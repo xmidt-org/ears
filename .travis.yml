@@ -16,7 +16,7 @@ addons:
   sonarcloud:
     organization: "xmidt-org"
     token:
-      secure: "Rerun 'travis encrypt --pro abcdefg' on the real org token and place the results here."
+      secure: "ERIz6dXofG3o8juL+QBqFfLtrY/5OokUiVGrevRIRIal+731TPyMg78XmZqtQWmJMRY+she8JE4eflgseDx40pUJyucBmdgHwlpHV4IdGvR/0TlvO7TDNZy8DUzKhhCJn0BJAnJzeu9gGDJ3rjHdNI4NGvP8Iapk6RLUYk9C1KPluW7sWliirTfEs/BZdwSIM5NJTT4rAss/JvENNAB/rvYa/XhioN7UF7bIoU8RXo6NXkhq7VPcFT3ayxkzXAVvz6sKTYXgcPQVnARYCjzGC5U1UVjghFq03qfjNeyBzr/Ez9nkmRDN4bfccDWy/lOza1pzBm0atLFlkPyecEoijf648w9/GG1kU3vCEY4Vux4tgSXnkqQqx1xbS779smIu7zB/gEdxDv94klxe49nZF2Ixp7IOYV1lZkRrEGjb1n8P/crRNlW2rdR/cLGjBNaH3zEmx/FsKLhgRK2jIHljibI3NYKKXAgIx85OeRucS7eajVf0TAmT3HYjp6P/LRucePxHbkeO7OX8Uq+uzN85tEMajqOynIDJl5MpeMXmzQh14l6daenEZN2P/3Pt0VNJXSRaa1DE2vB4/5Xc8UOAiYgB6q6arUkU3kzSUhFRx/cQx9xtsp4Fx8xJg+ia5gFkJMFPayQrdBP4BvKbtVRGd3EgTekoaHx5/r5durRNwHg="
 
 install:
   - GO111MODULE=on go mod vendor
