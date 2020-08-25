@@ -11,6 +11,8 @@
 # Output of the go coverage tool, specifically when used with LiteIDE
 *.out
 coverage*
+report.json
+ears
 
 # Ignore the vendor structure
 *vendor/
