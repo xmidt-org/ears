@@ -1,4 +1,4 @@
-# Event Async Receiver Service (EARS)
+# Event Async Routing Service (EARS)
 
 [![Build Status](https://travis-ci.com/xmidt-org/ears.svg?branch=main)](https://travis-ci.com/xmidt-org/ears)
 [![codecov.io](http://codecov.io/github/xmidt-org/ears/coverage.svg?branch=main)](http://codecov.io/github/xmidt-org/ears?branch=main)
