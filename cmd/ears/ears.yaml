@@ -1,0 +1,6 @@
+ears:
+  env: qa
+  logLevel: debug
+
+  api:
+    port: 3000
