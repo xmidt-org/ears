@@ -5,7 +5,6 @@ import (
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 	"github.com/xmidt-org/ears/pkg/cli"
-	"os"
 )
 
 // rootCmd represents the base command when called without any subcommands
@@ -22,8 +21,7 @@ func Execute() {
 	log.Logger = log.With().Str("app.id", "ears").Logger()
 
 	if err := rootCmd.Execute(); err != nil {
-		log.Error().Str("op", "Execute").Msg(err.Error())
-		os.Exit(1)
+		log.Fatal().Str("op", "Execute").Msg(err.Error())
 	}
 }
 
@@ -34,7 +32,6 @@ func init() {
 func initConfig() {
 	err := cli.ViperConfig("ears")
 	if err != nil {
-		log.Error().Str("op", "initConfig").Msg(err.Error())
-		os.Exit(1)
+		log.Fatal().Str("op", "initConfig").Msg(err.Error())
 	}
 }

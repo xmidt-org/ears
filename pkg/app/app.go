@@ -42,13 +42,28 @@ func initLogging() error {
 }
 
 //Run is called after Viper/Cobra commands setup
-func Run() error {
+func Run(ctx context.Context) error {
 	err := initLogging()
 	if err != nil {
-		log.Error().Str("op", "initApp").Msg(err.Error())
+		log.Error().Str("op", "Run").Str("action", "initLogging").Msg(err.Error())
 		return err
 	}
 	port := viper.GetInt("ears.api.port")
-	err = startAPIServer(port)
+	srv, err := startAPIServer(port)
+	if err != nil {
+		log.Error().Str("op", "Run").Str("action", "startAPIServer").Msg(err.Error())
+		return err
+	}
+	log.Info().Str("op", "Run").Msg("API Server started")
+
+	//Should block here
+	<-ctx.Done()
+
+	//Shutdown initiated, start graceful shutdown
+	log.Info().Str("op", "Run").Msg("App stopping...")
+
+	srv.shutdown()
+
+	log.Info().Str("op", "Run").Msg("App stopped")
 	return nil
 }
