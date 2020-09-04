@@ -1,10 +1,12 @@
 package main
 
 import (
+	"context"
 	"github.com/spf13/cobra"
 	"github.com/xmidt-org/ears/pkg/app"
 	"github.com/xmidt-org/ears/pkg/cli"
 	"os"
+	"os/signal"
 )
 
 var runCmd = &cobra.Command{
@@ -13,7 +15,15 @@ var runCmd = &cobra.Command{
 	Long:  `Runs the EARS microservice`,
 	Run: func(cmd *cobra.Command, args []string) {
 
-		if err := app.Run(); nil != err {
+		c := make(chan os.Signal, 1)
+		signal.Notify(c, os.Interrupt)
+		ctx, cancel := context.WithCancel(context.Background())
+		go func() {
+			<-c
+			cancel()
+		}()
+
+		if err := app.Run(ctx); nil != err {
 			//not log the error since the throwing error func already did
 			os.Exit(1)
 		}

@@ -7,11 +7,16 @@ import (
 	"github.com/rs/zerolog/log"
 	"golang.org/x/net/context"
 	"net/http"
+	"time"
 )
 
-func startAPIServer(port int) error {
+type APIServer struct {
+	srv *http.Server
+}
+
+func startAPIServer(port int) (*APIServer, error) {
 	if port < 1 {
-		return &InvalidOptionError{Err: fmt.Errorf("port %d cannot be less than 1", port)}
+		return nil, &InvalidOptionError{Err: fmt.Errorf("port %d cannot be less than 1", port)}
 	}
 	r := mux.NewRouter()
 	r.HandleFunc("/version", versionHandler).Methods(http.MethodGet)
@@ -20,8 +25,27 @@ func startAPIServer(port int) error {
 	r.Use(authenticateMiddleare)
 
 	log.Info().Str("op", "App.Run").Int("Port", port).Msg("Starting...")
-	http.ListenAndServe(fmt.Sprintf(":%d", port), r)
-	return nil
+	srv := &http.Server{
+		Addr:    fmt.Sprintf(":%d", port),
+		Handler: r,
+	}
+
+	go func() {
+		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			log.Error().Str("op", "srv.ListenAndServe").Msg(err.Error())
+		}
+	}()
+	return &APIServer{srv}, nil
+}
+
+func (api *APIServer) shutdown() {
+	ctxShutDown, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer func() {
+		cancel()
+	}()
+	if err := api.srv.Shutdown(ctxShutDown); err != nil {
+		log.Fatal().Str("op", "APIServer.shutdown").Msg(err.Error())
+	}
 }
 
 func getSubCtxWithStr(ctx context.Context, key string, value string) context.Context {
