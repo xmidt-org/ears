@@ -1,5 +1,9 @@
 package internal
 
+import (
+	"context"
+)
+
 const (
 	PluginTypeKafka   = "kafka"
 	PluginTypeKDS     = "kds"
@@ -54,4 +58,42 @@ type (
 
 	// A PluginIndex is a hashmap mapping a plugin instance hash to a plugin instance
 	PluginIndex map[string]*EarsPlugin
+
+	EarsEvent struct {
+		Payload  interface{}        `json:"payload"` // event payload
+		Metadata *EarsEventMetadata // event metadata
+		srcRef   *EarsPlugin        // pointer to source plugin instance
+	}
+
+	EarsEventMetadata struct {
+		Ts int `json: "ts"` // timestamp when event was received
+	}
+)
+
+type (
+
+	// A RoutingTableManager supports modifying and querying an EARS routing table
+	RoutingTableManager interface {
+		AddRoute(ctx *context.Context, entry *RoutingEntry) error                                       // idempotent operation to add a routing entry to a local routing table
+		RemoveRoute(ctx *context.Context, entry *RoutingEntry) error                                    // idempotent operation to remove a routing entry from a local routing table
+		ReplaceAllRoutes(ctx *context.Context, entries []*RoutingEntry) error                           // replace complete local routing table
+		GetAllRoutes(ctx *context.Context) ([]*RoutingEntry, error)                                     // obtain complete local routing table
+		GetRoutesBySourcePlugin(ctx *context.Context, plugin *EarsPlugin) ([]*RoutingEntry, error)      // get all routes for a specifc source plugin
+		GetRoutesByDestinationPlugin(ctx *context.Context, plugin *EarsPlugin) ([]*RoutingEntry, error) // get all routes for a specific destination plugin
+		GetRoutesForEvent(ctx *context.Context, event *EarsEvent) ([]*RoutingEntry, error)              // get all routes for a given event (and source plugin)
+		GetHash() (string, error)                                                                       // get hash for local version of routing table
+	}
+
+	// A RoutingTablePersister serves as interface between a local and a persisted routing table
+	RoutingTablePersister interface {
+		GetAllRoutes(ctx *context.Context) ([]*RoutingEntry, error)  // get all routes from persistence layer (on startup or when inconsistency is detected)
+		AddRoute(ctx *context.Context, entry *RoutingEntry) error    // idempotent operation to add a routing entry to a persisted routing table
+		RemoveRoute(ctx *context.Context, entry *RoutingEntry) error // idempotent operation to remove a routing entry from a persisted routing table
+		GetHash() (string, error)                                    // get hash for persisted version of routing table
+	}
+
+	// An EventRouter will process an incoming event in accordance with a routing table
+	EventRouter interface {
+		ProcessEvent(ctx *context.Context, event *EarsEvent) error
+	}
 )
