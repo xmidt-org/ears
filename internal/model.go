@@ -74,6 +74,9 @@ type (
 	EventQueue struct {
 	}
 
+	Worker struct {
+	}
+
 	WorkerPool struct {
 	}
 )
