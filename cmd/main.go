@@ -7,6 +7,6 @@ import (
 )
 
 func main() {
-	re := new(internal.RoutingEntry)
+	re := new(internal.RoutingTableEntry)
 	fmt.Printf("hello world %s\n", re.PartnerId)
 }
