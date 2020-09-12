@@ -20,16 +20,8 @@ type Error struct {
 	Err error
 }
 
-// InvalidOptionError is returned when an invalid option is passed in
-type InvalidOptionError struct {
-	baseError
-
-	Err error
-}
-
-// NotInitializedError is returned when neither command or script have been set
-type NotInitializedError struct {
-	baseError
+func (e *Error) Is(target error) bool {
+	return e.Error() == target.Error()
 }
 
 func (e *Error) Unwrap() error {
@@ -43,7 +35,14 @@ func (e *Error) Error() string {
 	return e.Err.Error()
 }
 
-func (e *Error) Is(target error) bool {
+// InvalidOptionError is returned when an invalid option is passed in
+type InvalidOptionError struct {
+	baseError
+
+	Err error
+}
+
+func (e *InvalidOptionError) Is(target error) bool {
 	return e.Error() == target.Error()
 }
 
@@ -57,12 +56,4 @@ func (e *InvalidOptionError) Error() string {
 	}
 
 	return fmt.Sprintf("InvalidOptionError: %s", e.Err)
-}
-
-func (e *NotInitializedError) Unwrap() error {
-	return nil
-}
-
-func (e *NotInitializedError) Error() string {
-	return "NotInitializedError"
 }
