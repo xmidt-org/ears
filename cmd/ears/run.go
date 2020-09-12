@@ -1,6 +1,11 @@
 package main
 
 import (
+	"fmt"
+	"github.com/rs/zerolog"
+	"os"
+
+	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"github.com/xmidt-org/ears/internal/pkg/app"
@@ -14,6 +19,11 @@ var runCmd = &cobra.Command{
 	Long:  `Runs the EARS microservice`,
 	Run: func(cmd *cobra.Command, args []string) {
 
+		logger, err := InitGlobalLogger()
+		if err != nil {
+			log.Logger.Error().Str("op", "InitLogger").Msg(err.Error())
+			os.Exit(1)
+		}
 		earsApp := fx.New(
 			fx.Provide(
 				ViperConfig,
@@ -22,6 +32,7 @@ var runCmd = &cobra.Command{
 				app.NewMiddlewares,
 				app.NewMux,
 			),
+			fx.Logger(logger),
 			fx.Invoke(app.SetupAPIServer),
 		)
 		earsApp.Run()
@@ -30,6 +41,23 @@ var runCmd = &cobra.Command{
 
 func ViperConfig() app.Config {
 	return viper.Sub("ears")
+}
+
+//Initialize logging. We are initializing the zerolog global logger for uber/fx logging
+//The application itself will not use the global logger. Instead, it use the logger returned by
+//app.NewLogger function, which is a child logger of the global logger
+func InitGlobalLogger() (fx.Printer, error) {
+	logLevel, err := zerolog.ParseLevel(viper.GetString("ears.logLevel"))
+	if err != nil {
+		return nil, &app.InvalidOptionError{
+			Err: fmt.Errorf("invalid loglevel %s error %s",
+				viper.GetString("ears.logLevel"),
+				err.Error()),
+		}
+	}
+	zerolog.SetGlobalLevel(logLevel)
+	log.Logger = log.With().Str("env", viper.GetString("ears.env")).Logger()
+	return &log.Logger, nil
 }
 
 func init() {

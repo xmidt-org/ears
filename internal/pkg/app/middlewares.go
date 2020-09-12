@@ -19,26 +19,25 @@ func NewMiddlewares(logger *zerolog.Logger) []func(next http.Handler) http.Handl
 }
 
 func getSubCtxWithStr(ctx context.Context, key string, value string) context.Context {
-	//TODO this helper function is lame because my go compiler is not happy when WithContext is chain to the end of the first call
-	subLogger := middlewareLogger.With().Str(key, value).Logger()
-	return subLogger.WithContext(ctx)
+	logger := log.Ctx(ctx).With().Str(key, value).Logger()
+	return logger.WithContext(ctx)
 }
 
 func initRequestMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
+		subCtx := middlewareLogger.WithContext(ctx)
 
 		traceId := r.Header.Get(HeaderTraceId)
 		if traceId == "" {
 			traceId = uuid.New().String()
 		}
-		subCtx := getSubCtxWithStr(ctx, LogTraceId, traceId)
+		subCtx = getSubCtxWithStr(subCtx, LogTraceId, traceId)
 
 		appId := r.Header.Get(HeaderTenantId)
 		if appId != "" {
-			subCtx = getSubCtxWithStr(ctx, LogTenantId, appId)
+			subCtx = getSubCtxWithStr(subCtx, LogTenantId, appId)
 		}
-
 		log.Ctx(subCtx).Debug().Msg("initializeRequestMiddleware")
 
 		next.ServeHTTP(w, r.WithContext(subCtx))
@@ -47,8 +46,8 @@ func initRequestMiddleware(next http.Handler) http.Handler {
 
 func authenticateMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		ctx := r.Context()
-		log.Ctx(ctx).Debug().Msg("authenticateMiddleare")
-		next.ServeHTTP(w, r)
+		subCtx := r.Context()
+		log.Ctx(subCtx).Debug().Msg("authenticateMiddleare")
+		next.ServeHTTP(w, r.WithContext(subCtx))
 	})
 }

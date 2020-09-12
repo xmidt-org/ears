@@ -10,6 +10,9 @@ require (
 	github.com/mitchellh/mapstructure v1.3.3 // indirect
 	github.com/pelletier/go-toml v1.8.0 // indirect
 	github.com/rs/zerolog v1.19.0
+	github.com/sebdah/goldie v1.0.0
+	github.com/sebdah/goldie/v2 v2.5.1
+	github.com/sergi/go-diff v1.1.0 // indirect
 	github.com/spf13/afero v1.3.5 // indirect
 	github.com/spf13/cast v1.3.1 // indirect
 	github.com/spf13/cobra v1.0.0

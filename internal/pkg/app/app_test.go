@@ -1,6 +1,7 @@
 package app
 
 import (
+	"errors"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/viper"
@@ -11,24 +12,50 @@ import (
 	"time"
 )
 
-func AppTestConfig() Config {
+func AppConfig() Config {
 	viper.Set("ears.logLevel", "info")
 	viper.Set("ears.api.port", 8080)
+	viper.Set("ears.env", "test")
 	return viper.Sub("ears")
 }
 
-func LogListener() *zerolog.Logger {
-	return &log.Logger
+func BadConfig() Config {
+	viper.Set("ears.logLevel", "info")
+	viper.Set("ears.api.port", 0)
+	return viper.Sub("ears")
 }
 
-func TestAppRun(t *testing.T) {
+type NilLifeCycle struct {
+}
+
+func (lc *NilLifeCycle) Append(hook fx.Hook) {
+	//do nothing
+}
+
+func TestSetupAPIServer(t *testing.T) {
+	//Case 1: normal case
+	err := SetupAPIServer(&NilLifeCycle{}, AppConfig(), NewLogger(), nil)
+	if err != nil {
+		t.Errorf("error setup API server %s", err.Error())
+	}
+
+	//Case 2: error case
+	var invalidOptionErr *InvalidOptionError
+	err = SetupAPIServer(&NilLifeCycle{}, BadConfig(), NewLogger(), nil)
+	if err == nil || !errors.As(err, &invalidOptionErr) {
+		t.Error("expect invalid optional error due to bad config")
+	}
+}
+
+func TestAppRunSuccess(t *testing.T) {
+
 	logListener := testLog.NewLogListener()
 	log.Logger = zerolog.New(logListener)
 
 	earsApp := fx.New(
 		fx.Provide(
-			AppTestConfig,
-			LogListener,
+			AppConfig,
+			NewLogger,
 			NewRouter,
 			NewMiddlewares,
 			NewMux,
@@ -41,7 +68,7 @@ func TestAppRun(t *testing.T) {
 		//Server must be up in less than 10 seconds
 		err := logListener.Listen("message", "API Server Started", 10*time.Second)
 		if err != nil {
-			t.Fatalf("Fail to listen to log output, error=%s\n", err.Error())
+			t.Errorf("Fail to listen to log output, error=%s\n", err.Error())
 		}
 		//simulate interrupt signal
 		pid := os.Getpid()
