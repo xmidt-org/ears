@@ -19,13 +19,22 @@ package app
 
 import (
 	"context"
+	"fmt"
 	"github.com/gorilla/mux"
 	"github.com/rs/zerolog"
+	"github.com/rs/zerolog/log"
 	"go.uber.org/fx"
 	"net/http"
 )
 
 var Version = "v0.0.0"
+
+func NewLogger() *zerolog.Logger {
+	// Create a child logger off the global logger instead of creating a new logger from scratch because
+	// global loggers already have some context values that child logger can inherit
+	logger := log.Logger.With().Logger()
+	return &logger
+}
 
 func NewMux(r *mux.Router, middlewares []func(next http.Handler) http.Handler) (http.Handler, error) {
 	for _, middleware := range middlewares {
@@ -34,7 +43,13 @@ func NewMux(r *mux.Router, middlewares []func(next http.Handler) http.Handler) (
 	return r, nil
 }
 
-func SetupAPIServer(lifecycle fx.Lifecycle, config Config, logger *zerolog.Logger, mux http.Handler) {
+func SetupAPIServer(lifecycle fx.Lifecycle, config Config, logger *zerolog.Logger, mux http.Handler) error {
+	port := config.GetInt("api.port")
+	if port < 1 {
+		err := &InvalidOptionError{nil, fmt.Errorf("invalid port value %d", port)}
+		logger.Error().Msg(err.Error())
+		return err
+	}
 
 	server := &http.Server{
 		Addr:    ":" + config.GetString("api.port"),
@@ -49,10 +64,15 @@ func SetupAPIServer(lifecycle fx.Lifecycle, config Config, logger *zerolog.Logge
 				return nil
 			},
 			OnStop: func(ctx context.Context) error {
-				logger.Info().Msg("API Server Stopped")
-				server.Shutdown(ctx)
-				return nil
+				err := server.Shutdown(ctx)
+				if err != nil {
+					logger.Error().Str("op", "SetupAPIServer.OnStop").Msg(err.Error())
+				} else {
+					logger.Info().Msg("API Server Stopped")
+				}
+				return err
 			},
 		},
 	)
+	return nil
 }
