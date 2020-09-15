@@ -13,16 +13,18 @@ import (
 )
 
 func AppConfig() Config {
-	viper.Set("ears.logLevel", "info")
-	viper.Set("ears.api.port", 8080)
-	viper.Set("ears.env", "test")
-	return viper.Sub("ears")
+	v := viper.New()
+	v.Set("ears.logLevel", "info")
+	v.Set("ears.api.port", 8080)
+	v.Set("ears.env", "test")
+	return v.Sub("ears")
 }
 
 func BadConfig() Config {
-	viper.Set("ears.logLevel", "info")
-	viper.Set("ears.api.port", 0)
-	return viper.Sub("ears")
+	v := viper.New()
+	v.Set("ears.logLevel", "info")
+	v.Set("ears.api.port", 0)
+	return v.Sub("ears")
 }
 
 type NilLifeCycle struct {

@@ -31,7 +31,7 @@ var Version = "v0.0.0"
 
 func NewLogger() *zerolog.Logger {
 	// Create a child logger off the global logger instead of creating a new logger from scratch because
-	// global loggers already have some context values that child logger can inherit
+	// global loggers already have some context values that the child logger can inherit
 	logger := log.Logger.With().Logger()
 	return &logger
 }
@@ -70,7 +70,7 @@ func SetupAPIServer(lifecycle fx.Lifecycle, config Config, logger *zerolog.Logge
 				} else {
 					logger.Info().Msg("API Server Stopped")
 				}
-				return err
+				return nil
 			},
 		},
 	)
