@@ -9,8 +9,9 @@ const (
 	PluginTypeKDS     = "kds"
 	PluginTypeSQS     = "sqs"
 	PluginTypeWebhook = "webhook"
-	PluginTypeEars    = "ears"
-	PluginTypeGears   = "gears"
+	PluginTypeEars    = "ears"  // loopback plugin, may be useful for event splitting
+	PluginTypeGears   = "gears" // deliver to kafka in masheens envelope
+	PluginType        = "null"  // black whole for events for testing
 )
 
 type (
@@ -31,9 +32,11 @@ type (
 		MatchPattern    interface{} `json: "match_pattern"`      // json pattern that must be matched for route to be taken
 		FilterPattern   interface{} `json: "filter_pattern"`     // json pattern that must not match for route to be taken
 		Transformation  interface{} `json: "transformation"`     // simple structural transformation (otpional)
-		EventTsPath     string      `json: "event_ts_path"`      // jq path to extract timestamp from event (optional)
-		EventTsPeriodMs int         `json: "event_ts_period_ms"` // optional event timeout
-		EventSplitPath  string      `json: "event_split_path"`   // optional path to array to be split in event payload
+		EventTsPath     string      `json: "event_ts_path"`      // jq path to extract timestamp from event (optional) - maybe this should be a pluggable router feature
+		EventTsPeriodMs int         `json: "event_ts_period_ms"` // optional event timeout - maybe this should be a pluggable router feature
+		EventSplitPath  string      `json: "event_split_path"`   // optional path to array to be split in event payload - maybe this should be a pluggable router feature
+		DeliveryMode    string      `json: "delivery_mode"`      // possible values: fire_and_forget, at_least_once, exactly_once
+		Debug           bool        `json: "debug"`              // if true generate debug logs and metrics for events taking this route
 		Hash            string      `json: "hash"`               // hash over all route entry configurations
 		Ts              int         `json: "ts"`                 // timestamp when route was created or updated
 	}
@@ -61,8 +64,8 @@ type (
 
 	// An EarsEvent bundles even payload and metadata
 	Event struct {
-		Payload  interface{}    `json:"payload"` // event payload
-		Metadata *EventMetadata // event metadata
+		Payload  interface{}    `json:"payload"`  // event payload
+		Metadata *EventMetadata `json:"metadata"` // event metadata
 		srcRef   *Plugin        // pointer to source plugin instance
 	}
 
@@ -87,8 +90,8 @@ type (
 	RoutingTableManager interface {
 		AddRoute(ctx *context.Context, entry *RoutingTableEntry) error                                   // idempotent operation to add a routing entry to a local routing table
 		RemoveRoute(ctx *context.Context, entry *RoutingTableEntry) error                                // idempotent operation to remove a routing entry from a local routing table
-		ReplaceAllRoutes(ctx *context.Context, entries []*RoutingTableEntry) error                       // replace complete local routing table
 		GetAllRoutes(ctx *context.Context) ([]*RoutingTableEntry, error)                                 // obtain complete local routing table
+		ReplaceAllRoutes(ctx *context.Context, entries []*RoutingTableEntry) error                       // replace complete local routing table
 		GetRoutesBySourcePlugin(ctx *context.Context, plugin *Plugin) ([]*RoutingTableEntry, error)      // get all routes for a specifc source plugin
 		GetRoutesByDestinationPlugin(ctx *context.Context, plugin *Plugin) ([]*RoutingTableEntry, error) // get all routes for a specific destination plugin
 		GetRoutesForEvent(ctx *context.Context, event *Event) ([]*RoutingTableEntry, error)              // get all routes for a given event (and source plugin)
@@ -97,17 +100,16 @@ type (
 
 	// A RoutingTablePersister serves as interface between a local and a persisted routing table
 	RoutingTablePersister interface {
-		GetAllRoutes(ctx *context.Context) ([]*RoutingTableEntry, error)  // get all routes from persistence layer (on startup or when inconsistency is detected)
-		AddRoute(ctx *context.Context, entry *RoutingTableEntry) error    // idempotent operation to add a routing entry to a persisted routing table
-		RemoveRoute(ctx *context.Context, entry *RoutingTableEntry) error // idempotent operation to remove a routing entry from a persisted routing table
-		GetHash() (string, error)                                         // get hash for persisted version of routing table
+		GetAllRoutes(ctx *context.Context) ([]*RoutingTableEntry, error)           // get all routes from persistence layer (on startup or when inconsistency is detected)
+		ReplaceAllRoutes(ctx *context.Context, entries []*RoutingTableEntry) error // replace complete local routing table
+		AddRoute(ctx *context.Context, entry *RoutingTableEntry) error             // idempotent operation to add a routing entry to a persisted routing table
+		RemoveRoute(ctx *context.Context, entry *RoutingTableEntry) error          // idempotent operation to remove a routing entry from a persisted routing table
+		GetHash() (string, error)                                                  // get hash for persisted version of routing table
 	}
 
 	// An EventRouter represents and EARS worker
 	EventRouter interface {
 		ProcessEvent(ctx *context.Context, event *Event) error
-		Start() error // start event router
-		Stop() error  // stop event router
 	}
 
 	// An EventQueuer represents an ears event queue
