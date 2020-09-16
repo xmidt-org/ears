@@ -17,7 +17,10 @@
 
 package cli
 
-import "strings"
+import (
+	"fmt"
+	"strings"
+)
 
 const (
 	ErrConfigNotSupportedProtocol = "ConfigNotSupportedProtocol"
@@ -42,7 +45,7 @@ func (a ArgError) Value() interface{} {
 func (a ArgError) Error() string {
 	msg := "key=" + a.key
 	if a.value != nil {
-		msg += ", value=" + a.value.(string)
+		msg += fmt.Sprintf(", value=%v", a.value)
 	}
 
 	if a.Err != nil {
