@@ -30,11 +30,11 @@ import (
 func ViperAddArgument(cmd *cobra.Command, a Argument) error {
 
 	if cmd == nil {
-		return argError{errors.New("nil cmd argument"), "cmd", nil}
+		return &ArgError{errors.New("nil cmd argument"), "cmd", nil}
 	}
 
 	if a.Default == nil {
-		return argError{errors.New("no default set"), "a", a}
+		return &ArgError{errors.New("no default set"), "a", a}
 	}
 
 	var fs *pflag.FlagSet
@@ -72,7 +72,7 @@ func ViperAddArgument(cmd *cobra.Command, a Argument) error {
 // ViperAddArguments allows you to pass in many argument configs
 func ViperAddArguments(cmd *cobra.Command, aList []Argument) error {
 	if cmd == nil {
-		return argError{errors.New("nil cmd argument"), "cmd", nil}
+		return &ArgError{errors.New("nil cmd argument"), "cmd", nil}
 	}
 
 	for _, a := range aList {
@@ -113,7 +113,7 @@ func ViperConfig(configName string) error {
 			// be found.  If this is the case, we will ignore this error.
 			var fileNotFoundErr *viper.ConfigFileNotFoundError
 			if err != nil && !errors.As(err, &fileNotFoundErr) {
-				return configError{err, config}
+				return &ConfigError{err, config}
 			}
 		}
 		return nil
@@ -145,13 +145,13 @@ func ViperConfig(configName string) error {
 	default:
 		// Value is a path to a local file
 		if len(parts) > 1 {
-			return configError{errors.New(ErrConfigNotSupportedProtocol), config}
+			return &ConfigError{errors.New(ErrConfigNotSupportedProtocol), config}
 		}
 		viper.SetConfigFile(config)
 		if err := viper.ReadInConfig(); err != nil {
 			// It was intended to load in a config and we could not.
 			// Return an error
-			return configError{err, config}
+			return &ConfigError{err, config}
 		}
 
 	}
