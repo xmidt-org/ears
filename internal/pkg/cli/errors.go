@@ -25,44 +25,48 @@ const (
 
 // argError =============================================================
 
-type argError struct {
+type ArgError struct {
 	Err   error
 	key   string
 	value interface{}
 }
 
-func (a argError) Key() string {
+func (a ArgError) Key() string {
 	return a.key
 }
 
-func (a argError) Value() interface{} {
+func (a ArgError) Value() interface{} {
 	return a.value
 }
 
-func (a argError) Error() string {
-	msg := "key=" + a.key + ", value=" + a.value.(string)
+func (a ArgError) Error() string {
+	msg := "key=" + a.key
+	if a.value != nil {
+		msg += ", value=" + a.value.(string)
+	}
+
 	if a.Err != nil {
 		msg = a.Err.Error() + ", " + msg
 	}
 	return msg
 }
 
-func (a *argError) Unwrap() error {
+func (a *ArgError) Unwrap() error {
 	return a.Err
 }
 
 // configError =============================================================
 
-type configError struct {
+type ConfigError struct {
 	Err  error
 	path string
 }
 
-func (c configError) Path() string {
+func (c ConfigError) Path() string {
 	return c.path
 }
 
-func (c configError) Error() string {
+func (c ConfigError) Error() string {
 	msg := ""
 	if c.Err != nil {
 		// In case there are newlines in the error text
@@ -76,6 +80,6 @@ func (c configError) Error() string {
 	return msg + "path: " + c.Path()
 }
 
-func (c *configError) Unwrap() error {
+func (c *ConfigError) Unwrap() error {
 	return c.Err
 }
