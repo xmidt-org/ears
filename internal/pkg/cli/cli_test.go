@@ -7,6 +7,7 @@ import (
 	"github.com/spf13/viper"
 	"github.com/xmidt-org/ears/internal/pkg/cli"
 	"reflect"
+	"strings"
 	"testing"
 )
 
@@ -76,9 +77,42 @@ func TestConfigError(t *testing.T) {
 	if !errors.As(err, &argErr) {
 		t.Errorf("Expect ArgError type, got a different error type %s", reflect.TypeOf(err))
 	}
+	argErr, _ = err.(*cli.ArgError)
+	if argErr.Unwrap().Error() != "nil cmd argument" {
+		t.Errorf("Unexpected error message %s", argErr.Unwrap().Error())
+	}
 	if err.Error() != "nil cmd argument, key=cmd" {
 		t.Errorf("Unexpected error message %s", err.Error())
 	}
+
+	cmd := &cobra.Command{
+		Use:   "use",
+		Short: "short",
+		Long:  `long`,
+	}
+	err = cli.ViperAddArgument(
+		cmd,
+		cli.Argument{
+			Name: "config", Shorthand: "", Type: cli.ArgTypeString,
+			Default: nil, Persistent: true,
+			Description: "config file (default is $HOME/cli.yaml)",
+		},
+	)
+	if err == nil {
+		t.Errorf("Expect an error, got no error")
+		return
+	}
+	if !errors.As(err, &argErr) {
+		t.Errorf("Expect ArgError type, got a different error type %s", reflect.TypeOf(err))
+	}
+	argErr, _ = err.(*cli.ArgError)
+	if argErr.Unwrap().Error() != "no default set" {
+		t.Errorf("Unexpected error message %s", argErr.Unwrap().Error())
+	}
+	if !strings.HasPrefix(err.Error(), "no default set, key=a, value=") {
+		t.Errorf("Unexpected error message %s", err.Error())
+	}
+
 }
 
 func TestConfigRead(t *testing.T) {
