@@ -89,26 +89,33 @@ type (
 		Hash() (string, error)
 	}
 
+	Matcher interface {
+		Match(message interface{}, pattern interface{}) (bool, error)
+	}
+
 	RouteModifier interface {
 		AddRoute(ctx *context.Context, entry *RoutingTableEntry) error    // idempotent operation to add a routing entry to a local routing table
 		RemoveRoute(ctx *context.Context, entry *RoutingTableEntry) error // idempotent operation to remove a routing entry from a local routing table
 	}
 
+	RoutePersister interface {
+		GetAllRoutes(ctx *context.Context) ([]*RoutingTableEntry, error)           // obtain complete local routing table
+		ReplaceAllRoutes(ctx *context.Context, entries []*RoutingTableEntry) error // replace complete local routing table
+	}
+
 	// A RoutingTableManager supports modifying and querying an EARS routing table
 	RoutingTableManager interface {
-		GetAllRoutes(ctx *context.Context) ([]*RoutingTableEntry, error)                                 // obtain complete local routing table
-		ReplaceAllRoutes(ctx *context.Context, entries []*RoutingTableEntry) error                       // replace complete local routing table
 		GetRoutesBySourcePlugin(ctx *context.Context, plugin *Plugin) ([]*RoutingTableEntry, error)      // get all routes for a specifc source plugin
 		GetRoutesByDestinationPlugin(ctx *context.Context, plugin *Plugin) ([]*RoutingTableEntry, error) // get all routes for a specific destination plugin
 		GetRoutesForEvent(ctx *context.Context, event *Event) ([]*RoutingTableEntry, error)              // get all routes for a given event (and source plugin)
+		RoutePersister
 		RouteModifier
 		Hasher // get hash for local version of routing table
 	}
 
 	// A RoutingTablePersister serves as interface between a local and a persisted routing table
 	RoutingTablePersister interface {
-		GetAllRoutes(ctx *context.Context) ([]*RoutingTableEntry, error)           // get all routes from persistence layer (on startup or when inconsistency is detected)
-		ReplaceAllRoutes(ctx *context.Context, entries []*RoutingTableEntry) error // replace complete local routing table
+		RoutePersister
 		RouteModifier
 		Hasher // get hash for persisted version of routing table
 	}
