@@ -49,7 +49,6 @@ type (
 		Transformation  *Transformation `json: "transformation"`     // simple structural transformation (otpional)
 		EventTsPath     string          `json: "event_ts_path"`      // jq path to extract timestamp from event (optional) - maybe this should be a pluggable router feature
 		EventTsPeriodMs int             `json: "event_ts_period_ms"` // optional event timeout - maybe this should be a pluggable router feature
-		EventSplitPath  string          `json: "event_split_path"`   // optional path to array to be split in event payload - maybe this should be a pluggable router feature
 		DeliveryMode    string          `json: "delivery_mode"`      // possible values: fire_and_forget, at_least_once, exactly_once
 		Debug           bool            `json: "debug"`              // if true generate debug logs and metrics for events taking this route
 		//Hash            string          `json: "hash"`               // hash over all route entry configurations
@@ -147,6 +146,11 @@ type (
 		Validate() error
 	}
 
+	// An Interfacer can interface
+	Interfacer interface {
+		Interface()
+	}
+
 	// A Doer does things - this is the interface for an EARS worker
 	Doer interface {
 		Start() error
@@ -174,6 +178,7 @@ type (
 		RouteNavigator
 		RouteModifier
 		Hasher
+		Validater
 	}
 
 	// event horizon
