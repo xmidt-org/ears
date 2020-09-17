@@ -5,7 +5,9 @@ import (
 )
 
 const (
+
 	// plugin types
+
 	PluginTypeKafka = "kafka" // generic kafka plugin
 	PluginTypeKDS   = "kds"   // generic kds plugin
 	PluginTypeSQS   = "sqs"   // generic sqs plugin
@@ -14,9 +16,16 @@ const (
 	PluginTypeGears = "gears" // deliver to kafka in masheens envelope
 	PluginTypeNull  = "null"  // black whole for events for testing
 	PluginTypeDebug = "debug" // black whole for events for testing
+
+	// delivery modes
+
+	DeliveryModeFireAndForget = "fire_and_forget"
+	DeliveryModeAtLeastOnce   = "at_least_once"
+	DeliveryModeExactlyOnce   = "exactly_once"
+	DeliveryModeNeverEver     = "never_ever"
 )
 
-//TODO: should pattern be an interface?
+//TODO: should patterns be of type Matcher rather than interface{}?
 //TODO: what about pluggable routers? do they need pluggable routing table extensions too?
 //TODO: json serialization conventions?
 
@@ -24,30 +33,38 @@ type (
 
 	// A RoutingEntry represents an entry in the EARS routing table
 	RoutingTableEntry struct {
-		PartnerId       string      `json: "partner_id"` // partner ID for quota and rate limiting
-		AppId           string      `json: "app_id"`     // app ID for quota and rate limiting
-		SrcType         string      `json: "src_type"`   // source plugin type, e.g. kafka, kds, sqs, webhook
-		SrcParams       interface{} `json: "src_params"` // plugin specific configuration parameters
-		SrcHash         string      `json: "src_hash"`   // hash over all plugin configurations
-		srcRef          *Plugin     // pointer to plugin instance
-		DstType         string      `json: "dst_type"`   // destination plugin type
-		DstParams       interface{} `json: "dst_params"` // plugin specific configuration parameters
-		DstHash         string      `json: "dst_hash"`   // hash over all plugin configurations
-		dstRef          *Plugin     // pointer to plugin instance
-		RoutingData     interface{} `json: "routing_data"`       // destination specific routing parameters, may contain dynamic elements pulled from incoming event
-		MatchPattern    interface{} `json: "match_pattern"`      // json pattern that must be matched for route to be taken
-		FilterPattern   interface{} `json: "filter_pattern"`     // json pattern that must not match for route to be taken
-		Transformation  interface{} `json: "transformation"`     // simple structural transformation (otpional)
-		EventTsPath     string      `json: "event_ts_path"`      // jq path to extract timestamp from event (optional) - maybe this should be a pluggable router feature
-		EventTsPeriodMs int         `json: "event_ts_period_ms"` // optional event timeout - maybe this should be a pluggable router feature
-		EventSplitPath  string      `json: "event_split_path"`   // optional path to array to be split in event payload - maybe this should be a pluggable router feature
-		DeliveryMode    string      `json: "delivery_mode"`      // possible values: fire_and_forget, at_least_once, exactly_once
-		Debug           bool        `json: "debug"`              // if true generate debug logs and metrics for events taking this route
-		Hash            string      `json: "hash"`               // hash over all route entry configurations
-		Ts              int         `json: "ts"`                 // timestamp when route was created or updated
+		PartnerId       string          `json: "partner_id"` // partner ID for quota and rate limiting
+		AppId           string          `json: "app_id"`     // app ID for quota and rate limiting
+		SrcType         string          `json: "src_type"`   // source plugin type, e.g. kafka, kds, sqs, webhook
+		SrcParams       interface{}     `json: "src_params"` // plugin specific configuration parameters
+		SrcHash         string          `json: "src_hash"`   // hash over all plugin configurations
+		srcRef          *Plugin         // pointer to plugin instance
+		DstType         string          `json: "dst_type"`   // destination plugin type
+		DstParams       interface{}     `json: "dst_params"` // plugin specific configuration parameters
+		DstHash         string          `json: "dst_hash"`   // hash over all plugin configurations
+		dstRef          *Plugin         // pointer to plugin instance
+		RoutingData     interface{}     `json: "routing_data"`       // destination specific routing parameters, may contain dynamic elements pulled from incoming event
+		MatchPattern    *Pattern        `json: "match_pattern"`      // json pattern that must be matched for route to be taken
+		FilterPattern   *Pattern        `json: "filter_pattern"`     // json pattern that must not match for route to be taken
+		Transformation  *Transformation `json: "transformation"`     // simple structural transformation (otpional)
+		EventTsPath     string          `json: "event_ts_path"`      // jq path to extract timestamp from event (optional) - maybe this should be a pluggable router feature
+		EventTsPeriodMs int             `json: "event_ts_period_ms"` // optional event timeout - maybe this should be a pluggable router feature
+		EventSplitPath  string          `json: "event_split_path"`   // optional path to array to be split in event payload - maybe this should be a pluggable router feature
+		DeliveryMode    string          `json: "delivery_mode"`      // possible values: fire_and_forget, at_least_once, exactly_once
+		Debug           bool            `json: "debug"`              // if true generate debug logs and metrics for events taking this route
+		Hash            string          `json: "hash"`               // hash over all route entry configurations
+		Ts              int             `json: "ts"`                 // timestamp when route was created or updated
 	}
 
-	Pattern interface{}
+	// A Pattern represents an object for pattern matching, implements the matcher interface, other metadata may be added
+	Pattern struct {
+		Specification interface{} `json: "spec"` // json pattern for matching
+	}
+
+	// A Transformation represents an object for structural transformations, implements the transformer interface, other metadata may be added
+	Transformation struct {
+		Specification interface{} `json: "spec"` // json instructions for transformation
+	}
 
 	// A RoutingTable is a slice of routing entries and reprrsents the EARS routing table
 	RoutingTable []*RoutingTableEntry
@@ -101,7 +118,12 @@ type (
 
 	// A matcher can match a pattern against an object
 	Matcher interface {
-		Match(message interface{}, pattern interface{}) (bool, error) // if pattern is contained in message thhe function returns true
+		Match(message interface{}) (bool, error) // if pattern is contained in message the function returns true
+	}
+
+	// A transformer performs structural transformations on an object
+	Transformer interface {
+		Transform(message interface{}) (interface{}, error) // returns transformed object or error
 	}
 
 	// A Doer does things - this is the interface for an EARS worker
@@ -132,6 +154,8 @@ type (
 		RouteModifier
 		Hasher
 	}
+
+	// event horizon
 
 	// An EventRouter represents and EARS worker
 	EventRouter interface {
