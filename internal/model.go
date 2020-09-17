@@ -33,15 +33,15 @@ type (
 
 	// A RoutingEntry represents an entry in the EARS routing table
 	RoutingTableEntry struct {
-		PartnerId       string          `json: "partner_id"`         // partner ID for quota and rate limiting
-		AppId           string          `json: "app_id"`             // app ID for quota and rate limiting
-		SrcType         string          `json: "src_type"`           // source plugin type, e.g. kafka, kds, sqs, webhook
-		SrcParams       interface{}     `json: "src_params"`         // plugin specific configuration parameters
-		SrcHash         string          `json: "src_hash"`           // hash over all plugin configurations
-		Source          *Plugin         `json: "source`              // pointer to source plugin instance
-		DstType         string          `json: "dst_type"`           // destination plugin type
-		DstParams       interface{}     `json: "dst_params"`         // plugin specific configuration parameters
-		DstHash         string          `json: "dst_hash"`           // hash over all plugin configurations
+		PartnerId string      `json: "partner_id"` // partner ID for quota and rate limiting
+		AppId     string      `json: "app_id"`     // app ID for quota and rate limiting
+		SrcType   string      `json: "src_type"`   // source plugin type, e.g. kafka, kds, sqs, webhook
+		SrcParams interface{} `json: "src_params"` // plugin specific configuration parameters
+		//SrcHash         string          `json: "src_hash"`           // hash over all plugin configurations
+		Source    *Plugin     `json: "source`      // pointer to source plugin instance
+		DstType   string      `json: "dst_type"`   // destination plugin type
+		DstParams interface{} `json: "dst_params"` // plugin specific configuration parameters
+		//DstHash         string          `json: "dst_hash"`           // hash over all plugin configurations
 		Destination     *Plugin         `json: "destination`         // pointer to destination plugin instance
 		RoutingData     interface{}     `json: "routing_data"`       // destination specific routing parameters, may contain dynamic elements pulled from incoming event
 		MatchPattern    *Pattern        `json: "match_pattern"`      // json pattern that must be matched for route to be taken
@@ -52,8 +52,8 @@ type (
 		EventSplitPath  string          `json: "event_split_path"`   // optional path to array to be split in event payload - maybe this should be a pluggable router feature
 		DeliveryMode    string          `json: "delivery_mode"`      // possible values: fire_and_forget, at_least_once, exactly_once
 		Debug           bool            `json: "debug"`              // if true generate debug logs and metrics for events taking this route
-		Hash            string          `json: "hash"`               // hash over all route entry configurations
-		Ts              int             `json: "ts"`                 // timestamp when route was created or updated
+		//Hash            string          `json: "hash"`               // hash over all route entry configurations
+		Ts int `json: "ts"` // timestamp when route was created or updated
 	}
 
 	// A Pattern represents an object for pattern matching, implements the matcher interface, other metadata may be added
@@ -74,7 +74,7 @@ type (
 
 	// An EarsPlugin represents an input or output plugin instance
 	Plugin struct {
-		Hash         string               `json: "hash"`      // hash over all plugin configurations
+		//Hash         string               `json: "hash"`      // hash over all plugin configurations
 		Type         string               `json: "type"`      // source plugin type, e.g. kafka, kds, sqs, webhook
 		Params       interface{}          `json: "params"`    // plugin specific configuration parameters
 		IsInput      bool                 `json: "is_input"`  // if true plugin is input plugin
@@ -110,10 +110,26 @@ type (
 	}
 )
 
+func (rte *RoutingTableEntry) Hash() string {
+	return ""
+}
+
+func (rte *RoutingTableEntry) Validate() error {
+	return nil
+}
+
+func (plgn *Plugin) Hash() string {
+	return ""
+}
+
+func (plgn *Plugin) Validate() error {
+	return nil
+}
+
 type (
 	// A Hasher can provide a unique deterministic string hash based on its configuration parameters
 	Hasher interface {
-		Hash() (string, error)
+		Hash() string
 	}
 
 	// A matcher can match a pattern against an object
@@ -124,6 +140,11 @@ type (
 	// A transformer performs structural transformations on an object
 	Transformer interface {
 		Transform(message interface{}) (interface{}, error) // returns transformed object or error
+	}
+
+	// A validater validates its own configuration parameters and returns an error if any inconsistencies are found
+	Validater interface {
+		Validate() error
 	}
 
 	// A Doer does things - this is the interface for an EARS worker
