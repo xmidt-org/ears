@@ -19,30 +19,30 @@ const (
 
 	// delivery modes
 
-	DeliveryModeFireAndForget = "fire_and_forget"
-	DeliveryModeAtLeastOnce   = "at_least_once"
-	DeliveryModeExactlyOnce   = "exactly_once"
-	DeliveryModeNeverEver     = "never_ever"
+	DeliveryModeFireAndForget = "fire_and_forget"  // delivery not guranteed
+	DeliveryModeAtLeastOnce   = "at_least_once"    // duplicates allowed, message loss not allowed
+	DeliveryModeExactlyOnce   = "exactly_once"     // most precise delivery mode
+	DeliveryModeMostOfTheTime = "most_of_the_time" // realistic delivery mode
+	DeliveryModeNeverEver     = "never_ever"       // in case of message fatigue
 )
 
-//TODO: should patterns be of type Matcher rather than interface{}?
-//TODO: what about pluggable routers? do they need pluggable routing table extensions too?
+//TODO: do wev need pluggable routing table extensions?
 //TODO: json serialization conventions?
 
 type (
 
 	// A RoutingEntry represents an entry in the EARS routing table
 	RoutingTableEntry struct {
-		PartnerId       string          `json: "partner_id"` // partner ID for quota and rate limiting
-		AppId           string          `json: "app_id"`     // app ID for quota and rate limiting
-		SrcType         string          `json: "src_type"`   // source plugin type, e.g. kafka, kds, sqs, webhook
-		SrcParams       interface{}     `json: "src_params"` // plugin specific configuration parameters
-		SrcHash         string          `json: "src_hash"`   // hash over all plugin configurations
-		srcRef          *Plugin         // pointer to plugin instance
-		DstType         string          `json: "dst_type"`   // destination plugin type
-		DstParams       interface{}     `json: "dst_params"` // plugin specific configuration parameters
-		DstHash         string          `json: "dst_hash"`   // hash over all plugin configurations
-		dstRef          *Plugin         // pointer to plugin instance
+		PartnerId       string          `json: "partner_id"`         // partner ID for quota and rate limiting
+		AppId           string          `json: "app_id"`             // app ID for quota and rate limiting
+		SrcType         string          `json: "src_type"`           // source plugin type, e.g. kafka, kds, sqs, webhook
+		SrcParams       interface{}     `json: "src_params"`         // plugin specific configuration parameters
+		SrcHash         string          `json: "src_hash"`           // hash over all plugin configurations
+		Source          *Plugin         `json: "source`              // pointer to source plugin instance
+		DstType         string          `json: "dst_type"`           // destination plugin type
+		DstParams       interface{}     `json: "dst_params"`         // plugin specific configuration parameters
+		DstHash         string          `json: "dst_hash"`           // hash over all plugin configurations
+		Destination     *Plugin         `json: "destination`         // pointer to destination plugin instance
 		RoutingData     interface{}     `json: "routing_data"`       // destination specific routing parameters, may contain dynamic elements pulled from incoming event
 		MatchPattern    *Pattern        `json: "match_pattern"`      // json pattern that must be matched for route to be taken
 		FilterPattern   *Pattern        `json: "filter_pattern"`     // json pattern that must not match for route to be taken
