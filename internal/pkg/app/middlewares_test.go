@@ -4,7 +4,7 @@ import (
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	testLog "github.com/xmidt-org/ears/test/log"
-	"golang.org/x/net/context"
+	"context"
 	"net/http"
 	"net/http/httptest"
 	"testing"
