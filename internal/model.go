@@ -5,14 +5,20 @@ import (
 )
 
 const (
-	PluginTypeKafka   = "kafka"
-	PluginTypeKDS     = "kds"
-	PluginTypeSQS     = "sqs"
-	PluginTypeWebhook = "webhook"
-	PluginTypeEars    = "ears"  // loopback plugin, may be useful for event splitting
-	PluginTypeGears   = "gears" // deliver to kafka in masheens envelope
-	PluginType        = "null"  // black whole for events for testing
+	// plugin types
+	PluginTypeKafka = "kafka" // generic kafka plugin
+	PluginTypeKDS   = "kds"   // generic kds plugin
+	PluginTypeSQS   = "sqs"   // generic sqs plugin
+	PluginTypeHTTP  = "http"  // generic http / webhook plugin
+	PluginTypeEars  = "ears"  // loopback plugin, may be useful for event splitting
+	PluginTypeGears = "gears" // deliver to kafka in masheens envelope
+	PluginTypeNull  = "null"  // black whole for events for testing
+	PluginTypeDebug = "debug" // black whole for events for testing
 )
+
+//TODO: should pattern be an interface?
+//TODO: what about pluggable routers? do they need pluggable routing table extensions too?
+//TODO: json serialization conventions?
 
 type (
 
@@ -41,6 +47,8 @@ type (
 		Ts              int         `json: "ts"`                 // timestamp when route was created or updated
 	}
 
+	Pattern interface{}
+
 	// A RoutingTable is a slice of routing entries and reprrsents the EARS routing table
 	RoutingTable []*RoutingTableEntry
 
@@ -66,58 +74,63 @@ type (
 	Event struct {
 		Payload  interface{}    `json:"payload"`  // event payload
 		Metadata *EventMetadata `json:"metadata"` // event metadata
-		srcRef   *Plugin        // pointer to source plugin instance
+		Source   *Plugin        `json:"source"`   // pointer to source plugin instance
 	}
 
 	// EarsEventMetadata bundles event meta data
 	EventMetadata struct {
 		Ts int `json: "ts"` // timestamp when event was received
+		// tbd
 	}
 
-	EventQueue struct {
+	EventQueue struct { //tbd
 	}
 
-	Worker struct {
+	Worker struct { //tbd
 	}
 
-	WorkerPool struct {
+	WorkerPool struct { // tbd
 	}
 )
 
 type (
+	// A Hasher can provide a unique deterministic string hash based on its configuration parameters
 	Hasher interface {
 		Hash() (string, error)
 	}
 
+	// A matcher can match a pattern against an object
 	Matcher interface {
-		Match(message interface{}, pattern interface{}) (bool, error)
+		Match(message interface{}, pattern interface{}) (bool, error) // if pattern is contained in message thhe function returns true
 	}
 
+	// A Doer does things - this is the interface for an EARS worker
+	Doer interface {
+		Start() error
+		Stop() error
+	}
+
+	// A RouteModifier allows modifications to a routing table
 	RouteModifier interface {
-		AddRoute(ctx *context.Context, entry *RoutingTableEntry) error    // idempotent operation to add a routing entry to a local routing table
-		RemoveRoute(ctx *context.Context, entry *RoutingTableEntry) error // idempotent operation to remove a routing entry from a local routing table
-	}
-
-	RoutePersister interface {
-		GetAllRoutes(ctx *context.Context) ([]*RoutingTableEntry, error)           // obtain complete local routing table
+		AddRoute(ctx *context.Context, entry *RoutingTableEntry) error             // idempotent operation to add a routing entry to a local routing table
+		RemoveRoute(ctx *context.Context, entry *RoutingTableEntry) error          // idempotent operation to remove a routing entry from a local routing table
 		ReplaceAllRoutes(ctx *context.Context, entries []*RoutingTableEntry) error // replace complete local routing table
 	}
 
-	// A RoutingTableManager supports modifying and querying an EARS routing table
-	RoutingTableManager interface {
+	// A RouteNavigator
+	RouteNavigator interface {
+		GetAllRoutes(ctx *context.Context) ([]*RoutingTableEntry, error)                                 // obtain complete local routing table
 		GetRoutesBySourcePlugin(ctx *context.Context, plugin *Plugin) ([]*RoutingTableEntry, error)      // get all routes for a specifc source plugin
 		GetRoutesByDestinationPlugin(ctx *context.Context, plugin *Plugin) ([]*RoutingTableEntry, error) // get all routes for a specific destination plugin
 		GetRoutesForEvent(ctx *context.Context, event *Event) ([]*RoutingTableEntry, error)              // get all routes for a given event (and source plugin)
-		RoutePersister
-		RouteModifier
-		Hasher // get hash for local version of routing table
 	}
 
-	// A RoutingTablePersister serves as interface between a local and a persisted routing table
-	RoutingTablePersister interface {
-		RoutePersister
+	// A RoutingTableManager supports CRUD operations on an EARS routing table
+	// note: the local in memory cache and the database backed source of truth both implement this interface!
+	RoutingTableManager interface {
+		RouteNavigator
 		RouteModifier
-		Hasher // get hash for persisted version of routing table
+		Hasher
 	}
 
 	// An EventRouter represents and EARS worker
