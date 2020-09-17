@@ -1,10 +1,10 @@
 package app
 
 import (
+	"context"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	testLog "github.com/xmidt-org/ears/test/log"
-	"context"
 	"net/http"
 	"net/http/httptest"
 	"testing"
