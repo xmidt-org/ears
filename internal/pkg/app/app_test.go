@@ -5,12 +5,12 @@ import (
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/viper"
+	"github.com/xmidt-org/ears/internal/pkg/app"
 	testLog "github.com/xmidt-org/ears/test/log"
 	"go.uber.org/fx"
 	"os"
 	"testing"
 	"time"
-	"github.com/xmidt-org/ears/internal/pkg/app"
 )
 
 func AppConfig() app.Config {
