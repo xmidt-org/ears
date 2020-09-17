@@ -1,4 +1,4 @@
-package app
+package app_test
 
 import (
 	"errors"
@@ -10,9 +10,10 @@ import (
 	"os"
 	"testing"
 	"time"
+	"github.com/xmidt-org/ears/internal/pkg/app"
 )
 
-func AppConfig() Config {
+func AppConfig() app.Config {
 	v := viper.New()
 	v.Set("ears.logLevel", "info")
 	v.Set("ears.api.port", 8080)
@@ -20,7 +21,7 @@ func AppConfig() Config {
 	return v.Sub("ears")
 }
 
-func BadConfig() Config {
+func BadConfig() app.Config {
 	v := viper.New()
 	v.Set("ears.logLevel", "info")
 	v.Set("ears.api.port", 0)
@@ -36,14 +37,14 @@ func (lc *NilLifeCycle) Append(hook fx.Hook) {
 
 func TestSetupAPIServer(t *testing.T) {
 	//Case 1: normal case
-	err := SetupAPIServer(&NilLifeCycle{}, AppConfig(), NewLogger(), nil)
+	err := app.SetupAPIServer(&NilLifeCycle{}, AppConfig(), app.NewLogger(), nil)
 	if err != nil {
 		t.Errorf("error setup API server %s", err.Error())
 	}
 
 	//Case 2: error case
-	var invalidOptionErr *InvalidOptionError
-	err = SetupAPIServer(&NilLifeCycle{}, BadConfig(), NewLogger(), nil)
+	var invalidOptionErr *app.InvalidOptionError
+	err = app.SetupAPIServer(&NilLifeCycle{}, BadConfig(), app.NewLogger(), nil)
 	if err == nil || !errors.As(err, &invalidOptionErr) {
 		t.Error("expect invalid optional error due to bad config")
 	}
@@ -57,12 +58,12 @@ func TestAppRunSuccess(t *testing.T) {
 	earsApp := fx.New(
 		fx.Provide(
 			AppConfig,
-			NewLogger,
-			NewRouter,
-			NewMiddlewares,
-			NewMux,
+			app.NewLogger,
+			app.NewRouter,
+			app.NewMiddlewares,
+			app.NewMux,
 		),
-		fx.Invoke(SetupAPIServer),
+		fx.Invoke(app.SetupAPIServer),
 	)
 
 	go func() {

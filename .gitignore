@@ -23,3 +23,6 @@ ears
 
 # Vim
 *.swp
+
+# GoLand
+.idea/
