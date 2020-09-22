@@ -123,7 +123,7 @@ type (
 
 	Filter struct {
 		Type   string      `json: "filter_type"`
-		Config interface{} `json: "config"`
+		Params interface{} `json: "params"`
 	}
 
 	// A Pattern represents an object for pattern matching, implements the matcher interface, other metadata may be added
@@ -187,17 +187,6 @@ type (
 		Transform(message interface{}) (interface{}, error) // returns transformed object or error
 	}
 
-	// An Interfacer can interface
-	Interfacer interface {
-		Interface()
-	}
-
-	// A Doer does things - this is the interface for an EARS worker
-	Doer interface {
-		Start() error
-		Stop() error
-	}
-
 	// A RouteModifier allows modifications to a routing table
 	RouteModifier interface {
 		AddRoute(ctx *context.Context, entry *RoutingTableEntry) error             // idempotent operation to add a routing entry to a local routing table
@@ -221,8 +210,6 @@ type (
 		Hasher
 		Validater
 	}
-
-	// event horizon
 
 	// An EventRouter represents and EARS worker
 	EventRouter interface {
@@ -255,5 +242,18 @@ type (
 		GetEventDestinationsByRoute(ctx *context.Context, route *RoutingTableEntry) (*Plugin, error) // get event source for route entry
 		AddEventDestination(ctx *context.Context, source *Plugin) (*Plugin, error)                   // adds event source and starts listening for events if event source doesn't already exist, otherwise increments counter
 		RemoveEventDestination(ctx *context.Context, source *Plugin) error                           // stops listening for events and removes event source if event route counter is down to zero
+	}
+
+	////
+
+	// An Interfacer can interface
+	Interfacer interface {
+		Interface()
+	}
+
+	// A Doer does things - this is the interface for an EARS worker
+	Doer interface {
+		Start() error
+		Stop() error
 	}
 )
