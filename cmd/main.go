@@ -8,5 +8,5 @@ import (
 
 func main() {
 	re := new(internal.RoutingTableEntry)
-	fmt.Printf("hello world %s\n", re.PartnerId)
+	fmt.Printf("hello world %s\n", re.OrgId)
 }
