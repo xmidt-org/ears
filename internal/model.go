@@ -31,10 +31,31 @@ const (
 
 type (
 
+	// A RoutingTableFilterChainEntry represents an entry in the EARS routing table
+	RoutingTableFilterChainEntry struct {
+		OrgId     string      `json: "org_id"`     // org ID for quota and rate limiting
+		AppId     string      `json: "app_id"`     // app ID for quota and rate limiting
+		UserId    string      `json: "user_id"`    // user ID / author of route
+		SrcType   string      `json: "src_type"`   // source plugin type, e.g. kafka, kds, sqs, webhook
+		SrcParams interface{} `json: "src_params"` // plugin specific configuration parameters
+		//SrcHash         string          `json: "src_hash"`           // hash over all plugin configurations
+		Source    *Plugin     `json: "source`      // pointer to source plugin instance
+		DstType   string      `json: "dst_type"`   // destination plugin type
+		DstParams interface{} `json: "dst_params"` // plugin specific configuration parameters
+		//DstHash         string          `json: "dst_hash"`           // hash over all plugin configurations
+		Destination  *Plugin   `json: "destination`    // pointer to destination plugin instance
+		FilterChain  []*Plugin `json: "filter_chain`   // optional list of filter plugins that will be applied in order to perform arbitrary filtering and transformation functions
+		DeliveryMode string    `json: "delivery_mode"` // possible values: fire_and_forget, at_least_once, exactly_once
+		Debug        bool      `json: "debug"`         // if true generate debug logs and metrics for events taking this route
+		//Hash            string          `json: "hash"`               // hash over all route entry configurations
+		Ts int `json: "ts"` // timestamp when route was created or updated
+	}
+
 	// A RoutingEntry represents an entry in the EARS routing table
 	RoutingTableEntry struct {
-		PartnerId string      `json: "partner_id"` // partner ID for quota and rate limiting
+		OrgId     string      `json: "org_id"`     // org ID for quota and rate limiting
 		AppId     string      `json: "app_id"`     // app ID for quota and rate limiting
+		UserId    string      `json: "user_id"`    // user ID / author of route
 		SrcType   string      `json: "src_type"`   // source plugin type, e.g. kafka, kds, sqs, webhook
 		SrcParams interface{} `json: "src_params"` // plugin specific configuration parameters
 		//SrcHash         string          `json: "src_hash"`           // hash over all plugin configurations
@@ -53,6 +74,11 @@ type (
 		Debug           bool            `json: "debug"`              // if true generate debug logs and metrics for events taking this route
 		//Hash            string          `json: "hash"`               // hash over all route entry configurations
 		Ts int `json: "ts"` // timestamp when route was created or updated
+	}
+
+	Filter struct {
+		Type   string      `json: "filter_type"`
+		Config interface{} `json: "config"`
 	}
 
 	// A Pattern represents an object for pattern matching, implements the matcher interface, other metadata may be added
@@ -78,6 +104,7 @@ type (
 		Params       interface{}          `json: "params"`    // plugin specific configuration parameters
 		IsInput      bool                 `json: "is_input"`  // if true plugin is input plugin
 		IsOutput     bool                 `json: "is_output"` // if true plugin is output plugin
+		IsFilter     bool                 `json: "is_filter"` // if true plugin is a filter plugin
 		State        string               `json: "state"`     // plugin state
 		inputRoutes  []*RoutingTableEntry // list of routes using this plugin instance as source plugin
 		outputRoutes []*RoutingTableEntry // list of routes using this plugin instance as output plugin
