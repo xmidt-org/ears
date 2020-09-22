@@ -132,10 +132,10 @@ func ViperConfig(configName string) error {
 	parts := strings.SplitN(config, "://", 2)
 	switch parts[0] {
 	//case "http", "https":
-		//TODO: do we need this?
+	//TODO: do we need this?
 
 	//case "s3":
-		//TODO: do we need this?
+	//TODO: do we need this?
 
 	case "file":
 		// Set parts[0] to the file path and fall through to file path processing
