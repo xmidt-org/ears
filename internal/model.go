@@ -8,14 +8,29 @@ const (
 
 	// plugin types
 
-	PluginTypeKafka = "kafka" // generic kafka plugin
-	PluginTypeKDS   = "kds"   // generic kds plugin
-	PluginTypeSQS   = "sqs"   // generic sqs plugin
-	PluginTypeHTTP  = "http"  // generic http / webhook plugin
-	PluginTypeEars  = "ears"  // loopback plugin, may be useful for event splitting
-	PluginTypeGears = "gears" // deliver to kafka in masheens envelope
-	PluginTypeNull  = "null"  // black whole for events for testing
-	PluginTypeDebug = "debug" // black whole for events for testing
+	PluginTypeKafka  = "kafka"  // generic kafka plugin
+	PluginTypeKDS    = "kds"    // generic kds plugin
+	PluginTypeSQS    = "sqs"    // generic sqs plugin
+	PluginTypeHTTP   = "http"   // generic http / webhook plugin
+	PluginTypeEars   = "ears"   // loopback plugin, may be useful for multi stage processing
+	PluginTypeGears  = "gears"  // deliver to kafka in masheens envelope
+	PluginTypeNull   = "null"   // black whole for events for testing
+	PluginTypeDebug  = "debug"  // debug plugin
+	PluginTypeFilter = "filter" // a filter plugin that filter sor transforms and event
+
+	// plugin modes
+
+	PluginModeInput  = "input"  // input plugin
+	PluginModeOutput = "output" // output plugin
+	PluginModeFilter = "filter" // filter plugin
+
+	// plugin states
+
+	PluginStateRunning      = "running"       // running -> shutting_down, error
+	PluginStateStopped      = "stopped"       // stopped -> ready
+	PluginStateError        = "error"         // error
+	PluginStateShuttingDown = "shutting_down" // shutting_down -> stopped
+	PluginStateReady        = "ready"         // * ready -> running
 
 	// delivery modes
 
@@ -31,8 +46,8 @@ const (
 
 type (
 
-	// A RoutingTableFilterChainEntry represents an entry in the EARS routing table
-	RoutingTableFilterChainEntry struct {
+	// A RoutingTableEntry represents an entry in the EARS routing table
+	RoutingTableEntry struct {
 		OrgId     string      `json: "org_id"`     // org ID for quota and rate limiting
 		AppId     string      `json: "app_id"`     // app ID for quota and rate limiting
 		UserId    string      `json: "user_id"`    // user ID / author of route
@@ -52,7 +67,7 @@ type (
 	}
 
 	// A RoutingEntry represents an entry in the EARS routing table
-	RoutingTableEntry struct {
+	/*RoutingTableEntry struct {
 		OrgId     string      `json: "org_id"`     // org ID for quota and rate limiting
 		AppId     string      `json: "app_id"`     // app ID for quota and rate limiting
 		UserId    string      `json: "user_id"`    // user ID / author of route
@@ -74,7 +89,37 @@ type (
 		Debug           bool            `json: "debug"`              // if true generate debug logs and metrics for events taking this route
 		//Hash            string          `json: "hash"`               // hash over all route entry configurations
 		Ts int `json: "ts"` // timestamp when route was created or updated
+	}*/
+
+	// A RoutingTable is a slice of routing entries and reprrsents the EARS routing table
+	RoutingTable []*RoutingTableEntry
+
+	// A RoutingTableIndex is a hashmap mapping a routing entry hash to a routing entry pointer
+	RoutingTableIndex map[string]*RoutingTableEntry
+
+	// An EarsPlugin represents an input plugin an output plugin or a filter plugin
+	Plugin struct {
+		//Hash         string               `json: "hash"`      // hash over all plugin configurations
+		Type         string               `json: "type"`   // source plugin type, e.g. kafka, kds, sqs, webhook
+		Params       interface{}          `json: "params"` // plugin specific configuration parameters
+		Mode         string               `json:"mode"`    // plugin mode, one of input, output and filter
+		State        string               `json: "state"`  // plugin operational state including running, stopped, error etc
+		inputRoutes  []*RoutingTableEntry // list of routes using this plugin instance as source plugin
+		outputRoutes []*RoutingTableEntry // list of routes using this plugin instance as output plugin
 	}
+
+	// A PluginIndex is a hashmap mapping a plugin instance hash to a plugin instance
+	PluginIndex map[string]*Plugin
+
+	// An EarsEvent bundles even payload and metadata
+	Event struct {
+		Payload  interface{} `json:"payload"`  // event payload
+		Metadata interface{} `json:"metadata"` // optional metadata produced by filter chain
+		Source   *Plugin     `json:"source"`   // pointer to source plugin instance
+		Ts       int         `json: "ts"`      // timestamp when event was received
+	}
+
+	////
 
 	Filter struct {
 		Type   string      `json: "filter_type"`
@@ -89,41 +134,6 @@ type (
 	// A Transformation represents an object for structural transformations, implements the transformer interface, other metadata may be added
 	Transformation struct {
 		Specification interface{} `json: "spec"` // json instructions for transformation
-	}
-
-	// A RoutingTable is a slice of routing entries and reprrsents the EARS routing table
-	RoutingTable []*RoutingTableEntry
-
-	// A RoutingTableIndex is a hashmap mapping a routing entry hash to a routing entry pointer
-	RoutingTableIndex map[string]*RoutingTableEntry
-
-	// An EarsPlugin represents an input or output plugin instance
-	Plugin struct {
-		//Hash         string               `json: "hash"`      // hash over all plugin configurations
-		Type         string               `json: "type"`      // source plugin type, e.g. kafka, kds, sqs, webhook
-		Params       interface{}          `json: "params"`    // plugin specific configuration parameters
-		IsInput      bool                 `json: "is_input"`  // if true plugin is input plugin
-		IsOutput     bool                 `json: "is_output"` // if true plugin is output plugin
-		IsFilter     bool                 `json: "is_filter"` // if true plugin is a filter plugin
-		State        string               `json: "state"`     // plugin state
-		inputRoutes  []*RoutingTableEntry // list of routes using this plugin instance as source plugin
-		outputRoutes []*RoutingTableEntry // list of routes using this plugin instance as output plugin
-	}
-
-	// A PluginIndex is a hashmap mapping a plugin instance hash to a plugin instance
-	PluginIndex map[string]*Plugin
-
-	// An EarsEvent bundles even payload and metadata
-	Event struct {
-		Payload  interface{}    `json:"payload"`  // event payload
-		Metadata *EventMetadata `json:"metadata"` // event metadata
-		Source   *Plugin        `json:"source"`   // pointer to source plugin instance
-	}
-
-	// EarsEventMetadata bundles event meta data
-	EventMetadata struct {
-		Ts int `json: "ts"` // timestamp when event was received
-		// tbd
 	}
 
 	EventQueue struct { //tbd
@@ -158,6 +168,15 @@ type (
 		Hash() string
 	}
 
+	// A validater validates its own configuration parameters and returns an error if any inconsistencies are found
+	Validater interface {
+		Validate() error
+	}
+
+	Filterer interface {
+		Filter(event *Event) (*Event, error) // if event is filtered, returns nil, if event is not filterd returns events; event may be transformed and metadata may be created in the process
+	}
+
 	// A matcher can match a pattern against an object
 	Matcher interface {
 		Match(message interface{}) (bool, error) // if pattern is contained in message the function returns true
@@ -166,11 +185,6 @@ type (
 	// A transformer performs structural transformations on an object
 	Transformer interface {
 		Transform(message interface{}) (interface{}, error) // returns transformed object or error
-	}
-
-	// A validater validates its own configuration parameters and returns an error if any inconsistencies are found
-	Validater interface {
-		Validate() error
 	}
 
 	// An Interfacer can interface
