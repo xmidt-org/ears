@@ -7,6 +7,7 @@ import (
 
 type (
 	InMemoryRoutingTableManager struct {
+		//TODO: add index by source plugin
 		routingTableIndex RoutingTableIndex
 	}
 )
@@ -58,4 +59,45 @@ func (mgr *InMemoryRoutingTableManager) Validate() error {
 		}
 	}
 	return nil
+}
+
+func (mgr *InMemoryRoutingTableManager) Hash() string {
+	hash := ""
+	for _, entry := range mgr.routingTableIndex {
+		hash = hash + entry.Hash()
+	}
+	return hash
+}
+
+func (mgr *InMemoryRoutingTableManager) GetAllRoutes(ctx *context.Context) ([]*RoutingTableEntry, error) {
+	tbl := make([]*RoutingTableEntry, len(mgr.routingTableIndex))
+	idx := 0
+	for _, entry := range mgr.routingTableIndex {
+		tbl[idx] = entry
+	}
+	return tbl, nil
+}
+
+func (mgr *InMemoryRoutingTableManager) GetRoutesBySourcePlugin(ctx *context.Context, plugin *Plugin) ([]*RoutingTableEntry, error) {
+	tbl := make([]*RoutingTableEntry, len(mgr.routingTableIndex))
+	for _, entry := range mgr.routingTableIndex {
+		if entry.Source.Hash() == plugin.Hash() {
+			tbl = append(tbl, entry)
+		}
+	}
+	return tbl, nil
+}
+
+func (mgr *InMemoryRoutingTableManager) GetRoutesByDestinationPlugin(ctx *context.Context, plugin *Plugin) ([]*RoutingTableEntry, error) {
+	tbl := make([]*RoutingTableEntry, len(mgr.routingTableIndex))
+	for _, entry := range mgr.routingTableIndex {
+		if entry.Destination.Hash() == plugin.Hash() {
+			tbl = append(tbl, entry)
+		}
+	}
+	return tbl, nil
+}
+
+func (mgr *InMemoryRoutingTableManager) GetRoutesForEvent(ctx *context.Context, event *Event) ([]*RoutingTableEntry, error) {
+	return mgr.GetRoutesBySourcePlugin(ctx, event.Source)
 }
