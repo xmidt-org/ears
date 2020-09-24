@@ -59,7 +59,8 @@ func TestAppRunSuccess(t *testing.T) {
 		fx.Provide(
 			AppConfig,
 			app.NewLogger,
-			app.NewRouter,
+			app.NewAPIManager,
+			app.NewRoutingTableManager,
 			app.NewMiddlewares,
 			app.NewMux,
 		),

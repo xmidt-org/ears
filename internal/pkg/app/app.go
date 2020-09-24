@@ -20,7 +20,6 @@ package app
 import (
 	"context"
 	"fmt"
-	"github.com/gorilla/mux"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"go.uber.org/fx"
@@ -36,11 +35,11 @@ func NewLogger() *zerolog.Logger {
 	return &logger
 }
 
-func NewMux(r *mux.Router, middlewares []func(next http.Handler) http.Handler) (http.Handler, error) {
+func NewMux(a *APIManager, middlewares []func(next http.Handler) http.Handler) (http.Handler, error) {
 	for _, middleware := range middlewares {
-		r.Use(middleware)
+		a.muxRouter.Use(middleware)
 	}
-	return r, nil
+	return a.muxRouter, nil
 }
 
 func SetupAPIServer(lifecycle fx.Lifecycle, config Config, logger *zerolog.Logger, mux http.Handler) error {
