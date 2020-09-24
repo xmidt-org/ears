@@ -28,7 +28,8 @@ var runCmd = &cobra.Command{
 			fx.Provide(
 				ViperConfig,
 				app.NewLogger,
-				app.NewRouter,
+				app.NewRoutingTableManager,
+				app.NewAPIManager,
 				app.NewMiddlewares,
 				app.NewMux,
 			),
