@@ -32,6 +32,7 @@ For MVP, the event types are:
 * any: the plugin may accept/emit events in any format
 * json: events are in json format
 * binary: events are in binary format
+* interface: golang interface{}
 
 When EARS validates a pipeline, the two plugins connecting to each other must have matching event type such that the first plugin's output event type must match the second plugin's input event type. The only exception is `any` which can match any event type.
 
