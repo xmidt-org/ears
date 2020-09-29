@@ -22,7 +22,7 @@ func TestInitRequestMiddleware(t *testing.T) {
 
 	listener := testLog.NewLogListener()
 	logger := zerolog.New(listener)
-	middlewares := NewMiddlewares(&logger)
+	middleware := NewMiddleware(&logger)
 
 	//Test Case 1
 	validator := &Validator{func(w http.ResponseWriter, r *http.Request) {
@@ -32,14 +32,14 @@ func TestInitRequestMiddleware(t *testing.T) {
 		listener.AssertLastLogLine(t, "tx.traceId", "123456")
 	}}
 
-	middleware := middlewares[0](validator)
+	m := middleware[0](validator)
 
 	w := httptest.NewRecorder()
 	r := httptest.NewRequest(http.MethodGet, "/", nil)
 	r.Header.Set("Application-Id", "myapp")
 	r.Header.Set("X-B3-TraceId", "123456")
 
-	middleware.ServeHTTP(w, r)
+	m.ServeHTTP(w, r)
 
 	//Test Case 2
 	validator = &Validator{func(w http.ResponseWriter, r *http.Request) {
@@ -47,18 +47,18 @@ func TestInitRequestMiddleware(t *testing.T) {
 		log.Ctx(ctx).Debug().Msg("test")
 		listener.AssertLastLogLine(t, "gears.app.id", "myapp2")
 	}}
-	middleware = middlewares[0](validator)
+	m = middleware[0](validator)
 	r = httptest.NewRequest(http.MethodGet, "/", nil)
 	r.Header.Set("Application-Id", "myapp2")
 
-	middleware.ServeHTTP(w, r)
+	m.ServeHTTP(w, r)
 }
 
 func TestAuthMiddleware(t *testing.T) {
 	ctx := context.Background()
 	listener := testLog.NewLogListener()
 	logger := zerolog.New(listener)
-	middlewares := NewMiddlewares(&logger)
+	middleware := NewMiddleware(&logger)
 	subCtx := logger.WithContext(ctx)
 
 	//AuthenticateMiddleware is currently just a pass through.
@@ -69,7 +69,7 @@ func TestAuthMiddleware(t *testing.T) {
 		listener.AssertLastLogLine(t, "message", "good")
 	}}
 
-	middleware := middlewares[1](validator)
+	m := middleware[1](validator)
 
 	w := httptest.NewRecorder()
 	r := httptest.NewRequest(http.MethodGet, "/", nil)
@@ -77,5 +77,5 @@ func TestAuthMiddleware(t *testing.T) {
 	r.Header.Set("X-B3-TraceId", "123456")
 	//r.WithContext(log.Logger.WithContext(context.Background()))
 
-	middleware.ServeHTTP(w, r.WithContext(subCtx))
+	m.ServeHTTP(w, r.WithContext(subCtx))
 }

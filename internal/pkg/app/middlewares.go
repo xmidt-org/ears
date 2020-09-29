@@ -10,7 +10,7 @@ import (
 
 var middlewareLogger *zerolog.Logger
 
-func NewMiddlewares(logger *zerolog.Logger) []func(next http.Handler) http.Handler {
+func NewMiddleware(logger *zerolog.Logger) []func(next http.Handler) http.Handler {
 	middlewareLogger = logger
 	return []func(next http.Handler) http.Handler{
 		initRequestMiddleware,
