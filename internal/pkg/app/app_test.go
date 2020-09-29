@@ -61,7 +61,7 @@ func TestAppRunSuccess(t *testing.T) {
 			app.NewLogger,
 			app.NewAPIManager,
 			app.NewRoutingTableManager,
-			app.NewMiddlewares,
+			app.NewMiddleware,
 			app.NewMux,
 		),
 		fx.Invoke(app.SetupAPIServer),

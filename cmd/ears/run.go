@@ -30,7 +30,7 @@ var runCmd = &cobra.Command{
 				app.NewLogger,
 				app.NewRoutingTableManager,
 				app.NewAPIManager,
-				app.NewMiddlewares,
+				app.NewMiddleware,
 				app.NewMux,
 			),
 			fx.Logger(logger),

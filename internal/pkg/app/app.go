@@ -35,9 +35,9 @@ func NewLogger() *zerolog.Logger {
 	return &logger
 }
 
-func NewMux(a *APIManager, middlewares []func(next http.Handler) http.Handler) (http.Handler, error) {
-	for _, middleware := range middlewares {
-		a.muxRouter.Use(middleware)
+func NewMux(a *APIManager, middleware []func(next http.Handler) http.Handler) (http.Handler, error) {
+	for _, m := range middleware {
+		a.muxRouter.Use(m)
 	}
 	return a.muxRouter, nil
 }
