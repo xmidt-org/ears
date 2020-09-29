@@ -13,6 +13,7 @@
 coverage*
 report.json
 ears
+!ears/
 
 # Ignore the vendor structure
 *vendor/
@@ -22,3 +23,6 @@ ears
 
 # Vim
 *.swp
+
+# GoLand
+.idea/
