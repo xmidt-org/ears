@@ -1,0 +1,7 @@
+string: Here is a string
+boolean: true
+number: 12
+array:
+  - one
+  - two
+  - three
