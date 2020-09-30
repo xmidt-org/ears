@@ -100,10 +100,15 @@ type (
 	// An EarsPlugin represents an input plugin an output plugin or a filter plugin
 	Plugin struct {
 		//Hash         string               `json: "hash"`      // hash over all plugin configurations
-		Type         string               `json: "type"`   // source plugin type, e.g. kafka, kds, sqs, webhook
-		Params       interface{}          `json: "params"` // plugin specific configuration parameters
-		Mode         string               `json:"mode"`    // plugin mode, one of input, output and filter
-		State        string               `json: "state"`  // plugin operational state including running, stopped, error etc
+		Type         string      `json: "type"` // source plugin type, e.g. kafka, kds, sqs, webhook
+		Version      string      `json: "version"`
+		Params       interface{} `json: "params"` // plugin specific configuration parameters
+		Mode         string      `json:"mode"`    // plugin mode, one of input, output and filter
+		State        string      `json: "state"`  // plugin operational state including running, stopped, error etc
+		Name         string      `json: "name"`
+		Description  string      `json: "description"`
+		UserId       string      `json: "user_id"`
+		Ts           int
 		inputRoutes  []*RoutingTableEntry // list of routes using this plugin instance as source plugin
 		outputRoutes []*RoutingTableEntry // list of routes using this plugin instance as output plugin
 	}
