@@ -194,17 +194,17 @@ type (
 
 	// A RouteModifier allows modifications to a routing table
 	RouteModifier interface {
-		AddRoute(ctx *context.Context, entry *RoutingTableEntry) error             // idempotent operation to add a routing entry to a local routing table
-		RemoveRoute(ctx *context.Context, entry *RoutingTableEntry) error          // idempotent operation to remove a routing entry from a local routing table
-		ReplaceAllRoutes(ctx *context.Context, entries []*RoutingTableEntry) error // replace complete local routing table
+		AddRoute(ctx context.Context, entry *RoutingTableEntry) error             // idempotent operation to add a routing entry to a local routing table
+		RemoveRoute(ctx context.Context, entry *RoutingTableEntry) error          // idempotent operation to remove a routing entry from a local routing table
+		ReplaceAllRoutes(ctx context.Context, entries []*RoutingTableEntry) error // replace complete local routing table
 	}
 
 	// A RouteNavigator
 	RouteNavigator interface {
-		GetAllRoutes(ctx *context.Context) ([]*RoutingTableEntry, error)                                 // obtain complete local routing table
-		GetRoutesBySourcePlugin(ctx *context.Context, plugin *Plugin) ([]*RoutingTableEntry, error)      // get all routes for a specifc source plugin
-		GetRoutesByDestinationPlugin(ctx *context.Context, plugin *Plugin) ([]*RoutingTableEntry, error) // get all routes for a specific destination plugin
-		GetRoutesForEvent(ctx *context.Context, event *Event) ([]*RoutingTableEntry, error)              // get all routes for a given event (and source plugin)
+		GetAllRoutes(ctx context.Context) ([]*RoutingTableEntry, error)                                 // obtain complete local routing table
+		GetRoutesBySourcePlugin(ctx context.Context, plugin *Plugin) ([]*RoutingTableEntry, error)      // get all routes for a specifc source plugin
+		GetRoutesByDestinationPlugin(ctx context.Context, plugin *Plugin) ([]*RoutingTableEntry, error) // get all routes for a specific destination plugin
+		GetRoutesForEvent(ctx context.Context, event *Event) ([]*RoutingTableEntry, error)              // get all routes for a given event (and source plugin)
 	}
 
 	// A RoutingTableManager supports CRUD operations on an EARS routing table
@@ -223,30 +223,30 @@ type (
 
 	// An EventQueuer represents an ears event queue
 	EventQueuer interface {
-		AddEvent(ctx *context.Context, event *Event) error // add event to queue
-		NextEvent(ctx *context.Context) (*Event, error)    // blocking call to get next event and remove it from queue
-		GetEventCount(ctx *context.Context) (int error)    // get maximum number of elements in queue
-		GetMaxEventCount(ctx *context.Context) int         // get capacity of event queue
+		AddEvent(ctx context.Context, event *Event) error // add event to queue
+		NextEvent(ctx context.Context) (*Event, error)    // blocking call to get next event and remove it from queue
+		GetEventCount(ctx context.Context) (int error)    // get maximum number of elements in queue
+		GetMaxEventCount(ctx context.Context) int         // get capacity of event queue
 	}
 
 	// An EventSourceManager manages all event source plugins for a live ears instance
 	EventSourceManager interface {
-		GetAllEventSources(ctx *context.Context) ([]*Plugin, error)                            // get all event sourced
-		GetEventSourcesByType(ctx *context.Context, sourceType string) ([]*Plugin, error)      // get event sources by plugin type
-		GetEventSourcesByState(ctx *context.Context, sourceState string) ([]*Plugin, error)    // get event sources by plugin state
-		GetEventSourceByRoute(ctx *context.Context, route *RoutingTableEntry) (*Plugin, error) // get event source for route entry
-		AddEventSource(ctx *context.Context, source *Plugin) (*Plugin, error)                  // adds event source and starts listening for events if event source doesn't already exist, otherwise increments counter
-		RemoveEventSource(ctx *context.Context, source *Plugin) error                          // stops listening for events and removes event source if event route counter is down to zero
+		GetAllEventSources(ctx context.Context) ([]*Plugin, error)                            // get all event sourced
+		GetEventSourcesByType(ctx context.Context, sourceType string) ([]*Plugin, error)      // get event sources by plugin type
+		GetEventSourcesByState(ctx context.Context, sourceState string) ([]*Plugin, error)    // get event sources by plugin state
+		GetEventSourceByRoute(ctx context.Context, route *RoutingTableEntry) (*Plugin, error) // get event source for route entry
+		AddEventSource(ctx context.Context, source *Plugin) (*Plugin, error)                  // adds event source and starts listening for events if event source doesn't already exist, otherwise increments counter
+		RemoveEventSource(ctx context.Context, source *Plugin) error                          // stops listening for events and removes event source if event route counter is down to zero
 	}
 
 	// An EventDestinationManager manages all event destination plugins for a live ears instance
 	EventDestinationManager interface {
-		GetAllDestinations(ctx *context.Context) ([]*Plugin, error)                                  // get all event sourced
-		GetEventDestinationsByType(ctx *context.Context, sourceType string) ([]*Plugin, error)       // get event sources by plugin type
-		GetEventDestinationsByState(ctx *context.Context, sourceState string) ([]*Plugin, error)     // get event sources by plugin state
-		GetEventDestinationsByRoute(ctx *context.Context, route *RoutingTableEntry) (*Plugin, error) // get event source for route entry
-		AddEventDestination(ctx *context.Context, source *Plugin) (*Plugin, error)                   // adds event source and starts listening for events if event source doesn't already exist, otherwise increments counter
-		RemoveEventDestination(ctx *context.Context, source *Plugin) error                           // stops listening for events and removes event source if event route counter is down to zero
+		GetAllDestinations(ctx context.Context) ([]*Plugin, error)                                  // get all event sourced
+		GetEventDestinationsByType(ctx context.Context, sourceType string) ([]*Plugin, error)       // get event sources by plugin type
+		GetEventDestinationsByState(ctx context.Context, sourceState string) ([]*Plugin, error)     // get event sources by plugin state
+		GetEventDestinationsByRoute(ctx context.Context, route *RoutingTableEntry) (*Plugin, error) // get event source for route entry
+		AddEventDestination(ctx context.Context, source *Plugin) (*Plugin, error)                   // adds event source and starts listening for events if event source doesn't already exist, otherwise increments counter
+		RemoveEventDestination(ctx context.Context, source *Plugin) error                           // stops listening for events and removes event source if event route counter is down to zero
 	}
 
 	////
