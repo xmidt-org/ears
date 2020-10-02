@@ -115,3 +115,7 @@ func (mgr *InMemoryRoutingTableManager) GetRoutesByDestinationPlugin(ctx context
 func (mgr *InMemoryRoutingTableManager) GetRoutesForEvent(ctx context.Context, event *Event) ([]*RoutingTableEntry, error) {
 	return mgr.GetRoutesBySourcePlugin(ctx, event.Source)
 }
+
+func (mgr *InMemoryRoutingTableManager) GetRouteCount(ctx context.Context) int {
+	return len(mgr.routingTableIndex)
+}
