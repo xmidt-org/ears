@@ -181,6 +181,7 @@ type (
 	// A RouteNavigator
 	RouteNavigator interface {
 		GetAllRoutes(ctx context.Context) ([]*RoutingTableEntry, error)                                 // obtain complete local routing table
+		GetRouteCount(ctx context.Context) int                                                          // get current size of routing table
 		GetRoutesBySourcePlugin(ctx context.Context, plugin *Plugin) ([]*RoutingTableEntry, error)      // get all routes for a specifc source plugin
 		GetRoutesByDestinationPlugin(ctx context.Context, plugin *Plugin) ([]*RoutingTableEntry, error) // get all routes for a specific destination plugin
 		GetRoutesForEvent(ctx context.Context, event *Event) ([]*RoutingTableEntry, error)              // get all routes for a given event (and source plugin)
