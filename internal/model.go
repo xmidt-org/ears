@@ -41,9 +41,6 @@ const (
 	DeliveryModeNeverEver     = "never_ever"       // in case of message fatigue
 )
 
-//TODO: do wev need pluggable routing table extensions?
-//TODO: json serialization conventions?
-
 type (
 
 	// A RoutingTableEntry represents an entry in the EARS routing table
@@ -65,31 +62,6 @@ type (
 		//Hash            string          `json: "hash"`               // hash over all route entry configurations
 		Ts int `json: "ts"` // timestamp when route was created or updated
 	}
-
-	// A RoutingEntry represents an entry in the EARS routing table
-	/*RoutingTableEntry struct {
-		OrgId     string      `json: "org_id"`     // org ID for quota and rate limiting
-		AppId     string      `json: "app_id"`     // app ID for quota and rate limiting
-		UserId    string      `json: "user_id"`    // user ID / author of route
-		SrcType   string      `json: "src_type"`   // source plugin type, e.g. kafka, kds, sqs, webhook
-		SrcParams interface{} `json: "src_params"` // plugin specific configuration parameters
-		//SrcHash         string          `json: "src_hash"`           // hash over all plugin configurations
-		Source    *Plugin     `json: "source`      // pointer to source plugin instance
-		DstType   string      `json: "dst_type"`   // destination plugin type
-		DstParams interface{} `json: "dst_params"` // plugin specific configuration parameters
-		//DstHash         string          `json: "dst_hash"`           // hash over all plugin configurations
-		Destination     *Plugin         `json: "destination`         // pointer to destination plugin instance
-		RoutingData     interface{}     `json: "routing_data"`       // destination specific routing parameters, may contain dynamic elements pulled from incoming event
-		MatchPattern    *Pattern        `json: "match_pattern"`      // json pattern that must be matched for route to be taken
-		FilterPattern   *Pattern        `json: "filter_pattern"`     // json pattern that must not match for route to be taken
-		Transformation  *Transformation `json: "transformation"`     // simple structural transformation (otpional)
-		EventTsPath     string          `json: "event_ts_path"`      // jq path to extract timestamp from event (optional) - maybe this should be a pluggable router feature
-		EventTsPeriodMs int             `json: "event_ts_period_ms"` // optional event timeout - maybe this should be a pluggable router feature
-		DeliveryMode    string          `json: "delivery_mode"`      // possible values: fire_and_forget, at_least_once, exactly_once
-		Debug           bool            `json: "debug"`              // if true generate debug logs and metrics for events taking this route
-		//Hash            string          `json: "hash"`               // hash over all route entry configurations
-		Ts int `json: "ts"` // timestamp when route was created or updated
-	}*/
 
 	// A RoutingTable is a slice of routing entries and reprrsents the EARS routing table
 	RoutingTable []*RoutingTableEntry
