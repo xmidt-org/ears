@@ -116,10 +116,11 @@ type (
 	// A PluginIndex is a hashmap mapping a plugin instance hash to a plugin instance
 	PluginIndex map[string]*Plugin
 
-	// An EarsEvent bundles even payload and metadata
+	// An Event bundles even payload and metadata that travels with the event
 	Event struct {
 		Payload  interface{} `json:"payload"`  // event payload
 		Metadata interface{} `json:"metadata"` // optional metadata produced by filter chain
+		AckTree  AckTree     `json:"ack_tree"` // optional ack chain (or ack tree)
 		Source   *Plugin     `json:"source"`   // pointer to source plugin instance
 		Ts       int         `json: "ts"`      // timestamp when event was received
 	}
@@ -190,6 +191,11 @@ type (
 	// A transformer performs structural transformations on an object
 	Transformer interface {
 		Transform(message interface{}) (interface{}, error) // returns transformed object or error
+	}
+
+	AckTree interface {
+		Ack()
+		SubTree(int) []AckTree
 	}
 
 	// A RouteModifier allows modifications to a routing table
