@@ -81,7 +81,7 @@ func (ack *ackTree) NewSubTree() (SubTree, error) {
 	defer ack.lock.Unlock()
 
 	if ack.selfAcked {
-		//cannot create more sub chain if you already acked yourself
+		//cannot create more SubTree if you already acked yourself
 		return nil, &InvalidActionError{"Already acked. Cannot create more subchain"}
 	}
 
@@ -106,7 +106,7 @@ func (ack *ackTree) ack(selfAck bool) {
 	defer ack.lock.Unlock()
 
 	if ack.completed {
-		//this ack chain is already done
+		//this ack Tree is already done
 		return
 	}
 
@@ -135,7 +135,7 @@ func (ack *ackTree) startContextListener(ctx context.Context) {
 		ack.lock.Lock()
 		defer ack.lock.Unlock()
 		if ack.completed {
-			//this ack chain is already done
+			//this ack Tree is already done
 			return
 		}
 		ack.errFn(&TimeoutError{"Timeout reached"})
