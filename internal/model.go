@@ -141,7 +141,7 @@ func (plgn *Plugin) Validate() error {
 }
 
 type (
-	// A Hasher can provide a unique deterministic string hash based on its configuration parameters
+	// A Hasher can provide a unique deterministic hash string based on its configuration parameters
 	Hasher interface {
 		Hash() string
 	}
@@ -157,14 +157,15 @@ type (
 
 	// A matcher can match a pattern against an object
 	Matcher interface {
-		Match(message interface{}) (bool, error) // if pattern is contained in message the function returns true
+		Match(event *Event) (bool, error) // if pattern is contained in message the function returns true
 	}
 
 	// A transformer performs structural transformations on an object
 	Transformer interface {
-		Transform(message interface{}) (interface{}, error) // returns transformed object or error
+		Transform(event *Event) (*Event, error) // returns transformed object or error
 	}
 
+	// An AckTree is a splittable acknowledge tree object
 	AckTree interface {
 		Ack()
 		SubTree(int) []AckTree
@@ -227,7 +228,7 @@ type (
 		RemoveEventDestination(ctx context.Context, source *Plugin) error                           // stops listening for events and removes event source if event route counter is down to zero
 	}
 
-	////
+	// in sever cases of interface fatigue...
 
 	// An Interfacer can interface
 	Interfacer interface {
