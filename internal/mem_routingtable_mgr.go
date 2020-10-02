@@ -22,7 +22,7 @@ func NewInMemoryRoutingTableManager() *InMemoryRoutingTableManager {
 	return mgr
 }
 
-func (mgr *InMemoryRoutingTableManager) AddRoute(ctx *context.Context, entry *RoutingTableEntry) error {
+func (mgr *InMemoryRoutingTableManager) AddRoute(ctx context.Context, entry *RoutingTableEntry) error {
 	mgr.lock.Lock()
 	defer mgr.lock.Unlock()
 	if entry == nil {
@@ -35,7 +35,7 @@ func (mgr *InMemoryRoutingTableManager) AddRoute(ctx *context.Context, entry *Ro
 	return nil
 }
 
-func (mgr *InMemoryRoutingTableManager) RemoveRoute(ctx *context.Context, entry *RoutingTableEntry) error {
+func (mgr *InMemoryRoutingTableManager) RemoveRoute(ctx context.Context, entry *RoutingTableEntry) error {
 	mgr.lock.Lock()
 	defer mgr.lock.Unlock()
 	if entry == nil {
@@ -48,7 +48,7 @@ func (mgr *InMemoryRoutingTableManager) RemoveRoute(ctx *context.Context, entry 
 	return nil
 }
 
-func (mgr *InMemoryRoutingTableManager) ReplaceAllRoutes(ctx *context.Context, entries []*RoutingTableEntry) error {
+func (mgr *InMemoryRoutingTableManager) ReplaceAllRoutes(ctx context.Context, entries []*RoutingTableEntry) error {
 	m := make(map[string]*RoutingTableEntry)
 	for _, entry := range entries {
 		if err := entry.Validate(); err != nil {
@@ -77,7 +77,7 @@ func (mgr *InMemoryRoutingTableManager) Hash() string {
 	return hash
 }
 
-func (mgr *InMemoryRoutingTableManager) GetAllRoutes(ctx *context.Context) ([]*RoutingTableEntry, error) {
+func (mgr *InMemoryRoutingTableManager) GetAllRoutes(ctx context.Context) ([]*RoutingTableEntry, error) {
 	mgr.lock.RLock()
 	defer mgr.lock.RUnlock()
 	tbl := make([]*RoutingTableEntry, len(mgr.routingTableIndex))
@@ -88,7 +88,7 @@ func (mgr *InMemoryRoutingTableManager) GetAllRoutes(ctx *context.Context) ([]*R
 	return tbl, nil
 }
 
-func (mgr *InMemoryRoutingTableManager) GetRoutesBySourcePlugin(ctx *context.Context, plugin *Plugin) ([]*RoutingTableEntry, error) {
+func (mgr *InMemoryRoutingTableManager) GetRoutesBySourcePlugin(ctx context.Context, plugin *Plugin) ([]*RoutingTableEntry, error) {
 	mgr.lock.RLock()
 	defer mgr.lock.RUnlock()
 	tbl := make([]*RoutingTableEntry, len(mgr.routingTableIndex))
@@ -100,7 +100,7 @@ func (mgr *InMemoryRoutingTableManager) GetRoutesBySourcePlugin(ctx *context.Con
 	return tbl, nil
 }
 
-func (mgr *InMemoryRoutingTableManager) GetRoutesByDestinationPlugin(ctx *context.Context, plugin *Plugin) ([]*RoutingTableEntry, error) {
+func (mgr *InMemoryRoutingTableManager) GetRoutesByDestinationPlugin(ctx context.Context, plugin *Plugin) ([]*RoutingTableEntry, error) {
 	mgr.lock.RLock()
 	defer mgr.lock.RUnlock()
 	tbl := make([]*RoutingTableEntry, len(mgr.routingTableIndex))
@@ -112,6 +112,6 @@ func (mgr *InMemoryRoutingTableManager) GetRoutesByDestinationPlugin(ctx *contex
 	return tbl, nil
 }
 
-func (mgr *InMemoryRoutingTableManager) GetRoutesForEvent(ctx *context.Context, event *Event) ([]*RoutingTableEntry, error) {
+func (mgr *InMemoryRoutingTableManager) GetRoutesForEvent(ctx context.Context, event *Event) ([]*RoutingTableEntry, error) {
 	return mgr.GetRoutesBySourcePlugin(ctx, event.Source)
 }
