@@ -14,12 +14,12 @@ import (
 type (
 	// An EarsPlugin represents an input plugin an output plugin or a filter plugin
 	Plugin struct {
-		Type    string      `json:"type"` // source plugin type, e.g. kafka, kds, sqs, webhook, filter
-		Version string      `json:"version"`
-		Params  interface{} `json:"params"` // plugin specific configuration parameters
-		Mode    string      `json:"mode"`   // plugin mode, one of input, output and filter
-		State   string      `json:"state"`  // plugin operational state including running, stopped, error etc. (filter plugins are always in state running)
-		Name    string      `json:"name"`   // descriptive plugin name
+		Type    string                 `json:"type"` // source plugin type, e.g. kafka, kds, sqs, webhook, filter
+		Version string                 `json:"version"`
+		Params  map[string]interface{} `json:"params"` // plugin specific configuration parameters
+		Mode    string                 `json:"mode"`   // plugin mode, one of input, output and filter
+		State   string                 `json:"state"`  // plugin operational state including running, stopped, error etc. (filter plugins are always in state running)
+		Name    string                 `json:"name"`   // descriptive plugin name
 	}
 
 	InputPlugin struct {
@@ -115,7 +115,7 @@ func NewInputPlugin(ctx context.Context, rte *RoutingTableEntry) (*InputPlugin, 
 	switch rte.SrcType {
 	case PluginTypeDebug:
 		dip := new(DebugInputPlugin)
-		//TODO: pass in config params here
+		// initialize with defaults
 		dip.Payload = map[string]string{"hello": "world"}
 		dip.IntervalMs = 1000
 		dip.Rounds = 1
@@ -126,6 +126,19 @@ func NewInputPlugin(ctx context.Context, rte *RoutingTableEntry) (*InputPlugin, 
 		dip.Params = rte.SrcParams
 		dip.Routes = []*RoutingTableEntry{rte}
 		dip.EventQueuer = GetEventQueue(ctx)
+		// parse configs
+		if rte.SrcParams != nil {
+			if value, ok := rte.SrcParams["rounds"].(float64); ok {
+				dip.Rounds = int(value)
+			}
+			if value, ok := rte.SrcParams["interval_ms"].(float64); ok {
+				dip.IntervalMs = int(value)
+			}
+			if value, ok := rte.SrcParams["payload"]; ok {
+				dip.Payload = value
+			}
+		}
+		// start producing events
 		dip.DoAsync(ctx)
 		return &dip.InputPlugin, nil
 	}
