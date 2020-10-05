@@ -47,6 +47,10 @@ const (
 	DeliveryModeExactlyOnce   = "exactly_once"     // most precise delivery mode
 	DeliveryModeMostOfTheTime = "most_of_the_time" // realistic delivery mode
 	DeliveryModeNeverEver     = "never_ever"       // in case of message fatigue
+
+	// event encodings
+
+	EncodingJson = "json"
 )
 
 type (
@@ -68,7 +72,8 @@ type (
 		DeliveryMode string          `json: "delivery_mode"` // possible values: fire_and_forget, at_least_once, exactly_once
 		Debug        bool            `json: "debug"`         // if true generate debug logs and metrics for events taking this route
 		//Hash            string          `json: "hash"`               // hash over all route entry configurations
-		Ts int `json: "ts"` // timestamp when route was created or updated
+		Ts     int                 `json: "ts"` // timestamp when route was created or updated
+		tblMgr RoutingTableManager // pointer to routing table manager
 	}
 
 	// A RoutingTable is a slice of routing entries and reprrsents the EARS routing table
@@ -80,15 +85,12 @@ type (
 	// An EarsPlugin represents an input plugin an output plugin or a filter plugin
 	Plugin struct {
 		//Hash         string               `json: "hash"`      // hash over all plugin configurations
-		Type        string      `json: "type"` // source plugin type, e.g. kafka, kds, sqs, webhook, filter
-		Version     string      `json: "version"`
-		Params      interface{} `json: "params"` // plugin specific configuration parameters
-		Mode        string      `json:"mode"`    // plugin mode, one of input, output and filter
-		State       string      `json: "state"`  // plugin operational state including running, stopped, error etc. (filter plugins are always in state running)
-		Name        string      `json: "name"`
-		Description string      `json: "description"`
-		UserId      string      `json: "user_id"`
-		Ts          int         `json: "ts"` // timestamp when route was created or updated
+		Type    string      `json: "type"` // source plugin type, e.g. kafka, kds, sqs, webhook, filter
+		Version string      `json: "version"`
+		Params  interface{} `json: "params"` // plugin specific configuration parameters
+		Mode    string      `json:"mode"`    // plugin mode, one of input, output and filter
+		State   string      `json: "state"`  // plugin operational state including running, stopped, error etc. (filter plugins are always in state running)
+		Name    string      `json: "name"`   // descriptive plugin name
 	}
 
 	InputPlugin struct {
@@ -118,18 +120,6 @@ type (
 
 	// A PluginIndex is a hashmap mapping a plugin instance hash to a plugin instance
 	PluginIndex map[string]*Plugin
-
-	// An Event bundles even payload and metadata that travels with the event
-	Event struct {
-		ctx      context.Context
-		Payload  interface{} `json:"payload"`  // event payload (could also be string, but preparsed i sprobably more efficient if we want to allow deep inspection)
-		Encoding string      `json:"encoding"` // optional encoding hint to be set by input plugin
-		Metadata interface{} `json:"metadata"` // optional metadata produced by filter chain
-		AckTree  AckTree     `json:"ack_tree"` // optional ack chain (or ack tree)
-		Source   *Plugin     `json:"source"`   // pointer to source plugin instance
-		TxId     string      `json:"txid"`     // transaction ID (probably also available from context)
-		Ts       int         `json: "ts"`      // timestamp when event was received
-	}
 
 	////
 
@@ -230,11 +220,11 @@ type (
 
 	// A RouteNavigator allows searching for routes using various search criteria
 	RouteNavigator interface {
-		GetAllRoutes(ctx context.Context) ([]*RoutingTableEntry, error)                                 // obtain complete local routing table
-		GetRouteCount(ctx context.Context) int                                                          // get current size of routing table
-		GetRoutesBySourcePlugin(ctx context.Context, plugin *Plugin) ([]*RoutingTableEntry, error)      // get all routes for a specifc source plugin
-		GetRoutesByDestinationPlugin(ctx context.Context, plugin *Plugin) ([]*RoutingTableEntry, error) // get all routes for a specific destination plugin
-		GetRoutesForEvent(ctx context.Context, event *Event) ([]*RoutingTableEntry, error)              // get all routes for a given event (and source plugin)
+		GetAllRoutes(ctx context.Context) ([]*RoutingTableEntry, error)                                       // obtain complete local routing table
+		GetRouteCount(ctx context.Context) int                                                                // get current size of routing table
+		GetRoutesBySourcePlugin(ctx context.Context, plugin *InputPlugin) ([]*RoutingTableEntry, error)       // get all routes for a specifc source plugin
+		GetRoutesByDestinationPlugin(ctx context.Context, plugin *OutputPlugin) ([]*RoutingTableEntry, error) // get all routes for a specific destination plugin
+		GetRoutesForEvent(ctx context.Context, event *Event) ([]*RoutingTableEntry, error)                    // get all routes for a given event (and source plugin)
 	}
 
 	// A RouteInitializer

@@ -14,7 +14,11 @@ func (rte *RoutingTableEntry) Initialize(ctx context.Context) error {
 	//
 	// initialize input plugin
 	//
-
+	var err error
+	rte.Source, err = NewInputPlugin(ctx, rte)
+	if err != nil {
+		return err
+	}
 	//
 	// initialize filter chain
 	//
@@ -39,6 +43,10 @@ func (rte *RoutingTableEntry) Initialize(ctx context.Context) error {
 	//
 	// initialize output plugin
 	//
+	rte.Destination, err = NewOutputPlugin(ctx, rte)
+	if err != nil {
+		return err
+	}
 	return nil
 }
 
