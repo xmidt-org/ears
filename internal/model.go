@@ -139,13 +139,13 @@ type (
 		SyncDo(ctx context.Context, event *Event) error
 	}
 
+	// A matcher can match a pattern against an object
+	Matcher interface {
+		Match(ctx context.Context, event *Event, pattern interface{}) bool // if pattern is contained in event the function returns true
+	}
+
 	/*Filterer interface {
 		Filter(ctx context.Context, event *Event) (*Event, error) // if event is filtered, returns nil, if event is not filterd returns events; event may be transformed and metadata may be created in the process
-	}*/
-
-	// A matcher can match a pattern against an object
-	/*Matcher interface {
-		Match(ctx context.Context, event *Event) (bool, error) // if pattern is contained in message the function returns true
 	}*/
 
 	// A transformer performs structural transformations on an object
