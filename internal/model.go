@@ -82,40 +82,6 @@ type (
 	// A RoutingTableIndex is a hashmap mapping a routing entry hash to a routing entry pointer
 	RoutingTableIndex map[string]*RoutingTableEntry
 
-	// An EarsPlugin represents an input plugin an output plugin or a filter plugin
-	Plugin struct {
-		//Hash         string               `json: "hash"`      // hash over all plugin configurations
-		Type    string      `json: "type"` // source plugin type, e.g. kafka, kds, sqs, webhook, filter
-		Version string      `json: "version"`
-		Params  interface{} `json: "params"` // plugin specific configuration parameters
-		Mode    string      `json:"mode"`    // plugin mode, one of input, output and filter
-		State   string      `json: "state"`  // plugin operational state including running, stopped, error etc. (filter plugins are always in state running)
-		Name    string      `json: "name"`   // descriptive plugin name
-	}
-
-	InputPlugin struct {
-		Plugin
-		Routes []*RoutingTableEntry // list of routes using this plugin instance as source plugin
-	}
-
-	OutputPlugin struct {
-		Plugin
-		Routes []*RoutingTableEntry // list of routes using this plugin instance as destination plugin
-	}
-
-	FilterPlugin struct {
-		Plugin
-		FilterType        string             // filter type: filter, matcher, transformer, splitter, ttler etc.
-		FilterParams      interface{}        // parameters for filter configuration
-		RoutingTableEntry *RoutingTableEntry // routing table entry this fiter plugin belongs to
-		InputChannel      chan *Event        // channel on which this filter receives the next event
-		OutputChannel     chan *Event        // channel to which this filter forwards this event to
-		Filterer          Filterer           // an instance of the appropriate filterer
-		// note: if event is filtered it will not be forwarded
-		// note: if event is split multiple events will be forwarded
-		// note: if output channel is nil, we are at the end of the filter chain and the event is to be delivered to the output plugin of the route
-	}
-
 	//FilterFunction func(ctx context.Context, event *Event) (*[]Event, error)
 
 	// A PluginIndex is a hashmap mapping a plugin instance hash to a plugin instance
@@ -147,18 +113,6 @@ type (
 	WorkerPool struct { // tbd
 	}
 )
-
-func (plgn *Plugin) Hash(ctx context.Context) string {
-	return ""
-}
-
-func (plgn *Plugin) Validate(ctx context.Context) error {
-	return nil
-}
-
-func (plgn *Plugin) Initialize(ctx context.Context) error {
-	return nil
-}
 
 type (
 	// A Hasher can provide a unique deterministic hash string based on its configuration parameters

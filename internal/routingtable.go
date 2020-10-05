@@ -1,9 +1,20 @@
 package internal
 
-import "context"
+import (
+	"context"
+	"crypto/md5"
+	"fmt"
+)
 
 func (rte *RoutingTableEntry) Hash(ctx context.Context) string {
-	return ""
+	str := rte.Source.Hash(ctx) + rte.Destination.Hash(ctx)
+	if rte.FilterChain != nil {
+		for _, filter := range rte.FilterChain {
+			str += filter.Hash(ctx)
+		}
+	}
+	hash := fmt.Sprintf("%x", md5.Sum([]byte(str)))
+	return hash
 }
 
 func (rte *RoutingTableEntry) Validate(ctx context.Context) error {
