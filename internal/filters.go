@@ -8,10 +8,12 @@ import (
 type (
 	MatchFilter struct {
 		Pattern interface{}
+		Matcher Matcher
 	}
 
 	FilterFilter struct {
 		Pattern interface{}
+		Matcher Matcher
 	}
 
 	TransformFilter struct {
@@ -29,18 +31,20 @@ type (
 )
 
 func (mf *MatchFilter) Filter(ctx context.Context, event *Event) ([]*Event, error) {
-	// always matches
+	// passes if event matches
 	events := make([]*Event, 0)
-	//TODO: implement filter logic
-	events = append(events, event)
+	if mf.Matcher.Match(ctx, event, mf.Pattern) {
+		events = append(events, event)
+	}
 	return events, nil
 }
 
 func (mf *FilterFilter) Filter(ctx context.Context, event *Event) ([]*Event, error) {
-	// never filters
+	// passes if event does not match
 	events := make([]*Event, 0)
-	//TODO: implement filter logic
-	events = append(events, event)
+	if !mf.Matcher.Match(ctx, event, mf.Pattern) {
+		events = append(events, event)
+	}
 	return events, nil
 }
 
@@ -74,17 +78,35 @@ func NewFilterer(ctx context.Context, fp *FilterPlugin) (Filterer, error) {
 	if fp == nil {
 		return nil, errors.New("missing filter plugin config")
 	}
-	//TODO: pass in config params here
 	switch fp.Type {
 	case FilterTypeFilter:
-		return new(FilterFilter), nil
+		flt := new(FilterFilter)
+		flt.Matcher = NewDefaultPatternMatcher()
+		// parse config params
+		if fp.Params != nil {
+			if value, ok := fp.Params["pattern"]; ok {
+				flt.Pattern = value
+			}
+		}
+		return flt, nil
 	case FilterTypeMatcher:
-		return new(MatchFilter), nil
+		flt := new(MatchFilter)
+		flt.Matcher = NewDefaultPatternMatcher()
+		// parse config params
+		if fp.Params != nil {
+			if value, ok := fp.Params["pattern"]; ok {
+				flt.Pattern = value
+			}
+		}
+		return flt, nil
 	case FilterTypeTransformer:
+		//TODO: pass in config params here
 		return new(TransformFilter), nil
 	case FilterTypeTTLer:
+		//TODO: pass in config params here
 		return new(TTLFilter), nil
 	case FilterTypeSplitter:
+		//TODO: pass in config params here
 		return new(SplitFilter), nil
 	}
 	return nil, errors.New("unknown filter type " + fp.Type)
