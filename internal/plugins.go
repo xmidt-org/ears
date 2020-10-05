@@ -65,10 +65,10 @@ func (plgn *Plugin) Initialize(ctx context.Context) error {
 type (
 	DebugInputPlugin struct {
 		InputPlugin
-		IntervalMs   int
-		Rounds       int
-		Payload      interface{}
-		eventChannel chan *Event
+		IntervalMs  int
+		Rounds      int
+		Payload     interface{}
+		EventQueuer EventQueuer
 	}
 
 	DebugOutputPlugin struct {
@@ -78,10 +78,12 @@ type (
 
 func (dip *DebugInputPlugin) DoAsync(ctx context.Context) {
 	go func() {
-		if dip.eventChannel == nil {
+		if dip.EventQueuer == nil {
+			log.Error().Msg("no event queue set for debug input plugin " + dip.Hash(ctx))
 			return
 		}
 		if dip.Payload == nil {
+			log.Error().Msg("no payload configured for debug input plugin " + dip.Hash(ctx))
 			return
 		}
 		cnt := 0
@@ -92,7 +94,8 @@ func (dip *DebugInputPlugin) DoAsync(ctx context.Context) {
 			time.Sleep(time.Duration(dip.IntervalMs) * time.Millisecond)
 			event := NewEvent(ctx, &dip.InputPlugin, dip.Payload)
 			log.Debug().Msg("debug input plugin " + dip.Hash(ctx) + " produced event")
-			dip.eventChannel <- event
+			// place event on buffered event channel
+			dip.EventQueuer.AddEvent(ctx, event)
 			cnt++
 		}
 	}()
@@ -109,8 +112,6 @@ func (op *OutputPlugin) DoSync(ctx context.Context, event *Event) error {
 }
 
 func NewInputPlugin(ctx context.Context, rte *RoutingTableEntry) (*InputPlugin, error) {
-	//buf, _ := json.MarshalIndent(rte, "", "\t")
-	//fmt.Printf("%s\n", string(buf))
 	switch rte.SrcType {
 	case PluginTypeDebug:
 		dip := new(DebugInputPlugin)
@@ -124,7 +125,7 @@ func NewInputPlugin(ctx context.Context, rte *RoutingTableEntry) (*InputPlugin, 
 		dip.Name = "Debug"
 		dip.Params = rte.SrcParams
 		dip.Routes = []*RoutingTableEntry{rte}
-		dip.eventChannel = EventChannel
+		dip.EventQueuer = GetEventQueue(ctx)
 		dip.DoAsync(ctx)
 		return &dip.InputPlugin, nil
 	}
