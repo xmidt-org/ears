@@ -57,20 +57,20 @@ type (
 
 	// A RoutingTableEntry represents an entry in the EARS routing table
 	RoutingTableEntry struct {
-		OrgId        string              `json:"org_id"`        // org ID for quota and rate limiting
-		AppId        string              `json:"app_id"`        // app ID for quota and rate limiting
-		UserId       string              `json:"user_id"`       // user ID / author of route
-		SrcType      string              `json:"src_type"`      // source plugin type, e.g. kafka, kds, sqs, webhook
-		SrcParams    interface{}         `json:"src_params"`    // plugin specific configuration parameters
-		Source       *InputPlugin        `json:"source`         // pointer to source plugin instance
-		DstType      string              `json:"dst_type"`      // destination plugin type
-		DstParams    interface{}         `json:"dst_params"`    // plugin specific configuration parameters
-		Destination  *OutputPlugin       `json:"destination"`   // pointer to destination plugin instance
-		FilterChain  []*FilterPlugin     `json:"filter_chain"`  // optional list of filter plugins that will be applied in order to perform arbitrary filtering and transformation functions
-		DeliveryMode string              `json:"delivery_mode"` // possible values: fire_and_forget, at_least_once, exactly_once
-		Debug        bool                `json:"debug"`         // if true generate debug logs and metrics for events taking this route
-		Ts           int                 `json:"ts"`            // timestamp when route was created or updated
-		tblMgr       RoutingTableManager `json:"-"`             // pointer to routing table manager
+		OrgId        string                 `json:"org_id"`        // org ID for quota and rate limiting
+		AppId        string                 `json:"app_id"`        // app ID for quota and rate limiting
+		UserId       string                 `json:"user_id"`       // user ID / author of route
+		SrcType      string                 `json:"src_type"`      // source plugin type, e.g. kafka, kds, sqs, webhook
+		SrcParams    map[string]interface{} `json:"src_params"`    // plugin specific configuration parameters
+		Source       *InputPlugin           `json:"source`         // pointer to source plugin instance
+		DstType      string                 `json:"dst_type"`      // destination plugin type
+		DstParams    map[string]interface{} `json:"dst_params"`    // plugin specific configuration parameters
+		Destination  *OutputPlugin          `json:"destination"`   // pointer to destination plugin instance
+		FilterChain  []*FilterPlugin        `json:"filter_chain"`  // optional list of filter plugins that will be applied in order to perform arbitrary filtering and transformation functions
+		DeliveryMode string                 `json:"delivery_mode"` // possible values: fire_and_forget, at_least_once, exactly_once
+		Debug        bool                   `json:"debug"`         // if true generate debug logs and metrics for events taking this route
+		Ts           int                    `json:"ts"`            // timestamp when route was created or updated
+		tblMgr       RoutingTableManager    `json:"-"`             // pointer to routing table manager
 	}
 
 	// A RoutingTable is a slice of routing entries and reprrsents the EARS routing table

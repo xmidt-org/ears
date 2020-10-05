@@ -18,7 +18,14 @@ var (
 		"app_id" : "xfi",
 		"user_id" : "boris",
 		"src_type" : "debug",
-		"src_params" : {},
+		"src_params" :
+		{
+			"rounds" : 1,
+			"interval_ms" : 1000,
+			"payload" : {
+				"foo" : "bar"
+			}
+		},
 		"dst_type" : "debug",
 		"dst_params" : {},
 		"filter_chain" : [
