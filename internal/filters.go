@@ -5,14 +5,6 @@ import (
 	"errors"
 )
 
-const (
-	FilterTypeFilter      = "filter"
-	FilterTypeMatcher     = "matcher"
-	FilterTypeTransformer = "transformer"
-	FilterTypeTTLer       = "ttler"
-	FilterTypeSplitter    = "splitter"
-)
-
 type (
 	MatchFilter struct {
 		Pattern interface{}
