@@ -75,7 +75,7 @@ func NewFilterer(ctx context.Context, fp *FilterPlugin) (Filterer, error) {
 		return nil, errors.New("missing filter plugin config")
 	}
 	//TODO: pass in config params here
-	switch fp.FilterType {
+	switch fp.Type {
 	case FilterTypeFilter:
 		return new(FilterFilter), nil
 	case FilterTypeMatcher:
@@ -87,5 +87,5 @@ func NewFilterer(ctx context.Context, fp *FilterPlugin) (Filterer, error) {
 	case FilterTypeSplitter:
 		return new(SplitFilter), nil
 	}
-	return nil, errors.New("unknown filter type " + fp.FilterType)
+	return nil, errors.New("unknown filter type " + fp.Type)
 }

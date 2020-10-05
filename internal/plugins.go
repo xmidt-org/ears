@@ -2,9 +2,64 @@ package internal
 
 import (
 	"context"
+	"crypto/md5"
+	"encoding/json"
 	"errors"
+	"fmt"
 	"time"
 )
+
+type (
+	// An EarsPlugin represents an input plugin an output plugin or a filter plugin
+	Plugin struct {
+		//Hash         string               `json: "hash"`      // hash over all plugin configurations
+		Type    string      `json: "type"` // source plugin type, e.g. kafka, kds, sqs, webhook, filter
+		Version string      `json: "version"`
+		Params  interface{} `json: "params"` // plugin specific configuration parameters
+		Mode    string      `json:"mode"`    // plugin mode, one of input, output and filter
+		State   string      `json: "state"`  // plugin operational state including running, stopped, error etc. (filter plugins are always in state running)
+		Name    string      `json: "name"`   // descriptive plugin name
+	}
+
+	InputPlugin struct {
+		Plugin
+		Routes []*RoutingTableEntry // list of routes using this plugin instance as source plugin
+	}
+
+	OutputPlugin struct {
+		Plugin
+		Routes []*RoutingTableEntry // list of routes using this plugin instance as destination plugin
+	}
+
+	FilterPlugin struct {
+		Plugin
+		RoutingTableEntry *RoutingTableEntry // routing table entry this fiter plugin belongs to
+		InputChannel      chan *Event        // channel on which this filter receives the next event
+		OutputChannel     chan *Event        // channel to which this filter forwards this event to
+		Filterer          Filterer           // an instance of the appropriate filterer
+		// note: if event is filtered it will not be forwarded
+		// note: if event is split multiple events will be forwarded
+		// note: if output channel is nil, we are at the end of the filter chain and the event is to be delivered to the output plugin of the route
+	}
+)
+
+func (plgn *Plugin) Hash(ctx context.Context) string {
+	str := plgn.Type
+	if plgn.Params != nil {
+		buf, _ := json.Marshal(plgn.Params)
+		str += string(buf)
+	}
+	hash := fmt.Sprintf("%x", md5.Sum([]byte(str)))
+	return hash
+}
+
+func (plgn *Plugin) Validate(ctx context.Context) error {
+	return nil
+}
+
+func (plgn *Plugin) Initialize(ctx context.Context) error {
+	return nil
+}
 
 type (
 	DebugInputPlugin struct {
