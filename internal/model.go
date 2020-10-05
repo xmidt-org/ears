@@ -95,6 +95,12 @@ type (
 
 	FilterPlugin struct {
 		Plugin
+		RoutingTableEntry *RoutingTableEntry // routing table entry this fiter plugin belongs to
+		InputChannel      chan *Event        // channel on which this filter receives the next event
+		OutputChannel     chan *Event        // channel to which this filter forwards this event to
+		// note: if event is filtered it will not be forwarded
+		// note: if event is split multiple events will be forwarded
+		// note: if output channel is nil, we are at the end of the filter chain and the event is to be delivered to the output plugin of the route
 	}
 
 	// A PluginIndex is a hashmap mapping a plugin instance hash to a plugin instance
@@ -137,52 +143,62 @@ type (
 	}
 )
 
-func (rte *RoutingTableEntry) Hash() string {
+func (rte *RoutingTableEntry) Hash(ctx context.Context) string {
 	return ""
 }
 
-func (rte *RoutingTableEntry) Validate() error {
+func (rte *RoutingTableEntry) Validate(ctx context.Context) error {
 	return nil
 }
 
-func (plgn *Plugin) Hash() string {
+func (rte *RoutingTableEntry) Initialize(ctx context.Context) error {
+	return nil
+}
+
+func (plgn *Plugin) Hash(ctx context.Context) string {
 	return ""
 }
 
-func (plgn *Plugin) Validate() error {
+func (plgn *Plugin) Validate(ctx context.Context) error {
+	return nil
+}
+
+func (plgn *Plugin) Initialize(ctx context.Context) error {
 	return nil
 }
 
 type (
 	// A Hasher can provide a unique deterministic hash string based on its configuration parameters
 	Hasher interface {
-		Hash() string
+		Hash(ctx context.Context) string
 	}
 
 	// A validater validates its own configuration parameters and returns an error if any inconsistencies are found
 	Validater interface {
-		Validate() error
+		Validate(ctx context.Context) error
+	}
+
+	// An initializer initializes internal data structures to prepare for runtime
+	Initializer interface {
+		Initialize(ctx context.Context) error
 	}
 
 	////
-
-	F interface {
-	}
 
 	////
 
 	Filterer interface {
-		Filter(event *Event) (*Event, error) // if event is filtered, returns nil, if event is not filterd returns events; event may be transformed and metadata may be created in the process
+		Filter(ctx context.Context, event *Event) (*Event, error) // if event is filtered, returns nil, if event is not filterd returns events; event may be transformed and metadata may be created in the process
 	}
 
 	// A matcher can match a pattern against an object
 	Matcher interface {
-		Match(event *Event) (bool, error) // if pattern is contained in message the function returns true
+		Match(ctx context.Context, event *Event) (bool, error) // if pattern is contained in message the function returns true
 	}
 
 	// A transformer performs structural transformations on an object
 	Transformer interface {
-		Transform(event *Event) (*Event, error) // returns transformed object or error
+		Transform(ctx context.Context, event *Event) (*Event, error) // returns transformed object or error
 	}
 
 	// An AckTree is a splittable acknowledge tree object
@@ -198,7 +214,7 @@ type (
 		ReplaceAllRoutes(ctx context.Context, entries []*RoutingTableEntry) error // replace complete local routing table
 	}
 
-	// A RouteNavigator
+	// A RouteNavigator allows searching for routes using various search criteria
 	RouteNavigator interface {
 		GetAllRoutes(ctx context.Context) ([]*RoutingTableEntry, error)                                 // obtain complete local routing table
 		GetRouteCount(ctx context.Context) int                                                          // get current size of routing table
@@ -206,6 +222,8 @@ type (
 		GetRoutesByDestinationPlugin(ctx context.Context, plugin *Plugin) ([]*RoutingTableEntry, error) // get all routes for a specific destination plugin
 		GetRoutesForEvent(ctx context.Context, event *Event) ([]*RoutingTableEntry, error)              // get all routes for a given event (and source plugin)
 	}
+
+	// A RouteInitializer
 
 	// A RoutingTableManager supports CRUD operations on an EARS routing table
 	// note: the local in memory cache and the database backed source of truth both implement this interface!

@@ -28,10 +28,10 @@ func (mgr *InMemoryRoutingTableManager) AddRoute(ctx context.Context, entry *Rou
 	if entry == nil {
 		return errors.New("missing routing table entry")
 	}
-	if err := entry.Validate(); err != nil {
+	if err := entry.Validate(ctx); err != nil {
 		return err
 	}
-	mgr.routingTableIndex[entry.Hash()] = entry
+	mgr.routingTableIndex[entry.Hash(ctx)] = entry
 	return nil
 }
 
@@ -41,38 +41,38 @@ func (mgr *InMemoryRoutingTableManager) RemoveRoute(ctx context.Context, entry *
 	if entry == nil {
 		return errors.New("missing routing table entry")
 	}
-	if err := entry.Validate(); err != nil {
+	if err := entry.Validate(ctx); err != nil {
 		return err
 	}
-	delete(mgr.routingTableIndex, entry.Hash())
+	delete(mgr.routingTableIndex, entry.Hash(ctx))
 	return nil
 }
 
 func (mgr *InMemoryRoutingTableManager) ReplaceAllRoutes(ctx context.Context, entries []*RoutingTableEntry) error {
 	m := make(map[string]*RoutingTableEntry)
 	for _, entry := range entries {
-		if err := entry.Validate(); err != nil {
+		if err := entry.Validate(ctx); err != nil {
 			return err
 		}
-		m[entry.Hash()] = entry
+		m[entry.Hash(ctx)] = entry
 	}
 	mgr.routingTableIndex = m
 	return nil
 }
 
-func (mgr *InMemoryRoutingTableManager) Validate() error {
+func (mgr *InMemoryRoutingTableManager) Validate(ctx context.Context) error {
 	for _, entry := range mgr.routingTableIndex {
-		if err := entry.Validate(); err != nil {
+		if err := entry.Validate(ctx); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-func (mgr *InMemoryRoutingTableManager) Hash() string {
+func (mgr *InMemoryRoutingTableManager) Hash(ctx context.Context) string {
 	hash := ""
 	for _, entry := range mgr.routingTableIndex {
-		hash = hash + entry.Hash()
+		hash = hash + entry.Hash(ctx)
 	}
 	return hash
 }
@@ -93,7 +93,7 @@ func (mgr *InMemoryRoutingTableManager) GetRoutesBySourcePlugin(ctx context.Cont
 	defer mgr.lock.RUnlock()
 	tbl := make([]*RoutingTableEntry, len(mgr.routingTableIndex))
 	for _, entry := range mgr.routingTableIndex {
-		if entry.Source.Hash() == plugin.Hash() {
+		if entry.Source.Hash(ctx) == plugin.Hash(ctx) {
 			tbl = append(tbl, entry)
 		}
 	}
@@ -105,7 +105,7 @@ func (mgr *InMemoryRoutingTableManager) GetRoutesByDestinationPlugin(ctx context
 	defer mgr.lock.RUnlock()
 	tbl := make([]*RoutingTableEntry, len(mgr.routingTableIndex))
 	for _, entry := range mgr.routingTableIndex {
-		if entry.Destination.Hash() == plugin.Hash() {
+		if entry.Destination.Hash(ctx) == plugin.Hash(ctx) {
 			tbl = append(tbl, entry)
 		}
 	}
