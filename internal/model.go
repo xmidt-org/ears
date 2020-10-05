@@ -47,7 +47,6 @@ const (
 	DeliveryModeExactlyOnce   = "exactly_once"     // most precise delivery mode
 	DeliveryModeMostOfTheTime = "most_of_the_time" // realistic delivery mode
 	DeliveryModeNeverEver     = "never_ever"       // in case of message fatigue
-
 )
 
 type (
@@ -122,11 +121,13 @@ type (
 
 	// An Event bundles even payload and metadata that travels with the event
 	Event struct {
+		ctx      context.Context
 		Payload  interface{} `json:"payload"`  // event payload (could also be string, but preparsed i sprobably more efficient if we want to allow deep inspection)
 		Encoding string      `json:"encoding"` // optional encoding hint to be set by input plugin
 		Metadata interface{} `json:"metadata"` // optional metadata produced by filter chain
 		AckTree  AckTree     `json:"ack_tree"` // optional ack chain (or ack tree)
 		Source   *Plugin     `json:"source"`   // pointer to source plugin instance
+		TxId     string      `json:"txid"`     // transaction ID (probably also available from context)
 		Ts       int         `json: "ts"`      // timestamp when event was received
 	}
 
@@ -280,7 +281,7 @@ type (
 		RemoveEventDestination(ctx context.Context, source *Plugin) error                           // stops listening for events and removes event source if event route counter is down to zero
 	}
 
-	// in sever cases of interface fatigue...
+	// in severe cases of interface fatigue...
 
 	// An Interfacer can interface
 	Interfacer interface {
