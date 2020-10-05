@@ -6,11 +6,16 @@ import (
 	"sync"
 )
 
+const (
+	EventQueueDepth = 1000
+)
+
 type (
 	InMemoryRoutingTableManager struct {
 		//TODO: add index by source plugin
 		routingTableIndex RoutingTableIndex
 		lock              sync.RWMutex
+		eventQueue        chan *Event
 	}
 )
 
@@ -19,6 +24,7 @@ func NewInMemoryRoutingTableManager() *InMemoryRoutingTableManager {
 	mgr := new(InMemoryRoutingTableManager)
 	mgr.routingTableIndex = make(map[string]*RoutingTableEntry)
 	mgr.lock = sync.RWMutex{}
+	mgr.eventQueue = make(chan *Event, EventQueueDepth)
 	return mgr
 }
 
@@ -88,7 +94,7 @@ func (mgr *InMemoryRoutingTableManager) GetAllRoutes(ctx context.Context) ([]*Ro
 	return tbl, nil
 }
 
-func (mgr *InMemoryRoutingTableManager) GetRoutesBySourcePlugin(ctx context.Context, plugin *Plugin) ([]*RoutingTableEntry, error) {
+func (mgr *InMemoryRoutingTableManager) GetRoutesBySourcePlugin(ctx context.Context, plugin *InputPlugin) ([]*RoutingTableEntry, error) {
 	mgr.lock.RLock()
 	defer mgr.lock.RUnlock()
 	tbl := make([]*RoutingTableEntry, len(mgr.routingTableIndex))
@@ -100,7 +106,7 @@ func (mgr *InMemoryRoutingTableManager) GetRoutesBySourcePlugin(ctx context.Cont
 	return tbl, nil
 }
 
-func (mgr *InMemoryRoutingTableManager) GetRoutesByDestinationPlugin(ctx context.Context, plugin *Plugin) ([]*RoutingTableEntry, error) {
+func (mgr *InMemoryRoutingTableManager) GetRoutesByDestinationPlugin(ctx context.Context, plugin *OutputPlugin) ([]*RoutingTableEntry, error) {
 	mgr.lock.RLock()
 	defer mgr.lock.RUnlock()
 	tbl := make([]*RoutingTableEntry, len(mgr.routingTableIndex))
