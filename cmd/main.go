@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"time"
 
 	"github.com/xmidt-org/ears/internal"
 
@@ -50,6 +51,8 @@ func main() {
 		log.Error().Msg(err.Error())
 		return
 	}
+	buf, _ := json.MarshalIndent(rte, "", "\t")
+	fmt.Printf("%s\n", string(buf))
 	err = rtmgr.AddRoute(ctx, &rte)
 	if err != nil {
 		log.Error().Msg(err.Error())
@@ -64,4 +67,5 @@ func main() {
 	if len(allRoutes) > 0 {
 		log.Debug().Msg(fmt.Sprintf("first route has hash %s", allRoutes[0].Hash(ctx)))
 	}
+	time.Sleep(time.Duration(60) * time.Second)
 }

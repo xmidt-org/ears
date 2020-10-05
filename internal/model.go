@@ -65,8 +65,8 @@ type (
 		Source       *InputPlugin        `json:"source`         // pointer to source plugin instance
 		DstType      string              `json:"dst_type"`      // destination plugin type
 		DstParams    interface{}         `json:"dst_params"`    // plugin specific configuration parameters
-		Destination  *OutputPlugin       `json:"destination`    // pointer to destination plugin instance
-		FilterChain  []*FilterPlugin     `json:"filter_chain`   // optional list of filter plugins that will be applied in order to perform arbitrary filtering and transformation functions
+		Destination  *OutputPlugin       `json:"destination"`   // pointer to destination plugin instance
+		FilterChain  []*FilterPlugin     `json:"filter_chain"`  // optional list of filter plugins that will be applied in order to perform arbitrary filtering and transformation functions
 		DeliveryMode string              `json:"delivery_mode"` // possible values: fire_and_forget, at_least_once, exactly_once
 		Debug        bool                `json:"debug"`         // if true generate debug logs and metrics for events taking this route
 		Ts           int                 `json:"ts"`            // timestamp when route was created or updated
@@ -101,14 +101,14 @@ type (
 		Specification interface{} `json: "spec"` // json instructions for transformation
 	}*/
 
-	EventQueue struct { //tbd
-	}
+	/*EventQueue struct { //tbd
+	}*/
 
-	Worker struct { //tbd
-	}
+	/*Worker struct { //tbd
+	}*/
 
-	WorkerPool struct { // tbd
-	}
+	/*WorkerPool struct { // tbd
+	}*/
 )
 
 type (

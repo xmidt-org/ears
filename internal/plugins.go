@@ -7,18 +7,19 @@ import (
 	"errors"
 	"fmt"
 	"time"
+
+	"github.com/rs/zerolog/log"
 )
 
 type (
 	// An EarsPlugin represents an input plugin an output plugin or a filter plugin
 	Plugin struct {
-		//Hash         string               `json: "hash"`      // hash over all plugin configurations
-		Type    string      `json: "type"` // source plugin type, e.g. kafka, kds, sqs, webhook, filter
-		Version string      `json: "version"`
-		Params  interface{} `json: "params"` // plugin specific configuration parameters
-		Mode    string      `json:"mode"`    // plugin mode, one of input, output and filter
-		State   string      `json: "state"`  // plugin operational state including running, stopped, error etc. (filter plugins are always in state running)
-		Name    string      `json: "name"`   // descriptive plugin name
+		Type    string      `json:"type"` // source plugin type, e.g. kafka, kds, sqs, webhook, filter
+		Version string      `json:"version"`
+		Params  interface{} `json:"params"` // plugin specific configuration parameters
+		Mode    string      `json:"mode"`   // plugin mode, one of input, output and filter
+		State   string      `json:"state"`  // plugin operational state including running, stopped, error etc. (filter plugins are always in state running)
+		Name    string      `json:"name"`   // descriptive plugin name
 	}
 
 	InputPlugin struct {
@@ -64,9 +65,9 @@ func (plgn *Plugin) Initialize(ctx context.Context) error {
 type (
 	DebugInputPlugin struct {
 		InputPlugin
-		IntervalMs int
-		Payload    interface{}
-		eventQueue chan *Event
+		IntervalMs   int
+		Payload      interface{}
+		eventChannel chan *Event
 	}
 
 	DebugOutputPlugin struct {
@@ -76,7 +77,7 @@ type (
 
 func (dip *DebugInputPlugin) DoAsync(ctx context.Context) {
 	go func() {
-		if dip.eventQueue == nil {
+		if dip.eventChannel == nil {
 			return
 		}
 		if dip.Payload == nil {
@@ -85,13 +86,19 @@ func (dip *DebugInputPlugin) DoAsync(ctx context.Context) {
 		for {
 			time.Sleep(time.Duration(dip.IntervalMs) * time.Millisecond)
 			event := NewEvent(ctx, &dip.InputPlugin, dip.Payload)
-			dip.eventQueue <- event
+			log.Debug().Msg("debug input plugin " + dip.Hash(ctx) + " produced event")
+			dip.eventChannel <- event
 		}
 	}()
 }
 
 func (dop *DebugOutputPlugin) DoSync(ctx context.Context, event *Event) error {
-	//TODO: print event
+	log.Debug().Msg("debug output plugin " + dop.Hash(ctx) + " consumed event")
+	return nil
+}
+
+func (op *OutputPlugin) DoSync(ctx context.Context, event *Event) error {
+	log.Debug().Msg("output plugin " + op.Hash(ctx) + " consumed event")
 	return nil
 }
 
@@ -110,6 +117,8 @@ func NewInputPlugin(ctx context.Context, rte *RoutingTableEntry) (*InputPlugin, 
 		dip.Name = "Debug"
 		dip.Params = rte.SrcParams
 		dip.Routes = []*RoutingTableEntry{rte}
+		dip.eventChannel = EventChannel
+		dip.DoAsync(ctx)
 		return &dip.InputPlugin, nil
 	}
 	return nil, errors.New("unknown input plugin type " + rte.SrcType)
