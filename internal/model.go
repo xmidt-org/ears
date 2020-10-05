@@ -16,7 +16,7 @@ const (
 	PluginTypeGears  = "gears"  // deliver to kafka in masheens envelope
 	PluginTypeNull   = "null"   // black whole for events for testing
 	PluginTypeDebug  = "debug"  // debug plugin
-	PluginTypeFilter = "filter" // a filter plugin that filter sor transforms and event
+	PluginTypeFilter = "filter" // a filter plugin that filters or transforms and event
 
 	// plugin modes
 
@@ -72,7 +72,7 @@ type (
 	// An EarsPlugin represents an input plugin an output plugin or a filter plugin
 	Plugin struct {
 		//Hash         string               `json: "hash"`      // hash over all plugin configurations
-		Type        string      `json: "type"` // source plugin type, e.g. kafka, kds, sqs, webhook
+		Type        string      `json: "type"` // source plugin type, e.g. kafka, kds, sqs, webhook, filter
 		Version     string      `json: "version"`
 		Params      interface{} `json: "params"` // plugin specific configuration parameters
 		Mode        string      `json:"mode"`    // plugin mode, one of input, output and filter
@@ -95,13 +95,18 @@ type (
 
 	FilterPlugin struct {
 		Plugin
+		FilterType        string             // filter type: filter, matcher, transformer, splitter, ttler etc.
+		FilterParams      interface{}        // parameters for filter configuration
 		RoutingTableEntry *RoutingTableEntry // routing table entry this fiter plugin belongs to
 		InputChannel      chan *Event        // channel on which this filter receives the next event
 		OutputChannel     chan *Event        // channel to which this filter forwards this event to
+		Filterer          Filterer           // an instance of the appropriate filterer
 		// note: if event is filtered it will not be forwarded
 		// note: if event is split multiple events will be forwarded
 		// note: if output channel is nil, we are at the end of the filter chain and the event is to be delivered to the output plugin of the route
 	}
+
+	FilterFunction func(ctx context.Context, event *Event) (*[]Event, error)
 
 	// A PluginIndex is a hashmap mapping a plugin instance hash to a plugin instance
 	PluginIndex map[string]*Plugin
@@ -118,20 +123,20 @@ type (
 
 	////
 
-	Filter struct {
+	/*Filter struct {
 		Type   string      `json: "filter_type"`
 		Params interface{} `json: "params"`
-	}
+	}*/
 
 	// A Pattern represents an object for pattern matching, implements the matcher interface, other metadata may be added
-	Pattern struct {
+	/*Pattern struct {
 		Specification interface{} `json: "spec"` // json pattern for matching
-	}
+	}*/
 
 	// A Transformation represents an object for structural transformations, implements the transformer interface, other metadata may be added
-	Transformation struct {
+	/*Transformation struct {
 		Specification interface{} `json: "spec"` // json instructions for transformation
-	}
+	}*/
 
 	EventQueue struct { //tbd
 	}
@@ -183,23 +188,24 @@ type (
 		Initialize(ctx context.Context) error
 	}
 
-	////
-
-	////
-
+	// A Filterer is a generic interface that can filter, match, transform, split or do any number of things with a given event
 	Filterer interface {
-		Filter(ctx context.Context, event *Event) (*Event, error) // if event is filtered, returns nil, if event is not filterd returns events; event may be transformed and metadata may be created in the process
+		Filter(ctx context.Context, event *Event) ([]*Event, error) // the event slice can contain 0 (filter case), 1 (match or transform case) or n events (split case)
 	}
+
+	/*Filterer interface {
+		Filter(ctx context.Context, event *Event) (*Event, error) // if event is filtered, returns nil, if event is not filterd returns events; event may be transformed and metadata may be created in the process
+	}*/
 
 	// A matcher can match a pattern against an object
-	Matcher interface {
+	/*Matcher interface {
 		Match(ctx context.Context, event *Event) (bool, error) // if pattern is contained in message the function returns true
-	}
+	}*/
 
 	// A transformer performs structural transformations on an object
-	Transformer interface {
+	/*Transformer interface {
 		Transform(ctx context.Context, event *Event) (*Event, error) // returns transformed object or error
-	}
+	}*/
 
 	// An AckTree is a splittable acknowledge tree object
 	AckTree interface {
