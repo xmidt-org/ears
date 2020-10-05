@@ -96,6 +96,8 @@ func (dop *DebugOutputPlugin) DoSync(ctx context.Context, event *Event) error {
 }
 
 func NewInputPlugin(ctx context.Context, rte *RoutingTableEntry) (*InputPlugin, error) {
+	//buf, _ := json.MarshalIndent(rte, "", "\t")
+	//fmt.Printf("%s\n", string(buf))
 	switch rte.SrcType {
 	case PluginTypeDebug:
 		dip := new(DebugInputPlugin)

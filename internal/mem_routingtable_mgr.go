@@ -40,6 +40,7 @@ func (mgr *InMemoryRoutingTableManager) AddRoute(ctx context.Context, entry *Rou
 	if err := entry.Initialize(ctx); err != nil {
 		return err
 	}
+	entry.tblMgr = mgr
 	mgr.routingTableIndex[entry.Hash(ctx)] = entry
 	return nil
 }

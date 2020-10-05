@@ -41,6 +41,8 @@ func (rte *RoutingTableEntry) Initialize(ctx context.Context) error {
 		for idx, fp := range rte.FilterChain {
 			var err error
 			fp.Filterer, err = NewFilterer(ctx, fp)
+			fp.State = PluginStateReady
+			fp.Mode = PluginModeFilter
 			if err != nil {
 				return err
 			}
