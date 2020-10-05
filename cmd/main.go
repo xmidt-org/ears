@@ -31,6 +31,10 @@ var (
 				"params" : {}
 			},
 			{
+				"type" : "split",
+				"params" : {}
+			},
+			{
 				"type" : "transform",
 				"params" : {}
 			}

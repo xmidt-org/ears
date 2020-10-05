@@ -66,6 +66,7 @@ type (
 	DebugInputPlugin struct {
 		InputPlugin
 		IntervalMs   int
+		Rounds       int
 		Payload      interface{}
 		eventChannel chan *Event
 	}
@@ -83,11 +84,16 @@ func (dip *DebugInputPlugin) DoAsync(ctx context.Context) {
 		if dip.Payload == nil {
 			return
 		}
+		cnt := 0
 		for {
+			if dip.Rounds > 0 && cnt >= dip.Rounds {
+				return
+			}
 			time.Sleep(time.Duration(dip.IntervalMs) * time.Millisecond)
 			event := NewEvent(ctx, &dip.InputPlugin, dip.Payload)
 			log.Debug().Msg("debug input plugin " + dip.Hash(ctx) + " produced event")
 			dip.eventChannel <- event
+			cnt++
 		}
 	}()
 }
@@ -111,6 +117,7 @@ func NewInputPlugin(ctx context.Context, rte *RoutingTableEntry) (*InputPlugin, 
 		//TODO: pass in config params here
 		dip.Payload = map[string]string{"hello": "world"}
 		dip.IntervalMs = 1000
+		dip.Rounds = 1
 		dip.Type = PluginTypeDebug
 		dip.Mode = PluginModeInput
 		dip.State = PluginStateReady
