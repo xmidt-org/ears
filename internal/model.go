@@ -51,14 +51,14 @@ type (
 		SrcType   string      `json: "src_type"`   // source plugin type, e.g. kafka, kds, sqs, webhook
 		SrcParams interface{} `json: "src_params"` // plugin specific configuration parameters
 		//SrcHash         string          `json: "src_hash"`           // hash over all plugin configurations
-		Source    *Plugin     `json: "source`      // pointer to source plugin instance
-		DstType   string      `json: "dst_type"`   // destination plugin type
-		DstParams interface{} `json: "dst_params"` // plugin specific configuration parameters
+		Source    *InputPlugin `json: "source`      // pointer to source plugin instance
+		DstType   string       `json: "dst_type"`   // destination plugin type
+		DstParams interface{}  `json: "dst_params"` // plugin specific configuration parameters
 		//DstHash         string          `json: "dst_hash"`           // hash over all plugin configurations
-		Destination  *Plugin   `json: "destination`    // pointer to destination plugin instance
-		FilterChain  []*Plugin `json: "filter_chain`   // optional list of filter plugins that will be applied in order to perform arbitrary filtering and transformation functions
-		DeliveryMode string    `json: "delivery_mode"` // possible values: fire_and_forget, at_least_once, exactly_once
-		Debug        bool      `json: "debug"`         // if true generate debug logs and metrics for events taking this route
+		Destination  *OutputPlugin   `json: "destination`    // pointer to destination plugin instance
+		FilterChain  []*FilterPlugin `json: "filter_chain`   // optional list of filter plugins that will be applied in order to perform arbitrary filtering and transformation functions
+		DeliveryMode string          `json: "delivery_mode"` // possible values: fire_and_forget, at_least_once, exactly_once
+		Debug        bool            `json: "debug"`         // if true generate debug logs and metrics for events taking this route
 		//Hash            string          `json: "hash"`               // hash over all route entry configurations
 		Ts int `json: "ts"` // timestamp when route was created or updated
 	}
@@ -72,17 +72,29 @@ type (
 	// An EarsPlugin represents an input plugin an output plugin or a filter plugin
 	Plugin struct {
 		//Hash         string               `json: "hash"`      // hash over all plugin configurations
-		Type         string      `json: "type"` // source plugin type, e.g. kafka, kds, sqs, webhook
-		Version      string      `json: "version"`
-		Params       interface{} `json: "params"` // plugin specific configuration parameters
-		Mode         string      `json:"mode"`    // plugin mode, one of input, output and filter
-		State        string      `json: "state"`  // plugin operational state including running, stopped, error etc
-		Name         string      `json: "name"`
-		Description  string      `json: "description"`
-		UserId       string      `json: "user_id"`
-		Ts           int
-		inputRoutes  []*RoutingTableEntry // list of routes using this plugin instance as source plugin
-		outputRoutes []*RoutingTableEntry // list of routes using this plugin instance as output plugin
+		Type        string      `json: "type"` // source plugin type, e.g. kafka, kds, sqs, webhook
+		Version     string      `json: "version"`
+		Params      interface{} `json: "params"` // plugin specific configuration parameters
+		Mode        string      `json:"mode"`    // plugin mode, one of input, output and filter
+		State       string      `json: "state"`  // plugin operational state including running, stopped, error etc. (filter plugins are always in state running)
+		Name        string      `json: "name"`
+		Description string      `json: "description"`
+		UserId      string      `json: "user_id"`
+		Ts          int         `json: "ts"` // timestamp when route was created or updated
+	}
+
+	InputPlugin struct {
+		Plugin
+		Routes []*RoutingTableEntry // list of routes using this plugin instance as source plugin
+	}
+
+	OutputPlugin struct {
+		Plugin
+		Routes []*RoutingTableEntry // list of routes using this plugin instance as destination plugin
+	}
+
+	FilterPlugin struct {
+		Plugin
 	}
 
 	// A PluginIndex is a hashmap mapping a plugin instance hash to a plugin instance
@@ -90,7 +102,8 @@ type (
 
 	// An Event bundles even payload and metadata that travels with the event
 	Event struct {
-		Payload  interface{} `json:"payload"`  // event payload
+		Payload  interface{} `json:"payload"`  // event payload (could also be string, but preparsed i sprobably more efficient if we want to allow deep inspection)
+		Encoding string      `json:"encoding"` // optional encoding hint to be set by input plugin
 		Metadata interface{} `json:"metadata"` // optional metadata produced by filter chain
 		AckTree  AckTree     `json:"ack_tree"` // optional ack chain (or ack tree)
 		Source   *Plugin     `json:"source"`   // pointer to source plugin instance
@@ -150,6 +163,13 @@ type (
 	Validater interface {
 		Validate() error
 	}
+
+	////
+
+	F interface {
+	}
+
+	////
 
 	Filterer interface {
 		Filter(event *Event) (*Event, error) // if event is filtered, returns nil, if event is not filterd returns events; event may be transformed and metadata may be created in the process
