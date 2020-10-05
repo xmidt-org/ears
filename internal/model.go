@@ -18,6 +18,14 @@ const (
 	PluginTypeDebug  = "debug"  // debug plugin
 	PluginTypeFilter = "filter" // a filter plugin that filters or transforms and event
 
+	// filter types
+
+	FilterTypeFilter      = "filter"
+	FilterTypeMatcher     = "matcher"
+	FilterTypeTransformer = "transformer"
+	FilterTypeTTLer       = "ttler"
+	FilterTypeSplitter    = "splitter"
+
 	// plugin modes
 
 	PluginModeInput  = "input"  // input plugin
@@ -39,6 +47,7 @@ const (
 	DeliveryModeExactlyOnce   = "exactly_once"     // most precise delivery mode
 	DeliveryModeMostOfTheTime = "most_of_the_time" // realistic delivery mode
 	DeliveryModeNeverEver     = "never_ever"       // in case of message fatigue
+
 )
 
 type (
@@ -106,7 +115,7 @@ type (
 		// note: if output channel is nil, we are at the end of the filter chain and the event is to be delivered to the output plugin of the route
 	}
 
-	FilterFunction func(ctx context.Context, event *Event) (*[]Event, error)
+	//FilterFunction func(ctx context.Context, event *Event) (*[]Event, error)
 
 	// A PluginIndex is a hashmap mapping a plugin instance hash to a plugin instance
 	PluginIndex map[string]*Plugin
@@ -148,18 +157,6 @@ type (
 	}
 )
 
-func (rte *RoutingTableEntry) Hash(ctx context.Context) string {
-	return ""
-}
-
-func (rte *RoutingTableEntry) Validate(ctx context.Context) error {
-	return nil
-}
-
-func (rte *RoutingTableEntry) Initialize(ctx context.Context) error {
-	return nil
-}
-
 func (plgn *Plugin) Hash(ctx context.Context) string {
 	return ""
 }
@@ -191,6 +188,16 @@ type (
 	// A Filterer is a generic interface that can filter, match, transform, split or do any number of things with a given event
 	Filterer interface {
 		Filter(ctx context.Context, event *Event) ([]*Event, error) // the event slice can contain 0 (filter case), 1 (match or transform case) or n events (split case)
+	}
+
+	// An AsyncDoer processes things of similar type asynchronously, one after another, usually by listening on a blocking channel
+	AsyncDoer interface {
+		AsyncDo(ctx context.Context)
+	}
+
+	// A SyncDoer processes things of similar type ynchronously, one after another, by explicit function call
+	SyncDoer interface {
+		SyncDo(ctx context.Context, event *Event) error
 	}
 
 	/*Filterer interface {
@@ -278,11 +285,5 @@ type (
 	// An Interfacer can interface
 	Interfacer interface {
 		Interface()
-	}
-
-	// A Doer does things - this is the interface for an EARS worker
-	Doer interface {
-		Start() error
-		Stop() error
 	}
 )
