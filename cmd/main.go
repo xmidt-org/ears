@@ -31,11 +31,19 @@ var (
 		"filter_chain" : [
 			{
 				"type" : "match",
-				"params" : {}
+				"params" : {
+					"pattern" : {
+						"foo" : "bar"
+					}
+				}
 			},
 			{
 				"type" : "filter",
-				"params" : {}
+				"params" : {
+					"pattern" : {
+						"hello" : "world"
+					}
+				}
 			},
 			{
 				"type" : "split",
