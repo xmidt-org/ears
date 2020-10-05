@@ -4,6 +4,8 @@ import (
 	"context"
 	"crypto/md5"
 	"fmt"
+
+	"github.com/rs/zerolog/log"
 )
 
 func (rte *RoutingTableEntry) Hash(ctx context.Context) string {
@@ -30,6 +32,7 @@ func (rte *RoutingTableEntry) Initialize(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
+	log.Debug().Msg("init")
 	//
 	// initialize filter chain
 	//
@@ -43,14 +46,20 @@ func (rte *RoutingTableEntry) Initialize(ctx context.Context) error {
 			fp.Filterer, err = NewFilterer(ctx, fp)
 			fp.State = PluginStateReady
 			fp.Mode = PluginModeFilter
+			fp.RoutingTableEntry = rte
 			if err != nil {
 				return err
 			}
-			fp.InputChannel = eventChannel
+			if idx == 0 {
+				fp.InputChannel = EventChannel
+			} else {
+				fp.InputChannel = eventChannel
+			}
 			if idx < len(rte.FilterChain)-1 {
 				fp.OutputChannel = make(chan *Event)
 				eventChannel = fp.OutputChannel
 			}
+			fp.DoAsync(ctx)
 		}
 	}
 	//
@@ -64,6 +73,7 @@ func (rte *RoutingTableEntry) Initialize(ctx context.Context) error {
 }
 
 func (fp *FilterPlugin) DoSync(ctx context.Context, event *Event) error {
+	log.Debug().Msg(fp.Type + " filter " + fp.Hash(ctx) + " passed")
 	filteredEvents, err := fp.Filterer.Filter(ctx, event)
 	if err != nil {
 		return err
@@ -72,7 +82,7 @@ func (fp *FilterPlugin) DoSync(ctx context.Context, event *Event) error {
 		if fp.OutputChannel != nil {
 			fp.OutputChannel <- e
 		} else {
-			//TODO pass event to output plugin
+			fp.RoutingTableEntry.Destination.DoSync(ctx, e)
 		}
 	}
 	return nil
@@ -85,6 +95,7 @@ func (fp *FilterPlugin) DoAsync(ctx context.Context) {
 		}
 		for {
 			inputEvent := <-fp.InputChannel
+			log.Debug().Msg(fp.Type + " filter " + fp.Hash(ctx) + " passed")
 			filteredEvents, err := fp.Filterer.Filter(ctx, inputEvent)
 			if err != nil {
 				return
@@ -93,7 +104,7 @@ func (fp *FilterPlugin) DoAsync(ctx context.Context) {
 				if fp.OutputChannel != nil {
 					fp.OutputChannel <- e
 				} else {
-					//TODO pass event to output plugin
+					fp.RoutingTableEntry.Destination.DoSync(ctx, e)
 				}
 			}
 		}

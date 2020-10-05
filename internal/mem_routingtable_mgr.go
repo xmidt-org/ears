@@ -15,8 +15,11 @@ type (
 		//TODO: add index by source plugin
 		routingTableIndex RoutingTableIndex
 		lock              sync.RWMutex
-		eventQueue        chan *Event
 	}
+)
+
+var (
+	EventChannel = make(chan *Event, EventQueueDepth)
 )
 
 // NewInMemoryRoutingTableManager creates a new local in memory routing table cache
@@ -24,7 +27,6 @@ func NewInMemoryRoutingTableManager() *InMemoryRoutingTableManager {
 	mgr := new(InMemoryRoutingTableManager)
 	mgr.routingTableIndex = make(map[string]*RoutingTableEntry)
 	mgr.lock = sync.RWMutex{}
-	mgr.eventQueue = make(chan *Event, EventQueueDepth)
 	return mgr
 }
 
