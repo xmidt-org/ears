@@ -101,9 +101,6 @@ type (
 		Specification interface{} `json: "spec"` // json instructions for transformation
 	}*/
 
-	/*EventQueue struct { //tbd
-	}*/
-
 	/*Worker struct { //tbd
 	}*/
 
@@ -196,10 +193,11 @@ type (
 
 	// An EventQueuer represents an ears event queue
 	EventQueuer interface {
-		AddEvent(ctx context.Context, event *Event) error // add event to queue
-		NextEvent(ctx context.Context) (*Event, error)    // blocking call to get next event and remove it from queue
-		GetEventCount(ctx context.Context) (int error)    // get maximum number of elements in queue
-		GetMaxEventCount(ctx context.Context) int         // get capacity of event queue
+		AddEvent(ctx context.Context, event *Event) // add event to queue
+		NextEvent(ctx context.Context) *Event       // blocking call to get next event and remove it from queue
+		GetEventCount(ctx context.Context) int      // get maximum number of elements in queue
+		GetMaxEventCount(ctx context.Context) int   // get capacity of event queue
+		GetChannel(ctx context.Context) chan *Event // expose internal event channel
 	}
 
 	// An EventSourceManager manages all event source plugins for a live ears instance

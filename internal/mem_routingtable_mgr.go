@@ -6,20 +6,12 @@ import (
 	"sync"
 )
 
-const (
-	EventQueueDepth = 1000
-)
-
 type (
 	InMemoryRoutingTableManager struct {
 		//TODO: add index by source plugin
 		routingTableIndex RoutingTableIndex
 		lock              sync.RWMutex
 	}
-)
-
-var (
-	EventChannel = make(chan *Event, EventQueueDepth)
 )
 
 // NewInMemoryRoutingTableManager creates a new local in memory routing table cache

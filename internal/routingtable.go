@@ -51,7 +51,7 @@ func (rte *RoutingTableEntry) Initialize(ctx context.Context) error {
 				return err
 			}
 			if idx == 0 {
-				fp.InputChannel = EventChannel
+				fp.InputChannel = GetEventQueue(ctx).GetChannel(ctx)
 			} else {
 				fp.InputChannel = eventChannel
 			}
