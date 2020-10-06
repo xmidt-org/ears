@@ -41,20 +41,20 @@ type (
 
 	InputPlugin struct {
 		Plugin
-		Routes []*RoutingTableEntry // list of routes using this plugin instance as source plugin
+		routes []*RoutingTableEntry // list of routes using this plugin instance as source plugin
 	}
 
 	OutputPlugin struct {
 		Plugin
-		Routes []*RoutingTableEntry // list of routes using this plugin instance as destination plugin
+		routes []*RoutingTableEntry // list of routes using this plugin instance as destination plugin
 	}
 
 	FilterPlugin struct {
 		Plugin
-		RoutingTableEntry *RoutingTableEntry // routing table entry this fiter plugin belongs to
-		InputChannel      chan *Event        // channel on which this filter receives the next event
-		OutputChannel     chan *Event        // channel to which this filter forwards this event to
-		Filterer          Filterer           // an instance of the appropriate filterer
+		routingTableEntry *RoutingTableEntry // routing table entry this fiter plugin belongs to
+		inputChannel      chan *Event        // channel on which this filter receives the next event
+		outputChannel     chan *Event        // channel to which this filter forwards this event to
+		filterer          Filterer           // an instance of the appropriate filterer
 		// note: if event is filtered it will not be forwarded
 		// note: if event is split multiple events will be forwarded
 		// note: if output channel is nil, we are at the end of the filter chain and the event is to be delivered to the output plugin of the route
@@ -141,14 +141,14 @@ func NewInputPlugin(ctx context.Context, rte *RoutingTableEntry) (*InputPlugin, 
 		dip.State = PluginStateReady
 		dip.Name = "Debug"
 		dip.Params = rte.SrcParams
-		dip.Routes = []*RoutingTableEntry{rte}
+		dip.routes = []*RoutingTableEntry{rte}
 		dip.EventQueuer = GetEventQueue(ctx)
-		// parse configs
+		// parse configs and overwrite defaults
 		if rte.SrcParams != nil {
 			if value, ok := rte.SrcParams["rounds"].(float64); ok {
 				dip.Rounds = int(value)
 			}
-			if value, ok := rte.SrcParams["interval_ms"].(float64); ok {
+			if value, ok := rte.SrcParams["intervalMS"].(float64); ok {
 				dip.IntervalMs = int(value)
 			}
 			if value, ok := rte.SrcParams["payload"]; ok {
@@ -171,7 +171,7 @@ func NewOutputPlugin(ctx context.Context, rte *RoutingTableEntry) (*OutputPlugin
 		dop.State = PluginStateReady
 		dop.Name = "Debug"
 		dop.Params = rte.DstParams
-		dop.Routes = []*RoutingTableEntry{rte}
+		dop.routes = []*RoutingTableEntry{rte}
 		return &dop.OutputPlugin, nil
 	}
 	return nil, errors.New("unknown output plugin type " + rte.DstType)

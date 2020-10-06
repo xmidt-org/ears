@@ -20,6 +20,8 @@ package internal
 import (
 	"context"
 	"errors"
+
+	"github.com/rs/zerolog/log"
 )
 
 type (
@@ -127,4 +129,43 @@ func NewFilterer(ctx context.Context, fp *FilterPlugin) (Filterer, error) {
 		return new(SplitFilter), nil
 	}
 	return nil, errors.New("unknown filter type " + fp.Type)
+}
+
+func (fp *FilterPlugin) DoSync(ctx context.Context, event *Event) error {
+	log.Debug().Msg(fp.Type + " filter " + fp.Hash(ctx) + " passed")
+	filteredEvents, err := fp.filterer.Filter(ctx, event)
+	if err != nil {
+		return err
+	}
+	for _, e := range filteredEvents {
+		if fp.outputChannel != nil {
+			fp.outputChannel <- e
+		} else {
+			fp.routingTableEntry.Destination.DoSync(ctx, e)
+		}
+	}
+	return nil
+}
+
+func (fp *FilterPlugin) DoAsync(ctx context.Context) {
+	go func() {
+		if fp.inputChannel == nil {
+			return
+		}
+		for {
+			inputEvent := <-fp.inputChannel
+			log.Debug().Msg(fp.Type + " filter " + fp.Hash(ctx) + " passed")
+			filteredEvents, err := fp.filterer.Filter(ctx, inputEvent)
+			if err != nil {
+				return
+			}
+			for _, e := range filteredEvents {
+				if fp.outputChannel != nil {
+					fp.outputChannel <- e
+				} else {
+					fp.routingTableEntry.Destination.DoSync(ctx, e)
+				}
+			}
+		}
+	}()
 }

@@ -31,21 +31,21 @@ import (
 var (
 	ROUTE = `
 	{
-		"org_id" : "comcast",
-		"app_id" : "xfi",
-		"user_id" : "boris",
-		"src_type" : "debug",
-		"src_params" :
+		"orgId" : "comcast",
+		"appId" : "xfi",
+		"userId" : "boris",
+		"srcType" : "debug",
+		"srcParams" :
 		{
 			"rounds" : 10,
-			"interval_ms" : 1000,
+			"intervalMS" : 250,
 			"payload" : {
 				"foo" : "bar"
 			}
 		},
-		"dst_type" : "debug",
-		"dst_params" : {},
-		"filter_chain" : [
+		"dstType" : "debug",
+		"dstParams" : {},
+		"filterChain" : [
 			{
 				"type" : "match",
 				"params" : {
@@ -71,7 +71,7 @@ var (
 				"params" : {}
 			}
 		],
-		"delivery_mode" : "at_least_once"
+		"deliveryMode" : "at_least_once"
 	}
 	`
 )
@@ -87,8 +87,12 @@ func main() {
 		log.Error().Msg(err.Error())
 		return
 	}
-	//buf, _ := json.MarshalIndent(rte, "", "\t")
-	//fmt.Printf("%s\n", string(buf))
+	buf, err := json.MarshalIndent(rte, "", "\t")
+	if err != nil {
+		log.Error().Msg(err.Error())
+		return
+	}
+	fmt.Printf("%s\n", string(buf))
 	err = rtmgr.AddRoute(ctx, &rte)
 	if err != nil {
 		log.Error().Msg(err.Error())

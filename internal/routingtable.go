@@ -61,21 +61,21 @@ func (rte *RoutingTableEntry) Initialize(ctx context.Context) error {
 	if rte.FilterChain != nil {
 		for idx, fp := range rte.FilterChain {
 			var err error
-			fp.Filterer, err = NewFilterer(ctx, fp)
+			fp.filterer, err = NewFilterer(ctx, fp)
 			fp.State = PluginStateReady
 			fp.Mode = PluginModeFilter
-			fp.RoutingTableEntry = rte
+			fp.routingTableEntry = rte
 			if err != nil {
 				return err
 			}
 			if idx == 0 {
-				fp.InputChannel = GetEventQueue(ctx).GetChannel(ctx)
+				fp.inputChannel = GetEventQueue(ctx).GetChannel(ctx)
 			} else {
-				fp.InputChannel = eventChannel
+				fp.inputChannel = eventChannel
 			}
 			if idx < len(rte.FilterChain)-1 {
-				fp.OutputChannel = make(chan *Event)
-				eventChannel = fp.OutputChannel
+				fp.outputChannel = make(chan *Event)
+				eventChannel = fp.outputChannel
 			}
 			fp.DoAsync(ctx)
 		}
@@ -88,43 +88,4 @@ func (rte *RoutingTableEntry) Initialize(ctx context.Context) error {
 		return err
 	}
 	return nil
-}
-
-func (fp *FilterPlugin) DoSync(ctx context.Context, event *Event) error {
-	log.Debug().Msg(fp.Type + " filter " + fp.Hash(ctx) + " passed")
-	filteredEvents, err := fp.Filterer.Filter(ctx, event)
-	if err != nil {
-		return err
-	}
-	for _, e := range filteredEvents {
-		if fp.OutputChannel != nil {
-			fp.OutputChannel <- e
-		} else {
-			fp.RoutingTableEntry.Destination.DoSync(ctx, e)
-		}
-	}
-	return nil
-}
-
-func (fp *FilterPlugin) DoAsync(ctx context.Context) {
-	go func() {
-		if fp.InputChannel == nil {
-			return
-		}
-		for {
-			inputEvent := <-fp.InputChannel
-			log.Debug().Msg(fp.Type + " filter " + fp.Hash(ctx) + " passed")
-			filteredEvents, err := fp.Filterer.Filter(ctx, inputEvent)
-			if err != nil {
-				return
-			}
-			for _, e := range filteredEvents {
-				if fp.OutputChannel != nil {
-					fp.OutputChannel <- e
-				} else {
-					fp.RoutingTableEntry.Destination.DoSync(ctx, e)
-				}
-			}
-		}
-	}()
 }

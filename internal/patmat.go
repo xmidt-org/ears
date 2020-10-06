@@ -38,8 +38,9 @@ func (dpm *DefaultPatternMatcher) Match(ctx context.Context, event *Event, patte
 	return ispartof
 }
 
-// contains is a helper function to check if b is contained in a (if b is a partial of a)
 func contains(ctx context.Context, a interface{}, b interface{}, strength int) (bool, int) {
+	// contains is a helper function to check if b is contained in a (if b is a partial of a)
+	// this is a battle tested implementation borrowed from eel
 	if a == nil && b == nil {
 		return true, strength
 	}
