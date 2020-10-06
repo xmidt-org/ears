@@ -29,7 +29,7 @@ import (
 )
 
 var (
-	ROUTE = `
+	ROUTE_1 = `
 	{
 		"orgId" : "comcast",
 		"appId" : "xfi",
@@ -78,6 +78,29 @@ var (
 		"deliveryMode" : "at_least_once"
 	}
 	`
+	ROUTE_2 = `
+	{
+		"orgId" : "comcast",
+		"appId" : "xfi",
+		"userId" : "boris",
+		"source" : {
+			"type" : "debug",
+			"params" :
+			{
+				"rounds" : 3,
+				"intervalMS" : 250,
+				"payload" : {
+					"foo" : "bar"
+				}
+			}
+		},
+		"destination" : {
+			"type" : "debug",
+			"params" : {}
+		},
+		"deliveryMode" : "at_least_once"
+	}
+	`
 )
 
 func main() {
@@ -87,7 +110,7 @@ func main() {
 	rtmgr = internal.NewInMemoryRoutingTableManager()
 	log.Debug().Msg(fmt.Sprintf("ears has %d routes", rtmgr.GetRouteCount(ctx)))
 	var rte internal.RoutingTableEntry
-	err := json.Unmarshal([]byte(ROUTE), &rte)
+	err := json.Unmarshal([]byte(ROUTE_1), &rte)
 	if err != nil {
 		log.Error().Msg(err.Error())
 		return

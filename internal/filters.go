@@ -26,26 +26,36 @@ import (
 
 type (
 	MatchFilter struct {
-		Pattern interface{}
+		Pattern interface{} // match pattern
 		Matcher Matcher
 	}
 
 	FilterFilter struct {
-		Pattern interface{}
+		Pattern interface{} // filter pattern
 		Matcher Matcher
 	}
 
 	TransformFilter struct {
-		Transformation interface{}
+		Transformation interface{} // transformation instructions for event payload
 	}
 
+	// a TTLFilter filters an event when it is too old
 	TTLFilter struct {
-		TTL    int
-		TsPath string
+		TTL    int    // ttl in seconds
+		TsPath string // path to timestamp information in payload
 	}
 
+	// a SplitFilter splits and event into two or more events
 	SplitFilter struct {
-		SplitPath string
+		SplitPath string // path to split array in payload
+	}
+
+	// a PassFilter always passes an incoming event
+	PassFilter struct {
+	}
+
+	// a BlockFilter always blocks an incoming event
+	BlockFilter struct {
 	}
 )
 
@@ -92,6 +102,14 @@ func (mf *SplitFilter) Filter(ctx context.Context, event *Event) ([]*Event, erro
 	return events, nil
 }
 
+func (mf *PassFilter) Filter(ctx context.Context, event *Event) ([]*Event, error) {
+	return []*Event{event}, nil
+}
+
+func (mf *BlockFilter) Filter(ctx context.Context, event *Event) ([]*Event, error) {
+	return []*Event{}, nil
+}
+
 // factory function to create appropriate filterer for given filter plugin config
 func NewFilterer(ctx context.Context, fp *FilterPlugin) (Filterer, error) {
 	if fp == nil {
@@ -127,6 +145,10 @@ func NewFilterer(ctx context.Context, fp *FilterPlugin) (Filterer, error) {
 	case FilterTypeSplitter:
 		//TODO: pass in config params here
 		return new(SplitFilter), nil
+	case FilterTypePass:
+		return new(PassFilter), nil
+	case FilterTypeBlock:
+		return new(BlockFilter), nil
 	}
 	return nil, errors.New("unknown filter type " + fp.Type)
 }

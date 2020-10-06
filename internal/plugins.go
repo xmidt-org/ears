@@ -31,13 +31,14 @@ import (
 type (
 	// An EarsPlugin represents an input plugin an output plugin or a filter plugin
 	Plugin struct {
-		Type    string                 `json:"type"`    // plugin or filter type, e.g. kafka, kds, sqs, webhook, filter
-		Version string                 `json:"version"` // plugin version
-		SOName  string                 `json:"soName"`  // name of shared library file implementing this plugin
-		Params  map[string]interface{} `json:"params"`  // plugin specific configuration parameters
-		Mode    string                 `json:"mode"`    // plugin mode, one of input, output and filter
-		State   string                 `json:"state"`   // plugin operational state including running, stopped, error etc. (filter plugins are always in state running)
-		Name    string                 `json:"name"`    // descriptive plugin name
+		Type      string                 `json:"type"`      // plugin or filter type, e.g. kafka, kds, sqs, webhook, filter
+		Version   string                 `json:"version"`   // plugin version
+		SOName    string                 `json:"soName"`    // name of shared library file implementing this plugin
+		Params    map[string]interface{} `json:"params"`    // plugin specific configuration parameters
+		Mode      string                 `json:"mode"`      // plugin mode, one of input, output and filter
+		State     string                 `json:"state"`     // plugin operational state including running, stopped, error etc. (filter plugins are always in state running)
+		Name      string                 `json:"name"`      // descriptive plugin name
+		Encodings []string               `json:"encodings"` // list of supported encodings
 	}
 
 	InputPlugin struct {
