@@ -31,12 +31,13 @@ import (
 type (
 	// An EarsPlugin represents an input plugin an output plugin or a filter plugin
 	Plugin struct {
-		Type    string                 `json:"type"` // source plugin type, e.g. kafka, kds, sqs, webhook, filter
-		Version string                 `json:"version"`
-		Params  map[string]interface{} `json:"params"` // plugin specific configuration parameters
-		Mode    string                 `json:"mode"`   // plugin mode, one of input, output and filter
-		State   string                 `json:"state"`  // plugin operational state including running, stopped, error etc. (filter plugins are always in state running)
-		Name    string                 `json:"name"`   // descriptive plugin name
+		Type    string                 `json:"type"`    // plugin or filter type, e.g. kafka, kds, sqs, webhook, filter
+		Version string                 `json:"version"` // plugin version
+		SOName  string                 `json:"soName"`  // name of shared library file implementing this plugin
+		Params  map[string]interface{} `json:"params"`  // plugin specific configuration parameters
+		Mode    string                 `json:"mode"`    // plugin mode, one of input, output and filter
+		State   string                 `json:"state"`   // plugin operational state including running, stopped, error etc. (filter plugins are always in state running)
+		Name    string                 `json:"name"`    // descriptive plugin name
 	}
 
 	InputPlugin struct {
@@ -129,7 +130,7 @@ func (op *OutputPlugin) DoSync(ctx context.Context, event *Event) error {
 }
 
 func NewInputPlugin(ctx context.Context, rte *RoutingTableEntry) (*InputPlugin, error) {
-	switch rte.SrcType {
+	switch rte.Source.Type {
 	case PluginTypeDebug:
 		dip := new(DebugInputPlugin)
 		// initialize with defaults
@@ -140,18 +141,18 @@ func NewInputPlugin(ctx context.Context, rte *RoutingTableEntry) (*InputPlugin, 
 		dip.Mode = PluginModeInput
 		dip.State = PluginStateReady
 		dip.Name = "Debug"
-		dip.Params = rte.SrcParams
+		dip.Params = rte.Source.Params
 		dip.routes = []*RoutingTableEntry{rte}
 		dip.EventQueuer = GetEventQueue(ctx)
 		// parse configs and overwrite defaults
-		if rte.SrcParams != nil {
-			if value, ok := rte.SrcParams["rounds"].(float64); ok {
+		if dip.Params != nil {
+			if value, ok := dip.Params["rounds"].(float64); ok {
 				dip.Rounds = int(value)
 			}
-			if value, ok := rte.SrcParams["intervalMS"].(float64); ok {
+			if value, ok := dip.Params["intervalMS"].(float64); ok {
 				dip.IntervalMs = int(value)
 			}
-			if value, ok := rte.SrcParams["payload"]; ok {
+			if value, ok := dip.Params["payload"]; ok {
 				dip.Payload = value
 			}
 		}
@@ -159,20 +160,20 @@ func NewInputPlugin(ctx context.Context, rte *RoutingTableEntry) (*InputPlugin, 
 		dip.DoAsync(ctx)
 		return &dip.InputPlugin, nil
 	}
-	return nil, errors.New("unknown input plugin type " + rte.SrcType)
+	return nil, errors.New("unknown input plugin type " + rte.Source.Type)
 }
 
 func NewOutputPlugin(ctx context.Context, rte *RoutingTableEntry) (*OutputPlugin, error) {
-	switch rte.DstType {
+	switch rte.Destination.Type {
 	case PluginTypeDebug:
 		dop := new(DebugOutputPlugin)
 		dop.Type = PluginTypeDebug
 		dop.Mode = PluginModeOutput
 		dop.State = PluginStateReady
 		dop.Name = "Debug"
-		dop.Params = rte.DstParams
+		dop.Params = rte.Destination.Params
 		dop.routes = []*RoutingTableEntry{rte}
 		return &dop.OutputPlugin, nil
 	}
-	return nil, errors.New("unknown output plugin type " + rte.DstType)
+	return nil, errors.New("unknown output plugin type " + rte.Destination.Type)
 }

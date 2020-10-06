@@ -34,17 +34,21 @@ var (
 		"orgId" : "comcast",
 		"appId" : "xfi",
 		"userId" : "boris",
-		"srcType" : "debug",
-		"srcParams" :
-		{
-			"rounds" : 10,
-			"intervalMS" : 250,
-			"payload" : {
-				"foo" : "bar"
+		"source" : {
+			"type" : "debug",
+			"params" :
+			{
+				"rounds" : 3,
+				"intervalMS" : 250,
+				"payload" : {
+					"foo" : "bar"
+				}
 			}
 		},
-		"dstType" : "debug",
-		"dstParams" : {},
+		"destination" : {
+			"type" : "debug",
+			"params" : {}
+		},
 		"filterChain" : [
 			{
 				"type" : "match",
@@ -79,6 +83,7 @@ var (
 func main() {
 	ctx := context.Background()
 	var rtmgr internal.RoutingTableManager
+	// init in memory routing table manager
 	rtmgr = internal.NewInMemoryRoutingTableManager()
 	log.Debug().Msg(fmt.Sprintf("ears has %d routes", rtmgr.GetRouteCount(ctx)))
 	var rte internal.RoutingTableEntry
@@ -93,12 +98,14 @@ func main() {
 		return
 	}
 	fmt.Printf("%s\n", string(buf))
+	// add a route
 	err = rtmgr.AddRoute(ctx, &rte)
 	if err != nil {
 		log.Error().Msg(err.Error())
 		return
 	}
 	log.Debug().Msg(fmt.Sprintf("ears has %d routes", rtmgr.GetRouteCount(ctx)))
+	// check route
 	allRoutes, err := rtmgr.GetAllRoutes(ctx)
 	if err != nil {
 		log.Error().Msg(err.Error())
