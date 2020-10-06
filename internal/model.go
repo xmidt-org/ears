@@ -44,6 +44,8 @@ const (
 	FilterTypeTransformer = "transform"
 	FilterTypeTTLer       = "ttl"
 	FilterTypeSplitter    = "split"
+	FilterTypePass        = "pass"
+	FilterTypeBlock       = "block"
 
 	// plugin modes
 

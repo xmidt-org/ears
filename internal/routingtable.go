@@ -58,16 +58,25 @@ func (rte *RoutingTableEntry) Initialize(ctx context.Context) error {
 	// therefore the first filter reads from the buffered event channel and the last filter in the filter chain has a nil output channel
 	// we will likely change this in the future
 	var eventChannel chan *Event
+	if rte.FilterChain == nil {
+		rte.FilterChain = make([]*FilterPlugin, 0)
+	}
+	if len(rte.FilterChain) == 0 {
+		// seed an empty filter chain with a pass filter
+		fp := new(FilterPlugin)
+		fp.Type = FilterTypePass
+		fp.filterer, err = NewFilterer(ctx, fp)
+		rte.FilterChain = append(rte.FilterChain, fp)
+	}
 	if rte.FilterChain != nil {
 		for idx, fp := range rte.FilterChain {
-			var err error
 			fp.filterer, err = NewFilterer(ctx, fp)
-			fp.State = PluginStateReady
-			fp.Mode = PluginModeFilter
-			fp.routingTableEntry = rte
 			if err != nil {
 				return err
 			}
+			fp.State = PluginStateReady
+			fp.Mode = PluginModeFilter
+			fp.routingTableEntry = rte
 			if idx == 0 {
 				fp.inputChannel = GetEventQueue(ctx).GetChannel(ctx)
 			} else {
