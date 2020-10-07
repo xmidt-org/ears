@@ -74,11 +74,13 @@ func (mgr *InMemoryRoutingTableManager) RemoveRoute(ctx context.Context, entry *
 // ReplaceAllRoutes replaces all routes
 func (mgr *InMemoryRoutingTableManager) ReplaceAllRoutes(ctx context.Context, entries []*RoutingTableEntry) error {
 	m := make(map[string]*RoutingTableEntry)
-	for _, entry := range entries {
-		if err := entry.Validate(ctx); err != nil {
-			return err
+	if entries != nil {
+		for _, entry := range entries {
+			if err := entry.Validate(ctx); err != nil {
+				return err
+			}
+			m[entry.Hash(ctx)] = entry
 		}
-		m[entry.Hash(ctx)] = entry
 	}
 	mgr.routingTableIndex = m
 	return nil

@@ -50,6 +50,9 @@ func (rte *RoutingTableEntry) Initialize(ctx context.Context) error {
 	//
 	// initialize filter chain
 	//
+	if rte.FilterChain == nil {
+		rte.FilterChain = NewFilterChain(ctx)
+	}
 	err = rte.FilterChain.Initialize(ctx, rte)
 	if err != nil {
 		return err
