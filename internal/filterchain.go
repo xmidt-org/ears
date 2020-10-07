@@ -21,6 +21,12 @@ import (
 	"context"
 )
 
+func NewFilterChain(ctx context.Context) *FilterChain {
+	fc := new(FilterChain)
+	fc.Filters = make([]*FilterPlugin, 0)
+	return fc
+}
+
 // Initialize sets up filter chain objects and channels based on filter chain config
 func (fc *FilterChain) Initialize(ctx context.Context, rte *RoutingTableEntry) error {
 	//
