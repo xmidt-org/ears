@@ -83,11 +83,16 @@ type (
 		UserId       string              `json:"userId"`       // user ID / author of route
 		Source       *InputPlugin        `json:"source`        // pointer to source plugin instance
 		Destination  *OutputPlugin       `json:"destination"`  // pointer to destination plugin instance
-		FilterChain  []*FilterPlugin     `json:"filterChain"`  // optional list of filter plugins that will be applied in order to perform arbitrary filtering and transformation functions
+		FilterChain  *FilterChain        `json:"filterChain"`  // optional list of filter plugins that will be applied in order to perform arbitrary filtering and transformation functions
 		DeliveryMode string              `json:"deliveryMode"` // possible values: fire_and_forget, at_least_once, exactly_once
 		Debug        bool                `json:"debug"`        // if true generate debug logs and metrics for events taking this route
 		Ts           int                 `json:"ts"`           // timestamp when route was created or updated
 		tblMgr       RoutingTableManager `json:"-"`            // pointer to routing table manager
+	}
+
+	// A FilterChain is a slice of filter plugins
+	FilterChain struct {
+		Filters []*FilterPlugin `json:"filters"` // optional list of filter plugins that will be applied in order to perform arbitrary filtering and transformation functions
 	}
 
 	// A RoutingTable is a slice of routing entries and reprrsents the EARS routing table

@@ -49,32 +49,35 @@ var (
 			"type" : "debug",
 			"params" : {}
 		},
-		"filterChain" : [
-			{
-				"type" : "match",
-				"params" : {
-					"pattern" : {
-						"foo" : "bar"
+		"filterChain" : {
+			"filters": 
+			[
+				{
+					"type" : "match",
+					"params" : {
+						"pattern" : {
+							"foo" : "bar"
+						}
 					}
-				}
-			},
-			{
-				"type" : "filter",
-				"params" : {
-					"pattern" : {
-						"hello" : "world"
+				},
+				{
+					"type" : "filter",
+					"params" : {
+						"pattern" : {
+							"hello" : "world"
+						}
 					}
+				},
+				{
+					"type" : "split",
+					"params" : {}
+				},
+				{
+					"type" : "transform",
+					"params" : {}
 				}
-			},
-			{
-				"type" : "split",
-				"params" : {}
-			},
-			{
-				"type" : "transform",
-				"params" : {}
-			}
-		],
+			]
+		},
 		"deliveryMode" : "at_least_once"
 	}
 	`

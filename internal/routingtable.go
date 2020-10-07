@@ -21,14 +21,12 @@ import (
 	"context"
 	"crypto/md5"
 	"fmt"
-
-	"github.com/rs/zerolog/log"
 )
 
 func (rte *RoutingTableEntry) Hash(ctx context.Context) string {
 	str := rte.Source.Hash(ctx) + rte.Destination.Hash(ctx)
-	if rte.FilterChain != nil {
-		for _, filter := range rte.FilterChain {
+	if rte.FilterChain != nil && rte.FilterChain.Filters != nil {
+		for _, filter := range rte.FilterChain.Filters {
 			str += filter.Hash(ctx)
 		}
 	}
@@ -49,45 +47,12 @@ func (rte *RoutingTableEntry) Initialize(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	log.Debug().Msg("init")
 	//
 	// initialize filter chain
 	//
-	// for now output plugin is not connected via channel but rather via function call
-	// input plugin is decoupled from filter chain via simple buffered channel
-	// therefore the first filter reads from the buffered event channel and the last filter in the filter chain has a nil output channel
-	// we will likely change this in the future
-	var eventChannel chan *Event
-	if rte.FilterChain == nil {
-		rte.FilterChain = make([]*FilterPlugin, 0)
-	}
-	if len(rte.FilterChain) == 0 {
-		// seed an empty filter chain with a pass filter
-		fp := new(FilterPlugin)
-		fp.Type = FilterTypePass
-		fp.filterer, err = NewFilterer(ctx, fp)
-		rte.FilterChain = append(rte.FilterChain, fp)
-	}
-	if rte.FilterChain != nil {
-		for idx, fp := range rte.FilterChain {
-			fp.filterer, err = NewFilterer(ctx, fp)
-			if err != nil {
-				return err
-			}
-			fp.State = PluginStateReady
-			fp.Mode = PluginModeFilter
-			fp.routingTableEntry = rte
-			if idx == 0 {
-				fp.inputChannel = GetEventQueue(ctx).GetChannel(ctx)
-			} else {
-				fp.inputChannel = eventChannel
-			}
-			if idx < len(rte.FilterChain)-1 {
-				fp.outputChannel = make(chan *Event)
-				eventChannel = fp.outputChannel
-			}
-			fp.DoAsync(ctx)
-		}
+	err = rte.FilterChain.Initialize(ctx, rte)
+	if err != nil {
+		return err
 	}
 	//
 	// initialize output plugin
