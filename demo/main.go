@@ -140,5 +140,5 @@ func main() {
 	if len(allRoutes) > 0 {
 		log.Debug().Msg(fmt.Sprintf("first route has hash %s", allRoutes[0].Hash(ctx)))
 	}
-	time.Sleep(time.Duration(60) * time.Second)
+	time.Sleep(time.Duration(3) * time.Second)
 }
