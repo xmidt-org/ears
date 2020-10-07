@@ -40,17 +40,17 @@ type (
 		Name      string                 `json:"name"`      // descriptive plugin name
 		Encodings []string               `json:"encodings"` // list of supported encodings
 	}
-
+	// InputPlugin represents an input plugin
 	InputPlugin struct {
 		Plugin
 		routes []*RoutingTableEntry // list of routes using this plugin instance as source plugin
 	}
-
+	// OutputPlugin represents an output plugin
 	OutputPlugin struct {
 		Plugin
 		routes []*RoutingTableEntry // list of routes using this plugin instance as destination plugin
 	}
-
+	// FilterPlugin represents a filter plugin
 	FilterPlugin struct {
 		Plugin
 		routingTableEntry *RoutingTableEntry // routing table entry this fiter plugin belongs to

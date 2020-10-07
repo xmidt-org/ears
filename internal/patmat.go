@@ -26,10 +26,12 @@ import (
 type DefaultPatternMatcher struct {
 }
 
+// NewDefaultPatternMatcher creates a new pattern matcher
 func NewDefaultPatternMatcher() Matcher {
 	return new(DefaultPatternMatcher)
 }
 
+// Match matches event against patterns
 func (dpm *DefaultPatternMatcher) Match(ctx context.Context, event *Event, pattern interface{}) bool {
 	if pattern == nil {
 		return true

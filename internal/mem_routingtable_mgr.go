@@ -39,6 +39,7 @@ func NewInMemoryRoutingTableManager() *InMemoryRoutingTableManager {
 	return mgr
 }
 
+// AddRoute adds a route to the routing table
 func (mgr *InMemoryRoutingTableManager) AddRoute(ctx context.Context, entry *RoutingTableEntry) error {
 	mgr.lock.Lock()
 	defer mgr.lock.Unlock()
@@ -56,6 +57,7 @@ func (mgr *InMemoryRoutingTableManager) AddRoute(ctx context.Context, entry *Rou
 	return nil
 }
 
+// RemoveRoute removes a route from the routing table
 func (mgr *InMemoryRoutingTableManager) RemoveRoute(ctx context.Context, entry *RoutingTableEntry) error {
 	mgr.lock.Lock()
 	defer mgr.lock.Unlock()
@@ -69,6 +71,7 @@ func (mgr *InMemoryRoutingTableManager) RemoveRoute(ctx context.Context, entry *
 	return nil
 }
 
+// ReplaceAllRoutes replaces all routes
 func (mgr *InMemoryRoutingTableManager) ReplaceAllRoutes(ctx context.Context, entries []*RoutingTableEntry) error {
 	m := make(map[string]*RoutingTableEntry)
 	for _, entry := range entries {
@@ -81,6 +84,7 @@ func (mgr *InMemoryRoutingTableManager) ReplaceAllRoutes(ctx context.Context, en
 	return nil
 }
 
+// Validate validates all entries in the routing table
 func (mgr *InMemoryRoutingTableManager) Validate(ctx context.Context) error {
 	for _, entry := range mgr.routingTableIndex {
 		if err := entry.Validate(ctx); err != nil {
@@ -90,6 +94,7 @@ func (mgr *InMemoryRoutingTableManager) Validate(ctx context.Context) error {
 	return nil
 }
 
+// Hash calculates hash over all entries in the routing table
 func (mgr *InMemoryRoutingTableManager) Hash(ctx context.Context) string {
 	hash := ""
 	for _, entry := range mgr.routingTableIndex {
@@ -98,6 +103,7 @@ func (mgr *InMemoryRoutingTableManager) Hash(ctx context.Context) string {
 	return hash
 }
 
+// GetAll Routes returns complete routing table
 func (mgr *InMemoryRoutingTableManager) GetAllRoutes(ctx context.Context) ([]*RoutingTableEntry, error) {
 	mgr.lock.RLock()
 	defer mgr.lock.RUnlock()
@@ -109,6 +115,7 @@ func (mgr *InMemoryRoutingTableManager) GetAllRoutes(ctx context.Context) ([]*Ro
 	return tbl, nil
 }
 
+// GetRoutesBySourcePlugin gets all routes used by a given input plugin
 func (mgr *InMemoryRoutingTableManager) GetRoutesBySourcePlugin(ctx context.Context, plugin *InputPlugin) ([]*RoutingTableEntry, error) {
 	mgr.lock.RLock()
 	defer mgr.lock.RUnlock()
@@ -121,6 +128,7 @@ func (mgr *InMemoryRoutingTableManager) GetRoutesBySourcePlugin(ctx context.Cont
 	return tbl, nil
 }
 
+// GetRoutesByDestinationPlugin gets all routes used by a given output plugin
 func (mgr *InMemoryRoutingTableManager) GetRoutesByDestinationPlugin(ctx context.Context, plugin *OutputPlugin) ([]*RoutingTableEntry, error) {
 	mgr.lock.RLock()
 	defer mgr.lock.RUnlock()
@@ -133,10 +141,12 @@ func (mgr *InMemoryRoutingTableManager) GetRoutesByDestinationPlugin(ctx context
 	return tbl, nil
 }
 
+// GetRoutesForEvent gets all routes for a given event
 func (mgr *InMemoryRoutingTableManager) GetRoutesForEvent(ctx context.Context, event *Event) ([]*RoutingTableEntry, error) {
 	return mgr.GetRoutesBySourcePlugin(ctx, event.Source)
 }
 
+// GetRouteCount gets size of routing table
 func (mgr *InMemoryRoutingTableManager) GetRouteCount(ctx context.Context) int {
 	return len(mgr.routingTableIndex)
 }
