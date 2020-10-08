@@ -212,12 +212,16 @@ type (
 	InputPluginManager interface {
 		RegisterRoute(ctx context.Context, rte *RoutingTableEntry) (*InputPlugin, error) // uses plugin parameter only for hash calculation and returns one if it already exists or creates a new one
 		UnregisterRoute(ctx context.Context, rte *RoutingTableEntry) error               // uses plugin parameter only for hash calculation
+		GetPluginCount(ctx context.Context) int                                          // get plugin count
+		GetAllPlugins(ctx context.Context) ([]*InputPlugin, error)                       // get all plugins
 	}
 
 	// A PluginManager maintains a map of live plugins and ensures no two plugins with the same hash exist
 	OutputPluginManager interface {
 		RegisterRoute(ctx context.Context, rte *RoutingTableEntry) (*OutputPlugin, error) // uses plugin parameter only for hash calculation and returns one if it already exists or creates a new one
 		UnregisterRoute(ctx context.Context, rte *RoutingTableEntry) error                // uses plugin parameter only for hash calculation
+		GetPluginCount(ctx context.Context) int                                           // get plugin count
+		GetAllPlugins(ctx context.Context) ([]*OutputPlugin, error)                       // get all plugins
 	}
 
 	// An EventSourceManager manages all event source plugins for a live ears instance
