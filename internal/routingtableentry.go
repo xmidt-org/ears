@@ -59,7 +59,7 @@ func (rte *RoutingTableEntry) Initialize(ctx context.Context) error {
 	// initialize input plugin
 	//
 	var err error
-	rte.Source, err = NewInputPlugin(ctx, rte)
+	rte.Source, err = GetInputPluginManager(ctx).RegisterRoute(ctx, rte)
 	if err != nil {
 		return err
 	}
@@ -76,7 +76,26 @@ func (rte *RoutingTableEntry) Initialize(ctx context.Context) error {
 	//
 	// initialize output plugin
 	//
-	rte.Destination, err = NewOutputPlugin(ctx, rte)
+	rte.Destination, err = GetOutputPluginManager(ctx).RegisterRoute(ctx, rte)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (rte *RoutingTableEntry) Withdraw(ctx context.Context) error {
+	//
+	// withdraw input plugin
+	//
+	var err error
+	err = GetInputPluginManager(ctx).UnregisterRoute(ctx, rte)
+	if err != nil {
+		return err
+	}
+	//
+	// withdraw output plugin
+	//
+	err = GetOutputPluginManager(ctx).UnregisterRoute(ctx, rte)
 	if err != nil {
 		return err
 	}

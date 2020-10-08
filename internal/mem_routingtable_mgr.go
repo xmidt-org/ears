@@ -67,22 +67,41 @@ func (mgr *InMemoryRoutingTableManager) RemoveRoute(ctx context.Context, entry *
 	if err := entry.Validate(ctx); err != nil {
 		return err
 	}
-	delete(mgr.routingTableIndex, entry.Hash(ctx))
+	hash := entry.Hash(ctx)
+	if hash == "" {
+		return errors.New("bad hash for route")
+	}
+	r, ok := mgr.routingTableIndex[hash]
+	if !ok {
+		return errors.New("unknown route")
+	}
+	err := r.Withdraw(ctx)
+	if err != nil {
+		return err
+	}
+	delete(mgr.routingTableIndex, hash)
 	return nil
 }
 
 // ReplaceAllRoutes replaces all routes
 func (mgr *InMemoryRoutingTableManager) ReplaceAllRoutes(ctx context.Context, entries []*RoutingTableEntry) error {
-	m := make(map[string]*RoutingTableEntry)
-	if entries != nil {
-		for _, entry := range entries {
-			if err := entry.Validate(ctx); err != nil {
-				return err
-			}
-			m[entry.Hash(ctx)] = entry
+	var err error
+	for _, entry := range mgr.routingTableIndex {
+		err = mgr.RemoveRoute(ctx, entry)
+		if err != nil {
+			return err
 		}
 	}
-	mgr.routingTableIndex = m
+	mgr.routingTableIndex = make(map[string]*RoutingTableEntry)
+
+	if entries != nil {
+		for _, entry := range entries {
+			err = mgr.AddRoute(ctx, entry)
+			if err != nil {
+				return err
+			}
+		}
+	}
 	return nil
 }
 
