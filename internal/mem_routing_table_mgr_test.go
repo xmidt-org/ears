@@ -91,6 +91,10 @@ var (
 	`
 )
 
+var (
+	ctx = context.Background()
+)
+
 func TestSplitRoute(t *testing.T) {
 	ctx := context.Background()
 	var rtmgr internal.RoutingTableManager
@@ -129,7 +133,7 @@ func TestSplitRoute(t *testing.T) {
 		t.Errorf("unexpected number of produced events %d", allRoutes[0].Source.EventCount)
 	}
 	if allRoutes[0].Destination.EventCount != 6 {
-		t.Errorf("unexpected number of produced events %d", allRoutes[0].Source.EventCount)
+		t.Errorf("unexpected number of consumed events %d", allRoutes[0].Destination.EventCount)
 	}
 	err = rtmgr.ReplaceAllRoutes(ctx, nil)
 	if err != nil {
@@ -141,7 +145,7 @@ func TestSplitRoute(t *testing.T) {
 	}
 }
 
-/*func TestDirectRoute(t *testing.T) {
+func TestDirectRoute(t *testing.T) {
 	ctx := context.Background()
 	var rtmgr internal.RoutingTableManager
 	// init in memory routing table manager
@@ -179,7 +183,7 @@ func TestSplitRoute(t *testing.T) {
 		t.Errorf("unexpected number of produced events %d", allRoutes[0].Source.EventCount)
 	}
 	if allRoutes[0].Destination.EventCount != 3 {
-		t.Errorf("unexpected number of produced events %d", allRoutes[0].Source.EventCount)
+		t.Errorf("unexpected number of consumed events %d", allRoutes[0].Destination.EventCount)
 	}
 	err = rtmgr.ReplaceAllRoutes(ctx, nil)
 	if err != nil {
@@ -189,4 +193,4 @@ func TestSplitRoute(t *testing.T) {
 	if rtmgr.GetRouteCount(ctx) != 0 {
 		t.Errorf("routing table not empty")
 	}
-}*/
+}

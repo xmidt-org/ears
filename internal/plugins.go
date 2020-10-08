@@ -81,7 +81,7 @@ func (plgn *Plugin) Hash(ctx context.Context) string {
 		str += string(buf)
 	}
 	// distinguish input and output plugins
-	str += plgn.Mode
+	//str += plgn.Mode
 	// optionally distinguish by org and app here as well
 	hash := fmt.Sprintf("%x", md5.Sum([]byte(str)))
 	return hash
@@ -110,6 +110,7 @@ type (
 )
 
 func (dip *DebugInputPlugin) DoAsync(ctx context.Context) {
+	done := false
 	go func() {
 		if dip.EventQueuer == nil {
 			log.Error().Msg("no event queue set for debug input plugin " + dip.Hash(ctx))
@@ -124,6 +125,9 @@ func (dip *DebugInputPlugin) DoAsync(ctx context.Context) {
 				return
 			}
 			time.Sleep(time.Duration(dip.IntervalMs) * time.Millisecond)
+			if done {
+				break
+			}
 			event := NewEvent(ctx, &dip.InputPlugin, dip.Payload)
 			log.Debug().Msg("debug input plugin " + dip.Hash(ctx) + " produced event " + fmt.Sprintf("%d", dip.EventCount))
 			// place event on buffered event channel
@@ -155,13 +159,13 @@ func (dop *DebugOutputPlugin) DoSync(ctx context.Context, event *Event) error {
 	return nil
 }
 
+func (dop *DebugOutputPlugin) DoAsync(ctx context.Context) {
+}
+
 func (op *OutputPlugin) DoSync(ctx context.Context, event *Event) error {
 	log.Debug().Msg("output plugin " + op.Hash(ctx) + " consumed event " + fmt.Sprintf("%d", op.EventCount))
 	op.EventCount++
 	return nil
-}
-
-func (dop *DebugOutputPlugin) DoAsync(ctx context.Context) {
 }
 
 func NewInputPlugin(ctx context.Context, rte *RoutingTableEntry) (*InputPlugin, error) {
