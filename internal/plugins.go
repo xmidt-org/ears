@@ -32,6 +32,7 @@ import (
 //TODO: use interface rather than struct
 //TODO: implement basic stream sharing
 //TODO: add org id and app id to plugin and consider in hash calculation
+//TODO: ...and we need stream sharing
 
 type (
 	// An EarsPlugin represents an input plugin an output plugin or a filter plugin
@@ -71,11 +72,17 @@ type (
 )
 
 func (plgn *Plugin) Hash(ctx context.Context) string {
-	str := plgn.Type
+	str := ""
+	// distinguish different plugin types
+	str += plgn.Type
+	// distinguish different configurations
 	if plgn.Params != nil {
 		buf, _ := json.Marshal(plgn.Params)
 		str += string(buf)
 	}
+	// distinguish input and output plugins
+	str += plgn.Mode
+	// optionally distinguish by org and app here as well
 	hash := fmt.Sprintf("%x", md5.Sum([]byte(str)))
 	return hash
 }
@@ -148,10 +155,13 @@ func (dop *DebugOutputPlugin) DoSync(ctx context.Context, event *Event) error {
 	return nil
 }
 
-func (dop *OutputPlugin) DoSync(ctx context.Context, event *Event) error {
-	log.Debug().Msg("output plugin " + dop.Hash(ctx) + " consumed event " + fmt.Sprintf("%d", dop.EventCount))
-	dop.EventCount++
+func (op *OutputPlugin) DoSync(ctx context.Context, event *Event) error {
+	log.Debug().Msg("output plugin " + op.Hash(ctx) + " consumed event " + fmt.Sprintf("%d", op.EventCount))
+	op.EventCount++
 	return nil
+}
+
+func (dop *DebugOutputPlugin) DoAsync(ctx context.Context) {
 }
 
 func NewInputPlugin(ctx context.Context, rte *RoutingTableEntry) (*InputPlugin, error) {
@@ -200,6 +210,7 @@ func NewOutputPlugin(ctx context.Context, rte *RoutingTableEntry) (*OutputPlugin
 		dop.Params = rte.Destination.Params
 		dop.routes = []*RoutingTableEntry{rte}
 		dop.RouteCount = 1
+		dop.DoAsync(ctx)
 		return &dop.OutputPlugin, nil
 	}
 	return nil, errors.New("unknown output plugin type " + rte.Destination.Type)
