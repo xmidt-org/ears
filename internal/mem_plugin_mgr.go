@@ -124,7 +124,7 @@ func (pm *DefaultInputPluginManager) UnregisterRoute(ctx context.Context, rte *R
 		routes := make([]*RoutingTableEntry, 0)
 		if p.routes != nil {
 			for _, r := range p.routes {
-				if r != rte {
+				if r.Hash(ctx) != rte.Hash(ctx) {
 					routes = append(routes, r)
 				} else {
 					p.RouteCount--
@@ -137,6 +137,7 @@ func (pm *DefaultInputPluginManager) UnregisterRoute(ctx context.Context, rte *R
 			}
 		}
 		p.routes = routes
+		log.Debug().Msg(fmt.Sprintf("output plugin route count %d %d", p.RouteCount, len(p.routes)))
 	}
 	return nil
 }
@@ -152,7 +153,7 @@ func (pm *DefaultOutputPluginManager) UnregisterRoute(ctx context.Context, rte *
 		routes := make([]*RoutingTableEntry, 0)
 		if p.routes != nil {
 			for _, r := range p.routes {
-				if r != rte {
+				if r.Hash(ctx) != rte.Hash(ctx) {
 					routes = append(routes, r)
 				} else {
 					p.RouteCount--
@@ -165,6 +166,7 @@ func (pm *DefaultOutputPluginManager) UnregisterRoute(ctx context.Context, rte *
 			}
 		}
 		p.routes = routes
+		log.Debug().Msg(fmt.Sprintf("output plugin route count %d %d", p.RouteCount, len(p.routes)))
 	}
 	return nil
 }
