@@ -170,3 +170,25 @@ func (pm *DefaultOutputPluginManager) UnregisterRoute(ctx context.Context, rte *
 	}
 	return nil
 }
+
+func (pm *DefaultOutputPluginManager) GetPluginCount(ctx context.Context) int {
+	return len(pm.pluginMap)
+}
+func (pm *DefaultOutputPluginManager) GetAllPlugins(ctx context.Context) ([]*OutputPlugin, error) {
+	plugins := make([]*OutputPlugin, 0)
+	for _, p := range pm.pluginMap {
+		plugins = append(plugins, p)
+	}
+	return plugins, nil
+}
+
+func (pm *DefaultInputPluginManager) GetPluginCount(ctx context.Context) int {
+	return len(pm.pluginMap)
+}
+func (pm *DefaultInputPluginManager) GetAllPlugins(ctx context.Context) ([]*InputPlugin, error) {
+	plugins := make([]*InputPlugin, 0)
+	for _, p := range pm.pluginMap {
+		plugins = append(plugins, p)
+	}
+	return plugins, nil
+}
