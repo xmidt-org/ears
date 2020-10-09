@@ -55,10 +55,10 @@ func (fc *FilterChain) Initialize(ctx context.Context, rte *RoutingTableEntry) e
 			}
 			fp.State = PluginStateReady
 			fp.Mode = PluginModeFilter
-			fp.routingTableEntry = rte
+			fp.routes = []*RoutingTableEntry{rte}
 			fp.done = make(chan bool)
 			if idx == 0 {
-				fp.inputChannel = GetEventQueue(ctx).GetChannel(ctx)
+				fp.inputChannel = rte.Source.GetOutputChannel()
 			} else {
 				fp.inputChannel = eventChannel
 			}

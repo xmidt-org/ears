@@ -30,8 +30,8 @@ type (
 		OrgId        string              `json:"orgId"`        // org ID for quota and rate limiting
 		AppId        string              `json:"appId"`        // app ID for quota and rate limiting
 		UserId       string              `json:"userId"`       // user ID / author of route
-		Source       *IOPlugin           `json:"source`        // pointer to source plugin instance
-		Destination  *IOPlugin           `json:"destination"`  // pointer to destination plugin instance
+		Source       Pluginer            `json:"source`        // pointer to source plugin instance
+		Destination  Pluginer            `json:"destination"`  // pointer to destination plugin instance
 		FilterChain  *FilterChain        `json:"filterChain"`  // optional list of filter plugins that will be applied in order to perform arbitrary filtering and transformation functions
 		DeliveryMode string              `json:"deliveryMode"` // possible values: fire_and_forget, at_least_once, exactly_once
 		Debug        bool                `json:"debug"`        // if true generate debug logs and metrics for events taking this route
@@ -58,8 +58,8 @@ func (rte *RoutingTableEntry) Validate(ctx context.Context) error {
 	if rte.Destination == nil {
 		return new(MissingDestinationPluginConfiguraton)
 	}
-	rte.Source.Mode = PluginModeInput
-	rte.Destination.Mode = PluginModeOutput
+	rte.Source.GetConfig().Mode = PluginModeInput
+	rte.Destination.GetConfig().Mode = PluginModeOutput
 	return nil
 }
 

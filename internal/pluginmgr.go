@@ -27,7 +27,7 @@ import (
 
 type (
 	DefaultIOPluginManager struct {
-		pluginMap map[string]*IOPlugin
+		pluginMap map[string]Pluginer
 	}
 )
 
@@ -37,7 +37,7 @@ var (
 
 func NewIOPluginManager(ctx context.Context) *DefaultIOPluginManager {
 	pm := new(DefaultIOPluginManager)
-	pm.pluginMap = make(map[string]*IOPlugin)
+	pm.pluginMap = make(map[string]Pluginer)
 	return pm
 }
 
@@ -53,35 +53,35 @@ func (pm *DefaultIOPluginManager) String() string {
 	return string(buf)
 }
 
-func (pm *DefaultIOPluginManager) RegisterPlugin(ctx context.Context, rte *RoutingTableEntry, plugin *IOPlugin) (*IOPlugin, error) {
+func (pm *DefaultIOPluginManager) RegisterPlugin(ctx context.Context, rte *RoutingTableEntry, plugin Pluginer) (Pluginer, error) {
 	var err error
 	hash := plugin.Hash(ctx)
 	if hash == "" {
 		return plugin, new(EmptyPluginHashError)
 	}
+	pc := plugin.GetConfig()
 	if p, ok := pm.pluginMap[hash]; ok {
-		p.RouteCount++
-		if p.routes == nil {
-			p.routes = make([]*RoutingTableEntry, 0)
+		if pc.routes == nil {
+			pc.routes = make([]*RoutingTableEntry, 0)
 		}
-		p.routes = append(p.routes, rte)
+		pc.routes = append(pc.routes, rte)
 		return p, nil
 	}
-	var p *IOPlugin
-	if plugin.Mode == PluginModeInput {
+	var p Pluginer
+	if pc.Mode == PluginModeInput {
 		p, err = NewInputPlugin(ctx, rte)
-	} else if plugin.Mode == PluginModeOutput {
+	} else if pc.Mode == PluginModeOutput {
 		p, err = NewOutputPlugin(ctx, rte)
 	}
 	if err != nil {
 		return plugin, err
 	}
 	pm.pluginMap[hash] = p
-	log.Debug().Msg(fmt.Sprintf("registering new %s %s plugin with hash %s", p.Type, p.Mode, hash))
+	log.Debug().Msg(fmt.Sprintf("registering new %s %s plugin with hash %s", p.GetConfig().Type, p.GetConfig().Mode, hash))
 	return p, nil
 }
 
-func (pm *DefaultIOPluginManager) RegisterRoute(ctx context.Context, rte *RoutingTableEntry) (*IOPlugin, *IOPlugin, error) {
+func (pm *DefaultIOPluginManager) RegisterRoute(ctx context.Context, rte *RoutingTableEntry) (Pluginer, Pluginer, error) {
 	ip, err := pm.RegisterPlugin(ctx, rte, rte.Source)
 	if err != nil {
 		return nil, nil, err
@@ -93,30 +93,29 @@ func (pm *DefaultIOPluginManager) RegisterRoute(ctx context.Context, rte *Routin
 	return ip, op, nil
 }
 
-func (pm *DefaultIOPluginManager) WithdrawPlugin(ctx context.Context, rte *RoutingTableEntry, plugin *IOPlugin) error {
+func (pm *DefaultIOPluginManager) WithdrawPlugin(ctx context.Context, rte *RoutingTableEntry, plugin Pluginer) error {
 	hash := plugin.Hash(ctx)
 	if hash == "" {
 		return new(EmptyPluginHashError)
 	}
+	pc := plugin.GetConfig()
 	if p, ok := pm.pluginMap[hash]; ok {
-		log.Debug().Msg(fmt.Sprintf("unregistering %s %s plugin with hash %s", p.Type, p.Mode, hash))
+		log.Debug().Msg(fmt.Sprintf("unregistering %s %s plugin with hash %s", p.GetConfig().Type, p.GetConfig().Mode, hash))
 		routes := make([]*RoutingTableEntry, 0)
-		if p.routes != nil {
-			for _, r := range p.routes {
+		if pc.routes != nil {
+			for _, r := range pc.routes {
 				if r.Hash(ctx) != rte.Hash(ctx) {
 					routes = append(routes, r)
-				} else {
-					p.RouteCount--
 				}
 			}
-			if p.RouteCount <= 0 {
+			if p.GetRouteCount() <= 0 {
 				//TODO: stop plugin
-				log.Debug().Msg(fmt.Sprintf("stopped %s %s plugin with hash %s", p.Type, p.Mode, hash))
+				log.Debug().Msg(fmt.Sprintf("stopped %s %s plugin with hash %s", p.GetConfig().Type, p.GetConfig().Mode, hash))
 				delete(pm.pluginMap, hash)
 			}
 		}
-		p.routes = routes
-		log.Debug().Msg(fmt.Sprintf("%s %s plugin route count %d %d", p.Type, p.Mode, p.RouteCount, len(p.routes)))
+		pc.routes = routes
+		log.Debug().Msg(fmt.Sprintf("%s %s plugin route count %d %d", p.GetConfig().Type, p.GetConfig().Mode, p.GetRouteCount(), len(pc.routes)))
 	}
 	return nil
 }
@@ -124,8 +123,8 @@ func (pm *DefaultIOPluginManager) WithdrawPlugin(ctx context.Context, rte *Routi
 func (pm *DefaultIOPluginManager) GetPluginCount(ctx context.Context) int {
 	return len(pm.pluginMap)
 }
-func (pm *DefaultIOPluginManager) GetAllPlugins(ctx context.Context) ([]*IOPlugin, error) {
-	plugins := make([]*IOPlugin, 0)
+func (pm *DefaultIOPluginManager) GetAllPlugins(ctx context.Context) ([]Pluginer, error) {
+	plugins := make([]Pluginer, 0)
 	for _, p := range pm.pluginMap {
 		plugins = append(plugins, p)
 	}

@@ -21,6 +21,7 @@ import (
 	"context"
 	"crypto/md5"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"time"
 
@@ -28,51 +29,43 @@ import (
 )
 
 //TODO: separate configs from state
-//TODO: use interface rather than struct
 //TODO: add org id and app id to plugin and consider in hash calculation
 
 type (
 	// An EarsPlugin represents an input plugin an output plugin or a filter plugin
 	Plugin struct {
-		Type       string                 `json:"type"`       // plugin or filter type, e.g. kafka, kds, sqs, webhook, filter
-		Version    string                 `json:"version"`    // plugin version
-		SOName     string                 `json:"soName"`     // name of shared library file implementing this plugin
-		Params     map[string]interface{} `json:"params"`     // plugin specific configuration parameters
-		Mode       string                 `json:"mode"`       // plugin mode, one of input, output and filter
-		State      string                 `json:"state"`      // plugin operational state including running, stopped, error etc. (filter plugins are always in state running)
-		Name       string                 `json:"name"`       // descriptive plugin name
-		Encodings  []string               `json:"encodings"`  // list of supported encodings
-		EventCount int                    `json:"eventCount"` // number of events that have passed through this plugin
-		RouteCount int                    `json:"routeCount"` // number of routes using this plugin
+		Type          string                 `json:"type"`       // plugin or filter type, e.g. kafka, kds, sqs, webhook, filter
+		Version       string                 `json:"version"`    // plugin version
+		SOName        string                 `json:"soName"`     // name of shared library file implementing this plugin
+		Params        map[string]interface{} `json:"params"`     // plugin specific configuration parameters
+		Mode          string                 `json:"mode"`       // plugin mode, one of input, output and filter
+		State         string                 `json:"state"`      // plugin operational state including running, stopped, error etc. (filter plugins are always in state running)
+		Name          string                 `json:"name"`       // descriptive plugin name
+		Encodings     []string               `json:"encodings"`  // list of supported encodings
+		EventCount    int                    `json:"eventCount"` // number of events that have passed through this plugin
+		routes        []*RoutingTableEntry   // list of routes using this plugin instance
+		inputChannel  chan *Event            // event channel on which plugin receives the next event
+		outputChannel chan *Event            // event channel to which plugin forwards current event to
+		done          chan bool              // done channel
+		filterer      Filterer               // an instance of the appropriate filterer
 	}
-	// IOPlugin represents an input or an output plugin
-	IOPlugin struct {
-		Plugin
-		routes []*RoutingTableEntry // list of routes using this plugin instance as source plugin
-	}
-	// FilterPlugin represents a filter plugin
 	FilterPlugin struct {
 		Plugin
-		routingTableEntry *RoutingTableEntry // routing table entry this fiter plugin belongs to
-		inputChannel      chan *Event        // channel on which this filter receives the next event
-		outputChannel     chan *Event        // channel to which this filter forwards this event to
-		done              chan bool          // done channel
-		filterer          Filterer           // an instance of the appropriate filterer
-		// note: if event is filtered it will not be forwarded
-		// note: if event is split multiple events will be forwarded
-		// note: if output channel is nil, we are at the end of the filter chain and the event is to be delivered to the output plugin of the route
 	}
 	DebugInputPlugin struct {
-		IOPlugin
-		IntervalMs  int
-		Rounds      int
-		Payload     interface{}
-		EventQueuer EventQueuer
+		Plugin
+		IntervalMs int
+		Rounds     int
+		Payload    interface{}
 	}
 	DebugOutputPlugin struct {
-		IOPlugin
+		Plugin
 	}
 )
+
+//
+// generic plugin features
+//
 
 func (plgn *Plugin) Hash(ctx context.Context) string {
 	str := ""
@@ -103,13 +96,40 @@ func (plgn *Plugin) String() string {
 	return string(buf)
 }
 
+func (plgn *Plugin) GetConfig() *Plugin {
+	return plgn
+}
+
+func (plgn *Plugin) GetInputChannel() chan *Event {
+	return plgn.inputChannel
+}
+
+func (plgn *Plugin) GetOutputChannel() chan *Event {
+	return plgn.outputChannel
+}
+
+func (plgn *Plugin) GetRouteCount() int {
+	if plgn.routes != nil {
+		return len(plgn.routes)
+	}
+	return 0
+}
+
+func (plgn *Plugin) Close() {
+	plgn.done <- true
+}
+
+//
+// debug input plugin
+//
+
+func (dip *DebugInputPlugin) Close() {
+	dip.done <- true
+}
+
 func (dip *DebugInputPlugin) DoAsync(ctx context.Context) {
 	done := false
 	go func() {
-		if dip.EventQueuer == nil {
-			log.Error().Msg("no event queue set for debug input plugin " + dip.Hash(ctx))
-			return
-		}
 		if dip.Payload == nil {
 			log.Error().Msg("no payload configured for debug input plugin " + dip.Hash(ctx))
 			return
@@ -122,51 +142,74 @@ func (dip *DebugInputPlugin) DoAsync(ctx context.Context) {
 			if done {
 				break
 			}
-			event := NewEvent(ctx, &dip.IOPlugin, dip.Payload)
-			log.Debug().Msg("debug input plugin " + dip.Hash(ctx) + " produced event " + fmt.Sprintf("%d", dip.EventCount))
-			// place event on buffered event channel
-			dip.EventQueuer.AddEvent(ctx, event)
+			event := NewEvent(ctx, dip, dip.Payload)
+			// deliver event to each interested route (first filter in chain)
+			if dip.routes != nil {
+				for _, r := range dip.routes {
+					if r.FilterChain != nil && len(r.FilterChain.Filters) > 0 {
+						//TODO: clone event
+						r.FilterChain.Filters[0].GetInputChannel() <- event
+					}
+				}
+			}
+			log.Debug().Msg("debug " + dip.Mode + dip.Type + " plugin " + dip.Hash(ctx) + " produced event " + fmt.Sprintf("%d", dip.EventCount))
 			dip.EventCount++
 		}
 	}()
 }
 
-func (dip *DebugInputPlugin) DoSync(ctx context.Context) {
-	if dip.EventQueuer == nil {
-		log.Error().Msg("no event queue set for debug input plugin " + dip.Hash(ctx))
-		return
-	}
+func (dip *DebugInputPlugin) DoSync(ctx context.Context, event *Event) error {
 	if dip.Payload == nil {
-		log.Error().Msg("no payload configured for debug input plugin " + dip.Hash(ctx))
-		return
+		return errors.New("no payload configured for debug input plugin " + dip.Hash(ctx))
 	}
-	event := NewEvent(ctx, &dip.IOPlugin, dip.Payload)
 	log.Debug().Msg("debug input plugin " + dip.Hash(ctx) + " produced event " + fmt.Sprintf("%d", dip.EventCount))
-	// place event on buffered event channel
-	dip.EventQueuer.AddEvent(ctx, event)
+	// deliver event to each interested route (first filter in chain)
+	if dip.routes != nil {
+		for _, r := range dip.routes {
+			if r.FilterChain != nil && len(r.FilterChain.Filters) > 0 {
+				//TODO: clone event
+				r.FilterChain.Filters[0].GetInputChannel() <- event
+			}
+		}
+	}
 	dip.EventCount++
+	return nil
 }
 
+//
+// debug output plugin
+//
+
 func (dop *DebugOutputPlugin) DoSync(ctx context.Context, event *Event) error {
-	log.Debug().Msg("debug output plugin " + dop.Hash(ctx) + " consumed event " + fmt.Sprintf("%d", dop.EventCount))
+	log.Debug().Msg(dop.Mode + " " + dop.Type + " plugin " + dop.Hash(ctx) + " passed")
 	dop.EventCount++
 	return nil
 }
 
 func (dop *DebugOutputPlugin) DoAsync(ctx context.Context) {
+	go func() {
+		if dop.inputChannel == nil {
+			return
+		}
+		for {
+			select {
+			case <-dop.GetInputChannel():
+				dop.EventCount++
+			case <-dop.done:
+				return
+			}
+			log.Debug().Msg(dop.Mode + " " + dop.Type + " plugin " + dop.Hash(ctx) + " passed")
+		}
+	}()
 }
 
-func (iop *IOPlugin) DoSync(ctx context.Context, event *Event) error {
-	//TODO: improve
-	if iop.Mode == PluginModeOutput {
-		log.Debug().Msg("debug output plugin " + iop.Hash(ctx) + " consumed event " + fmt.Sprintf("%d", iop.EventCount))
-		iop.EventCount++
-	}
-	return nil
-}
+//
+// factory function for input plugin creation
+//
 
-func NewInputPlugin(ctx context.Context, rte *RoutingTableEntry) (*IOPlugin, error) {
-	switch rte.Source.Type {
+func NewInputPlugin(ctx context.Context, rte *RoutingTableEntry) (Pluginer, error) {
+	pc := rte.Source.GetConfig()
+	switch pc.Type {
 	case PluginTypeDebug:
 		dip := new(DebugInputPlugin)
 		// initialize with defaults
@@ -177,10 +220,10 @@ func NewInputPlugin(ctx context.Context, rte *RoutingTableEntry) (*IOPlugin, err
 		dip.Mode = PluginModeInput
 		dip.State = PluginStateReady
 		dip.Name = "Debug"
-		dip.Params = rte.Source.Params
+		dip.Params = pc.Params
 		dip.routes = []*RoutingTableEntry{rte}
-		dip.RouteCount = 1
-		dip.EventQueuer = GetEventQueue(ctx)
+		dip.outputChannel = make(chan *Event)
+		dip.done = make(chan bool)
 		// parse configs and overwrite defaults
 		if dip.Params != nil {
 			if value, ok := dip.Params["rounds"].(float64); ok {
@@ -195,24 +238,32 @@ func NewInputPlugin(ctx context.Context, rte *RoutingTableEntry) (*IOPlugin, err
 		}
 		// start producing events
 		dip.DoAsync(ctx)
-		return &dip.IOPlugin, nil
+		return dip, nil
 	}
-	return nil, &UnknownInputPluginTypeError{rte.Source.Type}
+	return nil, &UnknownInputPluginTypeError{pc.Type}
 }
 
-func NewOutputPlugin(ctx context.Context, rte *RoutingTableEntry) (*IOPlugin, error) {
-	switch rte.Destination.Type {
+//
+// factory function for output plugin creation
+//
+
+func NewOutputPlugin(ctx context.Context, rte *RoutingTableEntry) (Pluginer, error) {
+	pc := rte.Destination.GetConfig()
+	switch pc.Type {
 	case PluginTypeDebug:
 		dop := new(DebugOutputPlugin)
 		dop.Type = PluginTypeDebug
 		dop.Mode = PluginModeOutput
 		dop.State = PluginStateReady
 		dop.Name = "Debug"
-		dop.Params = rte.Destination.Params
+		dop.Params = pc.Params
 		dop.routes = []*RoutingTableEntry{rte}
-		dop.RouteCount = 1
+		dop.done = make(chan bool)
+		if rte.FilterChain != nil && len(rte.FilterChain.Filters) > 0 {
+			dop.inputChannel = rte.FilterChain.Filters[len(rte.FilterChain.Filters)-1].GetOutputChannel()
+		}
 		dop.DoAsync(ctx)
-		return &dop.IOPlugin, nil
+		return dop, nil
 	}
-	return nil, &UnknownOutputPluginTypeError{rte.Destination.Type}
+	return nil, &UnknownOutputPluginTypeError{pc.Type}
 }

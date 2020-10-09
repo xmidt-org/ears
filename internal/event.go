@@ -31,13 +31,13 @@ type (
 		Encoding string      `json:"encoding"` // optional encoding hint to be set by input plugin
 		Metadata interface{} `json:"metadata"` // optional metadata produced by filter chain
 		AckTree  AckTree     `json:"ackTree"`  // optional ack chain (or ack tree)
-		Source   *IOPlugin   `json:"source"`   // pointer to source plugin instance
+		Source   Pluginer    `json:"source"`   // pointer to source plugin instance
 		TxId     string      `json:"txid"`     // transaction ID (probably also available from context)
 		Ts       int         `json: "ts"`      // timestamp when event was received
 	}
 )
 
-func NewEvent(ctx context.Context, plugin *IOPlugin, payload interface{}) *Event {
+func NewEvent(ctx context.Context, plugin Pluginer, payload interface{}) *Event {
 	evt := new(Event)
 	evt.ctx = ctx
 	evt.Payload = payload
