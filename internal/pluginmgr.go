@@ -121,19 +121,6 @@ func (pm *DefaultIOPluginManager) WithdrawPlugin(ctx context.Context, rte *Routi
 	return nil
 }
 
-func (pm *DefaultIOPluginManager) WithdrawRoute(ctx context.Context, rte *RoutingTableEntry) error {
-	var err error
-	err = pm.WithdrawPlugin(ctx, rte, rte.Source)
-	if err != nil {
-		return err
-	}
-	err = pm.WithdrawPlugin(ctx, rte, rte.Destination)
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
 func (pm *DefaultIOPluginManager) GetPluginCount(ctx context.Context) int {
 	return len(pm.pluginMap)
 }
