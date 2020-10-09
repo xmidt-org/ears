@@ -19,6 +19,7 @@ package internal
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"sync"
 )
@@ -37,6 +38,15 @@ func NewInMemoryRoutingTableManager() *InMemoryRoutingTableManager {
 	mgr.routingTableIndex = make(map[string]*RoutingTableEntry)
 	mgr.lock = sync.RWMutex{}
 	return mgr
+}
+
+func (mgr *InMemoryRoutingTableManager) String() string {
+	tbl := make([]string, 0)
+	for _, e := range mgr.routingTableIndex {
+		tbl = append(tbl, e.String())
+	}
+	buf, _ := json.MarshalIndent(tbl, "", "\t")
+	return string(buf)
 }
 
 // AddRoute adds a route to the routing table

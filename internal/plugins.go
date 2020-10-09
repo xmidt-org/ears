@@ -28,11 +28,13 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
+//TODO: define error types
 //TODO: seprate configs from state
 //TODO: use interface rather than struct
 //TODO: implement basic stream sharing
 //TODO: add org id and app id to plugin and consider in hash calculation
 //TODO: ...and we need stream sharing
+//TODO: combine InputPlugin and OutputPlugin to IOPlugin
 
 type (
 	// An EarsPlugin represents an input plugin an output plugin or a filter plugin
@@ -64,6 +66,7 @@ type (
 		routingTableEntry *RoutingTableEntry // routing table entry this fiter plugin belongs to
 		inputChannel      chan *Event        // channel on which this filter receives the next event
 		outputChannel     chan *Event        // channel to which this filter forwards this event to
+		done              chan bool          // done channel
 		filterer          Filterer           // an instance of the appropriate filterer
 		// note: if event is filtered it will not be forwarded
 		// note: if event is split multiple events will be forwarded
@@ -93,6 +96,11 @@ func (plgn *Plugin) Validate(ctx context.Context) error {
 
 func (plgn *Plugin) Initialize(ctx context.Context) error {
 	return nil
+}
+
+func (plgn *Plugin) String() string {
+	buf, _ := json.Marshal(plgn)
+	return string(buf)
 }
 
 type (

@@ -41,11 +41,11 @@ func (fc *FilterChain) Initialize(ctx context.Context, rte *RoutingTableEntry) e
 	if fc.Filters == nil {
 		fc.Filters = make([]*FilterPlugin, 0)
 	}
+	//TODO: new method for FilterPlugin
 	if len(fc.Filters) == 0 {
 		// seed an empty filter chain with a pass filter
 		fp := new(FilterPlugin)
 		fp.Type = FilterTypePass
-		fp.filterer, err = NewFilterer(ctx, fp)
 		fc.Filters = append(fc.Filters, fp)
 	}
 	if fc.Filters != nil {
@@ -57,6 +57,7 @@ func (fc *FilterChain) Initialize(ctx context.Context, rte *RoutingTableEntry) e
 			fp.State = PluginStateReady
 			fp.Mode = PluginModeFilter
 			fp.routingTableEntry = rte
+			fp.done = make(chan bool)
 			if idx == 0 {
 				fp.inputChannel = GetEventQueue(ctx).GetChannel(ctx)
 			} else {
@@ -70,4 +71,12 @@ func (fc *FilterChain) Initialize(ctx context.Context, rte *RoutingTableEntry) e
 		}
 	}
 	return nil
+}
+
+func (fc *FilterChain) Withdraw(ctx context.Context) {
+	if fc.Filters != nil {
+		for _, f := range fc.Filters {
+			f.Close()
+		}
+	}
 }

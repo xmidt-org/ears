@@ -102,6 +102,7 @@ func (mf *SplitFilter) Filter(ctx context.Context, event *Event) ([]*Event, erro
 	// always splits into two identical events
 	events := make([]*Event, 0)
 	//TODO: implement filter logic
+	//TODO: clone
 	events = append(events, event)
 	events = append(events, event)
 	return events, nil
@@ -160,6 +161,10 @@ func NewFilterer(ctx context.Context, fp *FilterPlugin) (Filterer, error) {
 	return nil, errors.New("unknown filter type " + fp.Type)
 }
 
+func (fp *FilterPlugin) Close() {
+	fp.done <- true
+}
+
 // DoSync synchronoulsy accepts an event into a filter plugin belonging to a filter chain
 func (fp *FilterPlugin) DoSync(ctx context.Context, event *Event) error {
 	log.Debug().Msg(fp.Type + " filter " + fp.Hash(ctx) + " passed")
@@ -184,7 +189,12 @@ func (fp *FilterPlugin) DoAsync(ctx context.Context) {
 			return
 		}
 		for {
-			inputEvent := <-fp.inputChannel
+			var inputEvent *Event
+			select {
+			case inputEvent = <-fp.inputChannel:
+			case <-fp.done:
+				return
+			}
 			log.Debug().Msg(fp.Type + " filter " + fp.Hash(ctx) + " passed")
 			filteredEvents, err := fp.filterer.Filter(ctx, inputEvent)
 			if err != nil {

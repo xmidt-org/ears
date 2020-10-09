@@ -3,6 +3,7 @@ package internal_test
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"testing"
 	"time"
 
@@ -95,11 +96,12 @@ var (
 	ctx = context.Background()
 )
 
+//TODO: merge test code
+
 func TestSplitRoute(t *testing.T) {
 	ctx := context.Background()
-	var rtmgr internal.RoutingTableManager
 	// init in memory routing table manager
-	rtmgr = internal.NewInMemoryRoutingTableManager()
+	rtmgr := internal.NewInMemoryRoutingTableManager()
 	if rtmgr.GetRouteCount(ctx) != 0 {
 		t.Errorf("routing table not empty")
 		return
@@ -128,6 +130,12 @@ func TestSplitRoute(t *testing.T) {
 	if len(allRoutes) != 1 {
 		t.Errorf("routing table doesn't have expected entry")
 	}
+	fmt.Printf("ROUTING TABLE:\n")
+	fmt.Printf("%s\n", rtmgr.String())
+	fmt.Printf("INPUT PLUGINS:\n")
+	fmt.Printf("%s\n", internal.GetInputPluginManager(ctx).String())
+	fmt.Printf("OUTPUT PLUGINS:\n")
+	fmt.Printf("%s\n", internal.GetOutputPluginManager(ctx).String())
 	time.Sleep(time.Duration(2000) * time.Millisecond)
 	if allRoutes[0].Source.EventCount != 3 {
 		t.Errorf("unexpected number of produced events %d", allRoutes[0].Source.EventCount)
@@ -147,9 +155,8 @@ func TestSplitRoute(t *testing.T) {
 
 func TestDirectRoute(t *testing.T) {
 	ctx := context.Background()
-	var rtmgr internal.RoutingTableManager
 	// init in memory routing table manager
-	rtmgr = internal.NewInMemoryRoutingTableManager()
+	rtmgr := internal.NewInMemoryRoutingTableManager()
 	if rtmgr.GetRouteCount(ctx) != 0 {
 		t.Errorf("routing table not empty")
 		return
@@ -178,6 +185,12 @@ func TestDirectRoute(t *testing.T) {
 	if len(allRoutes) != 1 {
 		t.Errorf("routing table doesn't have expected entry")
 	}
+	fmt.Printf("ROUTING TABLE:\n")
+	fmt.Printf("%s\n", rtmgr.String())
+	fmt.Printf("INPUT PLUGINS:\n")
+	fmt.Printf("%s\n", internal.GetInputPluginManager(ctx).String())
+	fmt.Printf("OUTPUT PLUGINS:\n")
+	fmt.Printf("%s\n", internal.GetOutputPluginManager(ctx).String())
 	time.Sleep(time.Duration(2000) * time.Millisecond)
 	if allRoutes[0].Source.EventCount != 3 {
 		t.Errorf("unexpected number of produced events %d", allRoutes[0].Source.EventCount)
