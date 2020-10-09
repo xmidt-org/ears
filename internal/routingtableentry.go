@@ -71,13 +71,6 @@ func (rte *RoutingTableEntry) String() string {
 func (rte *RoutingTableEntry) Initialize(ctx context.Context) error {
 	var err error
 	//
-	// initialize input plugin
-	//
-	rte.Source, err = GetIOPluginManager(ctx).RegisterRoute(ctx, rte, rte.Source)
-	if err != nil {
-		return err
-	}
-	//
 	// initialize filter chain
 	//
 	if rte.FilterChain == nil {
@@ -88,9 +81,9 @@ func (rte *RoutingTableEntry) Initialize(ctx context.Context) error {
 		return err
 	}
 	//
-	// initialize output plugin
+	// initialize IO plugins
 	//
-	rte.Destination, err = GetIOPluginManager(ctx).RegisterRoute(ctx, rte, rte.Destination)
+	rte.Source, rte.Destination, err = GetIOPluginManager(ctx).RegisterRoute(ctx, rte)
 	if err != nil {
 		return err
 	}
@@ -98,20 +91,15 @@ func (rte *RoutingTableEntry) Initialize(ctx context.Context) error {
 }
 
 func (rte *RoutingTableEntry) Withdraw(ctx context.Context) error {
-	// withdraw from input plugin
+	// withdraw from IO plugins
 	var err error
-	err = GetIOPluginManager(ctx).WithdrawRoute(ctx, rte, rte.Source)
+	err = GetIOPluginManager(ctx).WithdrawRoute(ctx, rte)
 	if err != nil {
 		return err
 	}
 	// withdraw filter chain
 	if rte.FilterChain != nil {
 		rte.FilterChain.Withdraw(ctx)
-	}
-	// withdraw from output plugin
-	err = GetIOPluginManager(ctx).WithdrawRoute(ctx, rte, rte.Destination)
-	if err != nil {
-		return err
 	}
 	return nil
 }

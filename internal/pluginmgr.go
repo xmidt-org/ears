@@ -53,7 +53,7 @@ func (pm *DefaultIOPluginManager) String() string {
 	return string(buf)
 }
 
-func (pm *DefaultIOPluginManager) RegisterRoute(ctx context.Context, rte *RoutingTableEntry, plugin *IOPlugin) (*IOPlugin, error) {
+func (pm *DefaultIOPluginManager) RegisterPlugin(ctx context.Context, rte *RoutingTableEntry, plugin *IOPlugin) (*IOPlugin, error) {
 	var err error
 	hash := plugin.Hash(ctx)
 	if hash == "" {
@@ -81,7 +81,19 @@ func (pm *DefaultIOPluginManager) RegisterRoute(ctx context.Context, rte *Routin
 	return p, nil
 }
 
-func (pm *DefaultIOPluginManager) WithdrawRoute(ctx context.Context, rte *RoutingTableEntry, plugin *IOPlugin) error {
+func (pm *DefaultIOPluginManager) RegisterRoute(ctx context.Context, rte *RoutingTableEntry) (*IOPlugin, *IOPlugin, error) {
+	ip, err := pm.RegisterPlugin(ctx, rte, rte.Source)
+	if err != nil {
+		return nil, nil, err
+	}
+	op, err := pm.RegisterPlugin(ctx, rte, rte.Destination)
+	if err != nil {
+		return nil, nil, err
+	}
+	return ip, op, nil
+}
+
+func (pm *DefaultIOPluginManager) WithdrawPlugin(ctx context.Context, rte *RoutingTableEntry, plugin *IOPlugin) error {
 	hash := plugin.Hash(ctx)
 	if hash == "" {
 		return new(EmptyPluginHashError)
@@ -105,6 +117,19 @@ func (pm *DefaultIOPluginManager) WithdrawRoute(ctx context.Context, rte *Routin
 		}
 		p.routes = routes
 		log.Debug().Msg(fmt.Sprintf("%s %s plugin route count %d %d", p.Type, p.Mode, p.RouteCount, len(p.routes)))
+	}
+	return nil
+}
+
+func (pm *DefaultIOPluginManager) WithdrawRoute(ctx context.Context, rte *RoutingTableEntry) error {
+	var err error
+	err = pm.WithdrawPlugin(ctx, rte, rte.Source)
+	if err != nil {
+		return err
+	}
+	err = pm.WithdrawPlugin(ctx, rte, rte.Destination)
+	if err != nil {
+		return err
 	}
 	return nil
 }
