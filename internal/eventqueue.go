@@ -17,7 +17,7 @@
 
 package internal
 
-import "context"
+/*import "context"
 
 const (
 	EventQueueDepth = 1000
@@ -65,4 +65,4 @@ func (eq *EventQueue) GetMaxEventCount(ctx context.Context) int {
 
 func (eq *EventQueue) GetChannel(ctx context.Context) chan *Event {
 	return eq.eventChannel
-}
+}*/

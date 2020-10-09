@@ -160,13 +160,10 @@ func NewFilterer(ctx context.Context, fp *FilterPlugin) (Filterer, error) {
 	return nil, &UnknownFilterTypeError{fp.Type}
 }
 
-func (fp *FilterPlugin) Close() {
-	fp.done <- true
-}
-
 // DoSync synchronoulsy accepts an event into a filter plugin belonging to a filter chain
 func (fp *FilterPlugin) DoSync(ctx context.Context, event *Event) error {
 	log.Debug().Msg(fp.Type + " filter " + fp.Hash(ctx) + " passed")
+	fp.EventCount++
 	filteredEvents, err := fp.filterer.Filter(ctx, event)
 	if err != nil {
 		return err
@@ -174,8 +171,6 @@ func (fp *FilterPlugin) DoSync(ctx context.Context, event *Event) error {
 	for _, e := range filteredEvents {
 		if fp.outputChannel != nil {
 			fp.outputChannel <- e
-		} else {
-			fp.routingTableEntry.Destination.DoSync(ctx, e)
 		}
 	}
 	return nil
@@ -191,6 +186,7 @@ func (fp *FilterPlugin) DoAsync(ctx context.Context) {
 			var inputEvent *Event
 			select {
 			case inputEvent = <-fp.inputChannel:
+				fp.EventCount++
 			case <-fp.done:
 				return
 			}
@@ -202,8 +198,6 @@ func (fp *FilterPlugin) DoAsync(ctx context.Context) {
 			for _, e := range filteredEvents {
 				if fp.outputChannel != nil {
 					fp.outputChannel <- e
-				} else {
-					fp.routingTableEntry.Destination.DoSync(ctx, e)
 				}
 			}
 		}

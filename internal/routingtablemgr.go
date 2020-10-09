@@ -142,7 +142,7 @@ func (mgr *InMemoryRoutingTableManager) GetAllRoutes(ctx context.Context) ([]*Ro
 }
 
 // GetRoutesBySourcePlugin gets all routes used by a given input plugin
-func (mgr *InMemoryRoutingTableManager) GetRoutesBySourcePlugin(ctx context.Context, plugin *IOPlugin) ([]*RoutingTableEntry, error) {
+func (mgr *InMemoryRoutingTableManager) GetRoutesBySourcePlugin(ctx context.Context, plugin Pluginer) ([]*RoutingTableEntry, error) {
 	mgr.lock.RLock()
 	defer mgr.lock.RUnlock()
 	tbl := make([]*RoutingTableEntry, len(mgr.routingTableIndex))
@@ -155,7 +155,7 @@ func (mgr *InMemoryRoutingTableManager) GetRoutesBySourcePlugin(ctx context.Cont
 }
 
 // GetRoutesByDestinationPlugin gets all routes used by a given output plugin
-func (mgr *InMemoryRoutingTableManager) GetRoutesByDestinationPlugin(ctx context.Context, plugin *IOPlugin) ([]*RoutingTableEntry, error) {
+func (mgr *InMemoryRoutingTableManager) GetRoutesByDestinationPlugin(ctx context.Context, plugin Pluginer) ([]*RoutingTableEntry, error) {
 	mgr.lock.RLock()
 	defer mgr.lock.RUnlock()
 	tbl := make([]*RoutingTableEntry, len(mgr.routingTableIndex))
