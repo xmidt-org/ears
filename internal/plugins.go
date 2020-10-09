@@ -62,6 +62,16 @@ type (
 		// note: if event is split multiple events will be forwarded
 		// note: if output channel is nil, we are at the end of the filter chain and the event is to be delivered to the output plugin of the route
 	}
+	DebugInputPlugin struct {
+		IOPlugin
+		IntervalMs  int
+		Rounds      int
+		Payload     interface{}
+		EventQueuer EventQueuer
+	}
+	DebugOutputPlugin struct {
+		IOPlugin
+	}
 )
 
 func (plgn *Plugin) Hash(ctx context.Context) string {
@@ -92,20 +102,6 @@ func (plgn *Plugin) String() string {
 	buf, _ := json.Marshal(plgn)
 	return string(buf)
 }
-
-type (
-	DebugInputPlugin struct {
-		IOPlugin
-		IntervalMs  int
-		Rounds      int
-		Payload     interface{}
-		EventQueuer EventQueuer
-	}
-
-	DebugOutputPlugin struct {
-		IOPlugin
-	}
-)
 
 func (dip *DebugInputPlugin) DoAsync(ctx context.Context) {
 	done := false
