@@ -21,6 +21,7 @@ import (
 	"context"
 	"crypto/md5"
 	"encoding/json"
+	"errors"
 	"fmt"
 )
 
@@ -30,8 +31,8 @@ type (
 		OrgId        string              `json:"orgId"`        // org ID for quota and rate limiting
 		AppId        string              `json:"appId"`        // app ID for quota and rate limiting
 		UserId       string              `json:"userId"`       // user ID / author of route
-		Source       *InputPlugin        `json:"source`        // pointer to source plugin instance
-		Destination  *OutputPlugin       `json:"destination"`  // pointer to destination plugin instance
+		Source       *IOPlugin           `json:"source`        // pointer to source plugin instance
+		Destination  *IOPlugin           `json:"destination"`  // pointer to destination plugin instance
 		FilterChain  *FilterChain        `json:"filterChain"`  // optional list of filter plugins that will be applied in order to perform arbitrary filtering and transformation functions
 		DeliveryMode string              `json:"deliveryMode"` // possible values: fire_and_forget, at_least_once, exactly_once
 		Debug        bool                `json:"debug"`        // if true generate debug logs and metrics for events taking this route
@@ -52,6 +53,14 @@ func (rte *RoutingTableEntry) Hash(ctx context.Context) string {
 }
 
 func (rte *RoutingTableEntry) Validate(ctx context.Context) error {
+	if rte.Source == nil {
+		return errors.New("missing source plugin configuration")
+	}
+	if rte.Destination == nil {
+		return errors.New("missing destination plugin configuration")
+	}
+	rte.Source.Mode = PluginModeInput
+	rte.Destination.Mode = PluginModeOutput
 	return nil
 }
 
@@ -61,11 +70,11 @@ func (rte *RoutingTableEntry) String() string {
 }
 
 func (rte *RoutingTableEntry) Initialize(ctx context.Context) error {
+	var err error
 	//
 	// initialize input plugin
 	//
-	var err error
-	rte.Source, err = GetInputPluginManager(ctx).RegisterRoute(ctx, rte)
+	rte.Source, err = GetIOPluginManager(ctx).RegisterRoute(ctx, rte, rte.Source)
 	if err != nil {
 		return err
 	}
@@ -82,7 +91,7 @@ func (rte *RoutingTableEntry) Initialize(ctx context.Context) error {
 	//
 	// initialize output plugin
 	//
-	rte.Destination, err = GetOutputPluginManager(ctx).RegisterRoute(ctx, rte)
+	rte.Destination, err = GetIOPluginManager(ctx).RegisterRoute(ctx, rte, rte.Destination)
 	if err != nil {
 		return err
 	}
@@ -92,7 +101,7 @@ func (rte *RoutingTableEntry) Initialize(ctx context.Context) error {
 func (rte *RoutingTableEntry) Withdraw(ctx context.Context) error {
 	// withdraw from input plugin
 	var err error
-	err = GetInputPluginManager(ctx).UnregisterRoute(ctx, rte)
+	err = GetIOPluginManager(ctx).UnregisterRoute(ctx, rte, rte.Source)
 	if err != nil {
 		return err
 	}
@@ -101,7 +110,7 @@ func (rte *RoutingTableEntry) Withdraw(ctx context.Context) error {
 		rte.FilterChain.Withdraw(ctx)
 	}
 	// withdraw from output plugin
-	err = GetOutputPluginManager(ctx).UnregisterRoute(ctx, rte)
+	err = GetIOPluginManager(ctx).UnregisterRoute(ctx, rte, rte.Destination)
 	if err != nil {
 		return err
 	}

@@ -41,11 +41,7 @@ func NewInMemoryRoutingTableManager() *InMemoryRoutingTableManager {
 }
 
 func (mgr *InMemoryRoutingTableManager) String() string {
-	tbl := make([]string, 0)
-	for _, e := range mgr.routingTableIndex {
-		tbl = append(tbl, e.String())
-	}
-	buf, _ := json.MarshalIndent(tbl, "", "\t")
+	buf, _ := json.MarshalIndent(mgr.routingTableIndex, "", "\t")
 	return string(buf)
 }
 
@@ -147,7 +143,7 @@ func (mgr *InMemoryRoutingTableManager) GetAllRoutes(ctx context.Context) ([]*Ro
 }
 
 // GetRoutesBySourcePlugin gets all routes used by a given input plugin
-func (mgr *InMemoryRoutingTableManager) GetRoutesBySourcePlugin(ctx context.Context, plugin *InputPlugin) ([]*RoutingTableEntry, error) {
+func (mgr *InMemoryRoutingTableManager) GetRoutesBySourcePlugin(ctx context.Context, plugin *IOPlugin) ([]*RoutingTableEntry, error) {
 	mgr.lock.RLock()
 	defer mgr.lock.RUnlock()
 	tbl := make([]*RoutingTableEntry, len(mgr.routingTableIndex))
@@ -160,7 +156,7 @@ func (mgr *InMemoryRoutingTableManager) GetRoutesBySourcePlugin(ctx context.Cont
 }
 
 // GetRoutesByDestinationPlugin gets all routes used by a given output plugin
-func (mgr *InMemoryRoutingTableManager) GetRoutesByDestinationPlugin(ctx context.Context, plugin *OutputPlugin) ([]*RoutingTableEntry, error) {
+func (mgr *InMemoryRoutingTableManager) GetRoutesByDestinationPlugin(ctx context.Context, plugin *IOPlugin) ([]*RoutingTableEntry, error) {
 	mgr.lock.RLock()
 	defer mgr.lock.RUnlock()
 	tbl := make([]*RoutingTableEntry, len(mgr.routingTableIndex))
