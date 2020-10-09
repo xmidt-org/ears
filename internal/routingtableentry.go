@@ -93,7 +93,11 @@ func (rte *RoutingTableEntry) Initialize(ctx context.Context) error {
 func (rte *RoutingTableEntry) Withdraw(ctx context.Context) error {
 	// withdraw from IO plugins
 	var err error
-	err = GetIOPluginManager(ctx).WithdrawRoute(ctx, rte)
+	err = GetIOPluginManager(ctx).WithdrawPlugin(ctx, rte, rte.Source)
+	if err != nil {
+		return err
+	}
+	err = GetIOPluginManager(ctx).WithdrawPlugin(ctx, rte, rte.Destination)
 	if err != nil {
 		return err
 	}
