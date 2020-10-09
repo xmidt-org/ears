@@ -87,33 +87,8 @@ type (
 	// A RoutingTableIndex is a hashmap mapping a routing entry hash to a routing entry pointer
 	RoutingTableIndex map[string]*RoutingTableEntry
 
-	//FilterFunction func(ctx context.Context, event *Event) (*[]Event, error)
-
 	// A PluginIndex is a hashmap mapping a plugin instance hash to a plugin instance
 	PluginIndex map[string]*Plugin
-
-	////
-
-	/*Filter struct {
-		Type   string      `json: "filter_type"`
-		Params interface{} `json: "params"`
-	}*/
-
-	// A Pattern represents an object for pattern matching, implements the matcher interface, other metadata may be added
-	/*Pattern struct {
-		Specification interface{} `json: "spec"` // json pattern for matching
-	}*/
-
-	// A Transformation represents an object for structural transformations, implements the transformer interface, other metadata may be added
-	/*Transformation struct {
-		Specification interface{} `json: "spec"` // json instructions for transformation
-	}*/
-
-	/*Worker struct { //tbd
-	}*/
-
-	/*WorkerPool struct { // tbd
-	}*/
 )
 
 type (
@@ -151,15 +126,6 @@ type (
 	Matcher interface {
 		Match(ctx context.Context, event *Event, pattern interface{}) bool // if pattern is contained in event the function returns true
 	}
-
-	/*Filterer interface {
-		Filter(ctx context.Context, event *Event) (*Event, error) // if event is filtered, returns nil, if event is not filterd returns events; event may be transformed and metadata may be created in the process
-	}*/
-
-	// A transformer performs structural transformations on an object
-	/*Transformer interface {
-		Transform(ctx context.Context, event *Event) (*Event, error) // returns transformed object or error
-	}*/
 
 	// An AckTree is a splittable acknowledge tree object
 	AckTree interface {
@@ -211,7 +177,7 @@ type (
 	// A IOPluginManager maintains a map of live plugins and ensures no two plugins with the same hash exist
 	IOPluginManager interface {
 		RegisterRoute(ctx context.Context, rte *RoutingTableEntry) (*IOPlugin, error) // uses plugin parameter only for hash calculation and returns one if it already exists or creates a new one
-		UnregisterRoute(ctx context.Context, rte *RoutingTableEntry) error            // uses plugin parameter only for hash calculation
+		WithdrawRoute(ctx context.Context, rte *RoutingTableEntry) error              // uses plugin parameter only for hash calculation
 		GetPluginCount(ctx context.Context) int                                       // get plugin count
 		GetAllPlugins(ctx context.Context) ([]*IOPlugin, error)                       // get all plugins
 	}

@@ -81,7 +81,7 @@ func (pm *DefaultIOPluginManager) RegisterRoute(ctx context.Context, rte *Routin
 	return p, nil
 }
 
-func (pm *DefaultIOPluginManager) UnregisterRoute(ctx context.Context, rte *RoutingTableEntry, plugin *IOPlugin) error {
+func (pm *DefaultIOPluginManager) WithdrawRoute(ctx context.Context, rte *RoutingTableEntry, plugin *IOPlugin) error {
 	hash := plugin.Hash(ctx)
 	if hash == "" {
 		return new(EmptyPluginHashError)
