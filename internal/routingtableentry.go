@@ -20,6 +20,7 @@ package internal
 import (
 	"context"
 	"crypto/md5"
+	"encoding/json"
 	"fmt"
 )
 
@@ -54,6 +55,11 @@ func (rte *RoutingTableEntry) Validate(ctx context.Context) error {
 	return nil
 }
 
+func (rte *RoutingTableEntry) String() string {
+	buf, _ := json.Marshal(rte)
+	return string(buf)
+}
+
 func (rte *RoutingTableEntry) Initialize(ctx context.Context) error {
 	//
 	// initialize input plugin
@@ -84,17 +90,17 @@ func (rte *RoutingTableEntry) Initialize(ctx context.Context) error {
 }
 
 func (rte *RoutingTableEntry) Withdraw(ctx context.Context) error {
-	//
-	// withdraw input plugin
-	//
+	// withdraw from input plugin
 	var err error
 	err = GetInputPluginManager(ctx).UnregisterRoute(ctx, rte)
 	if err != nil {
 		return err
 	}
-	//
-	// withdraw output plugin
-	//
+	// withdraw filter chain
+	if rte.FilterChain != nil {
+		rte.FilterChain.Withdraw(ctx)
+	}
+	// withdraw from output plugin
 	err = GetOutputPluginManager(ctx).UnregisterRoute(ctx, rte)
 	if err != nil {
 		return err

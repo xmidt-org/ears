@@ -19,6 +19,7 @@ package internal
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 
@@ -37,34 +38,52 @@ type (
 )
 
 var (
-	inputPluginMgr  InputPluginManager
-	outputPluginMgr OutputPluginManager
+	inputPluginMgr  *DefaultInputPluginManager
+	outputPluginMgr *DefaultOutputPluginManager
 )
 
-func NewOutputPluginManager(ctx context.Context) OutputPluginManager {
+func NewOutputPluginManager(ctx context.Context) *DefaultOutputPluginManager {
 	pm := new(DefaultOutputPluginManager)
 	pm.pluginMap = make(map[string]*OutputPlugin)
 	return pm
 }
 
-func GetOutputPluginManager(ctx context.Context) OutputPluginManager {
+func GetOutputPluginManager(ctx context.Context) *DefaultOutputPluginManager {
 	if outputPluginMgr == nil {
 		outputPluginMgr = NewOutputPluginManager(ctx)
 	}
 	return outputPluginMgr
 }
 
-func NewInputPluginManager(ctx context.Context) InputPluginManager {
+func NewInputPluginManager(ctx context.Context) *DefaultInputPluginManager {
 	pm := new(DefaultInputPluginManager)
 	pm.pluginMap = make(map[string]*InputPlugin)
 	return pm
 }
 
-func GetInputPluginManager(ctx context.Context) InputPluginManager {
+func GetInputPluginManager(ctx context.Context) *DefaultInputPluginManager {
 	if inputPluginMgr == nil {
 		inputPluginMgr = NewInputPluginManager(ctx)
 	}
 	return inputPluginMgr
+}
+
+func (pm *DefaultInputPluginManager) String() string {
+	tbl := make([]string, 0)
+	for _, e := range pm.pluginMap {
+		tbl = append(tbl, e.String())
+	}
+	buf, _ := json.MarshalIndent(tbl, "", "\t")
+	return string(buf)
+}
+
+func (pm *DefaultOutputPluginManager) String() string {
+	tbl := make([]string, 0)
+	for _, e := range pm.pluginMap {
+		tbl = append(tbl, e.String())
+	}
+	buf, _ := json.MarshalIndent(tbl, "", "\t")
+	return string(buf)
 }
 
 func (pm *DefaultInputPluginManager) RegisterRoute(ctx context.Context, rte *RoutingTableEntry) (*InputPlugin, error) {
