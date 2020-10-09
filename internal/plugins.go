@@ -27,11 +27,9 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-//TODO: define error types
-//TODO: seprate configs from state
+//TODO: separate configs from state
 //TODO: use interface rather than struct
 //TODO: add org id and app id to plugin and consider in hash calculation
-//TODO: combine InputPlugin and OutputPlugin to IOPlugin
 
 type (
 	// An EarsPlugin represents an input plugin an output plugin or a filter plugin
