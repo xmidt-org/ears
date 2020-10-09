@@ -20,7 +20,6 @@ package internal
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"sync"
 )
 
@@ -50,7 +49,7 @@ func (mgr *InMemoryRoutingTableManager) AddRoute(ctx context.Context, entry *Rou
 	mgr.lock.Lock()
 	defer mgr.lock.Unlock()
 	if entry == nil {
-		return errors.New("missing routing table entry")
+		return new(MissingRoutingTableEntryError)
 	}
 	if err := entry.Validate(ctx); err != nil {
 		return err
@@ -68,18 +67,18 @@ func (mgr *InMemoryRoutingTableManager) RemoveRoute(ctx context.Context, entry *
 	mgr.lock.Lock()
 	defer mgr.lock.Unlock()
 	if entry == nil {
-		return errors.New("missing routing table entry")
+		return new(MissingRoutingTableEntryError)
 	}
 	if err := entry.Validate(ctx); err != nil {
 		return err
 	}
 	hash := entry.Hash(ctx)
 	if hash == "" {
-		return errors.New("bad hash for route")
+		return new(EmptyHashError)
 	}
 	r, ok := mgr.routingTableIndex[hash]
 	if !ok {
-		return errors.New("unknown route")
+		return new(UnkownRouteError)
 	}
 	err := r.Withdraw(ctx)
 	if err != nil {

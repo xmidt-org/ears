@@ -21,7 +21,6 @@ import (
 	"context"
 	"crypto/md5"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"time"
 
@@ -204,7 +203,7 @@ func NewInputPlugin(ctx context.Context, rte *RoutingTableEntry) (*IOPlugin, err
 		dip.DoAsync(ctx)
 		return &dip.IOPlugin, nil
 	}
-	return nil, errors.New("unknown input plugin type " + rte.Source.Type)
+	return nil, &UnknownInputPluginTypeError{rte.Source.Type}
 }
 
 func NewOutputPlugin(ctx context.Context, rte *RoutingTableEntry) (*IOPlugin, error) {
@@ -221,5 +220,5 @@ func NewOutputPlugin(ctx context.Context, rte *RoutingTableEntry) (*IOPlugin, er
 		dop.DoAsync(ctx)
 		return &dop.IOPlugin, nil
 	}
-	return nil, errors.New("unknown output plugin type " + rte.Destination.Type)
+	return nil, &UnknownOutputPluginTypeError{rte.Destination.Type}
 }

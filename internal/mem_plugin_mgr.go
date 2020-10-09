@@ -20,7 +20,6 @@ package internal
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 
 	"github.com/rs/zerolog/log"
@@ -58,7 +57,7 @@ func (pm *DefaultIOPluginManager) RegisterRoute(ctx context.Context, rte *Routin
 	var err error
 	hash := plugin.Hash(ctx)
 	if hash == "" {
-		return plugin, errors.New("empty plugin hash")
+		return plugin, new(EmptyPluginHashError)
 	}
 	if p, ok := pm.pluginMap[hash]; ok {
 		p.RouteCount++
@@ -85,7 +84,7 @@ func (pm *DefaultIOPluginManager) RegisterRoute(ctx context.Context, rte *Routin
 func (pm *DefaultIOPluginManager) UnregisterRoute(ctx context.Context, rte *RoutingTableEntry, plugin *IOPlugin) error {
 	hash := plugin.Hash(ctx)
 	if hash == "" {
-		return errors.New("empty plugin hash")
+		return new(EmptyPluginHashError)
 	}
 	if p, ok := pm.pluginMap[hash]; ok {
 		log.Debug().Msg(fmt.Sprintf("unregistering %s %s plugin with hash %s", p.Type, p.Mode, hash))
