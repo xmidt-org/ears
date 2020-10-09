@@ -21,7 +21,6 @@ import (
 	"context"
 	"crypto/md5"
 	"encoding/json"
-	"errors"
 	"fmt"
 )
 
@@ -54,10 +53,10 @@ func (rte *RoutingTableEntry) Hash(ctx context.Context) string {
 
 func (rte *RoutingTableEntry) Validate(ctx context.Context) error {
 	if rte.Source == nil {
-		return errors.New("missing source plugin configuration")
+		return new(MissingSourcePluginConfiguraton)
 	}
 	if rte.Destination == nil {
-		return errors.New("missing destination plugin configuration")
+		return new(MissingDestinationPluginConfiguraton)
 	}
 	rte.Source.Mode = PluginModeInput
 	rte.Destination.Mode = PluginModeOutput

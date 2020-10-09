@@ -19,7 +19,6 @@ package internal
 
 import (
 	"context"
-	"errors"
 
 	"github.com/rs/zerolog/log"
 )
@@ -121,7 +120,7 @@ func (mf *BlockFilter) Filter(ctx context.Context, event *Event) ([]*Event, erro
 // NewFilterer is a factory function to create appropriate filterer for given filter plugin config
 func NewFilterer(ctx context.Context, fp *FilterPlugin) (Filterer, error) {
 	if fp == nil {
-		return nil, errors.New("missing filter plugin config")
+		return nil, new(MissingFilterPluginConfigError)
 	}
 	switch fp.Type {
 	case FilterTypeFilter:
@@ -158,7 +157,7 @@ func NewFilterer(ctx context.Context, fp *FilterPlugin) (Filterer, error) {
 	case FilterTypeBlock:
 		return new(BlockFilter), nil
 	}
-	return nil, errors.New("unknown filter type " + fp.Type)
+	return nil, &UnknownFilterTypeError{fp.Type}
 }
 
 func (fp *FilterPlugin) Close() {
