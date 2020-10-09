@@ -31,9 +31,7 @@ import (
 //TODO: define error types
 //TODO: seprate configs from state
 //TODO: use interface rather than struct
-//TODO: implement basic stream sharing
 //TODO: add org id and app id to plugin and consider in hash calculation
-//TODO: ...and we need stream sharing
 //TODO: combine InputPlugin and OutputPlugin to IOPlugin
 
 type (
@@ -50,15 +48,10 @@ type (
 		EventCount int                    `json:"eventCount"` // number of events that have passed through this plugin
 		RouteCount int                    `json:"routeCount"` // number of routes using this plugin
 	}
-	// InputPlugin represents an input plugin
-	InputPlugin struct {
+	// IOPlugin represents an input or an output plugin
+	IOPlugin struct {
 		Plugin
 		routes []*RoutingTableEntry // list of routes using this plugin instance as source plugin
-	}
-	// OutputPlugin represents an output plugin
-	OutputPlugin struct {
-		Plugin
-		routes []*RoutingTableEntry // list of routes using this plugin instance as destination plugin
 	}
 	// FilterPlugin represents a filter plugin
 	FilterPlugin struct {
@@ -84,7 +77,7 @@ func (plgn *Plugin) Hash(ctx context.Context) string {
 		str += string(buf)
 	}
 	// distinguish input and output plugins
-	//str += plgn.Mode
+	str += plgn.Mode
 	// optionally distinguish by org and app here as well
 	hash := fmt.Sprintf("%x", md5.Sum([]byte(str)))
 	return hash
@@ -105,7 +98,7 @@ func (plgn *Plugin) String() string {
 
 type (
 	DebugInputPlugin struct {
-		InputPlugin
+		IOPlugin
 		IntervalMs  int
 		Rounds      int
 		Payload     interface{}
@@ -113,7 +106,7 @@ type (
 	}
 
 	DebugOutputPlugin struct {
-		OutputPlugin
+		IOPlugin
 	}
 )
 
@@ -136,7 +129,7 @@ func (dip *DebugInputPlugin) DoAsync(ctx context.Context) {
 			if done {
 				break
 			}
-			event := NewEvent(ctx, &dip.InputPlugin, dip.Payload)
+			event := NewEvent(ctx, &dip.IOPlugin, dip.Payload)
 			log.Debug().Msg("debug input plugin " + dip.Hash(ctx) + " produced event " + fmt.Sprintf("%d", dip.EventCount))
 			// place event on buffered event channel
 			dip.EventQueuer.AddEvent(ctx, event)
@@ -154,7 +147,7 @@ func (dip *DebugInputPlugin) DoSync(ctx context.Context) {
 		log.Error().Msg("no payload configured for debug input plugin " + dip.Hash(ctx))
 		return
 	}
-	event := NewEvent(ctx, &dip.InputPlugin, dip.Payload)
+	event := NewEvent(ctx, &dip.IOPlugin, dip.Payload)
 	log.Debug().Msg("debug input plugin " + dip.Hash(ctx) + " produced event " + fmt.Sprintf("%d", dip.EventCount))
 	// place event on buffered event channel
 	dip.EventQueuer.AddEvent(ctx, event)
@@ -170,13 +163,16 @@ func (dop *DebugOutputPlugin) DoSync(ctx context.Context, event *Event) error {
 func (dop *DebugOutputPlugin) DoAsync(ctx context.Context) {
 }
 
-func (op *OutputPlugin) DoSync(ctx context.Context, event *Event) error {
-	log.Debug().Msg("output plugin " + op.Hash(ctx) + " consumed event " + fmt.Sprintf("%d", op.EventCount))
-	op.EventCount++
+func (iop *IOPlugin) DoSync(ctx context.Context, event *Event) error {
+	//TODO: improve
+	if iop.Mode == PluginModeOutput {
+		log.Debug().Msg("debug output plugin " + iop.Hash(ctx) + " consumed event " + fmt.Sprintf("%d", iop.EventCount))
+		iop.EventCount++
+	}
 	return nil
 }
 
-func NewInputPlugin(ctx context.Context, rte *RoutingTableEntry) (*InputPlugin, error) {
+func NewInputPlugin(ctx context.Context, rte *RoutingTableEntry) (*IOPlugin, error) {
 	switch rte.Source.Type {
 	case PluginTypeDebug:
 		dip := new(DebugInputPlugin)
@@ -206,12 +202,12 @@ func NewInputPlugin(ctx context.Context, rte *RoutingTableEntry) (*InputPlugin, 
 		}
 		// start producing events
 		dip.DoAsync(ctx)
-		return &dip.InputPlugin, nil
+		return &dip.IOPlugin, nil
 	}
 	return nil, errors.New("unknown input plugin type " + rte.Source.Type)
 }
 
-func NewOutputPlugin(ctx context.Context, rte *RoutingTableEntry) (*OutputPlugin, error) {
+func NewOutputPlugin(ctx context.Context, rte *RoutingTableEntry) (*IOPlugin, error) {
 	switch rte.Destination.Type {
 	case PluginTypeDebug:
 		dop := new(DebugOutputPlugin)
@@ -223,7 +219,7 @@ func NewOutputPlugin(ctx context.Context, rte *RoutingTableEntry) (*OutputPlugin
 		dop.routes = []*RoutingTableEntry{rte}
 		dop.RouteCount = 1
 		dop.DoAsync(ctx)
-		return &dop.OutputPlugin, nil
+		return &dop.IOPlugin, nil
 	}
 	return nil, errors.New("unknown output plugin type " + rte.Destination.Type)
 }

@@ -27,17 +27,17 @@ type (
 	// An Event bundles even payload and metadata that travels with the event
 	Event struct {
 		ctx      context.Context
-		Payload  interface{}  `json:"payload"`  // event payload (could also be string, but preparsed i sprobably more efficient if we want to allow deep inspection)
-		Encoding string       `json:"encoding"` // optional encoding hint to be set by input plugin
-		Metadata interface{}  `json:"metadata"` // optional metadata produced by filter chain
-		AckTree  AckTree      `json:"ackTree"`  // optional ack chain (or ack tree)
-		Source   *InputPlugin `json:"source"`   // pointer to source plugin instance
-		TxId     string       `json:"txid"`     // transaction ID (probably also available from context)
-		Ts       int          `json: "ts"`      // timestamp when event was received
+		Payload  interface{} `json:"payload"`  // event payload (could also be string, but preparsed i sprobably more efficient if we want to allow deep inspection)
+		Encoding string      `json:"encoding"` // optional encoding hint to be set by input plugin
+		Metadata interface{} `json:"metadata"` // optional metadata produced by filter chain
+		AckTree  AckTree     `json:"ackTree"`  // optional ack chain (or ack tree)
+		Source   *IOPlugin   `json:"source"`   // pointer to source plugin instance
+		TxId     string      `json:"txid"`     // transaction ID (probably also available from context)
+		Ts       int         `json: "ts"`      // timestamp when event was received
 	}
 )
 
-func NewEvent(ctx context.Context, plugin *InputPlugin, payload interface{}) *Event {
+func NewEvent(ctx context.Context, plugin *IOPlugin, payload interface{}) *Event {
 	evt := new(Event)
 	evt.ctx = ctx
 	evt.Payload = payload

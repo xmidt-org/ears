@@ -140,8 +140,6 @@ var (
 	ctx = context.Background()
 )
 
-//TODO: merge test code
-
 func simulateSingleRoute(t *testing.T, route string, expectedSourceCount, expectedDestinationCount int) {
 	ctx := context.Background()
 	// init in memory routing table manager
@@ -176,10 +174,8 @@ func simulateSingleRoute(t *testing.T, route string, expectedSourceCount, expect
 	}
 	/*fmt.Printf("ROUTING TABLE:\n")
 	fmt.Printf("%s\n", rtmgr.String())
-	fmt.Printf("INPUT PLUGINS:\n")
-	fmt.Printf("%s\n", internal.GetInputPluginManager(ctx).String())
-	fmt.Printf("OUTPUT PLUGINS:\n")
-	fmt.Printf("%s\n", internal.GetOutputPluginManager(ctx).String())*/
+	fmt.Printf("PLUGINS:\n")
+	fmt.Printf("%s\n", internal.GetIOPluginManager(ctx).String())*/
 	time.Sleep(time.Duration(2000) * time.Millisecond)
 	if allRoutes[0].Source.EventCount != expectedSourceCount {
 		t.Errorf("unexpected number of produced events %d", allRoutes[0].Source.EventCount)
