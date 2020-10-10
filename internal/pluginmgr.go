@@ -81,7 +81,7 @@ func (pm *DefaultIOPluginManager) RegisterPlugin(ctx context.Context, rte *Routi
 	return p, nil
 }
 
-func (pm *DefaultIOPluginManager) RegisterRoute(ctx context.Context, rte *RoutingTableEntry) (Pluginer, Pluginer, error) {
+/*func (pm *DefaultIOPluginManager) RegisterRoute(ctx context.Context, rte *RoutingTableEntry) (Pluginer, Pluginer, error) {
 	ip, err := pm.RegisterPlugin(ctx, rte, rte.Source)
 	if err != nil {
 		return nil, nil, err
@@ -91,7 +91,7 @@ func (pm *DefaultIOPluginManager) RegisterRoute(ctx context.Context, rte *Routin
 		return nil, nil, err
 	}
 	return ip, op, nil
-}
+}*/
 
 func (pm *DefaultIOPluginManager) WithdrawPlugin(ctx context.Context, rte *RoutingTableEntry, plugin Pluginer) error {
 	hash := plugin.Hash(ctx)

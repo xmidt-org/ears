@@ -148,14 +148,14 @@ func simulateSingleRoute(t *testing.T, route string, expectedSourceCount, expect
 		t.Errorf("routing table not empty")
 		return
 	}
-	var rte internal.RoutingTableEntry
-	err := json.Unmarshal([]byte(route), &rte)
+	var rc internal.RouteConfig
+	err := json.Unmarshal([]byte(route), &rc)
 	if err != nil {
 		t.Errorf(err.Error())
 		return
 	}
 	// add a route
-	err = rtmgr.AddRoute(ctx, &rte)
+	err = rtmgr.AddRoute(ctx, internal.NewRoutingTableEntryFromRouteConfig(&rc))
 	if err != nil {
 		t.Errorf(err.Error())
 		return
@@ -177,11 +177,11 @@ func simulateSingleRoute(t *testing.T, route string, expectedSourceCount, expect
 	fmt.Printf("PLUGINS:\n")
 	fmt.Printf("%s\n", internal.GetIOPluginManager(ctx).String())*/
 	time.Sleep(time.Duration(2000) * time.Millisecond)
-	if allRoutes[0].Source.EventCount != expectedSourceCount {
-		t.Errorf("unexpected number of produced events %d", allRoutes[0].Source.EventCount)
+	if allRoutes[0].Source.GetEventCount() != expectedSourceCount {
+		t.Errorf("unexpected number of produced events %d", allRoutes[0].Source.GetEventCount())
 	}
-	if allRoutes[0].Destination.EventCount != expectedDestinationCount {
-		t.Errorf("unexpected number of consumed events %d", allRoutes[0].Destination.EventCount)
+	if allRoutes[0].Destination.GetEventCount() != expectedDestinationCount {
+		t.Errorf("unexpected number of consumed events %d", allRoutes[0].Destination.GetEventCount())
 	}
 	err = rtmgr.ReplaceAllRoutes(ctx, nil)
 	if err != nil {

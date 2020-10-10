@@ -112,20 +112,20 @@ func main() {
 	// init in memory routing table manager
 	rtmgr = internal.NewInMemoryRoutingTableManager()
 	log.Debug().Msg(fmt.Sprintf("ears has %d routes", rtmgr.GetRouteCount(ctx)))
-	var rte internal.RoutingTableEntry
-	err := json.Unmarshal([]byte(ROUTE_1), &rte)
+	var rc internal.RouteConfig
+	err := json.Unmarshal([]byte(ROUTE_1), &rc)
 	if err != nil {
 		log.Error().Msg(err.Error())
 		return
 	}
-	buf, err := json.MarshalIndent(rte, "", "\t")
+	buf, err := json.MarshalIndent(rc, "", "\t")
 	if err != nil {
 		log.Error().Msg(err.Error())
 		return
 	}
 	fmt.Printf("%s\n", string(buf))
 	// add a route
-	err = rtmgr.AddRoute(ctx, &rte)
+	err = rtmgr.AddRoute(ctx, internal.NewRoutingTableEntryFromRouteConfig(&rc))
 	if err != nil {
 		log.Error().Msg(err.Error())
 		return
