@@ -62,10 +62,8 @@ func (fc *FilterChain) Initialize(ctx context.Context, rte *RoutingTableEntry) e
 			} else {
 				fp.inputChannel = eventChannel
 			}
-			if idx < len(fc.Filters)-1 {
-				fp.outputChannel = make(chan *Event)
-				eventChannel = fp.outputChannel
-			}
+			fp.outputChannel = make(chan *Event)
+			eventChannel = fp.outputChannel
 			fp.DoAsync(ctx)
 		}
 	}
