@@ -124,12 +124,8 @@ func (rte *RoutingTableEntry) Initialize(ctx context.Context) error {
 }
 
 func (rte *RoutingTableEntry) Withdraw(ctx context.Context) error {
-	// withdraw from IO plugins
+	// withdraw from destination plugin
 	var err error
-	err = GetIOPluginManager(ctx).WithdrawPlugin(ctx, rte, rte.Source)
-	if err != nil {
-		return err
-	}
 	err = GetIOPluginManager(ctx).WithdrawPlugin(ctx, rte, rte.Destination)
 	if err != nil {
 		return err
@@ -137,6 +133,11 @@ func (rte *RoutingTableEntry) Withdraw(ctx context.Context) error {
 	// withdraw filter chain
 	if rte.FilterChain != nil {
 		rte.FilterChain.Withdraw(ctx)
+	}
+	// withdraw from source plugin
+	err = GetIOPluginManager(ctx).WithdrawPlugin(ctx, rte, rte.Source)
+	if err != nil {
+		return err
 	}
 	return nil
 }

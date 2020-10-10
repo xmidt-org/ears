@@ -107,7 +107,7 @@ type (
 
 	// A Hasher can provide a unique deterministic hash string based on its configuration parameters
 	Closer interface {
-		Close()
+		Close(ctx context.Context)
 	}
 
 	// A Hasher can provide a unique deterministic hash string based on its configuration parameters

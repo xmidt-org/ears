@@ -75,7 +75,7 @@ var (
 			"type" : "debug",
 			"params" :
 			{
-				"rounds" : 3,
+				"rounds" : 1,
 				"intervalMS" : 250,
 				"payload" : {
 					"foo" : "bar"
@@ -198,7 +198,7 @@ func TestSplitRoute(t *testing.T) {
 }
 
 func TestDirectRoute(t *testing.T) {
-	simulateSingleRoute(t, DIRECT_ROUTE, 3, 3)
+	simulateSingleRoute(t, DIRECT_ROUTE, 1, 1)
 }
 
 func TestFilterRoute(t *testing.T) {

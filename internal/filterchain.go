@@ -73,7 +73,7 @@ func (fc *FilterChain) Initialize(ctx context.Context, rte *RoutingTableEntry) e
 func (fc *FilterChain) Withdraw(ctx context.Context) {
 	if fc.Filters != nil {
 		for _, f := range fc.Filters {
-			f.Close()
+			f.Close(ctx)
 		}
 	}
 }

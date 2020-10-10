@@ -127,7 +127,8 @@ func (plgn *Plugin) DoAsync(ctx context.Context) {
 	log.Error().Msg("unworthy plugin")
 }
 
-func (plgn *Plugin) Close() {
+func (plgn *Plugin) Close(ctx context.Context) {
+	log.Error().Msg("sending done signal for " + plgn.Mode + " " + plgn.Type + " " + plgn.Hash(ctx))
 	plgn.done <- true
 }
 
@@ -135,12 +136,12 @@ func (plgn *Plugin) Close() {
 // debug input plugin
 //
 
-func (dip *DebugInputPlugin) Close() {
-	//dip.done <- true
-}
-
 func (dip *DebugInputPlugin) DoAsync(ctx context.Context) {
 	done := false
+	go func() {
+		<-dip.done
+		done = true
+	}()
 	go func() {
 		if dip.Payload == nil {
 			log.Error().Msg("no payload configured for debug input plugin " + dip.Hash(ctx))
@@ -164,7 +165,7 @@ func (dip *DebugInputPlugin) DoAsync(ctx context.Context) {
 					}
 				}
 			}
-			log.Debug().Msg("debug " + dip.Mode + dip.Type + " plugin " + dip.Hash(ctx) + " produced event " + fmt.Sprintf("%d", dip.EventCount))
+			log.Debug().Msg("debug " + dip.Mode + " " + dip.Type + " plugin " + dip.Hash(ctx) + " produced event " + fmt.Sprintf("%d", dip.EventCount))
 			dip.EventCount++
 		}
 	}()
@@ -206,11 +207,12 @@ func (dop *DebugOutputPlugin) DoAsync(ctx context.Context) {
 		for {
 			select {
 			case <-dop.GetInputChannel():
+				log.Debug().Msg(dop.Mode + " " + dop.Type + " plugin " + dop.Hash(ctx) + " passed")
 				dop.EventCount++
 			case <-dop.done:
+				log.Debug().Msg(dop.Mode + " " + dop.Type + " plugin " + dop.Hash(ctx) + " done")
 				return
 			}
-			log.Debug().Msg(dop.Mode + " " + dop.Type + " plugin " + dop.Hash(ctx) + " passed")
 		}
 	}()
 }
