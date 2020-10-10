@@ -115,6 +115,18 @@ func (plgn *Plugin) GetRouteCount() int {
 	return 0
 }
 
+func (plgn *Plugin) GetEventCount() int {
+	return plgn.EventCount
+}
+
+func (plgn *Plugin) DoSync(ctx context.Context, event *Event) error {
+	return errors.New("unworthy plugin")
+}
+
+func (plgn *Plugin) DoAsync(ctx context.Context) {
+	log.Error().Msg("unworthy plugin")
+}
+
 func (plgn *Plugin) Close() {
 	plgn.done <- true
 }
@@ -124,7 +136,7 @@ func (plgn *Plugin) Close() {
 //
 
 func (dip *DebugInputPlugin) Close() {
-	dip.done <- true
+	//dip.done <- true
 }
 
 func (dip *DebugInputPlugin) DoAsync(ctx context.Context) {

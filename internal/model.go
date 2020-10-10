@@ -102,6 +102,7 @@ type (
 		GetInputChannel() chan *Event
 		GetOutputChannel() chan *Event
 		GetRouteCount() int
+		GetEventCount() int
 	}
 
 	// A Hasher can provide a unique deterministic hash string based on its configuration parameters

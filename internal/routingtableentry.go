@@ -38,7 +38,33 @@ type (
 		Ts           int                 `json:"ts"`           // timestamp when route was created or updated
 		tblMgr       RoutingTableManager `json:"-"`            // pointer to routing table manager
 	}
+	RouteConfig struct {
+		OrgId        string       `json:"orgId"`        // org ID for quota and rate limiting
+		AppId        string       `json:"appId"`        // app ID for quota and rate limiting
+		UserId       string       `json:"userId"`       // user ID / author of route
+		Source       *Plugin      `json:"source`        // pointer to source plugin instance
+		Destination  *Plugin      `json:"destination"`  // pointer to destination plugin instance
+		FilterChain  *FilterChain `json:"filterChain"`  // optional list of filter plugins that will be applied in order to perform arbitrary filtering and transformation functions
+		DeliveryMode string       `json:"deliveryMode"` // possible values: fire_and_forget, at_least_once, exactly_once
+		Debug        bool         `json:"debug"`        // if true generate debug logs and metrics for events taking this route
+		Ts           int          `json:"ts"`           // timestamp when route was created or updated
+	}
 )
+
+func NewRoutingTableEntryFromRouteConfig(rc *RouteConfig) *RoutingTableEntry {
+	re := RoutingTableEntry{
+		OrgId:        rc.OrgId,
+		AppId:        rc.AppId,
+		UserId:       rc.UserId,
+		Source:       rc.Source,
+		Destination:  rc.Destination,
+		FilterChain:  rc.FilterChain,
+		DeliveryMode: rc.DeliveryMode,
+		Debug:        rc.Debug,
+		Ts:           rc.Ts,
+	}
+	return &re
+}
 
 func (rte *RoutingTableEntry) Hash(ctx context.Context) string {
 	str := rte.Source.Hash(ctx) + rte.Destination.Hash(ctx)
@@ -71,6 +97,13 @@ func (rte *RoutingTableEntry) String() string {
 func (rte *RoutingTableEntry) Initialize(ctx context.Context) error {
 	var err error
 	//
+	// initialize source plugin
+	//
+	rte.Source, err = GetIOPluginManager(ctx).RegisterPlugin(ctx, rte, rte.Source)
+	if err != nil {
+		return err
+	}
+	//
 	// initialize filter chain
 	//
 	if rte.FilterChain == nil {
@@ -81,9 +114,9 @@ func (rte *RoutingTableEntry) Initialize(ctx context.Context) error {
 		return err
 	}
 	//
-	// initialize IO plugins
+	// initialize destination plugin
 	//
-	rte.Source, rte.Destination, err = GetIOPluginManager(ctx).RegisterRoute(ctx, rte)
+	rte.Destination, err = GetIOPluginManager(ctx).RegisterPlugin(ctx, rte, rte.Destination)
 	if err != nil {
 		return err
 	}
