@@ -81,18 +81,6 @@ func (pm *DefaultIOPluginManager) RegisterPlugin(ctx context.Context, rte *Routi
 	return p, nil
 }
 
-/*func (pm *DefaultIOPluginManager) RegisterRoute(ctx context.Context, rte *RoutingTableEntry) (Pluginer, Pluginer, error) {
-	ip, err := pm.RegisterPlugin(ctx, rte, rte.Source)
-	if err != nil {
-		return nil, nil, err
-	}
-	op, err := pm.RegisterPlugin(ctx, rte, rte.Destination)
-	if err != nil {
-		return nil, nil, err
-	}
-	return ip, op, nil
-}*/
-
 func (pm *DefaultIOPluginManager) WithdrawPlugin(ctx context.Context, rte *RoutingTableEntry, plugin Pluginer) error {
 	hash := plugin.Hash(ctx)
 	if hash == "" {
@@ -108,13 +96,13 @@ func (pm *DefaultIOPluginManager) WithdrawPlugin(ctx context.Context, rte *Routi
 					routes = append(routes, r)
 				}
 			}
+			pc.routes = routes
 			if p.GetRouteCount() <= 0 {
-				//TODO: stop plugin
+				p.Close(ctx)
 				log.Debug().Msg(fmt.Sprintf("stopped %s %s plugin with hash %s", p.GetConfig().Type, p.GetConfig().Mode, hash))
 				delete(pm.pluginMap, hash)
 			}
 		}
-		pc.routes = routes
 		log.Debug().Msg(fmt.Sprintf("%s %s plugin route count %d %d", p.GetConfig().Type, p.GetConfig().Mode, p.GetRouteCount(), len(pc.routes)))
 	}
 	return nil
