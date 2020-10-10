@@ -28,7 +28,7 @@ func NewFilterChain(ctx context.Context) *FilterChain {
 }
 
 // Initialize sets up filter chain objects and channels based on filter chain config
-func (fc *FilterChain) Initialize(ctx context.Context, rte *RoutingTableEntry) error {
+func (fc *FilterChain) Initialize(ctx context.Context, rte *Route) error {
 	//
 	// initialize filter chain
 	//
@@ -55,7 +55,7 @@ func (fc *FilterChain) Initialize(ctx context.Context, rte *RoutingTableEntry) e
 			}
 			fp.State = PluginStateReady
 			fp.Mode = PluginModeFilter
-			fp.routes = []*RoutingTableEntry{rte}
+			fp.routes = []*Route{rte}
 			fp.done = make(chan bool)
 			if idx == 0 {
 				fp.inputChannel = rte.Source.GetOutputChannel()

@@ -155,7 +155,7 @@ func simulateSingleRoute(t *testing.T, route string, expectedSourceCount, expect
 		return
 	}
 	// add a route
-	err = rtmgr.AddRoute(ctx, internal.NewRoutingTableEntryFromRouteConfig(&rc))
+	err = rtmgr.AddRoute(ctx, internal.NewRouteFromRouteConfig(&rc))
 	if err != nil {
 		t.Errorf(err.Error())
 		return

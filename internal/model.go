@@ -81,10 +81,10 @@ type (
 	}
 
 	// A RoutingTable is a slice of routing entries and reprrsents the EARS routing table
-	RoutingTable []*RoutingTableEntry
+	RoutingTable []*Route
 
 	// A RoutingTableIndex is a hashmap mapping a routing entry hash to a routing entry pointer
-	RoutingTableIndex map[string]*RoutingTableEntry
+	RoutingTableIndex map[string]*Route
 
 	// A PluginIndex is a hashmap mapping a plugin instance hash to a plugin instance
 	PluginIndex map[string]Pluginer
@@ -153,18 +153,18 @@ type (
 
 	// A RouteModifier allows modifications to a routing table
 	RouteModifier interface {
-		AddRoute(ctx context.Context, entry *RoutingTableEntry) error             // idempotent operation to add a routing entry to a local routing table
-		RemoveRoute(ctx context.Context, entry *RoutingTableEntry) error          // idempotent operation to remove a routing entry from a local routing table
-		ReplaceAllRoutes(ctx context.Context, entries []*RoutingTableEntry) error // replace complete local routing table
+		AddRoute(ctx context.Context, entry *Route) error             // idempotent operation to add a routing entry to a local routing table
+		RemoveRoute(ctx context.Context, entry *Route) error          // idempotent operation to remove a routing entry from a local routing table
+		ReplaceAllRoutes(ctx context.Context, entries []*Route) error // replace complete local routing table
 	}
 
 	// A RouteNavigator allows searching for routes using various search criteria
 	RouteNavigator interface {
-		GetAllRoutes(ctx context.Context) ([]*RoutingTableEntry, error)                                  // obtain complete local routing table
-		GetRouteCount(ctx context.Context) int                                                           // get current size of routing table
-		GetRoutesBySourcePlugin(ctx context.Context, plugin Pluginer) ([]*RoutingTableEntry, error)      // get all routes for a specifc source plugin
-		GetRoutesByDestinationPlugin(ctx context.Context, plugin Pluginer) ([]*RoutingTableEntry, error) // get all routes for a specific destination plugin
-		GetRoutesForEvent(ctx context.Context, event *Event) ([]*RoutingTableEntry, error)               // get all routes for a given event (and source plugin)
+		GetAllRoutes(ctx context.Context) ([]*Route, error)                                  // obtain complete local routing table
+		GetRouteCount(ctx context.Context) int                                               // get current size of routing table
+		GetRoutesBySourcePlugin(ctx context.Context, plugin Pluginer) ([]*Route, error)      // get all routes for a specifc source plugin
+		GetRoutesByDestinationPlugin(ctx context.Context, plugin Pluginer) ([]*Route, error) // get all routes for a specific destination plugin
+		GetRoutesForEvent(ctx context.Context, event *Event) ([]*Route, error)               // get all routes for a given event (and source plugin)
 	}
 
 	// A RouteInitializer
@@ -194,10 +194,10 @@ type (
 
 	// A IOPluginManager maintains a map of live plugins and ensures no two plugins with the same hash exist
 	IOPluginManager interface {
-		RegisterRoute(ctx context.Context, rte *RoutingTableEntry) (Pluginer, error) // uses plugin parameter only for hash calculation and returns one if it already exists or creates a new one
-		WithdrawRoute(ctx context.Context, rte *RoutingTableEntry) error             // uses plugin parameter only for hash calculation
-		GetPluginCount(ctx context.Context) int                                      // get plugin count
-		GetAllPlugins(ctx context.Context) ([]Pluginer, error)                       // get all plugins
+		RegisterRoute(ctx context.Context, rte *Route) (Pluginer, error) // uses plugin parameter only for hash calculation and returns one if it already exists or creates a new one
+		WithdrawRoute(ctx context.Context, rte *Route) error             // uses plugin parameter only for hash calculation
+		GetPluginCount(ctx context.Context) int                          // get plugin count
+		GetAllPlugins(ctx context.Context) ([]Pluginer, error)           // get all plugins
 	}
 
 	// An EventSourceManager manages all event source plugins for a live ears instance
@@ -205,7 +205,7 @@ type (
 		GetAllEventSources(ctx context.Context) ([]Pluginer, error)                            // get all event sourced
 		GetEventSourcesByType(ctx context.Context, sourceType string) ([]Pluginer, error)      // get event sources by plugin type
 		GetEventSourcesByState(ctx context.Context, sourceState string) ([]Pluginer, error)    // get event sources by plugin state
-		GetEventSourceByRoute(ctx context.Context, route *RoutingTableEntry) (Pluginer, error) // get event source for route entry
+		GetEventSourceByRoute(ctx context.Context, route *Route) (Pluginer, error) // get event source for route entry
 		AddEventSource(ctx context.Context, source Pluginer) (Pluginer, error)                  // adds event source and starts listening for events if event source doesn't already exist, otherwise increments counter
 		RemoveEventSource(ctx context.Context, source Pluginer) error                          // stops listening for events and removes event source if event route counter is down to zero
 	}*/
@@ -215,7 +215,7 @@ type (
 		GetAllDestinations(ctx context.Context) ([]Pluginer, error)                                  // get all event sourced
 		GetEventDestinationsByType(ctx context.Context, sourceType string) ([]Pluginer, error)       // get event sources by plugin type
 		GetEventDestinationsByState(ctx context.Context, sourceState string) ([]Pluginer, error)     // get event sources by plugin state
-		GetEventDestinationsByRoute(ctx context.Context, route *RoutingTableEntry) (Pluginer, error) // get event source for route entry
+		GetEventDestinationsByRoute(ctx context.Context, route *Route) (Pluginer, error) // get event source for route entry
 		AddEventDestination(ctx context.Context, source Pluginer) (Pluginer, error)                   // adds event source and starts listening for events if event source doesn't already exist, otherwise increments counter
 		RemoveEventDestination(ctx context.Context, source Pluginer) error                           // stops listening for events and removes event source if event route counter is down to zero
 	}*/

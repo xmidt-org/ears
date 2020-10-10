@@ -43,7 +43,7 @@ type (
 		Name          string                 `json:"name"`       // descriptive plugin name
 		Encodings     []string               `json:"encodings"`  // list of supported encodings
 		EventCount    int                    `json:"eventCount"` // number of events that have passed through this plugin
-		routes        []*RoutingTableEntry   // list of routes using this plugin instance
+		routes        []*Route               // list of routes using this plugin instance
 		inputChannel  chan *Event            // event channel on which plugin receives the next event
 		outputChannel chan *Event            // event channel to which plugin forwards current event to
 		done          chan bool              // done channel
@@ -221,7 +221,7 @@ func (dop *DebugOutputPlugin) DoAsync(ctx context.Context) {
 // factory function for input plugin creation
 //
 
-func NewInputPlugin(ctx context.Context, rte *RoutingTableEntry) (Pluginer, error) {
+func NewInputPlugin(ctx context.Context, rte *Route) (Pluginer, error) {
 	pc := rte.Source.GetConfig()
 	switch pc.Type {
 	case PluginTypeDebug:
@@ -235,7 +235,7 @@ func NewInputPlugin(ctx context.Context, rte *RoutingTableEntry) (Pluginer, erro
 		dip.State = PluginStateReady
 		dip.Name = "Debug"
 		dip.Params = pc.Params
-		dip.routes = []*RoutingTableEntry{rte}
+		dip.routes = []*Route{rte}
 		dip.outputChannel = make(chan *Event)
 		dip.done = make(chan bool)
 		// parse configs and overwrite defaults
@@ -261,7 +261,7 @@ func NewInputPlugin(ctx context.Context, rte *RoutingTableEntry) (Pluginer, erro
 // factory function for output plugin creation
 //
 
-func NewOutputPlugin(ctx context.Context, rte *RoutingTableEntry) (Pluginer, error) {
+func NewOutputPlugin(ctx context.Context, rte *Route) (Pluginer, error) {
 	pc := rte.Destination.GetConfig()
 	switch pc.Type {
 	case PluginTypeDebug:
@@ -271,7 +271,7 @@ func NewOutputPlugin(ctx context.Context, rte *RoutingTableEntry) (Pluginer, err
 		dop.State = PluginStateReady
 		dop.Name = "Debug"
 		dop.Params = pc.Params
-		dop.routes = []*RoutingTableEntry{rte}
+		dop.routes = []*Route{rte}
 		dop.done = make(chan bool)
 		if rte.FilterChain != nil && len(rte.FilterChain.Filters) > 0 {
 			dop.inputChannel = rte.FilterChain.Filters[len(rte.FilterChain.Filters)-1].GetOutputChannel()
