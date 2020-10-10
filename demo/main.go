@@ -125,7 +125,7 @@ func main() {
 	}
 	fmt.Printf("%s\n", string(buf))
 	// add a route
-	err = rtmgr.AddRoute(ctx, internal.NewRoutingTableEntryFromRouteConfig(&rc))
+	err = rtmgr.AddRoute(ctx, internal.NewRouteFromRouteConfig(&rc))
 	if err != nil {
 		log.Error().Msg(err.Error())
 		return

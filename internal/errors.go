@@ -10,7 +10,7 @@ type (
 	}
 	EmptyHashError struct {
 	}
-	MissingRoutingTableEntryError struct {
+	MissingRouteError struct {
 	}
 	UnkownRouteError struct {
 	}
@@ -58,7 +58,7 @@ func (e *EmptyHashError) Error() string {
 	return "empty hash"
 }
 
-func (e *MissingRoutingTableEntryError) Error() string {
+func (e *MissingRouteError) Error() string {
 	return "missing routing table entry"
 }
 

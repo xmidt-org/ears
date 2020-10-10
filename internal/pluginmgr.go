@@ -53,7 +53,7 @@ func (pm *DefaultIOPluginManager) String() string {
 	return string(buf)
 }
 
-func (pm *DefaultIOPluginManager) RegisterPlugin(ctx context.Context, rte *RoutingTableEntry, plugin Pluginer) (Pluginer, error) {
+func (pm *DefaultIOPluginManager) RegisterPlugin(ctx context.Context, rte *Route, plugin Pluginer) (Pluginer, error) {
 	var err error
 	hash := plugin.Hash(ctx)
 	if hash == "" {
@@ -62,7 +62,7 @@ func (pm *DefaultIOPluginManager) RegisterPlugin(ctx context.Context, rte *Routi
 	pc := plugin.GetConfig()
 	if p, ok := pm.pluginMap[hash]; ok {
 		if pc.routes == nil {
-			pc.routes = make([]*RoutingTableEntry, 0)
+			pc.routes = make([]*Route, 0)
 		}
 		pc.routes = append(pc.routes, rte)
 		return p, nil
@@ -81,7 +81,7 @@ func (pm *DefaultIOPluginManager) RegisterPlugin(ctx context.Context, rte *Routi
 	return p, nil
 }
 
-func (pm *DefaultIOPluginManager) WithdrawPlugin(ctx context.Context, rte *RoutingTableEntry, plugin Pluginer) error {
+func (pm *DefaultIOPluginManager) WithdrawPlugin(ctx context.Context, rte *Route, plugin Pluginer) error {
 	hash := plugin.Hash(ctx)
 	if hash == "" {
 		return new(EmptyPluginHashError)
@@ -89,7 +89,7 @@ func (pm *DefaultIOPluginManager) WithdrawPlugin(ctx context.Context, rte *Routi
 	pc := plugin.GetConfig()
 	if p, ok := pm.pluginMap[hash]; ok {
 		log.Debug().Msg(fmt.Sprintf("unregistering %s %s plugin with hash %s", p.GetConfig().Type, p.GetConfig().Mode, hash))
-		routes := make([]*RoutingTableEntry, 0)
+		routes := make([]*Route, 0)
 		if pc.routes != nil {
 			for _, r := range pc.routes {
 				if r.Hash(ctx) != rte.Hash(ctx) {

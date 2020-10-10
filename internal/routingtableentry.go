@@ -25,8 +25,8 @@ import (
 )
 
 type (
-	// A RoutingTableEntry represents an entry in the EARS routing table
-	RoutingTableEntry struct {
+	// A Route represents an entry in the EARS routing table
+	Route struct {
 		OrgId        string              `json:"orgId"`        // org ID for quota and rate limiting
 		AppId        string              `json:"appId"`        // app ID for quota and rate limiting
 		UserId       string              `json:"userId"`       // user ID / author of route
@@ -51,8 +51,8 @@ type (
 	}
 )
 
-func NewRoutingTableEntryFromRouteConfig(rc *RouteConfig) *RoutingTableEntry {
-	re := RoutingTableEntry{
+func NewRouteFromRouteConfig(rc *RouteConfig) *Route {
+	re := Route{
 		OrgId:        rc.OrgId,
 		AppId:        rc.AppId,
 		UserId:       rc.UserId,
@@ -66,7 +66,7 @@ func NewRoutingTableEntryFromRouteConfig(rc *RouteConfig) *RoutingTableEntry {
 	return &re
 }
 
-func (rte *RoutingTableEntry) Hash(ctx context.Context) string {
+func (rte *Route) Hash(ctx context.Context) string {
 	str := rte.Source.Hash(ctx) + rte.Destination.Hash(ctx)
 	if rte.FilterChain != nil && rte.FilterChain.Filters != nil {
 		for _, filter := range rte.FilterChain.Filters {
@@ -77,7 +77,7 @@ func (rte *RoutingTableEntry) Hash(ctx context.Context) string {
 	return hash
 }
 
-func (rte *RoutingTableEntry) Validate(ctx context.Context) error {
+func (rte *Route) Validate(ctx context.Context) error {
 	if rte.Source == nil {
 		return new(MissingSourcePluginConfiguraton)
 	}
@@ -89,12 +89,12 @@ func (rte *RoutingTableEntry) Validate(ctx context.Context) error {
 	return nil
 }
 
-func (rte *RoutingTableEntry) String() string {
+func (rte *Route) String() string {
 	buf, _ := json.Marshal(rte)
 	return string(buf)
 }
 
-func (rte *RoutingTableEntry) Initialize(ctx context.Context) error {
+func (rte *Route) Initialize(ctx context.Context) error {
 	var err error
 	//
 	// initialize source plugin
@@ -123,7 +123,7 @@ func (rte *RoutingTableEntry) Initialize(ctx context.Context) error {
 	return nil
 }
 
-func (rte *RoutingTableEntry) Withdraw(ctx context.Context) error {
+func (rte *Route) Withdraw(ctx context.Context) error {
 	// withdraw from destination plugin
 	var err error
 	err = GetIOPluginManager(ctx).WithdrawPlugin(ctx, rte, rte.Destination)
