@@ -146,7 +146,7 @@ func (mgr *InMemoryRoutingTableManager) GetAllRoutes(ctx context.Context) ([]*Ro
 func (mgr *InMemoryRoutingTableManager) GetRoutesBySourcePlugin(ctx context.Context, plugin Pluginer) ([]*Route, error) {
 	mgr.lock.RLock()
 	defer mgr.lock.RUnlock()
-	tbl := make([]*Route, len(mgr.routingTableIndex))
+	tbl := make([]*Route, 0)
 	for _, entry := range mgr.routingTableIndex {
 		if entry.Source.Hash(ctx) == plugin.Hash(ctx) {
 			tbl = append(tbl, entry)
@@ -159,7 +159,7 @@ func (mgr *InMemoryRoutingTableManager) GetRoutesBySourcePlugin(ctx context.Cont
 func (mgr *InMemoryRoutingTableManager) GetRoutesByDestinationPlugin(ctx context.Context, plugin Pluginer) ([]*Route, error) {
 	mgr.lock.RLock()
 	defer mgr.lock.RUnlock()
-	tbl := make([]*Route, len(mgr.routingTableIndex))
+	tbl := make([]*Route, 0)
 	for _, entry := range mgr.routingTableIndex {
 		if entry.Destination.Hash(ctx) == plugin.Hash(ctx) {
 			tbl = append(tbl, entry)
