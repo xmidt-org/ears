@@ -248,4 +248,12 @@ func TestGetRoutesBy(t *testing.T) {
 	if len(foundRoutes) != 3 {
 		t.Errorf("unexpected number of routes %d", len(foundRoutes))
 	}
+	err = rtmgr.RemoveRoute(ctx, foundRoutes[0])
+	if err != nil {
+		t.Errorf(err.Error())
+		return
+	}
+	if rtmgr.GetRouteCount(ctx) != 2 {
+		t.Errorf("unexpected number of routes %d", len(foundRoutes))
+	}
 }
