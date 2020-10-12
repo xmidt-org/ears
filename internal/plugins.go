@@ -102,10 +102,14 @@ func (plgn *Plugin) GetConfig() *Plugin {
 }
 
 func (plgn *Plugin) GetInputChannel() chan *Event {
+	plgn.lock.RLock()
+	defer plgn.lock.RUnlock()
 	return plgn.inputChannel
 }
 
 func (plgn *Plugin) GetOutputChannel() chan *Event {
+	plgn.lock.RLock()
+	defer plgn.lock.RUnlock()
 	return plgn.outputChannel
 }
 
