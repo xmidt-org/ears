@@ -30,6 +30,7 @@ type (
 		OrgId        string              `json:"orgId"`        // org ID for quota and rate limiting
 		AppId        string              `json:"appId"`        // app ID for quota and rate limiting
 		UserId       string              `json:"userId"`       // user ID / author of route
+		Name         string              `json:"name"`         // optional unique name for route
 		Source       Pluginer            `json:"source`        // pointer to source plugin instance
 		Destination  Pluginer            `json:"destination"`  // pointer to destination plugin instance
 		FilterChain  *FilterChain        `json:"filterChain"`  // optional list of filter plugins that will be applied in order to perform arbitrary filtering and transformation functions
@@ -42,6 +43,7 @@ type (
 		OrgId        string       `json:"orgId"`        // org ID for quota and rate limiting
 		AppId        string       `json:"appId"`        // app ID for quota and rate limiting
 		UserId       string       `json:"userId"`       // user ID / author of route
+		Name         string       `json:"name"`         // optional unique name for route
 		Source       *Plugin      `json:"source`        // pointer to source plugin instance
 		Destination  *Plugin      `json:"destination"`  // pointer to destination plugin instance
 		FilterChain  *FilterChain `json:"filterChain"`  // optional list of filter plugins that will be applied in order to perform arbitrary filtering and transformation functions
@@ -56,6 +58,7 @@ func NewRouteFromRouteConfig(rc *RouteConfig) *Route {
 		OrgId:        rc.OrgId,
 		AppId:        rc.AppId,
 		UserId:       rc.UserId,
+		Name:         rc.Name,
 		Source:       rc.Source,
 		Destination:  rc.Destination,
 		FilterChain:  rc.FilterChain,
