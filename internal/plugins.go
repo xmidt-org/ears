@@ -21,7 +21,6 @@ import (
 	"context"
 	"crypto/md5"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"time"
 
@@ -120,11 +119,10 @@ func (plgn *Plugin) GetEventCount() int {
 }
 
 func (plgn *Plugin) DoSync(ctx context.Context, event *Event) error {
-	return errors.New("unworthy plugin")
+	return new(UnworthyPluginError)
 }
 
 func (plgn *Plugin) DoAsync(ctx context.Context) {
-	log.Error().Msg("unworthy plugin")
 }
 
 func (plgn *Plugin) Close(ctx context.Context) {
@@ -173,7 +171,7 @@ func (dip *DebugInputPlugin) DoAsync(ctx context.Context) {
 
 func (dip *DebugInputPlugin) DoSync(ctx context.Context, event *Event) error {
 	if dip.Payload == nil {
-		return errors.New("no payload configured for debug input plugin " + dip.Hash(ctx))
+		return &MissingPluginConfiguratonError{dip.Type, dip.Hash(ctx), PluginModeInput}
 	}
 	log.Debug().Msg("debug input plugin " + dip.Hash(ctx) + " produced event " + fmt.Sprintf("%d", dip.EventCount))
 	// deliver event to each interested route (first filter in chain)

@@ -20,18 +20,17 @@ type (
 	UnknownOutputPluginTypeError struct {
 		PluginType string
 	}
-	MissingSourcePluginConfiguraton struct {
+	MissingPluginConfiguratonError struct {
+		PluginType string
+		PluginHash string
+		PluginMode string
 	}
-	MissingDestinationPluginConfiguraton struct {
+	UnworthyPluginError struct {
 	}
 )
 
-func (e *MissingSourcePluginConfiguraton) Error() string {
-	return "missing source plugin configuration"
-}
-
-func (e *MissingDestinationPluginConfiguraton) Error() string {
-	return "missing destination plugin configuration"
+func (e *MissingPluginConfiguratonError) Error() string {
+	return "missing configuration for " + e.PluginType + " " + e.PluginMode + " plugin " + e.PluginHash
 }
 
 func (e *UnknownInputPluginTypeError) Error() string {
@@ -64,4 +63,8 @@ func (e *MissingRouteError) Error() string {
 
 func (e *UnkownRouteError) Error() string {
 	return "unknown route"
+}
+
+func (e *UnworthyPluginError) Error() string {
+	return "unworthy plugin"
 }
