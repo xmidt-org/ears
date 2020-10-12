@@ -188,12 +188,15 @@ func (fp *FilterPlugin) DoAsync(ctx context.Context) {
 			case inputEvent = <-fp.inputChannel:
 				fp.EventCount++
 			case <-fp.done:
+				log.Debug().Msg(fp.Mode + " " + fp.Type + " plugin " + fp.Hash(ctx) + " done")
 				return
 			}
-			log.Debug().Msg(fp.Type + " filter " + fp.Hash(ctx) + " passed")
 			filteredEvents, err := fp.filterer.Filter(ctx, inputEvent)
 			if err != nil {
 				return
+			}
+			if len(filteredEvents) > 0 {
+				log.Debug().Msg(fp.Mode + " " + fp.Type + " plugin " + fp.Hash(ctx) + " passed")
 			}
 			for _, e := range filteredEvents {
 				if fp.outputChannel != nil {

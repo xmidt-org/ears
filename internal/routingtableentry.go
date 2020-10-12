@@ -79,10 +79,10 @@ func (rte *Route) Hash(ctx context.Context) string {
 
 func (rte *Route) Validate(ctx context.Context) error {
 	if rte.Source == nil {
-		return new(MissingSourcePluginConfiguraton)
+		return &MissingPluginConfiguratonError{"", "", PluginModeInput}
 	}
 	if rte.Destination == nil {
-		return new(MissingDestinationPluginConfiguraton)
+		return &MissingPluginConfiguratonError{"", "", PluginModeOutput}
 	}
 	rte.Source.GetConfig().Mode = PluginModeInput
 	rte.Destination.GetConfig().Mode = PluginModeOutput
