@@ -22,6 +22,7 @@ import (
 	"crypto/md5"
 	"encoding/json"
 	"fmt"
+	"sync"
 	"time"
 
 	"github.com/rs/zerolog/log"
@@ -47,6 +48,7 @@ type (
 		outputChannel chan *Event            // event channel to which plugin forwards current event to
 		done          chan bool              // done channel
 		filterer      Filterer               // an instance of the appropriate filterer
+		lock          sync.RWMutex           // r/w lock
 	}
 	FilterPlugin struct {
 		Plugin
@@ -115,6 +117,8 @@ func (plgn *Plugin) GetRouteCount() int {
 }
 
 func (plgn *Plugin) GetEventCount() int {
+	plgn.lock.RLock()
+	defer plgn.lock.RUnlock()
 	return plgn.EventCount
 }
 
@@ -126,7 +130,7 @@ func (plgn *Plugin) DoAsync(ctx context.Context) {
 }
 
 func (plgn *Plugin) Close(ctx context.Context) {
-	log.Error().Msg("sending done signal for " + plgn.Mode + " " + plgn.Type + " " + plgn.Hash(ctx))
+	log.Debug().Msg("sending done signal for " + plgn.Mode + " " + plgn.Type + " " + plgn.Hash(ctx))
 	plgn.done <- true
 }
 
@@ -154,6 +158,7 @@ func (dip *DebugInputPlugin) DoAsync(ctx context.Context) {
 				break
 			}
 			event := NewEvent(ctx, dip, dip.Payload)
+			dip.lock.Lock()
 			// deliver event to each interested route (first filter in chain)
 			if dip.routes != nil {
 				for _, r := range dip.routes {
@@ -165,6 +170,7 @@ func (dip *DebugInputPlugin) DoAsync(ctx context.Context) {
 			}
 			log.Debug().Msg("debug " + dip.Mode + " " + dip.Type + " plugin " + dip.Hash(ctx) + " produced event " + fmt.Sprintf("%d", dip.EventCount))
 			dip.EventCount++
+			dip.lock.Unlock()
 		}
 	}()
 }
@@ -206,7 +212,9 @@ func (dop *DebugOutputPlugin) DoAsync(ctx context.Context) {
 			select {
 			case <-dop.GetInputChannel():
 				log.Debug().Msg(dop.Mode + " " + dop.Type + " plugin " + dop.Hash(ctx) + " passed")
+				dop.lock.Lock()
 				dop.EventCount++
+				dop.lock.Unlock()
 			case <-dop.done:
 				log.Debug().Msg(dop.Mode + " " + dop.Type + " plugin " + dop.Hash(ctx) + " done")
 				return
