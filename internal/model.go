@@ -105,7 +105,7 @@ type (
 		GetEventCount() int
 	}
 
-	// A Hasher can provide a unique deterministic hash string based on its configuration parameters
+	// A Closer can close or shutdown a running thing
 	Closer interface {
 		Close(ctx context.Context)
 	}
