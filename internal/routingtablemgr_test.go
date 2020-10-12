@@ -203,3 +203,49 @@ func TestDirectRoute(t *testing.T) {
 func TestFilterRoute(t *testing.T) {
 	simulateSingleRoute(t, FILTER_ROUTE, 3, 0)
 }
+
+func TestGetRoutesBy(t *testing.T) {
+	ctx := context.Background()
+	ctx = log.Logger.WithContext(ctx)
+	// init in memory routing table manager
+	rtmgr := internal.NewInMemoryRoutingTableManager()
+	if rtmgr.GetRouteCount(ctx) != 0 {
+		t.Errorf("routing table not empty")
+		return
+	}
+	// add a routes
+	routes := []string{SPLIT_ROUTE, DIRECT_ROUTE, FILTER_ROUTE}
+	var rc internal.RouteConfig
+	for _, route := range routes {
+		err := json.Unmarshal([]byte(route), &rc)
+		if err != nil {
+			t.Errorf(err.Error())
+			return
+		}
+		err = rtmgr.AddRoute(ctx, internal.NewRouteFromRouteConfig(&rc))
+		if err != nil {
+			t.Errorf(err.Error())
+			return
+		}
+	}
+	// check routes
+	if rtmgr.GetRouteCount(ctx) != 3 {
+		t.Errorf("routing table doesn't have expected entry")
+	}
+	foundRoutes, err := rtmgr.GetRoutesBySourcePlugin(ctx, rc.Source)
+	if err != nil {
+		t.Errorf(err.Error())
+		return
+	}
+	if len(foundRoutes) != 3 {
+		t.Errorf("unexpected number of routes %d", len(foundRoutes))
+	}
+	foundRoutes, err = rtmgr.GetRoutesByDestinationPlugin(ctx, rc.Destination)
+	if err != nil {
+		t.Errorf(err.Error())
+		return
+	}
+	if len(foundRoutes) != 3 {
+		t.Errorf("unexpected number of routes %d", len(foundRoutes))
+	}
+}
