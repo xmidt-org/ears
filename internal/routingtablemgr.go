@@ -170,7 +170,7 @@ func (mgr *InMemoryRoutingTableManager) GetRoutesByDestinationPlugin(ctx context
 
 // GetRoutesForEvent gets all routes for a given event
 func (mgr *InMemoryRoutingTableManager) GetRoutesForEvent(ctx context.Context, event *Event) ([]*Route, error) {
-	return mgr.GetRoutesBySourcePlugin(ctx, event.Source)
+	return mgr.GetRoutesBySourcePlugin(ctx, event.source)
 }
 
 // GetRouteCount gets size of routing table
