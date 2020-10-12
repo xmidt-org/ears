@@ -98,7 +98,6 @@ func (mgr *InMemoryRoutingTableManager) ReplaceAllRoutes(ctx context.Context, en
 		}
 	}
 	mgr.routingTableIndex = make(map[string]*Route)
-
 	if entries != nil {
 		for _, entry := range entries {
 			err = mgr.AddRoute(ctx, entry)
@@ -122,6 +121,8 @@ func (mgr *InMemoryRoutingTableManager) Validate(ctx context.Context) error {
 
 // Hash calculates hash over all entries in the routing table
 func (mgr *InMemoryRoutingTableManager) Hash(ctx context.Context) string {
+	mgr.lock.RLock()
+	defer mgr.lock.RUnlock()
 	hash := ""
 	for _, entry := range mgr.routingTableIndex {
 		hash = hash + entry.Hash(ctx)
@@ -174,5 +175,7 @@ func (mgr *InMemoryRoutingTableManager) GetRoutesForEvent(ctx context.Context, e
 
 // GetRouteCount gets size of routing table
 func (mgr *InMemoryRoutingTableManager) GetRouteCount(ctx context.Context) int {
+	mgr.lock.RLock()
+	defer mgr.lock.RUnlock()
 	return len(mgr.routingTableIndex)
 }
