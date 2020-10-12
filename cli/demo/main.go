@@ -108,37 +108,38 @@ var (
 
 func main() {
 	ctx := context.Background()
+	ctx = log.Logger.WithContext(ctx)
 	var rtmgr internal.RoutingTableManager
 	// init in memory routing table manager
 	rtmgr = internal.NewInMemoryRoutingTableManager()
-	log.Debug().Msg(fmt.Sprintf("ears has %d routes", rtmgr.GetRouteCount(ctx)))
+	log.Ctx(ctx).Debug().Msg(fmt.Sprintf("ears has %d routes", rtmgr.GetRouteCount(ctx)))
 	var rc internal.RouteConfig
 	err := json.Unmarshal([]byte(ROUTE_1), &rc)
 	if err != nil {
-		log.Error().Msg(err.Error())
+		log.Ctx(ctx).Error().Msg(err.Error())
 		return
 	}
 	buf, err := json.MarshalIndent(rc, "", "\t")
 	if err != nil {
-		log.Error().Msg(err.Error())
+		log.Ctx(ctx).Error().Msg(err.Error())
 		return
 	}
 	fmt.Printf("%s\n", string(buf))
 	// add a route
 	err = rtmgr.AddRoute(ctx, internal.NewRouteFromRouteConfig(&rc))
 	if err != nil {
-		log.Error().Msg(err.Error())
+		log.Ctx(ctx).Error().Msg(err.Error())
 		return
 	}
-	log.Debug().Msg(fmt.Sprintf("ears has %d routes", rtmgr.GetRouteCount(ctx)))
+	log.Ctx(ctx).Debug().Msg(fmt.Sprintf("ears has %d routes", rtmgr.GetRouteCount(ctx)))
 	// check route
 	allRoutes, err := rtmgr.GetAllRoutes(ctx)
 	if err != nil {
-		log.Error().Msg(err.Error())
+		log.Ctx(ctx).Error().Msg(err.Error())
 		return
 	}
 	if len(allRoutes) > 0 {
-		log.Debug().Msg(fmt.Sprintf("first route has hash %s", allRoutes[0].Hash(ctx)))
+		log.Ctx(ctx).Debug().Msg(fmt.Sprintf("first route has hash %s", allRoutes[0].Hash(ctx)))
 	}
 	time.Sleep(time.Duration(3) * time.Second)
 }

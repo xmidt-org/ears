@@ -77,7 +77,7 @@ func (pm *DefaultIOPluginManager) RegisterPlugin(ctx context.Context, rte *Route
 		return plugin, err
 	}
 	pm.pluginMap[hash] = p
-	log.Debug().Msg(fmt.Sprintf("registering new %s %s plugin with hash %s", p.GetConfig().Type, p.GetConfig().Mode, hash))
+	log.Ctx(ctx).Debug().Msg(fmt.Sprintf("registering new %s %s plugin with hash %s", p.GetConfig().Type, p.GetConfig().Mode, hash))
 	return p, nil
 }
 
@@ -88,7 +88,7 @@ func (pm *DefaultIOPluginManager) WithdrawPlugin(ctx context.Context, rte *Route
 	}
 	pc := plugin.GetConfig()
 	if p, ok := pm.pluginMap[hash]; ok {
-		log.Debug().Msg(fmt.Sprintf("unregistering %s %s plugin with hash %s", p.GetConfig().Type, p.GetConfig().Mode, hash))
+		log.Ctx(ctx).Debug().Msg(fmt.Sprintf("unregistering %s %s plugin with hash %s", p.GetConfig().Type, p.GetConfig().Mode, hash))
 		routes := make([]*Route, 0)
 		if pc.routes != nil {
 			for _, r := range pc.routes {
@@ -99,11 +99,11 @@ func (pm *DefaultIOPluginManager) WithdrawPlugin(ctx context.Context, rte *Route
 			pc.routes = routes
 			if p.GetRouteCount() <= 0 {
 				p.Close(ctx)
-				log.Debug().Msg(fmt.Sprintf("stopped %s %s plugin with hash %s", p.GetConfig().Type, p.GetConfig().Mode, hash))
+				log.Ctx(ctx).Debug().Msg(fmt.Sprintf("stopped %s %s plugin with hash %s", p.GetConfig().Type, p.GetConfig().Mode, hash))
 				delete(pm.pluginMap, hash)
 			}
 		}
-		log.Debug().Msg(fmt.Sprintf("%s %s plugin route count %d %d", p.GetConfig().Type, p.GetConfig().Mode, p.GetRouteCount(), len(pc.routes)))
+		log.Ctx(ctx).Debug().Msg(fmt.Sprintf("%s %s plugin route count %d %d", p.GetConfig().Type, p.GetConfig().Mode, p.GetRouteCount(), len(pc.routes)))
 	}
 	return nil
 }

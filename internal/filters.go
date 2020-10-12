@@ -162,7 +162,7 @@ func NewFilterer(ctx context.Context, fp *FilterPlugin) (Filterer, error) {
 
 // DoSync synchronoulsy accepts an event into a filter plugin belonging to a filter chain
 func (fp *FilterPlugin) DoSync(ctx context.Context, event *Event) error {
-	log.Debug().Msg(fp.Type + " filter " + fp.Hash(ctx) + " passed")
+	log.Ctx(ctx).Debug().Msg(fp.Type + " filter " + fp.Hash(ctx) + " passed")
 	fp.EventCount++
 	filteredEvents, err := fp.filterer.Filter(ctx, event)
 	if err != nil {
@@ -188,7 +188,7 @@ func (fp *FilterPlugin) DoAsync(ctx context.Context) {
 			case inputEvent = <-fp.inputChannel:
 				fp.EventCount++
 			case <-fp.done:
-				log.Debug().Msg(fp.Mode + " " + fp.Type + " plugin " + fp.Hash(ctx) + " done")
+				log.Ctx(ctx).Debug().Msg(fp.Mode + " " + fp.Type + " plugin " + fp.Hash(ctx) + " done")
 				return
 			}
 			filteredEvents, err := fp.filterer.Filter(ctx, inputEvent)
@@ -196,7 +196,7 @@ func (fp *FilterPlugin) DoAsync(ctx context.Context) {
 				return
 			}
 			if len(filteredEvents) > 0 {
-				log.Debug().Msg(fp.Mode + " " + fp.Type + " plugin " + fp.Hash(ctx) + " passed")
+				log.Ctx(ctx).Debug().Msg(fp.Mode + " " + fp.Type + " plugin " + fp.Hash(ctx) + " passed")
 			}
 			for _, e := range filteredEvents {
 				if fp.outputChannel != nil {

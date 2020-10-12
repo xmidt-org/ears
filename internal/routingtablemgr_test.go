@@ -7,6 +7,8 @@ import (
 	"time"
 
 	"github.com/xmidt-org/ears/internal"
+
+	"github.com/rs/zerolog/log"
 )
 
 var (
@@ -136,12 +138,9 @@ var (
 	`
 )
 
-var (
-	ctx = context.Background()
-)
-
 func simulateSingleRoute(t *testing.T, route string, expectedSourceCount, expectedDestinationCount int) {
 	ctx := context.Background()
+	ctx = log.Logger.WithContext(ctx)
 	// init in memory routing table manager
 	rtmgr := internal.NewInMemoryRoutingTableManager()
 	if rtmgr.GetRouteCount(ctx) != 0 {
