@@ -161,7 +161,8 @@ func (dip *DebugInputPlugin) DoAsync(ctx context.Context) {
 			if done {
 				break
 			}
-			event := NewEvent(ctx, dip, dip.Payload)
+			subCtx := context.WithValue(ctx, "foo", "bar")
+			event := NewEvent(subCtx, dip, dip.Payload)
 			dip.lock.Lock()
 			// deliver event to each interested route (first filter in chain)
 			if dip.routes != nil {
