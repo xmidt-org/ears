@@ -56,14 +56,16 @@ func (fc *FilterChain) Initialize(ctx context.Context, rte *Route) error {
 			fp.State = PluginStateReady
 			fp.Mode = PluginModeFilter
 			fp.routes = []*Route{rte}
+			fp.lock.Lock()
 			fp.done = make(chan bool)
+			fp.lock.Unlock()
 			if idx == 0 {
-				fp.inputChannel = rte.Source.GetOutputChannel()
+				fp.SetInputChannel(rte.Source.GetOutputChannel())
 			} else {
-				fp.inputChannel = eventChannel
+				fp.SetInputChannel(eventChannel)
 			}
-			fp.outputChannel = make(chan *Event)
-			eventChannel = fp.outputChannel
+			fp.SetOutputChannel(make(chan *Event))
+			eventChannel = fp.GetOutputChannel()
 			fp.DoAsync(ctx)
 		}
 	}
