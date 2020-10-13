@@ -136,6 +136,90 @@ var (
 		"deliveryMode" : "at_least_once"
 	}
 	`
+
+	ARRAY_ROUTE = `
+	{
+		"orgId" : "comcast",
+		"appId" : "xfi",
+		"userId" : "boris",
+		"source" : {
+			"type" : "debug",
+			"params" :
+			{
+				"rounds" : 3,
+				"intervalMS" : 250,
+				"payload" : [{"foo" : "bar"}]
+			}
+		},
+		"destination" : {
+			"type" : "debug",
+			"params" : {}
+		},
+		"filterChain" : {
+			"filters": 
+			[
+				{
+					"type" : "match",
+					"params" : {
+						"pattern" : [{"foo" : "bar"}]
+					}
+				},
+				{
+					"type" : "filter",
+					"params" : {
+						"pattern" : [{"foo" : "bar"}]
+					}
+				}
+			]
+		},
+		"deliveryMode" : "at_least_once"
+	}
+	`
+
+	WILDCARD_ROUTE = `
+	{
+		"orgId" : "comcast",
+		"appId" : "xfi",
+		"userId" : "boris",
+		"source" : {
+			"type" : "debug",
+			"params" :
+			{
+				"rounds" : 3,
+				"intervalMS" : 250,
+				"payload" : {"foo" : "bar"}
+			}
+		},
+		"destination" : {
+			"type" : "debug",
+			"params" : {}
+		},
+		"filterChain" : {
+			"filters": 
+			[
+				{
+					"type" : "match",
+					"params" : {
+						"pattern" : {"foo" : "b*"}
+					}
+				},
+				{
+					"type" : "match",
+					"params" : {
+						"pattern" : {"foo" : "bar||baz"}
+					}
+				},
+				{
+					"type" : "filter",
+					"params" : {
+						"pattern" : {"foo" : "bar"}
+					}
+				}
+			]
+		},
+		"deliveryMode" : "at_least_once"
+	}
+	`
 )
 
 func simulateSingleRoute(t *testing.T, rstr string, expectedSourceCount, expectedDestinationCount int) {
@@ -204,6 +288,14 @@ func TestFilterRoute(t *testing.T) {
 	simulateSingleRoute(t, FILTER_ROUTE, 3, 0)
 }
 
+func TestArrayRoute(t *testing.T) {
+	simulateSingleRoute(t, ARRAY_ROUTE, 3, 0)
+}
+
+func TestWildcardRoute(t *testing.T) {
+	simulateSingleRoute(t, WILDCARD_ROUTE, 3, 0)
+}
+
 func TestGetRoutesBy(t *testing.T) {
 	ctx := context.Background()
 	ctx = log.Logger.WithContext(ctx)
@@ -228,6 +320,16 @@ func TestGetRoutesBy(t *testing.T) {
 			t.Errorf(err.Error())
 			return
 		}
+	}
+	// validate
+	err := rtmgr.Validate(ctx)
+	if err != nil {
+		t.Errorf(err.Error())
+		return
+	}
+	hash := rtmgr.Hash(ctx)
+	if hash == "" {
+		t.Errorf("empty table hash")
 	}
 	// check routes
 	if rtmgr.GetRouteCount(ctx) != 3 {
