@@ -58,6 +58,12 @@ func (mgr *InMemoryRoutingTableManager) AddRoute(ctx context.Context, entry *Rou
 		return err
 	}
 	entry.tblMgr = mgr
+	if entry.Hash(ctx) == "" {
+		return new(EmptyHashError)
+	}
+	/*if _, ok := mgr.routingTableIndex[entry.Hash(ctx)]; ok {
+		return errors.New("hash " + entry.Hash(ctx) + " already exists")
+	}*/
 	mgr.routingTableIndex[entry.Hash(ctx)] = entry
 	return nil
 }

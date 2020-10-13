@@ -179,7 +179,7 @@ func (fp *FilterPlugin) DoSync(ctx context.Context, event *Event) error {
 // DoAsync kicks of a go routine listening indefinitly for a events to arrive on its in channel
 func (fp *FilterPlugin) DoAsync(ctx context.Context) {
 	go func() {
-		if fp.inputChannel == nil {
+		if fp.GetInputChannel() == nil {
 			return
 		}
 		for {

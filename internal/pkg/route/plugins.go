@@ -107,10 +107,22 @@ func (plgn *Plugin) GetInputChannel() chan *Event {
 	return plgn.inputChannel
 }
 
+func (plgn *Plugin) SetInputChannel(in chan *Event) {
+	plgn.lock.Lock()
+	defer plgn.lock.Unlock()
+	plgn.inputChannel = in
+}
+
 func (plgn *Plugin) GetOutputChannel() chan *Event {
 	plgn.lock.RLock()
 	defer plgn.lock.RUnlock()
 	return plgn.outputChannel
+}
+
+func (plgn *Plugin) SetOutputChannel(in chan *Event) {
+	plgn.lock.Lock()
+	defer plgn.lock.Unlock()
+	plgn.outputChannel = in
 }
 
 func (plgn *Plugin) GetRouteCount() int {
@@ -210,7 +222,7 @@ func (dop *DebugOutputPlugin) DoSync(ctx context.Context, event *Event) error {
 
 func (dop *DebugOutputPlugin) DoAsync(ctx context.Context) {
 	go func() {
-		if dop.inputChannel == nil {
+		if dop.GetInputChannel() == nil {
 			return
 		}
 		for {
@@ -247,7 +259,7 @@ func NewInputPlugin(ctx context.Context, rte *Route) (Pluginer, error) {
 		dip.Name = "Debug"
 		dip.Params = pc.Params
 		dip.routes = []*Route{rte}
-		dip.outputChannel = make(chan *Event)
+		dip.SetOutputChannel(make(chan *Event))
 		dip.done = make(chan bool)
 		// parse configs and overwrite defaults
 		if dip.Params != nil {
@@ -285,7 +297,7 @@ func NewOutputPlugin(ctx context.Context, rte *Route) (Pluginer, error) {
 		dop.routes = []*Route{rte}
 		dop.done = make(chan bool)
 		if rte.FilterChain != nil && len(rte.FilterChain.Filters) > 0 {
-			dop.inputChannel = rte.FilterChain.Filters[len(rte.FilterChain.Filters)-1].GetOutputChannel()
+			dop.SetInputChannel(rte.FilterChain.Filters[len(rte.FilterChain.Filters)-1].GetOutputChannel())
 		}
 		dop.DoAsync(ctx)
 		return dop, nil
