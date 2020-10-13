@@ -1,4 +1,4 @@
-package internal
+package route
 
 type (
 	MissingFilterPluginConfigError struct {

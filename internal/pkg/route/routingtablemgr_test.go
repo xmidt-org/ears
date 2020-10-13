@@ -1,4 +1,4 @@
-package internal_test
+package route_test
 
 import (
 	"context"
@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/xmidt-org/ears/internal"
+	"github.com/xmidt-org/ears/internal/pkg/route"
 
 	"github.com/rs/zerolog/log"
 )
@@ -138,23 +138,23 @@ var (
 	`
 )
 
-func simulateSingleRoute(t *testing.T, route string, expectedSourceCount, expectedDestinationCount int) {
+func simulateSingleRoute(t *testing.T, rstr string, expectedSourceCount, expectedDestinationCount int) {
 	ctx := context.Background()
 	ctx = log.Logger.WithContext(ctx)
 	// init in memory routing table manager
-	rtmgr := internal.NewInMemoryRoutingTableManager()
+	rtmgr := route.NewInMemoryRoutingTableManager()
 	if rtmgr.GetRouteCount(ctx) != 0 {
 		t.Errorf("routing table not empty")
 		return
 	}
-	var rc internal.RouteConfig
-	err := json.Unmarshal([]byte(route), &rc)
+	var rc route.RouteConfig
+	err := json.Unmarshal([]byte(rstr), &rc)
 	if err != nil {
 		t.Errorf(err.Error())
 		return
 	}
 	// add a route
-	err = rtmgr.AddRoute(ctx, internal.NewRouteFromRouteConfig(&rc))
+	err = rtmgr.AddRoute(ctx, route.NewRouteFromRouteConfig(&rc))
 	if err != nil {
 		t.Errorf(err.Error())
 		return
@@ -174,7 +174,7 @@ func simulateSingleRoute(t *testing.T, route string, expectedSourceCount, expect
 	/*fmt.Printf("ROUTING TABLE:\n")
 	fmt.Printf("%s\n", rtmgr.String())
 	fmt.Printf("PLUGINS:\n")
-	fmt.Printf("%s\n", internal.GetIOPluginManager(ctx).String())*/
+	fmt.Printf("%s\n", route.GetIOPluginManager(ctx).String())*/
 	time.Sleep(time.Duration(2000) * time.Millisecond)
 	if allRoutes[0].Source.GetEventCount() != expectedSourceCount {
 		t.Errorf("unexpected number of produced events %d", allRoutes[0].Source.GetEventCount())
@@ -208,21 +208,21 @@ func TestGetRoutesBy(t *testing.T) {
 	ctx := context.Background()
 	ctx = log.Logger.WithContext(ctx)
 	// init in memory routing table manager
-	rtmgr := internal.NewInMemoryRoutingTableManager()
+	rtmgr := route.NewInMemoryRoutingTableManager()
 	if rtmgr.GetRouteCount(ctx) != 0 {
 		t.Errorf("routing table not empty")
 		return
 	}
 	// add a routes
 	routes := []string{SPLIT_ROUTE, DIRECT_ROUTE, FILTER_ROUTE}
-	var rc internal.RouteConfig
-	for _, route := range routes {
-		err := json.Unmarshal([]byte(route), &rc)
+	var rc route.RouteConfig
+	for _, rstr := range routes {
+		err := json.Unmarshal([]byte(rstr), &rc)
 		if err != nil {
 			t.Errorf(err.Error())
 			return
 		}
-		err = rtmgr.AddRoute(ctx, internal.NewRouteFromRouteConfig(&rc))
+		err = rtmgr.AddRoute(ctx, route.NewRouteFromRouteConfig(&rc))
 		if err != nil {
 			t.Errorf(err.Error())
 			return

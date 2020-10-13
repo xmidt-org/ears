@@ -23,7 +23,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/xmidt-org/ears/internal"
+	"github.com/xmidt-org/ears/internal/pkg/route"
 
 	"github.com/rs/zerolog/log"
 )
@@ -109,11 +109,11 @@ var (
 func main() {
 	ctx := context.Background()
 	ctx = log.Logger.WithContext(ctx)
-	var rtmgr internal.RoutingTableManager
+	var rtmgr route.RoutingTableManager
 	// init in memory routing table manager
-	rtmgr = internal.NewInMemoryRoutingTableManager()
+	rtmgr = route.NewInMemoryRoutingTableManager()
 	log.Ctx(ctx).Debug().Msg(fmt.Sprintf("ears has %d routes", rtmgr.GetRouteCount(ctx)))
-	var rc internal.RouteConfig
+	var rc route.RouteConfig
 	err := json.Unmarshal([]byte(ROUTE_1), &rc)
 	if err != nil {
 		log.Ctx(ctx).Error().Msg(err.Error())
@@ -126,7 +126,7 @@ func main() {
 	}
 	fmt.Printf("%s\n", string(buf))
 	// add a route
-	err = rtmgr.AddRoute(ctx, internal.NewRouteFromRouteConfig(&rc))
+	err = rtmgr.AddRoute(ctx, route.NewRouteFromRouteConfig(&rc))
 	if err != nil {
 		log.Ctx(ctx).Error().Msg(err.Error())
 		return
