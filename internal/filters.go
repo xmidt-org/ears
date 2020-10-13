@@ -186,7 +186,9 @@ func (fp *FilterPlugin) DoAsync(ctx context.Context) {
 			var inputEvent *Event
 			select {
 			case inputEvent = <-fp.inputChannel:
+				fp.lock.Lock()
 				fp.EventCount++
+				fp.lock.Unlock()
 			case <-fp.done:
 				log.Ctx(ctx).Debug().Msg(fp.Mode + " " + fp.Type + " plugin " + fp.Hash(ctx) + " done")
 				return
