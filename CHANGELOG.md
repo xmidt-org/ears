@@ -6,8 +6,11 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 
+* POC for in memory routing table manager and filter chain 
+
 ## [v0.1.0]
-- Initial creation
+
+* Initial creation
 
 [Unreleased]: https://github.com/xmidt-org/ears/compare/v0.1.0..HEAD
 [v0.1.0]: https://github.com/xmidt-org/ears/compare/aab401079d1826abe069f3f7e8516371a440bafc...v0.1.0
