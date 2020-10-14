@@ -27,13 +27,13 @@ type (
 	// An Event bundles even payload and metadata that travels with the event
 	Event struct {
 		ctx      context.Context
-		Payload  interface{} `json:"payload"`  // event payload (could also be string, but preparsed i sprobably more efficient if we want to allow deep inspection)
-		Encoding string      `json:"encoding"` // optional encoding hint to be set by input plugin
-		Metadata interface{} `json:"metadata"` // optional metadata produced by filter chain
-		ackTree  AckTree     `json:"ackTree"`  // optional ack chain (or ack tree)
-		source   Pluginer    `json:"source"`   // pointer to source plugin instance
-		TxId     string      `json:"txid"`     // transaction ID (probably also available from context)
-		Ts       int         `json: "ts"`      // timestamp when event was received
+		Payload  interface{} `json:"payload,omitempty"`  // event payload (could also be string, but preparsed i sprobably more efficient if we want to allow deep inspection)
+		Encoding string      `json:"encoding,omitempty"` // optional encoding hint to be set by input plugin
+		Metadata interface{} `json:"metadata,omitempty"` // optional metadata produced by filter chain
+		ackTree  AckTree     `json:"ackTree,omitempty"`  // optional ack chain (or ack tree)
+		source   Pluginer    `json:"source,omitempty"`   // pointer to source plugin instance
+		TxId     string      `json:"txid,omitempty"`     // transaction ID (probably also available from context)
+		Ts       int         `json: "ts,omitempty"`      // timestamp when event was received
 	}
 )
 

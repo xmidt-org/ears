@@ -3,6 +3,7 @@ package route_test
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"testing"
 	"time"
 
@@ -220,6 +221,18 @@ var (
 		"deliveryMode" : "at_least_once"
 	}
 	`
+
+	EMPTY_ROUTE = `
+	{
+		"orgId" : "comcast",
+		"appId" : "xfi",
+		"userId" : "boris",
+		"deliveryMode" : "at_least_once",
+		"source" : {},
+		"destination" : {},
+		"filterChain" : {}
+	}
+	`
 )
 
 func simulateSingleRoute(t *testing.T, rstr string, expectedSourceCount, expectedDestinationCount int) {
@@ -359,4 +372,96 @@ func TestGetRoutesBy(t *testing.T) {
 	if rtmgr.GetRouteCount(ctx) != 2 {
 		t.Errorf("unexpected number of routes %d", len(foundRoutes))
 	}
+}
+
+func TestErrors(t *testing.T) {
+	ctx := context.Background()
+	ctx = log.Logger.WithContext(ctx)
+	// init in memory routing table manager
+	rtmgr := route.NewInMemoryRoutingTableManager()
+	if rtmgr.GetRouteCount(ctx) != 0 {
+		t.Errorf("routing table not empty")
+		return
+	}
+	// add a routes
+	err := rtmgr.AddRoute(ctx, nil)
+	if err == nil {
+		t.Errorf("no error")
+	} else {
+		fmt.Printf("error %s\n", err.Error())
+	}
+	routes := []string{EMPTY_ROUTE}
+	var rc *route.RouteConfig
+	for _, rstr := range routes {
+		rc = new(route.RouteConfig)
+		err := json.Unmarshal([]byte(rstr), rc)
+		if err != nil {
+			t.Errorf(err.Error())
+			return
+		}
+		err = rtmgr.AddRoute(ctx, route.NewRouteFromRouteConfig(rc))
+		if err == nil {
+			t.Errorf("missing error")
+		}
+		_, ok := err.(*route.UnknownPluginTypeError)
+		if !ok {
+			t.Errorf("wrong error")
+		}
+	}
+	// validate
+	err = rtmgr.Validate(ctx)
+	if err != nil {
+		t.Errorf(err.Error())
+		return
+	}
+	hash := rtmgr.Hash(ctx)
+	if hash != "" {
+		t.Errorf("table hash not empty")
+	}
+}
+
+func TestDoSync(t *testing.T) {
+	ctx := context.Background()
+	ctx = log.Logger.WithContext(ctx)
+	// init in memory routing table manager
+	rtmgr := route.NewInMemoryRoutingTableManager()
+	if rtmgr.GetRouteCount(ctx) != 0 {
+		t.Errorf("routing table not empty")
+		return
+	}
+	// add a routes
+	routes := []string{SPLIT_ROUTE}
+	var rc *route.RouteConfig
+	for _, rstr := range routes {
+		rc = new(route.RouteConfig)
+		err := json.Unmarshal([]byte(rstr), rc)
+		if err != nil {
+			t.Errorf(err.Error())
+			return
+		}
+		err = rtmgr.AddRoute(ctx, route.NewRouteFromRouteConfig(rc))
+		if err != nil {
+			t.Errorf(err.Error())
+			return
+		}
+	}
+	// inject event
+	allRoutes, _ := rtmgr.GetAllRoutes(ctx)
+	r := allRoutes[0]
+	event := route.NewEvent(ctx, r.Source, map[string]string{"foo": "bar"})
+	err := r.Source.DoSync(ctx, event)
+	if err != nil {
+		t.Errorf(err.Error())
+	}
+	err = r.Destination.DoSync(ctx, event)
+	if err != nil {
+		t.Errorf(err.Error())
+	}
+	err = r.FilterChain.Filters[0].DoSync(ctx, event)
+	if err != nil {
+		t.Errorf(err.Error())
+	}
+	/*if r.Destination.GetEventCount() != 6 {
+		t.Errorf("unexpected number of events %d", r.Destination.GetEventCount())
+	}*/
 }

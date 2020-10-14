@@ -14,10 +14,7 @@ type (
 	}
 	UnkownRouteError struct {
 	}
-	UnknownInputPluginTypeError struct {
-		PluginType string
-	}
-	UnknownOutputPluginTypeError struct {
+	UnknownPluginTypeError struct {
 		PluginType string
 	}
 	MissingPluginConfiguratonError struct {
@@ -33,12 +30,8 @@ func (e *MissingPluginConfiguratonError) Error() string {
 	return "missing configuration for " + e.PluginType + " " + e.PluginMode + " plugin " + e.PluginHash
 }
 
-func (e *UnknownInputPluginTypeError) Error() string {
-	return "unknown input plugin type " + e.PluginType
-}
-
-func (e *UnknownOutputPluginTypeError) Error() string {
-	return "unknown output plugin type " + e.PluginType
+func (e *UnknownPluginTypeError) Error() string {
+	return "unknown plugin type " + e.PluginType
 }
 
 func (e *MissingFilterPluginConfigError) Error() string {

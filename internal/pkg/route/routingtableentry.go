@@ -27,29 +27,29 @@ import (
 type (
 	// A Route represents an entry in the EARS routing table
 	Route struct {
-		OrgId        string              `json:"orgId"`        // org ID for quota and rate limiting
-		AppId        string              `json:"appId"`        // app ID for quota and rate limiting
-		UserId       string              `json:"userId"`       // user ID / author of route
-		Name         string              `json:"name"`         // optional unique name for route
-		Source       Pluginer            `json:"source`        // pointer to source plugin instance
-		Destination  Pluginer            `json:"destination"`  // pointer to destination plugin instance
-		FilterChain  *FilterChain        `json:"filterChain"`  // optional list of filter plugins that will be applied in order to perform arbitrary filtering and transformation functions
-		DeliveryMode string              `json:"deliveryMode"` // possible values: fire_and_forget, at_least_once, exactly_once
-		Debug        bool                `json:"debug"`        // if true generate debug logs and metrics for events taking this route
-		Ts           int                 `json:"ts"`           // timestamp when route was created or updated
-		tblMgr       RoutingTableManager `json:"-"`            // pointer to routing table manager
+		OrgId        string              `json:"orgId,omitempty"`        // org ID for quota and rate limiting
+		AppId        string              `json:"appId,omitempty"`        // app ID for quota and rate limiting
+		UserId       string              `json:"userId,omitempty"`       // user ID / author of route
+		Name         string              `json:"name,omitempty"`         // optional unique name for route
+		Source       Pluginer            `json:"source,omitempty`        // pointer to source plugin instance
+		Destination  Pluginer            `json:"destination,omitempty"`  // pointer to destination plugin instance
+		FilterChain  *FilterChain        `json:"filterChain,omitempty"`  // optional list of filter plugins that will be applied in order to perform arbitrary filtering and transformation functions
+		DeliveryMode string              `json:"deliveryMode,omitempty"` // possible values: fire_and_forget, at_least_once, exactly_once
+		Debug        bool                `json:"debug,omitempty"`        // if true generate debug logs and metrics for events taking this route
+		Ts           int                 `json:"ts,omitempty"`           // timestamp when route was created or updated
+		tblMgr       RoutingTableManager `json:"-"`                      // pointer to routing table manager
 	}
 	RouteConfig struct {
-		OrgId        string       `json:"orgId"`        // org ID for quota and rate limiting
-		AppId        string       `json:"appId"`        // app ID for quota and rate limiting
-		UserId       string       `json:"userId"`       // user ID / author of route
-		Name         string       `json:"name"`         // optional unique name for route
-		Source       *Plugin      `json:"source`        // pointer to source plugin instance
-		Destination  *Plugin      `json:"destination"`  // pointer to destination plugin instance
-		FilterChain  *FilterChain `json:"filterChain"`  // optional list of filter plugins that will be applied in order to perform arbitrary filtering and transformation functions
-		DeliveryMode string       `json:"deliveryMode"` // possible values: fire_and_forget, at_least_once, exactly_once
-		Debug        bool         `json:"debug"`        // if true generate debug logs and metrics for events taking this route
-		Ts           int          `json:"ts"`           // timestamp when route was created or updated
+		OrgId        string       `json:"orgId,omitempty"`        // org ID for quota and rate limiting
+		AppId        string       `json:"appId,omitempty"`        // app ID for quota and rate limiting
+		UserId       string       `json:"userId,omitempty"`       // user ID / author of route
+		Name         string       `json:"name,omitempty"`         // optional unique name for route
+		Source       *Plugin      `json:"source,omitempty"`       // pointer to source plugin instance
+		Destination  *Plugin      `json:"destination,omitempty"`  // pointer to destination plugin instance
+		FilterChain  *FilterChain `json:"filterChain,omitempty"`  // optional list of filter plugins that will be applied in order to perform arbitrary filtering and transformation functions
+		DeliveryMode string       `json:"deliveryMode,omitempty"` // possible values: fire_and_forget, at_least_once, exactly_once
+		Debug        bool         `json:"debug,omitempty"`        // if true generate debug logs and metrics for events taking this route
+		Ts           int          `json:"ts,omitempty"`           // timestamp when route was created or updated
 	}
 )
 
