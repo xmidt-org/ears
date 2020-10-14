@@ -34,15 +34,15 @@ import (
 type (
 	// An EarsPlugin represents an input plugin an output plugin or a filter plugin
 	Plugin struct {
-		Type          string                 `json:"type"`       // plugin or filter type, e.g. kafka, kds, sqs, webhook, filter
-		Version       string                 `json:"version"`    // plugin version
-		SOName        string                 `json:"soName"`     // name of shared library file implementing this plugin
-		Params        map[string]interface{} `json:"params"`     // plugin specific configuration parameters
-		Mode          string                 `json:"mode"`       // plugin mode, one of input, output and filter
-		State         string                 `json:"state"`      // plugin operational state including running, stopped, error etc. (filter plugins are always in state running)
-		Name          string                 `json:"name"`       // descriptive plugin name
-		Encodings     []string               `json:"encodings"`  // list of supported encodings
-		EventCount    int                    `json:"eventCount"` // number of events that have passed through this plugin
+		Type          string                 `json:"type,omitempty"`       // plugin or filter type, e.g. kafka, kds, sqs, webhook, filter
+		Version       string                 `json:"version,omitempty"`    // plugin version
+		SOName        string                 `json:"soName,omitempty"`     // name of shared library file implementing this plugin
+		Params        map[string]interface{} `json:"params,omitempty"`     // plugin specific configuration parameters
+		Mode          string                 `json:"mode,omitempty"`       // plugin mode, one of input, output and filter
+		State         string                 `json:"state,omitempty"`      // plugin operational state including running, stopped, error etc. (filter plugins are always in state running)
+		Name          string                 `json:"name,omitempty"`       // descriptive plugin name
+		Encodings     []string               `json:"encodings,omitempty"`  // list of supported encodings
+		EventCount    int                    `json:"eventCount,omitempty"` // number of events that have passed through this plugin
 		routes        []*Route               // list of routes using this plugin instance
 		inputChannel  chan *Event            // event channel on which plugin receives the next event
 		outputChannel chan *Event            // event channel to which plugin forwards current event to
@@ -277,7 +277,7 @@ func NewInputPlugin(ctx context.Context, rte *Route) (Pluginer, error) {
 		dip.DoAsync(ctx)
 		return dip, nil
 	}
-	return nil, &UnknownInputPluginTypeError{pc.Type}
+	return nil, &UnknownPluginTypeError{pc.Type}
 }
 
 //
@@ -302,5 +302,5 @@ func NewOutputPlugin(ctx context.Context, rte *Route) (Pluginer, error) {
 		dop.DoAsync(ctx)
 		return dop, nil
 	}
-	return nil, &UnknownOutputPluginTypeError{pc.Type}
+	return nil, &UnknownPluginTypeError{pc.Type}
 }
