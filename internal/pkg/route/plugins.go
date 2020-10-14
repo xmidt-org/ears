@@ -138,6 +138,12 @@ func (plgn *Plugin) GetEventCount() int {
 	return plgn.EventCount
 }
 
+func (plgn *Plugin) IncEventCount(inc int) {
+	plgn.lock.Lock()
+	defer plgn.lock.Unlock()
+	plgn.EventCount += inc
+}
+
 func (plgn *Plugin) DoSync(ctx context.Context, event *Event) error {
 	return new(UnworthyPluginError)
 }
@@ -166,7 +172,7 @@ func (dip *DebugInputPlugin) DoAsync(ctx context.Context) {
 			return
 		}
 		for {
-			if dip.Rounds > 0 && dip.EventCount >= dip.Rounds {
+			if dip.Rounds > 0 && dip.GetEventCount() >= dip.Rounds {
 				return
 			}
 			time.Sleep(time.Duration(dip.IntervalMs) * time.Millisecond)
@@ -186,8 +192,8 @@ func (dip *DebugInputPlugin) DoAsync(ctx context.Context) {
 				}
 			}
 			log.Ctx(ctx).Debug().Msg("debug " + dip.Mode + " " + dip.Type + " plugin " + dip.Hash(ctx) + " produced event " + fmt.Sprintf("%d", dip.EventCount))
-			dip.EventCount++
 			dip.lock.Unlock()
+			dip.IncEventCount(1)
 		}
 	}()
 }
@@ -206,7 +212,7 @@ func (dip *DebugInputPlugin) DoSync(ctx context.Context, event *Event) error {
 			}
 		}
 	}
-	dip.EventCount++
+	dip.IncEventCount(1)
 	return nil
 }
 
@@ -216,7 +222,7 @@ func (dip *DebugInputPlugin) DoSync(ctx context.Context, event *Event) error {
 
 func (dop *DebugOutputPlugin) DoSync(ctx context.Context, event *Event) error {
 	log.Ctx(ctx).Debug().Msg(dop.Mode + " " + dop.Type + " plugin " + dop.Hash(ctx) + " passed")
-	dop.EventCount++
+	dop.IncEventCount(1)
 	return nil
 }
 
@@ -229,9 +235,9 @@ func (dop *DebugOutputPlugin) DoAsync(ctx context.Context) {
 			select {
 			case <-dop.GetInputChannel():
 				log.Ctx(ctx).Debug().Msg(dop.Mode + " " + dop.Type + " plugin " + dop.Hash(ctx) + " passed")
-				dop.lock.Lock()
-				dop.EventCount++
-				dop.lock.Unlock()
+				//dop.lock.Lock()
+				dop.IncEventCount(1)
+				//dop.lock.Unlock()
 			case <-dop.done:
 				log.Ctx(ctx).Debug().Msg(dop.Mode + " " + dop.Type + " plugin " + dop.Hash(ctx) + " done")
 				return
