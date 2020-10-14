@@ -163,7 +163,7 @@ func NewFilterer(ctx context.Context, fp *FilterPlugin) (Filterer, error) {
 // DoSync synchronoulsy accepts an event into a filter plugin belonging to a filter chain
 func (fp *FilterPlugin) DoSync(ctx context.Context, event *Event) error {
 	log.Ctx(ctx).Debug().Msg(fp.Type + " filter " + fp.Hash(ctx) + " passed")
-	fp.EventCount++
+	fp.IncEventCount(1)
 	filteredEvents, err := fp.filterer.Filter(ctx, event)
 	if err != nil {
 		return err
@@ -186,9 +186,7 @@ func (fp *FilterPlugin) DoAsync(ctx context.Context) {
 			var inputEvent *Event
 			select {
 			case inputEvent = <-fp.inputChannel:
-				fp.lock.Lock()
-				fp.EventCount++
-				fp.lock.Unlock()
+				fp.IncEventCount(1)
 			case <-fp.done:
 				log.Ctx(ctx).Debug().Msg(fp.Mode + " " + fp.Type + " plugin " + fp.Hash(ctx) + " done")
 				return

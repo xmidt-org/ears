@@ -103,6 +103,7 @@ type (
 		GetOutputChannel() chan *Event
 		GetRouteCount() int
 		GetEventCount() int
+		IncEventCount(int)
 	}
 
 	// A Closer can close or shutdown a running thing
