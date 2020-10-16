@@ -4,6 +4,7 @@ go 1.14
 
 require (
 	github.com/fsnotify/fsnotify v1.4.9 // indirect
+	github.com/google/addlicense v0.0.0-20200906110928-a0294312aa76 // indirect
 	github.com/google/go-cmp v0.5.2
 	github.com/google/uuid v1.1.2
 	github.com/gorilla/mux v1.8.0
@@ -22,6 +23,7 @@ require (
 	go.uber.org/fx v1.13.1
 	go.uber.org/multierr v1.5.0 // indirect
 	golang.org/x/lint v0.0.0-20200302205851-738671d3881b // indirect
+	golang.org/x/sync v0.0.0-20201008141435-b3e1573b7520 // indirect
 	golang.org/x/sys v0.0.0-20200909081042-eff7692f9009 // indirect
 	golang.org/x/tools v0.0.0-20200909205333-6a8222ee2526 // indirect
 	gopkg.in/ini.v1 v1.61.0 // indirect
