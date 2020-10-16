@@ -62,7 +62,7 @@ if [[ $files == "" ]]; then
 	echo "  - No matching files found to process.  Exiting."
 	finish 1
 fi
-echo $files
+echo -e "$files"
 echo
 
 
