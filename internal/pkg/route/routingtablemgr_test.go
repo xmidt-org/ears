@@ -187,7 +187,7 @@ var (
 			"params" :
 			{
 				"rounds" : 3,
-				"intervalMS" : 250,
+				"intervalMS" : 333,
 				"payload" : {"foo" : "bar"}
 			}
 		},
@@ -319,7 +319,7 @@ func TestGetRoutesBy(t *testing.T) {
 		return
 	}
 	// add a routes
-	routes := []string{SPLIT_ROUTE, DIRECT_ROUTE, FILTER_ROUTE}
+	routes := []string{SPLIT_ROUTE, DIRECT_ROUTE, FILTER_ROUTE, ARRAY_ROUTE, WILDCARD_ROUTE}
 	var rc *route.RouteConfig
 	for _, rstr := range routes {
 		rc = new(route.RouteConfig)
@@ -345,15 +345,15 @@ func TestGetRoutesBy(t *testing.T) {
 		t.Errorf("empty table hash")
 	}
 	// check routes
-	if rtmgr.GetRouteCount(ctx) != 3 {
-		t.Errorf("routing table doesn't have expected number of entries")
+	if rtmgr.GetRouteCount(ctx) != 5 {
+		t.Errorf("routing table doesn't have expected number of entries %d", rtmgr.GetRouteCount(ctx))
 	}
 	foundRoutes, err := rtmgr.GetRoutesBySourcePlugin(ctx, rc.Source)
 	if err != nil {
 		t.Errorf(err.Error())
 		return
 	}
-	if len(foundRoutes) != 2 {
+	if len(foundRoutes) != 1 {
 		t.Errorf("unexpected number of routes by source %d", len(foundRoutes))
 	}
 	foundRoutes, err = rtmgr.GetRoutesByDestinationPlugin(ctx, rc.Destination)
@@ -361,7 +361,7 @@ func TestGetRoutesBy(t *testing.T) {
 		t.Errorf(err.Error())
 		return
 	}
-	if len(foundRoutes) != 3 {
+	if len(foundRoutes) != 5 {
 		t.Errorf("unexpected number of routes by destination %d", len(foundRoutes))
 	}
 	err = rtmgr.RemoveRoute(ctx, foundRoutes[0])
@@ -369,7 +369,7 @@ func TestGetRoutesBy(t *testing.T) {
 		t.Errorf(err.Error())
 		return
 	}
-	if rtmgr.GetRouteCount(ctx) != 2 {
+	if rtmgr.GetRouteCount(ctx) != 4 {
 		t.Errorf("unexpected number of routes %d", len(foundRoutes))
 	}
 }
