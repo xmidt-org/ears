@@ -24,7 +24,6 @@ import (
 const (
 
 	// plugin types
-	//TODO: where should this live?
 
 	PluginTypeKafka  = "kafka"  // generic kafka plugin
 	PluginTypeKDS    = "kds"    // generic kds plugin
@@ -37,7 +36,6 @@ const (
 	PluginTypeFilter = "filter" // a filter plugin that filters or transforms and event
 
 	// filter types
-	//TODO: where should this live?
 
 	FilterTypeFilter      = "filter"
 	FilterTypeMatcher     = "match"
@@ -165,7 +163,6 @@ type (
 		GetRouteCount(ctx context.Context) int                                               // get current size of routing table
 		GetRoutesBySourcePlugin(ctx context.Context, plugin Pluginer) ([]*Route, error)      // get all routes for a specifc source plugin
 		GetRoutesByDestinationPlugin(ctx context.Context, plugin Pluginer) ([]*Route, error) // get all routes for a specific destination plugin
-		GetRoutesForEvent(ctx context.Context, event *Event) ([]*Route, error)               // get all routes for a given event (and source plugin)
 	}
 
 	// A RouteInitializer
