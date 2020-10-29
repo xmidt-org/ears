@@ -187,7 +187,7 @@ var (
 			"params" :
 			{
 				"rounds" : 3,
-				"intervalMS" : 333,
+				"intervalMS" : 222,
 				"payload" : {"foo" : "bar"}
 			}
 		},
@@ -268,17 +268,16 @@ func simulateSingleRoute(t *testing.T, rstr string, expectedSourceCount, expecte
 	if len(allRoutes) != 1 {
 		t.Errorf("routing table doesn't have expected entry")
 	}
-	/*fmt.Printf("ROUTING TABLE:\n")
-	fmt.Printf("%s\n", rtmgr.String())
-	fmt.Printf("PLUGINS:\n")
-	fmt.Printf("%s\n", route.GetIOPluginManager(ctx).String())*/
-	time.Sleep(time.Duration(2000) * time.Millisecond)
+	// give plugins some time to do their thing
+	time.Sleep(time.Duration(1000) * time.Millisecond)
+	// check if expected number of events hhave made it thhroughh input and output plugins
 	if allRoutes[0].Source.GetEventCount() != expectedSourceCount {
 		t.Errorf("unexpected number of produced events %d", allRoutes[0].Source.GetEventCount())
 	}
 	if allRoutes[0].Destination.GetEventCount() != expectedDestinationCount {
 		t.Errorf("unexpected number of consumed events %d", allRoutes[0].Destination.GetEventCount())
 	}
+	// cleanup routes
 	err = rtmgr.ReplaceAllRoutes(ctx, nil)
 	if err != nil {
 		t.Errorf(err.Error())
@@ -418,6 +417,7 @@ func TestGetPluginsBy(t *testing.T) {
 	if len(plugins) != 5 {
 		t.Errorf("unexpcted number of plugins %d", len(plugins))
 	}
+	// check plugins by mode
 	plugins, err = pmgr.GetPlugins(ctx, "input", "")
 	if err != nil {
 		t.Errorf("unexpcted error " + err.Error())
@@ -432,6 +432,7 @@ func TestGetPluginsBy(t *testing.T) {
 	if len(plugins) != 1 {
 		t.Errorf("unexpcted number of output plugins %d", len(plugins))
 	}
+	// check plugins by type
 	plugins, err = pmgr.GetPlugins(ctx, "", "debug")
 	if err != nil {
 		t.Errorf("unexpcted error " + err.Error())
@@ -444,6 +445,7 @@ func TestGetPluginsBy(t *testing.T) {
 	if err != nil {
 		t.Errorf("unexpcted error " + err.Error())
 	}
+	// and ensure all plugins have been withdrawn
 	plugins, err = pmgr.GetAllPlugins(ctx)
 	if err != nil {
 		t.Errorf("unexpcted error " + err.Error())
