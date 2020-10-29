@@ -4,6 +4,8 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
+	"path/filepath"
 	"testing"
 	"time"
 
@@ -12,228 +14,15 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-var (
-	SPLIT_ROUTE = `
-	{
-		"orgId" : "comcast",
-		"appId" : "xfi",
-		"userId" : "boris",
-		"source" : {
-			"type" : "debug",
-			"params" :
-			{
-				"rounds" : 3,
-				"intervalMS" : 250,
-				"payload" : {
-					"foo" : "bar"
-				}
-			}
-		},
-		"destination" : {
-			"type" : "debug",
-			"params" : {}
-		},
-		"filterChain" : {
-			"filters": 
-			[
-				{
-					"type" : "match",
-					"params" : {
-						"pattern" : {
-							"foo" : "bar"
-						}
-					}
-				},
-				{
-					"type" : "filter",
-					"params" : {
-						"pattern" : {
-							"hello" : "world"
-						}
-					}
-				},
-				{
-					"type" : "pass",
-					"params" : {}
-				},
-				{
-					"type" : "split",
-					"params" : {}
-				},
-				{
-					"type" : "transform",
-					"params" : {}
-				}
-			]
-		},
-		"deliveryMode" : "at_least_once"
+func getTestRouteByName(t *testing.T, name string) string {
+	path := filepath.Join("tests", name+".json")
+	buf, err := ioutil.ReadFile(path)
+	if err != nil {
+		t.Errorf(err.Error())
+		return ""
 	}
-	`
-	DIRECT_ROUTE = `
-	{
-		"orgId" : "comcast",
-		"appId" : "xfi",
-		"userId" : "boris",
-		"source" : {
-			"type" : "debug",
-			"params" :
-			{
-				"rounds" : 1,
-				"intervalMS" : 250,
-				"payload" : {
-					"foo" : "bar"
-				}
-			}
-		},
-		"destination" : {
-			"type" : "debug",
-			"params" : {}
-		},
-		"deliveryMode" : "at_least_once"
-	}
-	`
-
-	FILTER_ROUTE = `
-	{
-		"orgId" : "comcast",
-		"appId" : "xfi",
-		"userId" : "boris",
-		"source" : {
-			"type" : "debug",
-			"params" :
-			{
-				"rounds" : 3,
-				"intervalMS" : 250,
-				"payload" : {
-					"foo" : "bar"
-				}
-			}
-		},
-		"destination" : {
-			"type" : "debug",
-			"params" : {}
-		},
-		"filterChain" : {
-			"filters": 
-			[
-				{
-					"type" : "match",
-					"params" : {
-						"pattern" : {
-							"foo" : "bar"
-						}
-					}
-				},
-				{
-					"type" : "filter",
-					"params" : {
-						"pattern" : {
-							"foo" : "bar"
-						}
-					}
-				}
-			]
-		},
-		"deliveryMode" : "at_least_once"
-	}
-	`
-
-	ARRAY_ROUTE = `
-	{
-		"orgId" : "comcast",
-		"appId" : "xfi",
-		"userId" : "boris",
-		"source" : {
-			"type" : "debug",
-			"params" :
-			{
-				"rounds" : 3,
-				"intervalMS" : 250,
-				"payload" : [{"foo" : "bar"}]
-			}
-		},
-		"destination" : {
-			"type" : "debug",
-			"params" : {}
-		},
-		"filterChain" : {
-			"filters": 
-			[
-				{
-					"type" : "match",
-					"params" : {
-						"pattern" : [{"foo" : "bar"}]
-					}
-				},
-				{
-					"type" : "filter",
-					"params" : {
-						"pattern" : [{"foo" : "bar"}]
-					}
-				}
-			]
-		},
-		"deliveryMode" : "at_least_once"
-	}
-	`
-
-	WILDCARD_ROUTE = `
-	{
-		"orgId" : "comcast",
-		"appId" : "xfi",
-		"userId" : "boris",
-		"source" : {
-			"type" : "debug",
-			"params" :
-			{
-				"rounds" : 3,
-				"intervalMS" : 222,
-				"payload" : {"foo" : "bar"}
-			}
-		},
-		"destination" : {
-			"type" : "debug",
-			"params" : {}
-		},
-		"filterChain" : {
-			"filters": 
-			[
-				{
-					"type" : "match",
-					"params" : {
-						"pattern" : {"foo" : "b*"}
-					}
-				},
-				{
-					"type" : "match",
-					"params" : {
-						"pattern" : {"foo" : "bar||baz"}
-					}
-				},
-				{
-					"type" : "filter",
-					"params" : {
-						"pattern" : {"foo" : "bar"}
-					}
-				}
-			]
-		},
-		"deliveryMode" : "at_least_once"
-	}
-	`
-
-	EMPTY_ROUTE = `
-	{
-		"orgId" : "comcast",
-		"appId" : "xfi",
-		"userId" : "boris",
-		"deliveryMode" : "at_least_once",
-		"source" : {},
-		"destination" : {},
-		"filterChain" : {}
-	}
-	`
-)
+	return string(buf)
+}
 
 func simulateSingleRoute(t *testing.T, rstr string, expectedSourceCount, expectedDestinationCount int) {
 	ctx := context.Background()
@@ -289,23 +78,23 @@ func simulateSingleRoute(t *testing.T, rstr string, expectedSourceCount, expecte
 }
 
 func TestSplitRoute(t *testing.T) {
-	simulateSingleRoute(t, SPLIT_ROUTE, 3, 6)
+	simulateSingleRoute(t, getTestRouteByName(t, "split_route"), 3, 6)
 }
 
 func TestDirectRoute(t *testing.T) {
-	simulateSingleRoute(t, DIRECT_ROUTE, 1, 1)
+	simulateSingleRoute(t, getTestRouteByName(t, "direct_route"), 1, 1)
 }
 
 func TestFilterRoute(t *testing.T) {
-	simulateSingleRoute(t, FILTER_ROUTE, 3, 0)
+	simulateSingleRoute(t, getTestRouteByName(t, "filter_route"), 3, 0)
 }
 
 func TestArrayRoute(t *testing.T) {
-	simulateSingleRoute(t, ARRAY_ROUTE, 3, 0)
+	simulateSingleRoute(t, getTestRouteByName(t, "array_route"), 3, 0)
 }
 
 func TestWildcardRoute(t *testing.T) {
-	simulateSingleRoute(t, WILDCARD_ROUTE, 3, 0)
+	simulateSingleRoute(t, getTestRouteByName(t, "wildcard_route"), 3, 0)
 }
 
 func TestGetRoutesBy(t *testing.T) {
@@ -318,7 +107,7 @@ func TestGetRoutesBy(t *testing.T) {
 		return
 	}
 	// add a routes
-	routes := []string{SPLIT_ROUTE, DIRECT_ROUTE, FILTER_ROUTE, ARRAY_ROUTE, WILDCARD_ROUTE}
+	routes := []string{getTestRouteByName(t, "split_route"), getTestRouteByName(t, "direct_route"), getTestRouteByName(t, "filter_route"), getTestRouteByName(t, "array_route"), getTestRouteByName(t, "wildcard_route")}
 	var rc *route.RouteConfig
 	for _, rstr := range routes {
 		rc = new(route.RouteConfig)
@@ -383,7 +172,7 @@ func TestGetPluginsBy(t *testing.T) {
 		return
 	}
 	// add a routes
-	routes := []string{SPLIT_ROUTE, DIRECT_ROUTE, FILTER_ROUTE, ARRAY_ROUTE, WILDCARD_ROUTE}
+	routes := []string{getTestRouteByName(t, "split_route"), getTestRouteByName(t, "direct_route"), getTestRouteByName(t, "filter_route"), getTestRouteByName(t, "array_route"), getTestRouteByName(t, "wildcard_route")}
 	var rc *route.RouteConfig
 	for _, rstr := range routes {
 		rc = new(route.RouteConfig)
@@ -471,7 +260,7 @@ func TestErrors(t *testing.T) {
 	} else {
 		fmt.Printf("error %s\n", err.Error())
 	}
-	routes := []string{EMPTY_ROUTE}
+	routes := []string{getTestRouteByName(t, "empty_route")}
 	var rc *route.RouteConfig
 	for _, rstr := range routes {
 		rc = new(route.RouteConfig)
@@ -511,7 +300,7 @@ func TestDoSync(t *testing.T) {
 		return
 	}
 	// add a routes
-	routes := []string{SPLIT_ROUTE}
+	routes := []string{getTestRouteByName(t, "split_route")}
 	var rc *route.RouteConfig
 	for _, rstr := range routes {
 		rc = new(route.RouteConfig)

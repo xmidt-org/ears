@@ -1,0 +1,54 @@
+{
+    "orgId" : "comcast",
+    "appId" : "xfi",
+    "userId" : "boris",
+    "source" : {
+        "type" : "debug",
+        "params" :
+        {
+            "rounds" : 3,
+            "intervalMS" : 250,
+            "payload" : {
+                "foo" : "bar"
+            }
+        }
+    },
+    "destination" : {
+        "type" : "debug",
+        "params" : {}
+    },
+    "filterChain" : {
+        "filters": 
+        [
+            {
+                "type" : "match",
+                "params" : {
+                    "pattern" : {
+                        "foo" : "bar"
+                    }
+                }
+            },
+            {
+                "type" : "filter",
+                "params" : {
+                    "pattern" : {
+                        "hello" : "world"
+                    }
+                }
+            },
+            {
+                "type" : "pass",
+                "params" : {}
+            },
+            {
+                "type" : "split",
+                "params" : {}
+            },
+            {
+                "type" : "transform",
+                "params" : {}
+            }
+        ]
+    },
+    "deliveryMode" : "at_least_once"
+}
