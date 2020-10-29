@@ -14,14 +14,39 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
+type (
+	TestTableEntry struct {
+		Name                          string
+		ExpectedSourceEventCount      int
+		ExpectedDestinationEventCount int
+	}
+)
+
 func getTestRouteByName(t *testing.T, name string) string {
 	path := filepath.Join("tests", name+".json")
 	buf, err := ioutil.ReadFile(path)
 	if err != nil {
-		t.Errorf(err.Error())
-		return ""
+		t.Fatalf(err.Error())
 	}
 	return string(buf)
+}
+
+func TestSingleRouteTestTable(t *testing.T) {
+	path := filepath.Join("tests", "test_table.json")
+	buf, err := ioutil.ReadFile(path)
+	if err != nil {
+		t.Fatalf(err.Error())
+		return
+	}
+	testTable := make([]*TestTableEntry, 0)
+	err = json.Unmarshal(buf, &testTable)
+	if err != nil {
+		t.Fatalf(err.Error())
+		return
+	}
+	for _, singleRouteTest := range testTable {
+		simulateSingleRoute(t, getTestRouteByName(t, singleRouteTest.Name), singleRouteTest.ExpectedSourceEventCount, singleRouteTest.ExpectedDestinationEventCount)
+	}
 }
 
 func simulateSingleRoute(t *testing.T, rstr string, expectedSourceCount, expectedDestinationCount int) {
@@ -77,25 +102,25 @@ func simulateSingleRoute(t *testing.T, rstr string, expectedSourceCount, expecte
 	}
 }
 
-func TestSplitRoute(t *testing.T) {
+/*func TestSplitRoute(t *testing.T) {
 	simulateSingleRoute(t, getTestRouteByName(t, "split_route"), 3, 6)
-}
+}*/
 
-func TestDirectRoute(t *testing.T) {
+/*func TestDirectRoute(t *testing.T) {
 	simulateSingleRoute(t, getTestRouteByName(t, "direct_route"), 1, 1)
-}
+}*/
 
-func TestFilterRoute(t *testing.T) {
+/*func TestFilterRoute(t *testing.T) {
 	simulateSingleRoute(t, getTestRouteByName(t, "filter_route"), 3, 0)
-}
+}*/
 
-func TestArrayRoute(t *testing.T) {
+/*func TestArrayRoute(t *testing.T) {
 	simulateSingleRoute(t, getTestRouteByName(t, "array_route"), 3, 0)
-}
+}*/
 
-func TestWildcardRoute(t *testing.T) {
+/*func TestWildcardRoute(t *testing.T) {
 	simulateSingleRoute(t, getTestRouteByName(t, "wildcard_route"), 3, 0)
-}
+}*/
 
 func TestGetRoutesBy(t *testing.T) {
 	ctx := context.Background()
