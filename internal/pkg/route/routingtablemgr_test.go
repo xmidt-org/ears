@@ -439,7 +439,18 @@ func TestGetPluginsBy(t *testing.T) {
 	if len(plugins) != 5 {
 		t.Errorf("unexpcted number of debug plugins %d", len(plugins))
 	}
-	//TODO: check for plugin withdrawal
+	// remove all routes
+	err = rtmgr.ReplaceAllRoutes(ctx, nil)
+	if err != nil {
+		t.Errorf("unexpcted error " + err.Error())
+	}
+	plugins, err = pmgr.GetAllPlugins(ctx)
+	if err != nil {
+		t.Errorf("unexpcted error " + err.Error())
+	}
+	if len(plugins) > 0 {
+		t.Errorf("found residual plugins %d", len(plugins))
+	}
 }
 
 func TestErrors(t *testing.T) {
