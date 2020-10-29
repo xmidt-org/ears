@@ -374,6 +374,74 @@ func TestGetRoutesBy(t *testing.T) {
 	}
 }
 
+func TestGetPluginsBy(t *testing.T) {
+	ctx := context.Background()
+	ctx = log.Logger.WithContext(ctx)
+	// init in memory routing table manager
+	rtmgr := route.NewInMemoryRoutingTableManager()
+	if rtmgr.GetRouteCount(ctx) != 0 {
+		t.Errorf("routing table not empty")
+		return
+	}
+	// add a routes
+	routes := []string{SPLIT_ROUTE, DIRECT_ROUTE, FILTER_ROUTE, ARRAY_ROUTE, WILDCARD_ROUTE}
+	var rc *route.RouteConfig
+	for _, rstr := range routes {
+		rc = new(route.RouteConfig)
+		err := json.Unmarshal([]byte(rstr), rc)
+		if err != nil {
+			t.Errorf(err.Error())
+			return
+		}
+		err = rtmgr.AddRoute(ctx, route.NewRouteFromRouteConfig(rc))
+		if err != nil {
+			t.Errorf(err.Error())
+			return
+		}
+	}
+	// validate
+	err := rtmgr.Validate(ctx)
+	if err != nil {
+		t.Errorf(err.Error())
+		return
+	}
+	hash := rtmgr.Hash(ctx)
+	if hash == "" {
+		t.Errorf("empty table hash")
+	}
+	// check plugins
+	pmgr := route.GetIOPluginManager(ctx)
+	plugins, err := pmgr.GetAllPlugins(ctx)
+	if err != nil {
+		t.Errorf("unexpcted error " + err.Error())
+	}
+	if len(plugins) != 5 {
+		t.Errorf("unexpcted number of plugins %d", len(plugins))
+	}
+	plugins, err = pmgr.GetPlugins(ctx, "input", "")
+	if err != nil {
+		t.Errorf("unexpcted error " + err.Error())
+	}
+	if len(plugins) != 4 {
+		t.Errorf("unexpcted number of input plugins %d", len(plugins))
+	}
+	plugins, err = pmgr.GetPlugins(ctx, "output", "")
+	if err != nil {
+		t.Errorf("unexpcted error " + err.Error())
+	}
+	if len(plugins) != 1 {
+		t.Errorf("unexpcted number of output plugins %d", len(plugins))
+	}
+	plugins, err = pmgr.GetPlugins(ctx, "", "debug")
+	if err != nil {
+		t.Errorf("unexpcted error " + err.Error())
+	}
+	if len(plugins) != 5 {
+		t.Errorf("unexpcted number of debug plugins %d", len(plugins))
+	}
+	//TODO: check for plugin withdrawal
+}
+
 func TestErrors(t *testing.T) {
 	ctx := context.Background()
 	ctx = log.Logger.WithContext(ctx)

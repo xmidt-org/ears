@@ -235,9 +235,7 @@ func (dop *DebugOutputPlugin) DoAsync(ctx context.Context) {
 			select {
 			case <-dop.GetInputChannel():
 				log.Ctx(ctx).Debug().Msg(dop.Mode + " " + dop.Type + " plugin " + dop.Hash(ctx) + " passed")
-				//dop.lock.Lock()
 				dop.IncEventCount(1)
-				//dop.lock.Unlock()
 			case <-dop.done:
 				log.Ctx(ctx).Debug().Msg(dop.Mode + " " + dop.Type + " plugin " + dop.Hash(ctx) + " done")
 				return

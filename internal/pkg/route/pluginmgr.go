@@ -118,3 +118,17 @@ func (pm *DefaultIOPluginManager) GetAllPlugins(ctx context.Context) ([]Pluginer
 	}
 	return plugins, nil
 }
+
+func (pm *DefaultIOPluginManager) GetPlugins(ctx context.Context, pluginMode string, pluginType string) ([]Pluginer, error) {
+	plugins := make([]Pluginer, 0)
+	for _, p := range pm.pluginMap {
+		if pluginMode != "" && p.GetConfig().Mode != pluginMode {
+			continue
+		}
+		if pluginType != "" && p.GetConfig().Type != pluginType {
+			continue
+		}
+		plugins = append(plugins, p)
+	}
+	return plugins, nil
+}

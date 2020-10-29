@@ -192,10 +192,11 @@ type (
 
 	// A IOPluginManager maintains a map of live plugins and ensures no two plugins with the same hash exist
 	IOPluginManager interface {
-		RegisterRoute(ctx context.Context, rte *Route) (Pluginer, error) // uses plugin parameter only for hash calculation and returns one if it already exists or creates a new one
-		WithdrawRoute(ctx context.Context, rte *Route) error             // uses plugin parameter only for hash calculation
-		GetPluginCount(ctx context.Context) int                          // get plugin count
-		GetAllPlugins(ctx context.Context) ([]Pluginer, error)           // get all plugins
+		RegisterRoute(ctx context.Context, rte *Route) (Pluginer, error)                          // uses plugin parameter only for hash calculation and returns one if it already exists or creates a new one
+		WithdrawRoute(ctx context.Context, rte *Route) error                                      // uses plugin parameter only for hash calculation
+		GetPluginCount(ctx context.Context) int                                                   // get plugin count
+		GetAllPlugins(ctx context.Context) ([]Pluginer, error)                                    // get all plugins
+		GetPlugins(ctx context.Context, pluginMode string, pluginType string) ([]Pluginer, error) // filter plugins by mode or type
 	}
 
 	// An EventSourceManager manages all event source plugins for a live ears instance
