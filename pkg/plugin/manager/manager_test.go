@@ -366,6 +366,155 @@ func TestLoadPlugin(t *testing.T) {
 	}
 }
 
+func TestLoadErrors(t *testing.T) {
+
+	testCases := []struct {
+		name   string
+		config manager.Config
+		err    error
+	}{
+		{
+			name:   "missing_config_name",
+			config: manager.Config{},
+			err:    &manager.InvalidConfigError{Err: fmt.Errorf("config name cannot be empty")},
+		},
+		{
+			name:   "missing_config_path",
+			config: manager.Config{Name: "missing_config_path"},
+			err:    &manager.InvalidConfigError{Err: fmt.Errorf("config path cannot be empty")},
+		},
+		{
+			name:   "bad_plugin_path",
+			config: manager.Config{Name: "bad_plugin_path", Path: "bad_plugin_path"},
+			err:    &manager.LoadError{}, // Difficult to determine exactly what plugin.Open() will return
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			a := NewWithT(t)
+			m := manager.NewManager()
+
+			_, err := m.LoadPlugin(tc.config)
+			a.Expect(err).ToNot(BeNil())
+			a.Expect(reflect.TypeOf(err)).To(Equal(reflect.TypeOf(tc.err)))
+		})
+	}
+
+}
+
+func TestNewReceiver(t *testing.T) {
+
+	a := NewWithT(t)
+	m := manager.NewManager()
+
+	nfe := &manager.NotFoundError{}
+
+	{
+		p, err := m.NewReceiver("myreceiver", "")
+		a.Expect(p).To(BeNil())
+		a.Expect(reflect.TypeOf(err)).To(Equal(reflect.TypeOf(nfe)))
+	}
+
+	{
+		m.RegisterPlugin(
+			"myreceiver",
+			&newReceivererMock{
+				receiver.NewReceivererMock{
+					NewReceiverFunc: func(config string) (receiver.Receiver, error) {
+						return &receiver.ReceiverMock{}, nil
+					},
+				},
+			},
+		)
+		p, err := m.NewReceiver("myreceiver", "")
+		a.Expect(p).ToNot(BeNil())
+		a.Expect(err).To(BeNil())
+		m.UnregisterPlugin("myreceiver")
+	}
+
+	{
+		p, err := m.NewReceiver("myreceiver", "")
+		a.Expect(p).To(BeNil())
+		a.Expect(reflect.TypeOf(err)).To(Equal(reflect.TypeOf(nfe)))
+	}
+
+}
+
+func TestNewFilterer(t *testing.T) {
+	a := NewWithT(t)
+	m := manager.NewManager()
+
+	nfe := &manager.NotFoundError{}
+
+	{
+		p, err := m.NewFilterer("myfilterer", "")
+		a.Expect(p).To(BeNil())
+		a.Expect(reflect.TypeOf(err)).To(Equal(reflect.TypeOf(nfe)))
+	}
+
+	{
+		m.RegisterPlugin(
+			"myfilterer",
+			&newFiltererMock{
+				filter.NewFiltererMock{
+					NewFiltererFunc: func(config string) (filter.Filterer, error) {
+						return &filter.FiltererMock{}, nil
+					},
+				},
+			},
+		)
+		p, err := m.NewFilterer("myfilterer", "")
+		a.Expect(p).ToNot(BeNil())
+		a.Expect(err).To(BeNil())
+		m.UnregisterPlugin("myfilterer")
+	}
+
+	{
+		p, err := m.NewFilterer("myfilterer", "")
+		a.Expect(p).To(BeNil())
+		a.Expect(reflect.TypeOf(err)).To(Equal(reflect.TypeOf(nfe)))
+	}
+
+}
+
+func TestNewSenderer(t *testing.T) {
+	a := NewWithT(t)
+	m := manager.NewManager()
+
+	nfe := &manager.NotFoundError{}
+
+	{
+		p, err := m.NewSender("mysenderer", "")
+		a.Expect(p).To(BeNil())
+		a.Expect(reflect.TypeOf(err)).To(Equal(reflect.TypeOf(nfe)))
+	}
+
+	{
+		m.RegisterPlugin(
+			"mysenderer",
+			&newSendererMock{
+				sender.NewSendererMock{
+					NewSenderFunc: func(config string) (sender.Sender, error) {
+						return &sender.SenderMock{}, nil
+					},
+				},
+			},
+		)
+		p, err := m.NewSender("mysenderer", "")
+		a.Expect(p).ToNot(BeNil())
+		a.Expect(err).To(BeNil())
+		m.UnregisterPlugin("mysenderer")
+	}
+
+	{
+		p, err := m.NewSender("mysenderer", "")
+		a.Expect(p).To(BeNil())
+		a.Expect(reflect.TypeOf(err)).To(Equal(reflect.TypeOf(nfe)))
+	}
+
+}
+
 // === Test Lifecycle ===========================
 
 func testSetup() error {
