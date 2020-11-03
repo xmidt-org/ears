@@ -16,14 +16,16 @@ package plugin
 
 // === Plugin =========================================================
 
+//go:generate moq -out testing_mock.go . NewPluginerer Pluginer
+
+type NewPluginerer interface {
+	NewPluginer(config string) (Pluginer, error)
+}
+
 type Pluginer interface {
 	Name() string
 	Version() string
 	Config() string
-}
-
-type NewPluginerer interface {
-	NewPluginer(config string) (Pluginer, error)
 }
 
 // === Errors =========================================================

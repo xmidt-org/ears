@@ -12,26 +12,24 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package sender
+package main
 
 import (
 	"context"
 
-	"github.com/xmidt-org/ears/pkg/event"
+	"github.com/xmidt-org/ears/pkg/receiver"
 )
 
-//go:generate moq -out testing_mock.go . NewSenderer Sender
+var _ receiver.Receiver = (*generator)(nil)
 
-type InvalidConfigError struct {
-	Err error
+type generator struct {
+	config string
 }
 
-type NewSenderer interface {
-	NewSender(config string) (Sender, error)
+func (g *generator) NewReceiver(config string) (receiver.Receiver, error) {
+	g.config = config
 }
 
-// or Outputter[√] or Producer[x] or Publisher[√]
-type Sender interface {
-	// Hash() string // SenderHash ?
-	Send(ctx context.Context, e event.Event) error
+func (g *generator) Receive(ctx context.Context, next receiver.NextFn) error {
+	return nil
 }

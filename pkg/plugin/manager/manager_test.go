@@ -12,121 +12,304 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package plugin_test
+package manager_test
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"log"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
-	"github.com/xmidt-org/ears/internal/pkg/app/plugin"
+	"github.com/xmidt-org/ears/pkg/plugin"
+	"github.com/xmidt-org/ears/pkg/plugin/manager"
 
 	. "github.com/onsi/gomega"
+
+	"github.com/sebdah/goldie/v2"
 )
 
 const (
 	buildPluginTimeout = 10 * time.Second
 
-	testPluginDir  = "test_plugin"
-	testPluginFile = "test_plugin.so"
+	testPluginDir = "testplugins"
 )
 
-var (
-	testPluginPath = filepath.Join(testPluginDir, testPluginFile)
-)
+var logger = log.New(os.Stderr, "", log.LstdFlags)
 
 func TestMain(m *testing.M) {
 	err := testSetup()
 	if err != nil {
-		fmt.Fprint(os.Stderr, err)
-		os.Exit(1)
+		logger.Fatal(err)
 	}
 
 	code := m.Run()
 
 	err = testShutdown()
 	if err != nil {
-		fmt.Fprint(os.Stderr, err)
+		logger.Println(err)
 		os.Exit(1 | code)
 	}
 
 	os.Exit(code)
 }
 
-func TestLoadPlugin(t *testing.T) {
+func TestErrorMessage(t *testing.T) {
 	testCases := []struct {
-		name   string
-		config plugin.Config
-		err    error
+		name string
+		err  error
 	}{
+		{name: "NilPluginError", err: &manager.NilPluginError{}},
+		{name: "NotFoundError", err: &manager.NotFoundError{}},
+		{name: "AlreadyRegisteredError", err: &manager.AlreadyRegisteredError{}},
 		{
-			name: "found",
-			config: plugin.Config{
-				Name: "found_plugin",
-				Path: testPluginPath,
+			name: "InvalidConfigError_Nil",
+			err:  &manager.InvalidConfigError{},
+		},
+		{
+			name: "InvalidConfigError_Err",
+			err: &manager.InvalidConfigError{
+				Err: fmt.Errorf("wrapped error"),
+			},
+		},
+		{name: "NewPluginerNotImplementedError", err: &manager.NewPluginerNotImplementedError{}},
+		{
+			name: "VariableLookupError_Nil",
+			err:  &manager.VariableLookupError{},
+		},
+		{
+			name: "VariableLookupError_Err",
+			err: &manager.VariableLookupError{
+				Err: fmt.Errorf("wrapped error"),
+			},
+		},
+		{
+			name: "LoadError_Nil",
+			err:  &manager.LoadError{},
+		},
+		{
+			name: "LoadError_Err",
+			err: &manager.LoadError{
+				Err: fmt.Errorf("wrapped error"),
 			},
 		},
 	}
 
-	m := plugin.NewManager()
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			a := NewWithT(t)
+			g := goldie.New(t)
+			g.Assert(t, tc.name, []byte(fmt.Sprint(tc.err)))
+			g.Assert(t, tc.name+"_unwrapped", []byte(fmt.Sprint(errors.Unwrap(tc.err))))
 
-			p, err := m.LoadPlugin(tc.config)
-
-			if tc.err == nil {
-				a.Expect(err).To(BeNil())
-				a.Expect(p).ToNot(BeNil())
-			} else {
-				a.Expect(err).To(Equal(tc.err))
-			}
 		})
 	}
 
-	fmt.Println(testCases)
 }
 
-func TestBuildTestPlugin(t *testing.T) {
-	err := buildTestPlugin()
+func TestNilPluginError(t *testing.T) {
+	testCases := []struct {
+		name string
+		plug plugin.Pluginer
+		err  error
+	}{
+		{name: "nil_plugin", err: &manager.NilPluginError{}},
+	}
+
+	a := NewWithT(t)
+
+	m := manager.NewManager()
+
+	for _, tc := range testCases {
+		t.Run("register_"+tc.name, func(t *testing.T) {
+			err := m.RegisterPlugin(tc.name, tc.plug)
+			if tc.err == nil {
+				a.Expect(err).To(BeNil())
+			} else {
+				a.Expect(err).To(Equal(tc.err))
+			}
+
+		})
+	}
+
+}
+
+func TestAlreadyRegisteredError(t *testing.T) {
+	testCases := []struct {
+		name string
+		plug plugin.Pluginer
+		err  error
+	}{
+		{name: "registered", plug: &plugin.PluginerMock{}},
+		{name: "registered", plug: &plugin.PluginerMock{}, err: &manager.AlreadyRegisteredError{}},
+	}
+
+	a := NewWithT(t)
+	m := manager.NewManager()
+
+	for _, tc := range testCases {
+		t.Run("register_"+tc.name, func(t *testing.T) {
+			err := m.RegisterPlugin(tc.name, tc.plug)
+			if tc.err == nil {
+				a.Expect(err).To(BeNil())
+			} else {
+				a.Expect(err).To(Equal(tc.err))
+			}
+
+		})
+	}
+
+}
+
+func TestRegistrationLifecycle(t *testing.T) {
+	testCases := []struct {
+		name string
+		plug plugin.Pluginer
+	}{
+		{name: "one", plug: &plugin.PluginerMock{}},
+		{name: "two", plug: &plugin.PluginerMock{}},
+		{name: "three", plug: &plugin.PluginerMock{}},
+		{name: "four", plug: &plugin.PluginerMock{}},
+	}
+
+	a := NewWithT(t)
+
+	m := manager.NewManager()
+
+	for _, tc := range testCases {
+		t.Run("register_"+tc.name, func(t *testing.T) {
+			err := m.RegisterPlugin(tc.name, tc.plug)
+			a.Expect(err).To(BeNil())
+
+		})
+	}
+
+	registrations := m.Plugins()
+	a.Expect(len(testCases)).To(Equal(len(registrations)))
+
+	for _, tc := range testCases {
+		t.Run("lookup_"+tc.name, func(t *testing.T) {
+			_, ok := registrations[tc.name]
+			a.Expect(ok).To(BeTrue())
+
+			r := m.Plugin(tc.name)
+			a.Expect(r).ToNot(BeNil())
+
+		})
+	}
+
+	for _, tc := range testCases {
+		t.Run("unregister_"+tc.name, func(t *testing.T) {
+			err := m.UnregisterPlugin(tc.name)
+			a.Expect(err).To(BeNil())
+		})
+	}
+
+	registrations = m.Plugins()
+	a.Expect(len(registrations)).To(Equal(0))
+
+}
+
+func TestLoadPlugin(t *testing.T) {
+
+	paths, err := getTestPluginSOPaths()
 	if err != nil {
-		t.Error(err)
+		t.Errorf("could not get plugin paths: %w", err)
+	}
+
+	m := manager.NewManager()
+	for _, path := range paths {
+		t.Run(path, func(t *testing.T) {
+			a := NewWithT(t)
+
+			p, err := m.LoadPlugin(
+				manager.Config{
+					Name: path,
+					Path: path,
+				},
+			)
+
+			a.Expect(err).To(BeNil())
+			a.Expect(p).ToNot(BeNil())
+		})
 	}
 }
 
 // === Test Lifecycle ===========================
 
 func testSetup() error {
-	return buildTestPlugin()
+	return buildTestPlugins()
 }
 
 func testShutdown() error {
-	_ = os.Remove(filepath.Join(testPluginDir, testPluginFile))
+	files, err := getTestPluginSOPaths()
+
+	if err != nil {
+		logger.Printf("error cleaning up *.so: %s", err.Error())
+	}
+
+	for _, f := range files {
+		logger.Printf("removing plugin: %s\n", f)
+		_ = os.Remove(f)
+	}
+
 	return nil
 }
 
 // buildTestPlugin will build the plugin
-func buildTestPlugin() error {
+func buildTestPlugins() error {
 
 	ctx, cancel := context.WithTimeout(context.Background(), buildPluginTimeout)
 	defer cancel()
 
-	cmd := exec.CommandContext(
-		ctx,
-		"go", "build",
-		"-buildmode=plugin",
-		"-o", filepath.Join(testPluginDir, testPluginFile),
-		"./"+testPluginDir, // Must have the preceeding "./" which a filepath.Join ends up removing
-	)
-	cmd.Env = os.Environ()
-	cmd.Stdin = os.Stdin
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
+	paths, err := getTestPluginPaths()
 
-	return cmd.Run()
+	if err != nil {
+		return fmt.Errorf("could not find matching plugins: %w", err)
+	}
+
+	for _, p := range paths {
+		baseName := strings.TrimSuffix(filepath.Base(p), ".go")
+		dir := filepath.Dir(p)
+
+		cmd := exec.CommandContext(
+			ctx,
+			"go", "build",
+			"-buildmode=plugin",
+			"-o", filepath.Join(dir, baseName+".so"),
+			"./"+dir, // Must have the preceeding "./" which a filepath.Join ends up removing
+		)
+
+		cmd.Env = os.Environ()
+		cmd.Stdin = os.Stdin
+		cmd.Stdout = os.Stdout
+		cmd.Stderr = os.Stderr
+
+		logger.Printf("compiling plugin: %s", p)
+
+		err := cmd.Run()
+
+		if err != nil {
+			return fmt.Errorf("error compiling plugin %s: %w", baseName, err)
+		}
+
+	}
+
+	return nil
+
+}
+
+func getTestPluginPaths() ([]string, error) {
+	pluginRegex := filepath.Join(testPluginDir, "*", "*plugin.go")
+	return filepath.Glob(pluginRegex)
+}
+
+func getTestPluginSOPaths() ([]string, error) {
+	pluginRegex := filepath.Join(testPluginDir, "*", "*.so")
+	return filepath.Glob(pluginRegex)
 
 }

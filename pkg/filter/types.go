@@ -23,13 +23,15 @@ import (
 	"github.com/xmidt-org/ears/pkg/event"
 )
 
+//go:generate moq -out testing_mock.go . NewFilterer Filterer
+
 type NewFilterer interface {
 	NewFilterer(config string) (Filterer, error)
 }
 
 // or Outputter[√] or Producer[x] or Publisher[√]
 type Filterer interface {
-	Hash() string // FilterHash ?
+	// Hash() string // FilterHash ?
 
 	Filter(ctx context.Context, e event.Event) ([]event.Event, error)
 }

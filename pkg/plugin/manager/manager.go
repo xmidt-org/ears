@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package plugin
+package manager
 
 import (
 	"fmt"
@@ -99,6 +99,11 @@ func (m *manager) LoadPlugin(config Config) (plugin.Pluginer, error) {
 }
 
 func (m *manager) RegisterPlugin(name string, p plugin.Pluginer) error {
+
+	if p == nil {
+		return &NilPluginError{}
+	}
+
 	_, isReceiver := p.(receiver.NewReceiverer)
 	_, isFilterer := p.(filter.NewFilterer)
 	_, isSender := p.(sender.NewSenderer)

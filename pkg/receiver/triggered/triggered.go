@@ -12,26 +12,38 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package sender
+package main
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/xmidt-org/ears/pkg/event"
+	pkgreceiver "github.com/xmidt-org/ears/pkg/receiver"
 )
 
-//go:generate moq -out testing_mock.go . NewSenderer Sender
+var _ pkgreceiver.Receiver = (*receiver)(nil)
 
-type InvalidConfigError struct {
-	Err error
+type receiver struct {
+	nextFn pkgreceiver.NextFn
+	config string
 }
 
-type NewSenderer interface {
-	NewSender(config string) (Sender, error)
+func (r *receiver) NewReceiver(config string) (pkgreceiver.Receiver, error) {
+	return &receiver{
+		config: config,
+	}, nil
 }
 
-// or Outputter[√] or Producer[x] or Publisher[√]
-type Sender interface {
-	// Hash() string // SenderHash ?
-	Send(ctx context.Context, e event.Event) error
+func (r *receiver) Receive(ctx context.Context, next pkgreceiver.NextFn) error {
+	if next == nil {
+		return fmt.Errorf("next cannot be nil")
+	}
+
+	r.nextFn = next
+	return nil
+}
+
+func (r *receiver) Trigger(ctx context.Context, event event.Event) error {
+	return r.nextFn(event)
 }

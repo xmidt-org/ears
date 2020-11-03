@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package plugin
+package manager
 
 import "fmt"
 
@@ -64,9 +64,17 @@ func (e *NotFoundError) Error() string {
 	return "NotFoundError"
 }
 
+func (e *NilPluginError) Unwrap() error {
+	return nil
+}
+
+func (e *NilPluginError) Error() string {
+	return "NilPluginError"
+}
+
 func errToString(name string, err error) string {
 	if err == nil {
-		return fmt.Sprintf("%: unknown")
+		return fmt.Sprintf("%s: unknown", name)
 	}
 
 	return fmt.Sprintf("%s: %s", name, err)

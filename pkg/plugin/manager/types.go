@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package plugin
+package manager
 
 import (
 	"github.com/xmidt-org/ears/pkg/filter"
@@ -86,3 +86,5 @@ type InvalidConfigError struct {
 type AlreadyRegisteredError struct{}
 
 type NotFoundError struct{}
+
+type NilPluginError struct{}

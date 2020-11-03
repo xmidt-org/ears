@@ -22,12 +22,17 @@ import (
 	"github.com/ThreeDotsLabs/watermill/pubsub/gochannel"
 	"github.com/ghodss/yaml"
 	earsplugin "github.com/xmidt-org/ears/pkg/plugin"
+
+	"github.com/xmidt-org/ears/pkg/event"
+	"github.com/xmidt-org/ears/pkg/receiver"
+	"github.com/xmidt-org/ears/pkg/sender"
 )
 
 var Plugin = plugin{}
 
-var _ earsplugin.Sender = (*plugin)(nil)
-var _ earsplugin.Receiver = (*plugin)(nil)
+var _ earsplugin.Pluginer = (*plugin)(nil)
+var _ sender.Sender = (*plugin)(nil)
+var _ receiver.Receiver = (*plugin)(nil)
 
 type plugin struct {
 	pubsub *gochannel.GoChannel
@@ -46,6 +51,10 @@ const (
 
 // Plugin ============================================================
 
+func (p *plugin) NewPluginer(config string) (earsplugin.Pluginer, error) {
+	return p.new(config)
+}
+
 func (p *plugin) Name() string {
 	return "managerTestPlugin"
 }
@@ -60,7 +69,7 @@ func (p *plugin) Config() string {
 
 // Receiver ============================================================
 
-func (p *plugin) NewReceiver(config string) (earsplugin.Receiver, error) {
+func (p *plugin) NewReceiver(config string) (receiver.Receiver, error) {
 	if p.pubsub == nil {
 		return nil, &earsplugin.Error{
 			Code: ErrNotInitialized,
@@ -71,13 +80,13 @@ func (p *plugin) NewReceiver(config string) (earsplugin.Receiver, error) {
 	return p, nil
 }
 
-func (p *plugin) Receive(ctx context.Context, next earsplugin.NextFn) error {
+func (p *plugin) Receive(ctx context.Context, next receiver.NextFn) error {
 	return nil
 }
 
 // Sender ============================================================
 
-func (p *plugin) NewSender(config string) (earsplugin.Sender, error) {
+func (p *plugin) NewSender(config string) (sender.Sender, error) {
 	if p.pubsub == nil {
 		return nil, &earsplugin.Error{
 			Code: ErrNotInitialized,
@@ -88,13 +97,13 @@ func (p *plugin) NewSender(config string) (earsplugin.Sender, error) {
 	return p, nil
 }
 
-func (p *plugin) Send(ctx context.Context, event earsplugin.Event) error {
+func (p *plugin) Send(ctx context.Context, event event.Event) error {
 	return nil
 }
 
 // internal helpers ============================================================
 
-func (p *plugin) new(config string) (earsplugin.Plugin, error) {
+func (p *plugin) new(config string) (earsplugin.Pluginer, error) {
 	p.config = config
 	cfg := gochannel.Config{}
 

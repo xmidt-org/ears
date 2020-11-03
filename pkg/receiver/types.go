@@ -20,9 +20,17 @@ import (
 	"github.com/xmidt-org/ears/pkg/event"
 )
 
+//go:generate moq -out testing_mock.go . NewReceiverer Receiver
+
+type InvalidConfigError struct {
+	Err error
+}
+
 type NewReceiverer interface {
 	NewReceiver(config string) (Receiver, error)
 }
+
+type NextFn func(event.Event) error
 
 /*
 Receiver is a plugin that will receive messages and will
@@ -37,7 +45,7 @@ Other discarded names:
 
 */
 type Receiver interface {
-	Hash() string // ReceiverHash ?
+	// Hash() string // ReceiverHash ?
 
-	Receive(ctx context.Context, next func(event.Event)) error
+	Receive(ctx context.Context, next NextFn) error
 }
