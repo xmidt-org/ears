@@ -22,12 +22,17 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"reflect"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
 
+	"github.com/xmidt-org/ears/pkg/filter"
 	"github.com/xmidt-org/ears/pkg/plugin"
 	"github.com/xmidt-org/ears/pkg/plugin/manager"
+	"github.com/xmidt-org/ears/pkg/receiver"
+	"github.com/xmidt-org/ears/pkg/sender"
 
 	. "github.com/onsi/gomega"
 
@@ -120,12 +125,11 @@ func TestNilPluginError(t *testing.T) {
 		{name: "nil_plugin", err: &manager.NilPluginError{}},
 	}
 
-	a := NewWithT(t)
-
 	m := manager.NewManager()
 
 	for _, tc := range testCases {
 		t.Run("register_"+tc.name, func(t *testing.T) {
+			a := NewWithT(t)
 			err := m.RegisterPlugin(tc.name, tc.plug)
 			if tc.err == nil {
 				a.Expect(err).To(BeNil())
@@ -148,11 +152,11 @@ func TestAlreadyRegisteredError(t *testing.T) {
 		{name: "registered", plug: &plugin.PluginerMock{}, err: &manager.AlreadyRegisteredError{}},
 	}
 
-	a := NewWithT(t)
 	m := manager.NewManager()
 
 	for _, tc := range testCases {
 		t.Run("register_"+tc.name, func(t *testing.T) {
+			a := NewWithT(t)
 			err := m.RegisterPlugin(tc.name, tc.plug)
 			if tc.err == nil {
 				a.Expect(err).To(BeNil())
@@ -176,12 +180,12 @@ func TestRegistrationLifecycle(t *testing.T) {
 		{name: "four", plug: &plugin.PluginerMock{}},
 	}
 
-	a := NewWithT(t)
-
 	m := manager.NewManager()
+	a := NewWithT(t)
 
 	for _, tc := range testCases {
 		t.Run("register_"+tc.name, func(t *testing.T) {
+			a := NewWithT(t)
 			err := m.RegisterPlugin(tc.name, tc.plug)
 			a.Expect(err).To(BeNil())
 
@@ -193,6 +197,7 @@ func TestRegistrationLifecycle(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run("lookup_"+tc.name, func(t *testing.T) {
+			a := NewWithT(t)
 			_, ok := registrations[tc.name]
 			a.Expect(ok).To(BeTrue())
 
@@ -204,6 +209,7 @@ func TestRegistrationLifecycle(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run("unregister_"+tc.name, func(t *testing.T) {
+			a := NewWithT(t)
 			err := m.UnregisterPlugin(tc.name)
 			a.Expect(err).To(BeNil())
 		})
@@ -211,6 +217,111 @@ func TestRegistrationLifecycle(t *testing.T) {
 
 	registrations = m.Plugins()
 	a.Expect(len(registrations)).To(Equal(0))
+
+}
+
+func TestRegistrationTypes(t *testing.T) {
+
+	testCases := []struct {
+		name         string
+		numPlugins   int
+		numReceivers int
+		numSenders   int
+		numFilterers int
+	}{
+		{
+			name:         "only_plugins",
+			numPlugins:   3,
+			numReceivers: 0,
+			numSenders:   0,
+			numFilterers: 0,
+		},
+		{
+			name:         "only_receivers",
+			numPlugins:   0,
+			numReceivers: 5,
+			numSenders:   0,
+			numFilterers: 0,
+		},
+		{
+			name:         "only_senders",
+			numPlugins:   0,
+			numReceivers: 0,
+			numSenders:   2,
+			numFilterers: 0,
+		},
+		{
+			name:         "only_filters",
+			numPlugins:   0,
+			numReceivers: 0,
+			numSenders:   0,
+			numFilterers: 4,
+		},
+		{
+			name:         "mix",
+			numPlugins:   3,
+			numReceivers: 5,
+			numSenders:   2,
+			numFilterers: 4,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+
+			a := NewWithT(t)
+			m := manager.NewManager()
+
+			// Plugins
+			for i := 0; i < tc.numPlugins; i++ {
+				err := m.RegisterPlugin(
+					"plugins_"+strconv.Itoa(i),
+					&plugin.PluginerMock{},
+				)
+				a.Expect(err).To(BeNil())
+			}
+
+			// Receivers
+			for i := 0; i < tc.numReceivers; i++ {
+				err := m.RegisterPlugin(
+					"receivers_"+strconv.Itoa(i),
+					&newReceivererMock{},
+				)
+				a.Expect(err).To(BeNil())
+			}
+
+			// Fiterers
+			for i := 0; i < tc.numFilterers; i++ {
+				err := m.RegisterPlugin(
+					"filterers_"+strconv.Itoa(i),
+					&newFiltererMock{},
+				)
+				a.Expect(err).To(BeNil())
+			}
+
+			// Senders
+			for i := 0; i < tc.numSenders; i++ {
+				err := m.RegisterPlugin(
+					"senders_"+strconv.Itoa(i),
+					&newSendererMock{},
+				)
+				a.Expect(err).To(BeNil())
+			}
+
+			receiverers := m.Receiverers()
+			a.Expect(len(receiverers)).To(Equal(tc.numReceivers))
+
+			filterers := m.Filterers()
+			a.Expect(len(filterers)).To(Equal(tc.numFilterers))
+
+			senderers := m.Senderers()
+			a.Expect(len(senderers)).To(Equal(tc.numSenders))
+
+			registrations := m.Plugins()
+			a.Expect((len(registrations))).To(Equal(tc.numPlugins + tc.numReceivers + tc.numFilterers + tc.numSenders))
+
+		})
+	}
 
 }
 
@@ -233,8 +344,24 @@ func TestLoadPlugin(t *testing.T) {
 				},
 			)
 
-			a.Expect(err).To(BeNil())
-			a.Expect(p).ToNot(BeNil())
+			var expectedErr error
+			if strings.Contains(path, "/err_") {
+				switch {
+				case strings.Contains(path, "NewPluginerNotImplementedError"):
+					expectedErr = &manager.NewPluginerNotImplementedError{}
+				case strings.Contains(path, "VariableLookupError"):
+					expectedErr = &manager.VariableLookupError{}
+				}
+			}
+
+			if expectedErr == nil {
+				a.Expect(err).To(BeNil())
+				a.Expect(p).ToNot(BeNil())
+			} else {
+				a.Expect(p).To(BeNil())
+				a.Expect(reflect.TypeOf(err)).To(Equal(reflect.TypeOf(expectedErr)))
+			}
+
 		})
 	}
 }
@@ -259,6 +386,8 @@ func testShutdown() error {
 
 	return nil
 }
+
+// == Helper Functions ===============================================
 
 // buildTestPlugin will build the plugin
 func buildTestPlugins() error {
@@ -313,3 +442,29 @@ func getTestPluginSOPaths() ([]string, error) {
 	return filepath.Glob(pluginRegex)
 
 }
+
+// == Helper Structures ==============================================
+
+type newReceivererMock struct {
+	receiver.NewReceivererMock
+}
+
+func (m *newReceivererMock) Name() string    { return "newReceivererMock" }
+func (m *newReceivererMock) Version() string { return "version" }
+func (m *newReceivererMock) Config() string  { return "config" }
+
+type newSendererMock struct {
+	sender.NewSendererMock
+}
+
+func (m *newSendererMock) Name() string    { return "newSendererMock" }
+func (m *newSendererMock) Version() string { return "version" }
+func (m *newSendererMock) Config() string  { return "config" }
+
+type newFiltererMock struct {
+	filter.NewFiltererMock
+}
+
+func (m *newFiltererMock) Name() string    { return "newFiltererMock" }
+func (m *newFiltererMock) Version() string { return "version" }
+func (m *newFiltererMock) Config() string  { return "config" }
