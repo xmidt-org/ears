@@ -16,12 +16,20 @@ package manager
 
 import "fmt"
 
-func (e *LoadError) Unwrap() error {
+func (e *OpenPluginError) Unwrap() error {
 	return e.Err
 }
 
-func (e *LoadError) Error() string {
-	return errToString("LoadError", e.Err)
+func (e *OpenPluginError) Error() string {
+	return errToString("OpenPluginError", e.Err)
+}
+
+func (e *NewPluginerError) Unwrap() error {
+	return e.Err
+}
+
+func (e *NewPluginerError) Error() string {
+	return errToString("NewPluginerError", e.Err)
 }
 
 func (e *VariableLookupError) Unwrap() error {

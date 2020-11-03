@@ -16,7 +16,6 @@ package manager_test
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"log"
 	"os"
@@ -35,8 +34,6 @@ import (
 	"github.com/xmidt-org/ears/pkg/sender"
 
 	. "github.com/onsi/gomega"
-
-	"github.com/sebdah/goldie/v2"
 )
 
 const (
@@ -62,58 +59,6 @@ func TestMain(m *testing.M) {
 	}
 
 	os.Exit(code)
-}
-
-func TestErrorMessage(t *testing.T) {
-	testCases := []struct {
-		name string
-		err  error
-	}{
-		{name: "NilPluginError", err: &manager.NilPluginError{}},
-		{name: "NotFoundError", err: &manager.NotFoundError{}},
-		{name: "AlreadyRegisteredError", err: &manager.AlreadyRegisteredError{}},
-		{
-			name: "InvalidConfigError_Nil",
-			err:  &manager.InvalidConfigError{},
-		},
-		{
-			name: "InvalidConfigError_Err",
-			err: &manager.InvalidConfigError{
-				Err: fmt.Errorf("wrapped error"),
-			},
-		},
-		{name: "NewPluginerNotImplementedError", err: &manager.NewPluginerNotImplementedError{}},
-		{
-			name: "VariableLookupError_Nil",
-			err:  &manager.VariableLookupError{},
-		},
-		{
-			name: "VariableLookupError_Err",
-			err: &manager.VariableLookupError{
-				Err: fmt.Errorf("wrapped error"),
-			},
-		},
-		{
-			name: "LoadError_Nil",
-			err:  &manager.LoadError{},
-		},
-		{
-			name: "LoadError_Err",
-			err: &manager.LoadError{
-				Err: fmt.Errorf("wrapped error"),
-			},
-		},
-	}
-
-	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-			g := goldie.New(t)
-			g.Assert(t, tc.name, []byte(fmt.Sprint(tc.err)))
-			g.Assert(t, tc.name+"_unwrapped", []byte(fmt.Sprint(errors.Unwrap(tc.err))))
-
-		})
-	}
-
 }
 
 func TestNilPluginError(t *testing.T) {
@@ -351,6 +296,8 @@ func TestLoadPlugin(t *testing.T) {
 					expectedErr = &manager.NewPluginerNotImplementedError{}
 				case strings.Contains(path, "VariableLookupError"):
 					expectedErr = &manager.VariableLookupError{}
+				case strings.Contains(path, "NewPluginerError"):
+					expectedErr = &manager.NewPluginerError{}
 				}
 			}
 
@@ -386,7 +333,7 @@ func TestLoadErrors(t *testing.T) {
 		{
 			name:   "bad_plugin_path",
 			config: manager.Config{Name: "bad_plugin_path", Path: "bad_plugin_path"},
-			err:    &manager.LoadError{}, // Difficult to determine exactly what plugin.Open() will return
+			err:    &manager.OpenPluginError{},
 		},
 	}
 

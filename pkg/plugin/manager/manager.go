@@ -63,7 +63,7 @@ func (m *manager) LoadPlugin(config Config) (plugin.Pluginer, error) {
 
 	library, err := goplugin.Open(config.Path)
 	if err != nil {
-		return nil, &LoadError{
+		return nil, &OpenPluginError{
 			Err: fmt.Errorf("could not open plugin: %w", err),
 		}
 	}
@@ -82,8 +82,8 @@ func (m *manager) LoadPlugin(config Config) (plugin.Pluginer, error) {
 
 	plug, err := newer.NewPluginer(config.Config)
 	if err != nil {
-		return nil, &LoadError{
-			Err: fmt.Errorf("could not create plugin: %w", err),
+		return nil, &NewPluginerError{
+			Err: err,
 		}
 	}
 

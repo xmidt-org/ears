@@ -63,9 +63,15 @@ type Manager interface {
 
 // === Errors =========================================================
 
-// PluginLoadError is returned when the given plugin could
-// not be loaded
-type LoadError struct {
+// OpenPluginError is returned when the Go plugin framework
+// is unable to load the plugin.
+type OpenPluginError struct {
+	Err error
+}
+
+// NewPluginerError is returned when the call to NewPluginer
+// on a loaded plugin results in an error.
+type NewPluginerError struct {
 	Err error
 }
 
