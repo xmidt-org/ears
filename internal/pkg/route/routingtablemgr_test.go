@@ -14,6 +14,10 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
+//TODO: test all errors
+//TODO: test hashing and validations
+//TODO: test multiple routes
+
 type (
 	TestTableEntry struct {
 		Name                          string
@@ -101,10 +105,9 @@ func simulateSingleRoute(t *testing.T, rstr string, expectedSourceCount, expecte
 		t.Errorf("routing table not empty")
 	}
 }
-
-/*func TestSplitRoute(t *testing.T) {
+func TestSplitRoute(t *testing.T) {
 	simulateSingleRoute(t, getTestRouteByName(t, "split_route"), 3, 6)
-}*/
+}
 
 /*func TestDirectRoute(t *testing.T) {
 	simulateSingleRoute(t, getTestRouteByName(t, "direct_route"), 1, 1)
