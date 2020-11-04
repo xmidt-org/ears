@@ -39,7 +39,7 @@ import (
 )
 
 const (
-	buildPluginTimeout = 10 * time.Second
+	buildPluginTimeout = 1 * time.Minute
 
 	testPluginDir = "testplugins"
 )
