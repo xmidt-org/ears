@@ -551,7 +551,7 @@ func buildTestPlugins() error {
 		err := cmd.Run()
 
 		if err != nil {
-			return fmt.Errorf("error compiling plugin %s: %w", baseName, err)
+			return fmt.Errorf("error compiling plugin %s: %w", p, err)
 		}
 
 	}
