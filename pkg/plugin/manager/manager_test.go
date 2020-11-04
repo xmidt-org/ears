@@ -16,7 +16,9 @@ package manager_test
 
 import (
 	"context"
+	"flag"
 	"fmt"
+	"io/ioutil"
 	"log"
 	"os"
 	"os/exec"
@@ -42,9 +44,18 @@ const (
 	testPluginDir = "testplugins"
 )
 
-var logger = log.New(os.Stderr, "", log.LstdFlags)
+var logger *log.Logger
 
 func TestMain(m *testing.M) {
+
+	flag.Parse()
+
+	if verboseEnabled() {
+		logger = log.New(os.Stderr, "", log.LstdFlags)
+	} else {
+		logger = log.New(ioutil.Discard, "", log.LstdFlags)
+	}
+
 	err := testSetup()
 	if err != nil {
 		logger.Fatal(err)
@@ -485,11 +496,20 @@ func testShutdown() error {
 
 // == Helper Functions ===============================================
 
+// verboseEnabled allows us to see if the flag is set.  Unfortunately
+// this is only available on *testing.T.Verbose() and not on *testing.M
+func verboseEnabled() bool {
+	for _, v := range os.Args {
+		if v == "-test.v=true" {
+			return true
+		}
+	}
+
+	return false
+}
+
 // buildTestPlugin will build the plugin
 func buildTestPlugins() error {
-
-	ctx, cancel := context.WithTimeout(context.Background(), buildPluginTimeout)
-	defer cancel()
 
 	paths, err := getTestPluginPaths()
 
@@ -498,16 +518,28 @@ func buildTestPlugins() error {
 	}
 
 	for _, p := range paths {
+		ctx, cancel := context.WithTimeout(context.Background(), buildPluginTimeout)
+		defer cancel()
+
 		baseName := strings.TrimSuffix(filepath.Base(p), ".go")
 		dir := filepath.Dir(p)
 
-		cmd := exec.CommandContext(
-			ctx,
-			"go", "build",
+		args := []string{
+			"build",
 			"-buildmode=plugin",
+		}
+
+		if raceFlagEnabled {
+			args = append(args, "-race")
+		}
+
+		args = append(
+			args,
 			"-o", filepath.Join(dir, baseName+".so"),
 			"./"+dir, // Must have the preceeding "./" which a filepath.Join ends up removing
 		)
+
+		cmd := exec.CommandContext(ctx, "go", args...)
 
 		cmd.Env = os.Environ()
 		cmd.Stdin = os.Stdin

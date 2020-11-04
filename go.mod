@@ -4,6 +4,7 @@ go 1.14
 
 require (
 	github.com/ThreeDotsLabs/watermill v1.1.1
+	github.com/davecgh/go-spew v1.1.1
 	github.com/fsnotify/fsnotify v1.4.9 // indirect
 	github.com/ghodss/yaml v1.0.0
 	github.com/google/addlicense v0.0.0-20200906110928-a0294312aa76 // indirect
