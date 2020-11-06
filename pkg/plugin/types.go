@@ -18,10 +18,14 @@ package plugin
 
 //go:generate moq -out testing_mock.go . NewPluginerer Pluginer
 
+// NewPluginerer is something that is able to return a new Pluginer
 type NewPluginerer interface {
 	NewPluginer(config string) (Pluginer, error)
 }
 
+// Pluginer defines values that should be returned in order to
+// get visibility into which plugin was loaded and how it was
+// configured.
 type Pluginer interface {
 	Name() string
 	Version() string
@@ -36,6 +40,9 @@ type Pluginer interface {
 // to determine the meaning of the error.
 type ErrorCode int
 
+// TODO:  Define an enumeration of codes to use to help determine
+// how to handle the error
+
 // Error wraps a plugin's errors.  Because this package will have
 // no knowledge of which plugins it's importing, the convention is for the
 // plugin to set a Code associated with the plugin.
@@ -45,6 +52,8 @@ type Error struct {
 	Values map[string]interface{}
 }
 
+// InvalidArgumentError is returned when a configuration parameter
+// results in a plugin error
 type InvalidArgumentError struct {
 	Err error
 }

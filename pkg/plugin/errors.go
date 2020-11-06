@@ -17,6 +17,7 @@ package plugin
 import (
 	"fmt"
 	"sort"
+	"strings"
 	// We're going to be lazy and reference the full Watermill Message object.
 )
 
@@ -27,23 +28,35 @@ func (e *Error) Unwrap() error {
 
 // Error implements the standard error interface.  It'll display the code
 // as well printing out the Values in key sorted order.
+//
+// Output:
+//   plugin error (code=42, k1=v1, k2=v2): wrapped Err.Error() goes here
+//
 func (e *Error) Error() string {
+	if e == nil {
+		return "<nil>"
+	}
 
-	msg := fmt.Sprintf("Plugin Error (%v)", e.Code)
+	var suffix = ""
 	if e.Err != nil {
-		msg = msg + fmt.Sprintf(": %s", e.Err.Error())
+		suffix = ": " + e.Err.Error()
 	}
 
-	keys := []string{}
-	for k := range e.Values {
-		keys = append(keys, k)
-	}
-	sort.Strings(keys)
-	for _, k := range keys {
-		msg = msg + fmt.Sprintf("\n%s: %v", k, e.Values[k])
+	values := []string{fmt.Sprintf("code: %d", e.Code)}
+
+	if len(e.Values) > 0 {
+		keys := []string{}
+		for k := range e.Values {
+			keys = append(keys, k)
+		}
+		sort.Strings(keys)
+
+		for _, k := range keys {
+			values = append(values, fmt.Sprintf("%s: %v", k, e.Values[k]))
+		}
 	}
 
-	return msg
+	return "plugin error (" + strings.Join(values, ", ") + ")" + suffix
 }
 
 // Is compares two Error.  It does a simple string comparison.
@@ -77,10 +90,15 @@ func (e *InvalidArgumentError) Is(target error) bool {
 	return e.Error() == target.Error()
 }
 
+// Error implements the standard error interface.  It'll display the code
+// as well printing out the Values in key sorted order.
 func (e *NotSupportedError) Error() string {
 	return "NotSupportedError"
 }
 
+// Is compares two Error.  It does a simple string comparison.
+// This means that references to memory at different addresses for the same
+// key will result in different strings, thus causing `Is` to return false.
 func (e *NotSupportedError) Is(target error) bool {
 	return e.Error() == target.Error()
 }

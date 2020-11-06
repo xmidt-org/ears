@@ -1,0 +1,1 @@
+plugin error (code: 42, four: true, one: 1, three: 3, two: two): wrapped error
