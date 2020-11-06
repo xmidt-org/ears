@@ -47,9 +47,8 @@ type ErrorCode int
 // no knowledge of which plugins it's importing, the convention is for the
 // plugin to set a Code associated with the plugin.
 type Error struct {
-	Err    error
-	Code   ErrorCode
-	Values map[string]interface{}
+	Err  error
+	Code ErrorCode
 }
 
 // InvalidArgumentError is returned when a configuration parameter

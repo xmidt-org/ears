@@ -41,16 +41,10 @@ func TestErrorMessage(t *testing.T) {
 		},
 
 		{
-			name: "Error_Values",
-			err:  &plugin.Error{Values: map[string]interface{}{"one": 1, "two": "two", "three": 3.0, "four": true}},
-		},
-
-		{
 			name: "Error_All",
 			err: &plugin.Error{
-				Err:    fmt.Errorf("wrapped error"),
-				Code:   42,
-				Values: map[string]interface{}{"one": 1, "two": "two", "three": 3.0, "four": true},
+				Err:  fmt.Errorf("wrapped error"),
+				Code: 42,
 			},
 		},
 
