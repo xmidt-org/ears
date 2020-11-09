@@ -1,0 +1,27 @@
+[
+    {
+        "name" : "split_route",
+        "expectedSourceEventCount" : 3,
+        "expectedDestinationEventCount" : 6
+    },
+    {
+        "name" : "direct_route",
+        "expectedSourceEventCount" : 1,
+        "expectedDestinationEventCount" : 1
+    },
+    {
+        "name" : "filter_route",
+        "expectedSourceEventCount" : 3,
+        "expectedDestinationEventCount" : 0
+    },
+    {
+        "name" : "array_route",
+        "expectedSourceEventCount" : 3,
+        "expectedDestinationEventCount" : 0
+    },
+    {
+        "name" : "wildcard_route",
+        "expectedSourceEventCount" : 3,
+        "expectedDestinationEventCount" : 0
+    }
+]

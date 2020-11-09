@@ -4,6 +4,8 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
+	"path/filepath"
 	"testing"
 	"time"
 
@@ -12,228 +14,44 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-var (
-	SPLIT_ROUTE = `
-	{
-		"orgId" : "comcast",
-		"appId" : "xfi",
-		"userId" : "boris",
-		"source" : {
-			"type" : "debug",
-			"params" :
-			{
-				"rounds" : 3,
-				"intervalMS" : 250,
-				"payload" : {
-					"foo" : "bar"
-				}
-			}
-		},
-		"destination" : {
-			"type" : "debug",
-			"params" : {}
-		},
-		"filterChain" : {
-			"filters": 
-			[
-				{
-					"type" : "match",
-					"params" : {
-						"pattern" : {
-							"foo" : "bar"
-						}
-					}
-				},
-				{
-					"type" : "filter",
-					"params" : {
-						"pattern" : {
-							"hello" : "world"
-						}
-					}
-				},
-				{
-					"type" : "pass",
-					"params" : {}
-				},
-				{
-					"type" : "split",
-					"params" : {}
-				},
-				{
-					"type" : "transform",
-					"params" : {}
-				}
-			]
-		},
-		"deliveryMode" : "at_least_once"
-	}
-	`
-	DIRECT_ROUTE = `
-	{
-		"orgId" : "comcast",
-		"appId" : "xfi",
-		"userId" : "boris",
-		"source" : {
-			"type" : "debug",
-			"params" :
-			{
-				"rounds" : 1,
-				"intervalMS" : 250,
-				"payload" : {
-					"foo" : "bar"
-				}
-			}
-		},
-		"destination" : {
-			"type" : "debug",
-			"params" : {}
-		},
-		"deliveryMode" : "at_least_once"
-	}
-	`
+//TODO: test all errors
+//TODO: test hashing and validations
+//TODO: test multiple routes
 
-	FILTER_ROUTE = `
-	{
-		"orgId" : "comcast",
-		"appId" : "xfi",
-		"userId" : "boris",
-		"source" : {
-			"type" : "debug",
-			"params" :
-			{
-				"rounds" : 3,
-				"intervalMS" : 250,
-				"payload" : {
-					"foo" : "bar"
-				}
-			}
-		},
-		"destination" : {
-			"type" : "debug",
-			"params" : {}
-		},
-		"filterChain" : {
-			"filters": 
-			[
-				{
-					"type" : "match",
-					"params" : {
-						"pattern" : {
-							"foo" : "bar"
-						}
-					}
-				},
-				{
-					"type" : "filter",
-					"params" : {
-						"pattern" : {
-							"foo" : "bar"
-						}
-					}
-				}
-			]
-		},
-		"deliveryMode" : "at_least_once"
+type (
+	TestTableEntry struct {
+		Name                          string
+		ExpectedSourceEventCount      int
+		ExpectedDestinationEventCount int
 	}
-	`
-
-	ARRAY_ROUTE = `
-	{
-		"orgId" : "comcast",
-		"appId" : "xfi",
-		"userId" : "boris",
-		"source" : {
-			"type" : "debug",
-			"params" :
-			{
-				"rounds" : 3,
-				"intervalMS" : 250,
-				"payload" : [{"foo" : "bar"}]
-			}
-		},
-		"destination" : {
-			"type" : "debug",
-			"params" : {}
-		},
-		"filterChain" : {
-			"filters": 
-			[
-				{
-					"type" : "match",
-					"params" : {
-						"pattern" : [{"foo" : "bar"}]
-					}
-				},
-				{
-					"type" : "filter",
-					"params" : {
-						"pattern" : [{"foo" : "bar"}]
-					}
-				}
-			]
-		},
-		"deliveryMode" : "at_least_once"
-	}
-	`
-
-	WILDCARD_ROUTE = `
-	{
-		"orgId" : "comcast",
-		"appId" : "xfi",
-		"userId" : "boris",
-		"source" : {
-			"type" : "debug",
-			"params" :
-			{
-				"rounds" : 3,
-				"intervalMS" : 250,
-				"payload" : {"foo" : "bar"}
-			}
-		},
-		"destination" : {
-			"type" : "debug",
-			"params" : {}
-		},
-		"filterChain" : {
-			"filters": 
-			[
-				{
-					"type" : "match",
-					"params" : {
-						"pattern" : {"foo" : "b*"}
-					}
-				},
-				{
-					"type" : "match",
-					"params" : {
-						"pattern" : {"foo" : "bar||baz"}
-					}
-				},
-				{
-					"type" : "filter",
-					"params" : {
-						"pattern" : {"foo" : "bar"}
-					}
-				}
-			]
-		},
-		"deliveryMode" : "at_least_once"
-	}
-	`
-
-	EMPTY_ROUTE = `
-	{
-		"orgId" : "comcast",
-		"appId" : "xfi",
-		"userId" : "boris",
-		"deliveryMode" : "at_least_once",
-		"source" : {},
-		"destination" : {},
-		"filterChain" : {}
-	}
-	`
 )
+
+func getTestRouteByName(t *testing.T, name string) string {
+	path := filepath.Join("tests", name+".json")
+	buf, err := ioutil.ReadFile(path)
+	if err != nil {
+		t.Fatalf(err.Error())
+	}
+	return string(buf)
+}
+
+func TestSingleRouteTestTable(t *testing.T) {
+	path := filepath.Join("tests", "test_table.json")
+	buf, err := ioutil.ReadFile(path)
+	if err != nil {
+		t.Fatalf(err.Error())
+		return
+	}
+	testTable := make([]*TestTableEntry, 0)
+	err = json.Unmarshal(buf, &testTable)
+	if err != nil {
+		t.Fatalf(err.Error())
+		return
+	}
+	for _, singleRouteTest := range testTable {
+		simulateSingleRoute(t, getTestRouteByName(t, singleRouteTest.Name), singleRouteTest.ExpectedSourceEventCount, singleRouteTest.ExpectedDestinationEventCount)
+	}
+}
 
 func simulateSingleRoute(t *testing.T, rstr string, expectedSourceCount, expectedDestinationCount int) {
 	ctx := context.Background()
@@ -268,17 +86,16 @@ func simulateSingleRoute(t *testing.T, rstr string, expectedSourceCount, expecte
 	if len(allRoutes) != 1 {
 		t.Errorf("routing table doesn't have expected entry")
 	}
-	/*fmt.Printf("ROUTING TABLE:\n")
-	fmt.Printf("%s\n", rtmgr.String())
-	fmt.Printf("PLUGINS:\n")
-	fmt.Printf("%s\n", route.GetIOPluginManager(ctx).String())*/
-	time.Sleep(time.Duration(2000) * time.Millisecond)
+	// give plugins some time to do their thing
+	time.Sleep(time.Duration(1000) * time.Millisecond)
+	// check if expected number of events hhave made it thhroughh input and output plugins
 	if allRoutes[0].Source.GetEventCount() != expectedSourceCount {
 		t.Errorf("unexpected number of produced events %d", allRoutes[0].Source.GetEventCount())
 	}
 	if allRoutes[0].Destination.GetEventCount() != expectedDestinationCount {
 		t.Errorf("unexpected number of consumed events %d", allRoutes[0].Destination.GetEventCount())
 	}
+	// cleanup routes
 	err = rtmgr.ReplaceAllRoutes(ctx, nil)
 	if err != nil {
 		t.Errorf(err.Error())
@@ -288,26 +105,25 @@ func simulateSingleRoute(t *testing.T, rstr string, expectedSourceCount, expecte
 		t.Errorf("routing table not empty")
 	}
 }
-
 func TestSplitRoute(t *testing.T) {
-	simulateSingleRoute(t, SPLIT_ROUTE, 3, 6)
+	simulateSingleRoute(t, getTestRouteByName(t, "split_route"), 3, 6)
 }
 
-func TestDirectRoute(t *testing.T) {
-	simulateSingleRoute(t, DIRECT_ROUTE, 1, 1)
-}
+/*func TestDirectRoute(t *testing.T) {
+	simulateSingleRoute(t, getTestRouteByName(t, "direct_route"), 1, 1)
+}*/
 
-func TestFilterRoute(t *testing.T) {
-	simulateSingleRoute(t, FILTER_ROUTE, 3, 0)
-}
+/*func TestFilterRoute(t *testing.T) {
+	simulateSingleRoute(t, getTestRouteByName(t, "filter_route"), 3, 0)
+}*/
 
-func TestArrayRoute(t *testing.T) {
-	simulateSingleRoute(t, ARRAY_ROUTE, 3, 0)
-}
+/*func TestArrayRoute(t *testing.T) {
+	simulateSingleRoute(t, getTestRouteByName(t, "array_route"), 3, 0)
+}*/
 
-func TestWildcardRoute(t *testing.T) {
-	simulateSingleRoute(t, WILDCARD_ROUTE, 3, 0)
-}
+/*func TestWildcardRoute(t *testing.T) {
+	simulateSingleRoute(t, getTestRouteByName(t, "wildcard_route"), 3, 0)
+}*/
 
 func TestGetRoutesBy(t *testing.T) {
 	ctx := context.Background()
@@ -319,7 +135,7 @@ func TestGetRoutesBy(t *testing.T) {
 		return
 	}
 	// add a routes
-	routes := []string{SPLIT_ROUTE, DIRECT_ROUTE, FILTER_ROUTE}
+	routes := []string{getTestRouteByName(t, "split_route"), getTestRouteByName(t, "direct_route"), getTestRouteByName(t, "filter_route"), getTestRouteByName(t, "array_route"), getTestRouteByName(t, "wildcard_route")}
 	var rc *route.RouteConfig
 	for _, rstr := range routes {
 		rc = new(route.RouteConfig)
@@ -345,15 +161,15 @@ func TestGetRoutesBy(t *testing.T) {
 		t.Errorf("empty table hash")
 	}
 	// check routes
-	if rtmgr.GetRouteCount(ctx) != 3 {
-		t.Errorf("routing table doesn't have expected number of entries")
+	if rtmgr.GetRouteCount(ctx) != 5 {
+		t.Errorf("routing table doesn't have expected number of entries %d", rtmgr.GetRouteCount(ctx))
 	}
 	foundRoutes, err := rtmgr.GetRoutesBySourcePlugin(ctx, rc.Source)
 	if err != nil {
 		t.Errorf(err.Error())
 		return
 	}
-	if len(foundRoutes) != 2 {
+	if len(foundRoutes) != 1 {
 		t.Errorf("unexpected number of routes by source %d", len(foundRoutes))
 	}
 	foundRoutes, err = rtmgr.GetRoutesByDestinationPlugin(ctx, rc.Destination)
@@ -361,7 +177,7 @@ func TestGetRoutesBy(t *testing.T) {
 		t.Errorf(err.Error())
 		return
 	}
-	if len(foundRoutes) != 3 {
+	if len(foundRoutes) != 5 {
 		t.Errorf("unexpected number of routes by destination %d", len(foundRoutes))
 	}
 	err = rtmgr.RemoveRoute(ctx, foundRoutes[0])
@@ -369,8 +185,90 @@ func TestGetRoutesBy(t *testing.T) {
 		t.Errorf(err.Error())
 		return
 	}
-	if rtmgr.GetRouteCount(ctx) != 2 {
+	if rtmgr.GetRouteCount(ctx) != 4 {
 		t.Errorf("unexpected number of routes %d", len(foundRoutes))
+	}
+}
+
+func TestGetPluginsBy(t *testing.T) {
+	ctx := context.Background()
+	ctx = log.Logger.WithContext(ctx)
+	// init in memory routing table manager
+	rtmgr := route.NewInMemoryRoutingTableManager()
+	if rtmgr.GetRouteCount(ctx) != 0 {
+		t.Errorf("routing table not empty")
+		return
+	}
+	// add a routes
+	routes := []string{getTestRouteByName(t, "split_route"), getTestRouteByName(t, "direct_route"), getTestRouteByName(t, "filter_route"), getTestRouteByName(t, "array_route"), getTestRouteByName(t, "wildcard_route")}
+	var rc *route.RouteConfig
+	for _, rstr := range routes {
+		rc = new(route.RouteConfig)
+		err := json.Unmarshal([]byte(rstr), rc)
+		if err != nil {
+			t.Errorf(err.Error())
+			return
+		}
+		err = rtmgr.AddRoute(ctx, route.NewRouteFromRouteConfig(rc))
+		if err != nil {
+			t.Errorf(err.Error())
+			return
+		}
+	}
+	// validate
+	err := rtmgr.Validate(ctx)
+	if err != nil {
+		t.Errorf(err.Error())
+		return
+	}
+	hash := rtmgr.Hash(ctx)
+	if hash == "" {
+		t.Errorf("empty table hash")
+	}
+	// check plugins
+	pmgr := route.GetIOPluginManager(ctx)
+	plugins, err := pmgr.GetAllPlugins(ctx)
+	if err != nil {
+		t.Errorf("unexpcted error " + err.Error())
+	}
+	if len(plugins) != 5 {
+		t.Errorf("unexpcted number of plugins %d", len(plugins))
+	}
+	// check plugins by mode
+	plugins, err = pmgr.GetPlugins(ctx, "input", "")
+	if err != nil {
+		t.Errorf("unexpcted error " + err.Error())
+	}
+	if len(plugins) != 4 {
+		t.Errorf("unexpcted number of input plugins %d", len(plugins))
+	}
+	plugins, err = pmgr.GetPlugins(ctx, "output", "")
+	if err != nil {
+		t.Errorf("unexpcted error " + err.Error())
+	}
+	if len(plugins) != 1 {
+		t.Errorf("unexpcted number of output plugins %d", len(plugins))
+	}
+	// check plugins by type
+	plugins, err = pmgr.GetPlugins(ctx, "", "debug")
+	if err != nil {
+		t.Errorf("unexpcted error " + err.Error())
+	}
+	if len(plugins) != 5 {
+		t.Errorf("unexpcted number of debug plugins %d", len(plugins))
+	}
+	// remove all routes
+	err = rtmgr.ReplaceAllRoutes(ctx, nil)
+	if err != nil {
+		t.Errorf("unexpcted error " + err.Error())
+	}
+	// and ensure all plugins have been withdrawn
+	plugins, err = pmgr.GetAllPlugins(ctx)
+	if err != nil {
+		t.Errorf("unexpcted error " + err.Error())
+	}
+	if len(plugins) > 0 {
+		t.Errorf("found residual plugins %d", len(plugins))
 	}
 }
 
@@ -390,7 +288,7 @@ func TestErrors(t *testing.T) {
 	} else {
 		fmt.Printf("error %s\n", err.Error())
 	}
-	routes := []string{EMPTY_ROUTE}
+	routes := []string{getTestRouteByName(t, "empty_route")}
 	var rc *route.RouteConfig
 	for _, rstr := range routes {
 		rc = new(route.RouteConfig)
@@ -430,7 +328,7 @@ func TestDoSync(t *testing.T) {
 		return
 	}
 	// add a routes
-	routes := []string{SPLIT_ROUTE}
+	routes := []string{getTestRouteByName(t, "split_route")}
 	var rc *route.RouteConfig
 	for _, rstr := range routes {
 		rc = new(route.RouteConfig)
