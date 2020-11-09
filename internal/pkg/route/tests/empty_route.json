@@ -1,0 +1,9 @@
+{
+    "orgId" : "comcast",
+    "appId" : "xfi",
+    "userId" : "boris",
+    "deliveryMode" : "at_least_once",
+    "source" : {},
+    "destination" : {},
+    "filterChain" : {}
+}

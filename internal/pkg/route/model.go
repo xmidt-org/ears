@@ -24,7 +24,6 @@ import (
 const (
 
 	// plugin types
-	//TODO: where should this live?
 
 	PluginTypeKafka  = "kafka"  // generic kafka plugin
 	PluginTypeKDS    = "kds"    // generic kds plugin
@@ -37,7 +36,6 @@ const (
 	PluginTypeFilter = "filter" // a filter plugin that filters or transforms and event
 
 	// filter types
-	//TODO: where should this live?
 
 	FilterTypeFilter      = "filter"
 	FilterTypeMatcher     = "match"
@@ -165,7 +163,6 @@ type (
 		GetRouteCount(ctx context.Context) int                                               // get current size of routing table
 		GetRoutesBySourcePlugin(ctx context.Context, plugin Pluginer) ([]*Route, error)      // get all routes for a specifc source plugin
 		GetRoutesByDestinationPlugin(ctx context.Context, plugin Pluginer) ([]*Route, error) // get all routes for a specific destination plugin
-		GetRoutesForEvent(ctx context.Context, event *Event) ([]*Route, error)               // get all routes for a given event (and source plugin)
 	}
 
 	// A RouteInitializer
@@ -195,10 +192,11 @@ type (
 
 	// A IOPluginManager maintains a map of live plugins and ensures no two plugins with the same hash exist
 	IOPluginManager interface {
-		RegisterRoute(ctx context.Context, rte *Route) (Pluginer, error) // uses plugin parameter only for hash calculation and returns one if it already exists or creates a new one
-		WithdrawRoute(ctx context.Context, rte *Route) error             // uses plugin parameter only for hash calculation
-		GetPluginCount(ctx context.Context) int                          // get plugin count
-		GetAllPlugins(ctx context.Context) ([]Pluginer, error)           // get all plugins
+		RegisterRoute(ctx context.Context, rte *Route) (Pluginer, error)                          // uses plugin parameter only for hash calculation and returns one if it already exists or creates a new one
+		WithdrawRoute(ctx context.Context, rte *Route) error                                      // uses plugin parameter only for hash calculation
+		GetPluginCount(ctx context.Context) int                                                   // get plugin count
+		GetAllPlugins(ctx context.Context) ([]Pluginer, error)                                    // get all plugins
+		GetPlugins(ctx context.Context, pluginMode string, pluginType string) ([]Pluginer, error) // filter plugins by mode or type
 	}
 
 	// An EventSourceManager manages all event source plugins for a live ears instance

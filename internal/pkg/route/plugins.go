@@ -79,6 +79,10 @@ func (plgn *Plugin) Hash(ctx context.Context) string {
 	}
 	// distinguish input and output plugins
 	str += plgn.Mode
+	// distinguish instances by name
+	//fmt.Printf("PLGN NAME: %s %s %s\n", plgn.Type, plgn.Mode, plgn.Name)
+	str += "Debug"
+	str += plgn.Name
 	// optionally distinguish by org and app here as well
 	hash := fmt.Sprintf("%x", md5.Sum([]byte(str)))
 	return hash
@@ -235,9 +239,7 @@ func (dop *DebugOutputPlugin) DoAsync(ctx context.Context) {
 			select {
 			case <-dop.GetInputChannel():
 				log.Ctx(ctx).Debug().Msg(dop.Mode + " " + dop.Type + " plugin " + dop.Hash(ctx) + " passed")
-				//dop.lock.Lock()
 				dop.IncEventCount(1)
-				//dop.lock.Unlock()
 			case <-dop.done:
 				log.Ctx(ctx).Debug().Msg(dop.Mode + " " + dop.Type + " plugin " + dop.Hash(ctx) + " done")
 				return
@@ -262,7 +264,7 @@ func NewInputPlugin(ctx context.Context, rte *Route) (Pluginer, error) {
 		dip.Type = PluginTypeDebug
 		dip.Mode = PluginModeInput
 		dip.State = PluginStateReady
-		dip.Name = "Debug"
+		//dip.Name = "Debug"
 		dip.Params = pc.Params
 		dip.routes = []*Route{rte}
 		dip.SetOutputChannel(make(chan *Event))
@@ -298,7 +300,7 @@ func NewOutputPlugin(ctx context.Context, rte *Route) (Pluginer, error) {
 		dop.Type = PluginTypeDebug
 		dop.Mode = PluginModeOutput
 		dop.State = PluginStateReady
-		dop.Name = "Debug"
+		//dop.Name = "Debug"
 		dop.Params = pc.Params
 		dop.routes = []*Route{rte}
 		dop.done = make(chan bool)
