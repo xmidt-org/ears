@@ -27,7 +27,7 @@ type (
 )
 
 func getTestRouteByName(t *testing.T, name string) string {
-	path := filepath.Join("tests", name+".json")
+	path := filepath.Join("testdata", name+".json")
 	buf, err := ioutil.ReadFile(path)
 	if err != nil {
 		t.Fatalf(err.Error())
@@ -36,7 +36,7 @@ func getTestRouteByName(t *testing.T, name string) string {
 }
 
 func TestSingleRouteTestTable(t *testing.T) {
-	path := filepath.Join("tests", "test_table.json")
+	path := filepath.Join("testdata", "test_table.json")
 	buf, err := ioutil.ReadFile(path)
 	if err != nil {
 		t.Fatalf(err.Error())
@@ -105,9 +105,14 @@ func simulateSingleRoute(t *testing.T, rstr string, expectedSourceCount, expecte
 		t.Errorf("routing table not empty")
 	}
 }
-func TestSplitRoute(t *testing.T) {
-	simulateSingleRoute(t, getTestRouteByName(t, "split_route"), 3, 6)
+
+func TestMultiRoutes(t *testing.T) {
+
 }
+
+/*func TestSplitRoute(t *testing.T) {
+	simulateSingleRoute(t, getTestRouteByName(t, "split_route"), 3, 6)
+}*/
 
 /*func TestDirectRoute(t *testing.T) {
 	simulateSingleRoute(t, getTestRouteByName(t, "direct_route"), 1, 1)
