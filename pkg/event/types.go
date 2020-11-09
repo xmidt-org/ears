@@ -17,6 +17,7 @@
 
 package event
 
+//go:generate rm -f testing_mock.go
 //go:generate moq -out testing_mock.go . Event NewEventerer
 
 type Event interface {

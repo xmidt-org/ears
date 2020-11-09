@@ -20,7 +20,7 @@ import (
 	"github.com/xmidt-org/ears/pkg/event"
 )
 
-//go:generate rm testing_mock.go
+//go:generate rm -f testing_mock.go
 //go:generate moq -out testing_mock.go . Hasher NewSenderer Sender
 
 type InvalidConfigError struct {
