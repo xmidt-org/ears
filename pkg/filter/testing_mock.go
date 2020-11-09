@@ -9,6 +9,71 @@ import (
 	"sync"
 )
 
+// Ensure, that HasherMock does implement Hasher.
+// If this is not the case, regenerate this file with moq.
+var _ Hasher = &HasherMock{}
+
+// HasherMock is a mock implementation of Hasher.
+//
+//     func TestSomethingThatUsesHasher(t *testing.T) {
+//
+//         // make and configure a mocked Hasher
+//         mockedHasher := &HasherMock{
+//             FiltererHashFunc: func(config string) (string, error) {
+// 	               panic("mock out the FiltererHash method")
+//             },
+//         }
+//
+//         // use mockedHasher in code that requires Hasher
+//         // and then make assertions.
+//
+//     }
+type HasherMock struct {
+	// FiltererHashFunc mocks the FiltererHash method.
+	FiltererHashFunc func(config string) (string, error)
+
+	// calls tracks calls to the methods.
+	calls struct {
+		// FiltererHash holds details about calls to the FiltererHash method.
+		FiltererHash []struct {
+			// Config is the config argument value.
+			Config string
+		}
+	}
+	lockFiltererHash sync.RWMutex
+}
+
+// FiltererHash calls FiltererHashFunc.
+func (mock *HasherMock) FiltererHash(config string) (string, error) {
+	if mock.FiltererHashFunc == nil {
+		panic("HasherMock.FiltererHashFunc: method is nil but Hasher.FiltererHash was just called")
+	}
+	callInfo := struct {
+		Config string
+	}{
+		Config: config,
+	}
+	mock.lockFiltererHash.Lock()
+	mock.calls.FiltererHash = append(mock.calls.FiltererHash, callInfo)
+	mock.lockFiltererHash.Unlock()
+	return mock.FiltererHashFunc(config)
+}
+
+// FiltererHashCalls gets all the calls that were made to FiltererHash.
+// Check the length with:
+//     len(mockedHasher.FiltererHashCalls())
+func (mock *HasherMock) FiltererHashCalls() []struct {
+	Config string
+} {
+	var calls []struct {
+		Config string
+	}
+	mock.lockFiltererHash.RLock()
+	calls = mock.calls.FiltererHash
+	mock.lockFiltererHash.RUnlock()
+	return calls
+}
+
 // Ensure, that NewFiltererMock does implement NewFilterer.
 // If this is not the case, regenerate this file with moq.
 var _ NewFilterer = &NewFiltererMock{}
@@ -19,6 +84,9 @@ var _ NewFilterer = &NewFiltererMock{}
 //
 //         // make and configure a mocked NewFilterer
 //         mockedNewFilterer := &NewFiltererMock{
+//             FiltererHashFunc: func(config string) (string, error) {
+// 	               panic("mock out the FiltererHash method")
+//             },
 //             NewFiltererFunc: func(config string) (Filterer, error) {
 // 	               panic("mock out the NewFilterer method")
 //             },
@@ -29,18 +97,58 @@ var _ NewFilterer = &NewFiltererMock{}
 //
 //     }
 type NewFiltererMock struct {
+	// FiltererHashFunc mocks the FiltererHash method.
+	FiltererHashFunc func(config string) (string, error)
+
 	// NewFiltererFunc mocks the NewFilterer method.
 	NewFiltererFunc func(config string) (Filterer, error)
 
 	// calls tracks calls to the methods.
 	calls struct {
+		// FiltererHash holds details about calls to the FiltererHash method.
+		FiltererHash []struct {
+			// Config is the config argument value.
+			Config string
+		}
 		// NewFilterer holds details about calls to the NewFilterer method.
 		NewFilterer []struct {
 			// Config is the config argument value.
 			Config string
 		}
 	}
-	lockNewFilterer sync.RWMutex
+	lockFiltererHash sync.RWMutex
+	lockNewFilterer  sync.RWMutex
+}
+
+// FiltererHash calls FiltererHashFunc.
+func (mock *NewFiltererMock) FiltererHash(config string) (string, error) {
+	if mock.FiltererHashFunc == nil {
+		panic("NewFiltererMock.FiltererHashFunc: method is nil but NewFilterer.FiltererHash was just called")
+	}
+	callInfo := struct {
+		Config string
+	}{
+		Config: config,
+	}
+	mock.lockFiltererHash.Lock()
+	mock.calls.FiltererHash = append(mock.calls.FiltererHash, callInfo)
+	mock.lockFiltererHash.Unlock()
+	return mock.FiltererHashFunc(config)
+}
+
+// FiltererHashCalls gets all the calls that were made to FiltererHash.
+// Check the length with:
+//     len(mockedNewFilterer.FiltererHashCalls())
+func (mock *NewFiltererMock) FiltererHashCalls() []struct {
+	Config string
+} {
+	var calls []struct {
+		Config string
+	}
+	mock.lockFiltererHash.RLock()
+	calls = mock.calls.FiltererHash
+	mock.lockFiltererHash.RUnlock()
+	return calls
 }
 
 // NewFilterer calls NewFiltererFunc.

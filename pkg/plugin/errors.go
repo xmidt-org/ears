@@ -50,15 +50,15 @@ func (e *Error) Is(target error) bool {
 }
 
 // Unwrap implement's Go v1.13's error pattern
-func (e *InvalidArgumentError) Unwrap() error {
+func (e *InvalidConfigError) Unwrap() error {
 	return e.Err
 }
 
 // Error implements the standard error interface.  It'll display the code
 // as well printing out the Values in key sorted order.
-func (e *InvalidArgumentError) Error() string {
+func (e *InvalidConfigError) Error() string {
 
-	msg := fmt.Sprintf("InvalidArgumentError")
+	msg := fmt.Sprintf("InvalidConfigError")
 	if e.Err != nil {
 		msg = msg + fmt.Sprintf(": %s", e.Err.Error())
 	}
@@ -69,7 +69,7 @@ func (e *InvalidArgumentError) Error() string {
 // Is compares two Error.  It does a simple string comparison.
 // This means that references to memory at different addresses for the same
 // key will result in different strings, thus causing `Is` to return false.
-func (e *InvalidArgumentError) Is(target error) bool {
+func (e *InvalidConfigError) Is(target error) bool {
 	return e.Error() == target.Error()
 }
 

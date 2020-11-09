@@ -20,32 +20,46 @@ import (
 	"github.com/xmidt-org/ears/pkg/event"
 )
 
-//go:generate moq -out testing_mock.go . NewReceiverer Receiver
+//go:generate rm testing_mock.go
+//go:generate moq -out testing_mock.go . Hasher NewReceiverer Receiver
 
+// InvalidConfigError is returned when a bad configuration
+// is passed into the New* functions
 type InvalidConfigError struct {
 	Err error
 }
 
+// Hasher defines the hashing interface that a receiver
+// needs to implement
+type Hasher interface {
+	// ReceiverHash calculates the hash of a receiver based on the
+	// given configuration
+	ReceiverHash(config string) (string, error)
+}
+
 type NewReceiverer interface {
+	Hasher
+
+	// NewReceiver returns an object that implements the
+	// Receiver interface
 	NewReceiver(config string) (Receiver, error)
 }
 
+// NextFn defines the signature of a function that can take in an
+// event and process it
 type NextFn func(event.Event) error
 
-/*
-Receiver is a plugin that will receive messages and will
-send them to `NextFn`
-
-Other discarded names:
-* Inputter[x]
-* Ingestor[x]
-* Consumer[x]
-* Subscriber[√]
-* Listener[?]  vs Speaker?!?!?
-
-*/
+// Receiver is a plugin that will receive messages and will
+// send them to `NextFn`
 type Receiver interface {
-	// Hash() string // ReceiverHash ?
-
 	Receive(ctx context.Context, next NextFn) error
+
+	// StartReceiving blocks until receiving stops either by
+	// calling StopReceiving or by returning an error.
+	// On successful shutdown, nil will be returned.
+	//	StartReceiving(ctx context.Context, next NextFn) error
+
+	// StopReceiving will stop the receiver from receiving events.
+	// This will cause StartReceiving to return.
+	//	StopReceiving(ctx context.Context) error
 }

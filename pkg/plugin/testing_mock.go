@@ -7,6 +7,71 @@ import (
 	"sync"
 )
 
+// Ensure, that HasherMock does implement Hasher.
+// If this is not the case, regenerate this file with moq.
+var _ Hasher = &HasherMock{}
+
+// HasherMock is a mock implementation of Hasher.
+//
+//     func TestSomethingThatUsesHasher(t *testing.T) {
+//
+//         // make and configure a mocked Hasher
+//         mockedHasher := &HasherMock{
+//             PluginerHashFunc: func(config string) (string, error) {
+// 	               panic("mock out the PluginerHash method")
+//             },
+//         }
+//
+//         // use mockedHasher in code that requires Hasher
+//         // and then make assertions.
+//
+//     }
+type HasherMock struct {
+	// PluginerHashFunc mocks the PluginerHash method.
+	PluginerHashFunc func(config string) (string, error)
+
+	// calls tracks calls to the methods.
+	calls struct {
+		// PluginerHash holds details about calls to the PluginerHash method.
+		PluginerHash []struct {
+			// Config is the config argument value.
+			Config string
+		}
+	}
+	lockPluginerHash sync.RWMutex
+}
+
+// PluginerHash calls PluginerHashFunc.
+func (mock *HasherMock) PluginerHash(config string) (string, error) {
+	if mock.PluginerHashFunc == nil {
+		panic("HasherMock.PluginerHashFunc: method is nil but Hasher.PluginerHash was just called")
+	}
+	callInfo := struct {
+		Config string
+	}{
+		Config: config,
+	}
+	mock.lockPluginerHash.Lock()
+	mock.calls.PluginerHash = append(mock.calls.PluginerHash, callInfo)
+	mock.lockPluginerHash.Unlock()
+	return mock.PluginerHashFunc(config)
+}
+
+// PluginerHashCalls gets all the calls that were made to PluginerHash.
+// Check the length with:
+//     len(mockedHasher.PluginerHashCalls())
+func (mock *HasherMock) PluginerHashCalls() []struct {
+	Config string
+} {
+	var calls []struct {
+		Config string
+	}
+	mock.lockPluginerHash.RLock()
+	calls = mock.calls.PluginerHash
+	mock.lockPluginerHash.RUnlock()
+	return calls
+}
+
 // Ensure, that NewPluginererMock does implement NewPluginerer.
 // If this is not the case, regenerate this file with moq.
 var _ NewPluginerer = &NewPluginererMock{}
@@ -20,6 +85,9 @@ var _ NewPluginerer = &NewPluginererMock{}
 //             NewPluginerFunc: func(config string) (Pluginer, error) {
 // 	               panic("mock out the NewPluginer method")
 //             },
+//             PluginerHashFunc: func(config string) (string, error) {
+// 	               panic("mock out the PluginerHash method")
+//             },
 //         }
 //
 //         // use mockedNewPluginerer in code that requires NewPluginerer
@@ -30,6 +98,9 @@ type NewPluginererMock struct {
 	// NewPluginerFunc mocks the NewPluginer method.
 	NewPluginerFunc func(config string) (Pluginer, error)
 
+	// PluginerHashFunc mocks the PluginerHash method.
+	PluginerHashFunc func(config string) (string, error)
+
 	// calls tracks calls to the methods.
 	calls struct {
 		// NewPluginer holds details about calls to the NewPluginer method.
@@ -37,8 +108,14 @@ type NewPluginererMock struct {
 			// Config is the config argument value.
 			Config string
 		}
+		// PluginerHash holds details about calls to the PluginerHash method.
+		PluginerHash []struct {
+			// Config is the config argument value.
+			Config string
+		}
 	}
-	lockNewPluginer sync.RWMutex
+	lockNewPluginer  sync.RWMutex
+	lockPluginerHash sync.RWMutex
 }
 
 // NewPluginer calls NewPluginerFunc.
@@ -69,6 +146,37 @@ func (mock *NewPluginererMock) NewPluginerCalls() []struct {
 	mock.lockNewPluginer.RLock()
 	calls = mock.calls.NewPluginer
 	mock.lockNewPluginer.RUnlock()
+	return calls
+}
+
+// PluginerHash calls PluginerHashFunc.
+func (mock *NewPluginererMock) PluginerHash(config string) (string, error) {
+	if mock.PluginerHashFunc == nil {
+		panic("NewPluginererMock.PluginerHashFunc: method is nil but NewPluginerer.PluginerHash was just called")
+	}
+	callInfo := struct {
+		Config string
+	}{
+		Config: config,
+	}
+	mock.lockPluginerHash.Lock()
+	mock.calls.PluginerHash = append(mock.calls.PluginerHash, callInfo)
+	mock.lockPluginerHash.Unlock()
+	return mock.PluginerHashFunc(config)
+}
+
+// PluginerHashCalls gets all the calls that were made to PluginerHash.
+// Check the length with:
+//     len(mockedNewPluginerer.PluginerHashCalls())
+func (mock *NewPluginererMock) PluginerHashCalls() []struct {
+	Config string
+} {
+	var calls []struct {
+		Config string
+	}
+	mock.lockPluginerHash.RLock()
+	calls = mock.calls.PluginerHash
+	mock.lockPluginerHash.RUnlock()
 	return calls
 }
 

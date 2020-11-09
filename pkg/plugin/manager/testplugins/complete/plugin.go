@@ -21,6 +21,8 @@ import (
 	"github.com/ThreeDotsLabs/watermill"
 	"github.com/ThreeDotsLabs/watermill/pubsub/gochannel"
 	"github.com/ghodss/yaml"
+	"github.com/xmidt-org/ears/pkg/filter"
+	"github.com/xmidt-org/ears/pkg/hasher"
 	earsplugin "github.com/xmidt-org/ears/pkg/plugin"
 
 	"github.com/xmidt-org/ears/pkg/event"
@@ -30,9 +32,14 @@ import (
 
 var Plugin = plugin{}
 
+var _ earsplugin.NewPluginerer = (*plugin)(nil)
 var _ earsplugin.Pluginer = (*plugin)(nil)
+var _ sender.NewSenderer = (*plugin)(nil)
 var _ sender.Sender = (*plugin)(nil)
+var _ receiver.NewReceiverer = (*plugin)(nil)
 var _ receiver.Receiver = (*plugin)(nil)
+var _ filter.NewFilterer = (*plugin)(nil)
+var _ filter.Filterer = (*plugin)(nil)
 
 type plugin struct {
 	pubsub *gochannel.GoChannel
@@ -53,6 +60,10 @@ const (
 
 func (p *plugin) NewPluginer(config string) (earsplugin.Pluginer, error) {
 	return p.new(config)
+}
+
+func (p *plugin) PluginerHash(config string) (string, error) {
+	return hasher.Hash(config), nil
 }
 
 func (p *plugin) Name() string {
@@ -80,8 +91,26 @@ func (p *plugin) NewReceiver(config string) (receiver.Receiver, error) {
 	return p, nil
 }
 
+func (p *plugin) ReceiverHash(config string) (string, error) {
+	return hasher.Hash(config), nil
+}
+
 func (p *plugin) Receive(ctx context.Context, next receiver.NextFn) error {
 	return nil
+}
+
+// Filterer ============================================================
+
+func (p *plugin) NewFilterer(config string) (filter.Filterer, error) {
+	return p, nil
+}
+
+func (p *plugin) FiltererHash(config string) (string, error) {
+	return hasher.Hash(config), nil
+}
+
+func (p *plugin) Filter(ctx context.Context, e event.Event) ([]event.Event, error) {
+	return nil, nil
 }
 
 // Sender ============================================================
@@ -97,6 +126,10 @@ func (p *plugin) NewSender(config string) (sender.Sender, error) {
 	return p, nil
 }
 
+func (p *plugin) SenderHash(config string) (string, error) {
+	return hasher.Hash(config), nil
+}
+
 func (p *plugin) Send(ctx context.Context, event event.Event) error {
 	return nil
 }
@@ -110,7 +143,7 @@ func (p *plugin) new(config string) (earsplugin.Pluginer, error) {
 	if config != "" {
 		err := yaml.Unmarshal([]byte(config), &cfg)
 		if err != nil {
-			return nil, &earsplugin.InvalidArgumentError{Err: err}
+			return nil, &earsplugin.InvalidConfigError{Err: err}
 		}
 	}
 

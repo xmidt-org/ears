@@ -16,10 +16,20 @@ package plugin
 
 // === Plugin =========================================================
 
-//go:generate moq -out testing_mock.go . NewPluginerer Pluginer
+//go:generate rm testing_mock.go
+//go:generate moq -out testing_mock.go . Hasher NewPluginerer Pluginer
+
+// Hasher defines the hashing interface that a pluginer
+// needs to implement
+type Hasher interface {
+	// PluginerHash calculates the hash of a receiver based on the
+	// given configuration
+	PluginerHash(config string) (string, error)
+}
 
 // NewPluginerer is something that is able to return a new Pluginer
 type NewPluginerer interface {
+	Hasher
 	NewPluginer(config string) (Pluginer, error)
 }
 
@@ -51,9 +61,9 @@ type Error struct {
 	Code ErrorCode
 }
 
-// InvalidArgumentError is returned when a configuration parameter
+// InvalidConfigError is returned when a configuration parameter
 // results in a plugin error
-type InvalidArgumentError struct {
+type InvalidConfigError struct {
 	Err error
 }
 

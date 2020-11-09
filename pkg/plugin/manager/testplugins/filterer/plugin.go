@@ -16,10 +16,13 @@ package main
 
 import (
 	"context"
+	"crypto/md5"
+	"encoding/hex"
 	"fmt"
 
 	"github.com/ghodss/yaml"
 	"github.com/xmidt-org/ears/pkg/filter"
+	"github.com/xmidt-org/ears/pkg/hasher"
 	earsplugin "github.com/xmidt-org/ears/pkg/plugin"
 
 	"github.com/xmidt-org/ears/pkg/event"
@@ -27,7 +30,9 @@ import (
 
 var Plugin = plugin{}
 
+var _ earsplugin.NewPluginerer = (*plugin)(nil)
 var _ earsplugin.Pluginer = (*plugin)(nil)
+var _ filter.NewFilterer = (*plugin)(nil)
 var _ filter.Filterer = (*plugin)(nil)
 
 // == Custom Error Codes =============================================
@@ -63,6 +68,11 @@ func (p *plugin) NewPluginer(config string) (earsplugin.Pluginer, error) {
 	return p.new(config)
 }
 
+func (p *plugin) PluginerHash(config string) (string, error) {
+	hash := md5.Sum([]byte(config))
+	return hex.EncodeToString(hash[:]), nil
+}
+
 func (p *plugin) Name() string {
 	return p.config.Name
 }
@@ -87,6 +97,10 @@ func (p *plugin) NewFilterer(config string) (filter.Filterer, error) {
 	return p, nil
 }
 
+func (p *plugin) FiltererHash(config string) (string, error) {
+	return hasher.Hash(config), nil
+}
+
 func (p *plugin) Filter(ctx context.Context, e event.Event) ([]event.Event, error) {
 	return nil, nil
 }
@@ -103,7 +117,7 @@ func (p *plugin) new(config string) (earsplugin.Pluginer, error) {
 	if config != "" {
 		err := yaml.Unmarshal([]byte(config), &cfg)
 		if err != nil {
-			return nil, &earsplugin.InvalidArgumentError{Err: err}
+			return nil, &earsplugin.InvalidConfigError{Err: err}
 		}
 	}
 

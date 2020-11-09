@@ -8,6 +8,71 @@ import (
 	"sync"
 )
 
+// Ensure, that HasherMock does implement Hasher.
+// If this is not the case, regenerate this file with moq.
+var _ Hasher = &HasherMock{}
+
+// HasherMock is a mock implementation of Hasher.
+//
+//     func TestSomethingThatUsesHasher(t *testing.T) {
+//
+//         // make and configure a mocked Hasher
+//         mockedHasher := &HasherMock{
+//             ReceiverHashFunc: func(config string) (string, error) {
+// 	               panic("mock out the ReceiverHash method")
+//             },
+//         }
+//
+//         // use mockedHasher in code that requires Hasher
+//         // and then make assertions.
+//
+//     }
+type HasherMock struct {
+	// ReceiverHashFunc mocks the ReceiverHash method.
+	ReceiverHashFunc func(config string) (string, error)
+
+	// calls tracks calls to the methods.
+	calls struct {
+		// ReceiverHash holds details about calls to the ReceiverHash method.
+		ReceiverHash []struct {
+			// Config is the config argument value.
+			Config string
+		}
+	}
+	lockReceiverHash sync.RWMutex
+}
+
+// ReceiverHash calls ReceiverHashFunc.
+func (mock *HasherMock) ReceiverHash(config string) (string, error) {
+	if mock.ReceiverHashFunc == nil {
+		panic("HasherMock.ReceiverHashFunc: method is nil but Hasher.ReceiverHash was just called")
+	}
+	callInfo := struct {
+		Config string
+	}{
+		Config: config,
+	}
+	mock.lockReceiverHash.Lock()
+	mock.calls.ReceiverHash = append(mock.calls.ReceiverHash, callInfo)
+	mock.lockReceiverHash.Unlock()
+	return mock.ReceiverHashFunc(config)
+}
+
+// ReceiverHashCalls gets all the calls that were made to ReceiverHash.
+// Check the length with:
+//     len(mockedHasher.ReceiverHashCalls())
+func (mock *HasherMock) ReceiverHashCalls() []struct {
+	Config string
+} {
+	var calls []struct {
+		Config string
+	}
+	mock.lockReceiverHash.RLock()
+	calls = mock.calls.ReceiverHash
+	mock.lockReceiverHash.RUnlock()
+	return calls
+}
+
 // Ensure, that NewReceivererMock does implement NewReceiverer.
 // If this is not the case, regenerate this file with moq.
 var _ NewReceiverer = &NewReceivererMock{}
@@ -21,6 +86,9 @@ var _ NewReceiverer = &NewReceivererMock{}
 //             NewReceiverFunc: func(config string) (Receiver, error) {
 // 	               panic("mock out the NewReceiver method")
 //             },
+//             ReceiverHashFunc: func(config string) (string, error) {
+// 	               panic("mock out the ReceiverHash method")
+//             },
 //         }
 //
 //         // use mockedNewReceiverer in code that requires NewReceiverer
@@ -31,6 +99,9 @@ type NewReceivererMock struct {
 	// NewReceiverFunc mocks the NewReceiver method.
 	NewReceiverFunc func(config string) (Receiver, error)
 
+	// ReceiverHashFunc mocks the ReceiverHash method.
+	ReceiverHashFunc func(config string) (string, error)
+
 	// calls tracks calls to the methods.
 	calls struct {
 		// NewReceiver holds details about calls to the NewReceiver method.
@@ -38,8 +109,14 @@ type NewReceivererMock struct {
 			// Config is the config argument value.
 			Config string
 		}
+		// ReceiverHash holds details about calls to the ReceiverHash method.
+		ReceiverHash []struct {
+			// Config is the config argument value.
+			Config string
+		}
 	}
-	lockNewReceiver sync.RWMutex
+	lockNewReceiver  sync.RWMutex
+	lockReceiverHash sync.RWMutex
 }
 
 // NewReceiver calls NewReceiverFunc.
@@ -70,6 +147,37 @@ func (mock *NewReceivererMock) NewReceiverCalls() []struct {
 	mock.lockNewReceiver.RLock()
 	calls = mock.calls.NewReceiver
 	mock.lockNewReceiver.RUnlock()
+	return calls
+}
+
+// ReceiverHash calls ReceiverHashFunc.
+func (mock *NewReceivererMock) ReceiverHash(config string) (string, error) {
+	if mock.ReceiverHashFunc == nil {
+		panic("NewReceivererMock.ReceiverHashFunc: method is nil but NewReceiverer.ReceiverHash was just called")
+	}
+	callInfo := struct {
+		Config string
+	}{
+		Config: config,
+	}
+	mock.lockReceiverHash.Lock()
+	mock.calls.ReceiverHash = append(mock.calls.ReceiverHash, callInfo)
+	mock.lockReceiverHash.Unlock()
+	return mock.ReceiverHashFunc(config)
+}
+
+// ReceiverHashCalls gets all the calls that were made to ReceiverHash.
+// Check the length with:
+//     len(mockedNewReceiverer.ReceiverHashCalls())
+func (mock *NewReceivererMock) ReceiverHashCalls() []struct {
+	Config string
+} {
+	var calls []struct {
+		Config string
+	}
+	mock.lockReceiverHash.RLock()
+	calls = mock.calls.ReceiverHash
+	mock.lockReceiverHash.RUnlock()
 	return calls
 }
 

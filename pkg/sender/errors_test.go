@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package plugin_test
+package sender_test
 
 import (
 	"errors"
@@ -28,34 +28,12 @@ func TestErrorMessage(t *testing.T) {
 		name string
 		err  error
 	}{
-		{name: "Error_Default", err: &plugin.Error{}},
-
-		{
-			name: "Error_Err",
-			err:  &plugin.Error{Err: fmt.Errorf("wrapped error")},
-		},
-
-		{
-			name: "Error_Code",
-			err:  &plugin.Error{Code: 42},
-		},
-
-		{
-			name: "Error_All",
-			err: &plugin.Error{
-				Err:  fmt.Errorf("wrapped error"),
-				Code: 42,
-			},
-		},
-
 		{name: "InvalidConfigError", err: &plugin.InvalidConfigError{}},
 
 		{
-			name: "InvalidConfigError_Err",
+			name: "InvalidConfigError",
 			err:  &plugin.InvalidConfigError{Err: fmt.Errorf("wrapped error")},
 		},
-
-		{name: "NotSupportedError", err: &plugin.NotSupportedError{}},
 	}
 
 	for _, tc := range testCases {

@@ -76,7 +76,7 @@ func TestErrorMessage(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			g := goldie.New(t)
+			g := goldie.New(t, goldie.WithTestNameForDir(true))
 			g.Assert(t, tc.name, []byte(fmt.Sprint(tc.err)))
 			g.Assert(t, tc.name+"_unwrapped", []byte(fmt.Sprint(errors.Unwrap(tc.err))))
 

@@ -29,6 +29,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/sebdah/goldie/v2"
 	"github.com/xmidt-org/ears/pkg/filter"
 	"github.com/xmidt-org/ears/pkg/plugin"
 	"github.com/xmidt-org/ears/pkg/plugin/manager"
@@ -56,20 +57,22 @@ func TestMain(m *testing.M) {
 		logger = log.New(ioutil.Discard, "", log.LstdFlags)
 	}
 
+	shutdown := func(code int) {
+		err := testShutdown()
+		if err != nil {
+			logger.Println(err)
+			os.Exit(1 | code)
+		}
+		os.Exit(code)
+	}
+
 	err := testSetup()
 	if err != nil {
-		logger.Fatal(err)
-	}
-
-	code := m.Run()
-
-	err = testShutdown()
-	if err != nil {
 		logger.Println(err)
-		os.Exit(1 | code)
+		shutdown(1)
 	}
 
-	os.Exit(code)
+	shutdown(m.Run())
 }
 
 func TestNilPluginError(t *testing.T) {
@@ -315,9 +318,16 @@ func TestLoadPlugin(t *testing.T) {
 			if expectedErr == nil {
 				a.Expect(err).To(BeNil())
 				a.Expect(p).ToNot(BeNil())
+
+				g := goldie.New(t, goldie.WithTestNameForDir(true))
+				r := m.Plugin(path)
+				a.Expect(r).ToNot(BeNil())
+
+				g.AssertJson(t, strings.ReplaceAll(path, "/", "_"), r.Capabilities)
+
 			} else {
 				a.Expect(p).To(BeNil())
-				a.Expect(reflect.TypeOf(err)).To(Equal(reflect.TypeOf(expectedErr)))
+				a.Expect(errTypeToString(err)).To(Equal(errTypeToString(expectedErr)))
 			}
 
 		})
@@ -355,7 +365,7 @@ func TestLoadErrors(t *testing.T) {
 
 			_, err := m.LoadPlugin(tc.config)
 			a.Expect(err).ToNot(BeNil())
-			a.Expect(reflect.TypeOf(err)).To(Equal(reflect.TypeOf(tc.err)))
+			a.Expect(errTypeToString(err)).To(Equal(errTypeToString(tc.err)))
 		})
 	}
 
@@ -371,7 +381,7 @@ func TestNewReceiver(t *testing.T) {
 	{
 		p, err := m.NewReceiver("myreceiver", "")
 		a.Expect(p).To(BeNil())
-		a.Expect(reflect.TypeOf(err)).To(Equal(reflect.TypeOf(nfe)))
+		a.Expect(errTypeToString(err)).To(Equal(errTypeToString(nfe)))
 	}
 
 	{
@@ -394,7 +404,7 @@ func TestNewReceiver(t *testing.T) {
 	{
 		p, err := m.NewReceiver("myreceiver", "")
 		a.Expect(p).To(BeNil())
-		a.Expect(reflect.TypeOf(err)).To(Equal(reflect.TypeOf(nfe)))
+		a.Expect(errTypeToString(err)).To(Equal(errTypeToString(nfe)))
 	}
 
 }
@@ -408,7 +418,7 @@ func TestNewFilterer(t *testing.T) {
 	{
 		p, err := m.NewFilterer("myfilterer", "")
 		a.Expect(p).To(BeNil())
-		a.Expect(reflect.TypeOf(err)).To(Equal(reflect.TypeOf(nfe)))
+		a.Expect(errTypeToString(err)).To(Equal(errTypeToString(nfe)))
 	}
 
 	{
@@ -431,7 +441,7 @@ func TestNewFilterer(t *testing.T) {
 	{
 		p, err := m.NewFilterer("myfilterer", "")
 		a.Expect(p).To(BeNil())
-		a.Expect(reflect.TypeOf(err)).To(Equal(reflect.TypeOf(nfe)))
+		a.Expect(errTypeToString(err)).To(Equal(errTypeToString(nfe)))
 	}
 
 }
@@ -445,7 +455,7 @@ func TestNewSenderer(t *testing.T) {
 	{
 		p, err := m.NewSender("mysenderer", "")
 		a.Expect(p).To(BeNil())
-		a.Expect(reflect.TypeOf(err)).To(Equal(reflect.TypeOf(nfe)))
+		a.Expect(errTypeToString(err)).To(Equal(errTypeToString(nfe)))
 	}
 
 	{
@@ -468,7 +478,7 @@ func TestNewSenderer(t *testing.T) {
 	{
 		p, err := m.NewSender("mysenderer", "")
 		a.Expect(p).To(BeNil())
-		a.Expect(reflect.TypeOf(err)).To(Equal(reflect.TypeOf(nfe)))
+		a.Expect(errTypeToString(err)).To(Equal(errTypeToString(nfe)))
 	}
 
 }
@@ -495,6 +505,14 @@ func testShutdown() error {
 }
 
 // == Helper Functions ===============================================
+
+func errTypeToString(err error) string {
+	if err == nil {
+		return "<nil>"
+	}
+
+	return reflect.TypeOf(err).String()
+}
 
 // verboseEnabled allows us to see if the flag is set.  Unfortunately
 // this is only available on *testing.T.Verbose() and not on *testing.M

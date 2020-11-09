@@ -23,15 +23,33 @@ import (
 	"github.com/xmidt-org/ears/pkg/event"
 )
 
-//go:generate moq -out testing_mock.go . NewFilterer Filterer
+//go:generate rm testing_mock.go
+//go:generate moq -out testing_mock.go . Hasher NewFilterer Filterer
 
+// InvalidConfigError is returned when a configuration parameter
+// results in a plugin error
+type InvalidConfigError struct {
+	Err error
+}
+
+// Hasher defines the hashing interface that a receiver
+// needs to implement
+type Hasher interface {
+	// FiltererHash calculates the hash of a filterer based on the
+	// given configuration
+	FiltererHash(config string) (string, error)
+}
+
+// NewFilterer defines the interface on how to
+// to create a new filterer
 type NewFilterer interface {
+	Hasher
+
+	// NewFilterer returns an object that implements the Filterer interface
 	NewFilterer(config string) (Filterer, error)
 }
 
-// or Outputter[√] or Producer[x] or Publisher[√]
+// Filterer defines the interface that a filterer must implement
 type Filterer interface {
-	// Hash() string // FilterHash ?
-
 	Filter(ctx context.Context, e event.Event) ([]event.Event, error)
 }
