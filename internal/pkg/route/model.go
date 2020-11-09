@@ -144,12 +144,6 @@ type (
 		Match(ctx context.Context, event *Event, pattern interface{}) bool // if pattern is contained in event the function returns true
 	}
 
-	// An AckTree is a splittable acknowledge tree object
-	AckTree interface {
-		Ack()
-		SubTree(int) []AckTree
-	}
-
 	// A RouteModifier allows modifications to a routing table
 	RouteModifier interface {
 		AddRoute(ctx context.Context, entry *Route) error             // idempotent operation to add a routing entry to a local routing table

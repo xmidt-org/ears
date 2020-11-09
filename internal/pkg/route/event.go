@@ -21,6 +21,8 @@ import (
 	"context"
 	"crypto/rand"
 	"fmt"
+
+	"github.com/xmidt-org/ears/internal/pkg/ack"
 )
 
 type (
@@ -30,7 +32,7 @@ type (
 		Payload  interface{} `json:"payload,omitempty"`  // event payload (could also be string, but preparsed i sprobably more efficient if we want to allow deep inspection)
 		Encoding string      `json:"encoding,omitempty"` // optional encoding hint to be set by input plugin
 		Metadata interface{} `json:"metadata,omitempty"` // optional metadata produced by filter chain
-		ackTree  AckTree     `json:"ackTree,omitempty"`  // optional ack chain (or ack tree)
+		ackTree  ack.Tree    `json:"ackTree,omitempty"`  // optional ack chain (or ack tree)
 		source   Pluginer    `json:"source,omitempty"`   // pointer to source plugin instance
 		TxId     string      `json:"txid,omitempty"`     // transaction ID (probably also available from context)
 		Ts       int         `json: "ts,omitempty"`      // timestamp when event was received
