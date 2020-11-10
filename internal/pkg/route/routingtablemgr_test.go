@@ -88,7 +88,7 @@ func simulateSingleRoute(t *testing.T, rstr string, expectedSourceCount, expecte
 	}
 	// give plugins some time to do their thing
 	time.Sleep(time.Duration(1000) * time.Millisecond)
-	// check if expected number of events hhave made it thhroughh input and output plugins
+	// check if expected number of events have made it through input and output plugins
 	if allRoutes[0].Source.GetEventCount() != expectedSourceCount {
 		t.Errorf("unexpected number of produced events %d", allRoutes[0].Source.GetEventCount())
 	}
@@ -107,7 +107,80 @@ func simulateSingleRoute(t *testing.T, rstr string, expectedSourceCount, expecte
 }
 
 func TestMultiRoutes(t *testing.T) {
-
+	ctx := context.Background()
+	ctx = log.Logger.WithContext(ctx)
+	// init in memory routing table manager
+	rtmgr := route.NewInMemoryRoutingTableManager()
+	if rtmgr.GetRouteCount(ctx) != 0 {
+		t.Errorf("routing table not empty")
+		return
+	}
+	// add a routes
+	routes := []string{getTestRouteByName(t, "simple_route_a"), getTestRouteByName(t, "simple_route_b")}
+	for _, rstr := range routes {
+		var rc *route.RouteConfig
+		rc = new(route.RouteConfig)
+		rc.Source = new(route.Plugin)
+		rc.Destination = new(route.Plugin)
+		err := json.Unmarshal([]byte(rstr), rc)
+		if err != nil {
+			t.Errorf(err.Error())
+			return
+		}
+		route := route.NewRouteFromRouteConfig(rc)
+		err = rtmgr.AddRoute(ctx, route)
+		if err != nil {
+			t.Errorf(err.Error())
+			return
+		}
+	}
+	// validate
+	err := rtmgr.Validate(ctx)
+	if err != nil {
+		t.Errorf(err.Error())
+		return
+	}
+	hash := rtmgr.Hash(ctx)
+	if hash == "" {
+		t.Errorf("empty table hash")
+	}
+	// check routes
+	if rtmgr.GetRouteCount(ctx) != 2 {
+		t.Errorf("routing table doesn't have expected number of entries %d", rtmgr.GetRouteCount(ctx))
+	}
+	allRoutes, err := rtmgr.GetAllRoutes(ctx)
+	if err != nil {
+		t.Errorf(err.Error())
+		return
+	}
+	if len(allRoutes) != 2 {
+		t.Errorf("unexpected number of routes %d", len(allRoutes))
+		return
+	}
+	// give plugins some time to do their thing
+	time.Sleep(time.Duration(1000) * time.Millisecond)
+	// check if expected number of events have made it through input and output plugins
+	if allRoutes[0].Source.GetEventCount() != 2 {
+		t.Errorf("unexpected number of produced events %d", allRoutes[0].Source.GetEventCount())
+	}
+	if allRoutes[0].Destination.GetEventCount() != 2 {
+		t.Errorf("unexpected number of consumed events %d", allRoutes[0].Destination.GetEventCount())
+	}
+	if allRoutes[1].Source.GetEventCount() != 2 {
+		t.Errorf("unexpected number of produced events %d", allRoutes[1].Source.GetEventCount())
+	}
+	if allRoutes[1].Destination.GetEventCount() != 2 {
+		t.Errorf("unexpected number of consumed events %d", allRoutes[1].Destination.GetEventCount())
+	}
+	// cleanup routes
+	err = rtmgr.ReplaceAllRoutes(ctx, nil)
+	if err != nil {
+		t.Errorf(err.Error())
+		return
+	}
+	if rtmgr.GetRouteCount(ctx) != 0 {
+		t.Errorf("routing table not empty")
+	}
 }
 
 /*func TestSplitRoute(t *testing.T) {
@@ -318,8 +391,8 @@ func TestErrors(t *testing.T) {
 		return
 	}
 	hash := rtmgr.Hash(ctx)
-	if hash != "" {
-		t.Errorf("table hash not empty")
+	if hash == "" {
+		t.Errorf("table hash empty")
 	}
 }
 

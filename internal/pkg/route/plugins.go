@@ -22,6 +22,7 @@ import (
 	"crypto/md5"
 	"encoding/json"
 	"fmt"
+	"strconv"
 	"sync"
 	"time"
 
@@ -83,6 +84,7 @@ func (plgn *Plugin) Hash(ctx context.Context) string {
 	//fmt.Printf("PLGN NAME: %s %s %s\n", plgn.Type, plgn.Mode, plgn.Name)
 	str += "Debug"
 	str += plgn.Name
+	//fmt.Printf("NAME: %s\n", plgn.Name)
 	// optionally distinguish by org and app here as well
 	hash := fmt.Sprintf("%x", md5.Sum([]byte(str)))
 	return hash
@@ -225,7 +227,7 @@ func (dip *DebugInputPlugin) DoSync(ctx context.Context, event *Event) error {
 //
 
 func (dop *DebugOutputPlugin) DoSync(ctx context.Context, event *Event) error {
-	log.Ctx(ctx).Debug().Msg(dop.Mode + " " + dop.Type + " plugin " + dop.Hash(ctx) + " passed")
+	log.Ctx(ctx).Debug().Msg(dop.Mode + " " + dop.Type + " plugin " + dop.Hash(ctx) + " consumed event " + strconv.Itoa(dop.GetEventCount()))
 	dop.IncEventCount(1)
 	return nil
 }
@@ -238,7 +240,7 @@ func (dop *DebugOutputPlugin) DoAsync(ctx context.Context) {
 		for {
 			select {
 			case <-dop.GetInputChannel():
-				log.Ctx(ctx).Debug().Msg(dop.Mode + " " + dop.Type + " plugin " + dop.Hash(ctx) + " passed")
+				log.Ctx(ctx).Debug().Msg(dop.Mode + " " + dop.Type + " plugin " + dop.Hash(ctx) + " consumed event " + strconv.Itoa(dop.GetEventCount()))
 				dop.IncEventCount(1)
 			case <-dop.done:
 				log.Ctx(ctx).Debug().Msg(dop.Mode + " " + dop.Type + " plugin " + dop.Hash(ctx) + " done")
@@ -265,6 +267,7 @@ func NewInputPlugin(ctx context.Context, rte *Route) (Pluginer, error) {
 		dip.Mode = PluginModeInput
 		dip.State = PluginStateReady
 		//dip.Name = "Debug"
+		dip.Name = rte.Source.GetConfig().Name
 		dip.Params = pc.Params
 		dip.routes = []*Route{rte}
 		dip.SetOutputChannel(make(chan *Event))
@@ -301,6 +304,7 @@ func NewOutputPlugin(ctx context.Context, rte *Route) (Pluginer, error) {
 		dop.Mode = PluginModeOutput
 		dop.State = PluginStateReady
 		//dop.Name = "Debug"
+		dop.Name = rte.Destination.GetConfig().Name
 		dop.Params = pc.Params
 		dop.routes = []*Route{rte}
 		dop.done = make(chan bool)
