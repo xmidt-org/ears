@@ -81,10 +81,8 @@ func (plgn *Plugin) Hash(ctx context.Context) string {
 	// distinguish input and output plugins
 	str += plgn.Mode
 	// distinguish instances by name
-	//fmt.Printf("PLGN NAME: %s %s %s\n", plgn.Type, plgn.Mode, plgn.Name)
 	str += "Debug"
 	str += plgn.Name
-	//fmt.Printf("NAME: %s\n", plgn.Name)
 	// optionally distinguish by org and app here as well
 	hash := fmt.Sprintf("%x", md5.Sum([]byte(str)))
 	return hash
@@ -276,7 +274,8 @@ func NewInputPlugin(ctx context.Context, rte *Route) (Pluginer, error) {
 		dip.Name = rte.Source.GetConfig().Name
 		dip.Params = pc.Params
 		dip.routes = []*Route{rte}
-		dip.SetOutputChannel(make(chan *Event))
+		// each filter has its own channel
+		//dip.SetOutputChannel(make(chan *Event))
 		dip.done = make(chan bool)
 		// parse configs and overwrite defaults
 		if dip.Params != nil {
@@ -314,9 +313,8 @@ func NewOutputPlugin(ctx context.Context, rte *Route) (Pluginer, error) {
 		dop.Params = pc.Params
 		dop.routes = []*Route{rte}
 		dop.done = make(chan bool)
-		if rte.FilterChain != nil && len(rte.FilterChain.Filters) > 0 {
-			dop.SetInputChannel(rte.FilterChain.Filters[len(rte.FilterChain.Filters)-1].GetOutputChannel())
-		}
+		// the input chhannel of an output plugin may be shared by multiple routes
+		dop.SetInputChannel(make(chan *Event))
 		dop.DoAsync(ctx)
 		return dop, nil
 	}

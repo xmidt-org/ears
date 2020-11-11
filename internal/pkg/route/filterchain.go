@@ -53,12 +53,17 @@ func (fc *FilterChain) Initialize(ctx context.Context, rte *Route) error {
 			fp.done = make(chan bool)
 			fp.lock.Unlock()
 			if idx == 0 {
-				// each filter chain gets its own set of chhannels
+				// each filter chain gets its own set of channels
 				fp.SetInputChannel(make(chan *Event))
 			} else {
 				fp.SetInputChannel(eventChannel)
 			}
-			fp.SetOutputChannel(make(chan *Event))
+			if idx == len(fc.Filters)-1 {
+				// last channel in the filter chain is the (shared) input channel of the output plugin
+				fp.SetOutputChannel(rte.Destination.GetInputChannel())
+			} else {
+				fp.SetOutputChannel(make(chan *Event))
+			}
 			eventChannel = fp.GetOutputChannel()
 			fp.DoAsync(ctx)
 		}

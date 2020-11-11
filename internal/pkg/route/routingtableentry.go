@@ -107,19 +107,19 @@ func (rte *Route) Initialize(ctx context.Context) error {
 		return err
 	}
 	//
+	// initialize destination plugin
+	//
+	rte.Destination, err = GetIOPluginManager(ctx).RegisterPlugin(ctx, rte, rte.Destination)
+	if err != nil {
+		return err
+	}
+	//
 	// initialize filter chain
 	//
 	if rte.FilterChain == nil {
 		rte.FilterChain = NewFilterChain(ctx)
 	}
 	err = rte.FilterChain.Initialize(ctx, rte)
-	if err != nil {
-		return err
-	}
-	//
-	// initialize destination plugin
-	//
-	rte.Destination, err = GetIOPluginManager(ctx).RegisterPlugin(ctx, rte, rte.Destination)
 	if err != nil {
 		return err
 	}
