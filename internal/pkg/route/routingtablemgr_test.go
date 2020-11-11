@@ -16,13 +16,18 @@ import (
 
 //TODO: test all errors
 //TODO: test hashing and validations
-//TODO: test multiple routes
 
 type (
-	TestTableEntry struct {
+	TestTableSingleEntry struct {
 		Name                          string
 		ExpectedSourceEventCount      int
 		ExpectedDestinationEventCount int
+	}
+	TestTableMultiEntry struct {
+		Name                    string
+		Routes                  []string
+		InputPluginEventCounts  map[string]int
+		OutputPluginEventCounts map[string]int
 	}
 )
 
@@ -42,7 +47,7 @@ func TestSingleRouteTestTable(t *testing.T) {
 		t.Fatalf(err.Error())
 		return
 	}
-	testTable := make([]*TestTableEntry, 0)
+	testTable := make([]*TestTableSingleEntry, 0)
 	err = json.Unmarshal(buf, &testTable)
 	if err != nil {
 		t.Fatalf(err.Error())
@@ -50,6 +55,24 @@ func TestSingleRouteTestTable(t *testing.T) {
 	}
 	for _, singleRouteTest := range testTable {
 		simulateSingleRoute(t, getTestRouteByName(t, singleRouteTest.Name), singleRouteTest.ExpectedSourceEventCount, singleRouteTest.ExpectedDestinationEventCount)
+	}
+}
+
+func TestMultiRouteTestTable(t *testing.T) {
+	path := filepath.Join("testdata", "test_table_multi_route.json")
+	buf, err := ioutil.ReadFile(path)
+	if err != nil {
+		t.Fatalf(err.Error())
+		return
+	}
+	testTable := make([]*TestTableMultiEntry, 0)
+	err = json.Unmarshal(buf, &testTable)
+	if err != nil {
+		t.Fatalf(err.Error())
+		return
+	}
+	for _, multiRouteTest := range testTable {
+		simulateMultiRoutes(t, multiRouteTest)
 	}
 }
 
@@ -94,6 +117,89 @@ func simulateSingleRoute(t *testing.T, rstr string, expectedSourceCount, expecte
 	}
 	if allRoutes[0].Destination.GetEventCount() != expectedDestinationCount {
 		t.Errorf("unexpected number of consumed events %d", allRoutes[0].Destination.GetEventCount())
+	}
+	// cleanup routes
+	err = rtmgr.ReplaceAllRoutes(ctx, nil)
+	if err != nil {
+		t.Errorf(err.Error())
+		return
+	}
+	if rtmgr.GetRouteCount(ctx) != 0 {
+		t.Errorf("routing table not empty")
+	}
+}
+
+func simulateMultiRoutes(t *testing.T, data *TestTableMultiEntry) {
+	ctx := context.Background()
+	ctx = log.Logger.WithContext(ctx)
+	// init in memory routing table manager
+	rtmgr := route.NewInMemoryRoutingTableManager()
+	if rtmgr.GetRouteCount(ctx) != 0 {
+		t.Errorf("routing table not empty")
+		return
+	}
+	// add a routes
+	for _, name := range data.Routes {
+		rstr := getTestRouteByName(t, name)
+		var rc *route.RouteConfig
+		rc = new(route.RouteConfig)
+		rc.Source = new(route.Plugin)
+		rc.Destination = new(route.Plugin)
+		err := json.Unmarshal([]byte(rstr), rc)
+		if err != nil {
+			t.Errorf(err.Error())
+			return
+		}
+		route := route.NewRouteFromRouteConfig(rc)
+		err = rtmgr.AddRoute(ctx, route)
+		if err != nil {
+			t.Errorf(err.Error())
+			return
+		}
+	}
+	// validate
+	err := rtmgr.Validate(ctx)
+	if err != nil {
+		t.Errorf(err.Error())
+		return
+	}
+	hash := rtmgr.Hash(ctx)
+	if hash == "" {
+		t.Errorf("empty table hash")
+	}
+	// check routes
+	if rtmgr.GetRouteCount(ctx) != len(data.Routes) {
+		t.Errorf("routing table doesn't have expected number of entries %d", rtmgr.GetRouteCount(ctx))
+	}
+	allRoutes, err := rtmgr.GetAllRoutes(ctx)
+	if err != nil {
+		t.Errorf(err.Error())
+		return
+	}
+	if len(allRoutes) != len(data.Routes) {
+		t.Errorf("unexpected number of routes %d", len(allRoutes))
+		return
+	}
+	// give plugins some time to do their thing
+	time.Sleep(time.Duration(1000) * time.Millisecond)
+	// check if expected number of events have made it through input and output plugins
+	for k, v := range data.InputPluginEventCounts {
+		for _, r := range allRoutes {
+			if r.Source.GetConfig().Name == k {
+				if r.Source.GetEventCount() != v {
+					t.Errorf("unexpected number of produced events %d for %s", r.Source.GetEventCount(), k)
+				}
+			}
+		}
+	}
+	for k, v := range data.OutputPluginEventCounts {
+		for _, r := range allRoutes {
+			if r.Destination.GetConfig().Name == k {
+				if r.Destination.GetEventCount() != v {
+					t.Errorf("unexpected number of produced events %d for %s", r.Destination.GetEventCount(), k)
+				}
+			}
+		}
 	}
 	// cleanup routes
 	err = rtmgr.ReplaceAllRoutes(ctx, nil)
