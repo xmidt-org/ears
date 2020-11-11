@@ -1,27 +1,27 @@
 [
     {
-        "name" : "split_route",
-        "expectedSourceEventCount" : 3,
-        "expectedDestinationEventCount" : 6
+        "Name" : "split_route",
+        "ExpectedSourceEventCount" : 3,
+        "ExpectedDestinationEventCount" : 6
     },
     {
-        "name" : "direct_route",
-        "expectedSourceEventCount" : 1,
-        "expectedDestinationEventCount" : 1
+        "Name" : "direct_route",
+        "ExpectedSourceEventCount" : 1,
+        "ExpectedDestinationEventCount" : 1
     },
     {
-        "name" : "filter_route",
-        "expectedSourceEventCount" : 3,
-        "expectedDestinationEventCount" : 0
+        "Name" : "filter_route",
+        "ExpectedSourceEventCount" : 3,
+        "ExpectedDestinationEventCount" : 0
     },
     {
-        "name" : "array_route",
-        "expectedSourceEventCount" : 3,
-        "expectedDestinationEventCount" : 0
+        "Name" : "array_route",
+        "ExpectedSourceEventCount" : 3,
+        "ExpectedDestinationEventCount" : 0
     },
     {
-        "name" : "wildcard_route",
-        "expectedSourceEventCount" : 3,
-        "expectedDestinationEventCount" : 0
+        "Name" : "wildcard_route",
+        "ExpectedSourceEventCount" : 3,
+        "ExpectedDestinationEventCount" : 0
     }
 ]
