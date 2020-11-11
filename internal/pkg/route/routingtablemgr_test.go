@@ -36,7 +36,7 @@ func getTestRouteByName(t *testing.T, name string) string {
 }
 
 func TestSingleRouteTestTable(t *testing.T) {
-	path := filepath.Join("testdata", "test_table.json")
+	path := filepath.Join("testdata", "test_table_single_route.json")
 	buf, err := ioutil.ReadFile(path)
 	if err != nil {
 		t.Fatalf(err.Error())
