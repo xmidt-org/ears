@@ -186,9 +186,8 @@ func simulateMultiRoutes(t *testing.T, data *TestTableMultiEntry) {
 	for k, v := range data.InputPluginEventCounts {
 		for _, r := range allRoutes {
 			if r.Source.GetConfig().Name == k {
-				fmt.Printf("CHECK %s %s\n", data.Name, k)
 				if r.Source.GetEventCount() != v {
-					t.Errorf("unexpected number of produced events %d for %s", r.Source.GetEventCount(), k)
+					t.Errorf("unexpected number of produced events %d for %s (expected %d)", r.Source.GetEventCount(), k, v)
 				}
 			}
 		}
@@ -196,9 +195,8 @@ func simulateMultiRoutes(t *testing.T, data *TestTableMultiEntry) {
 	for k, v := range data.OutputPluginEventCounts {
 		for _, r := range allRoutes {
 			if r.Destination.GetConfig().Name == k {
-				fmt.Printf("CHECK %s %s\n", data.Name, k)
 				if r.Destination.GetEventCount() != v {
-					t.Errorf("unexpected number of produced events %d for %s", r.Destination.GetEventCount(), k)
+					t.Errorf("unexpected number of consumed events %d for %s (expected %d)", r.Destination.GetEventCount(), k, v)
 				}
 			}
 		}
