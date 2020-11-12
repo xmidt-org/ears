@@ -5,6 +5,7 @@
     "source" : {
         "type" : "debug",
         "name" : "debug_in_a",
+        "mode" : "input",
         "params" :
         {
             "rounds" : 2,
@@ -16,6 +17,7 @@
     },
     "destination" : {
         "type" : "debug",
+        "mode" : "output",
         "name" : "debug_out_b",
         "params" : {}
     },

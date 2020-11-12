@@ -191,17 +191,21 @@ func (dip *DebugInputPlugin) DoAsync(ctx context.Context) {
 			subCtx := context.WithValue(ctx, "foo", "bar")
 			event := NewEvent(subCtx, dip, dip.Payload)
 			dip.lock.Lock()
+			GetIOPluginManager(ctx).lock.RLock()
 			// deliver event to each interested route (first filter in chain)
 			if dip.routes != nil {
 				for _, r := range dip.routes {
+					r.lock.RLock()
 					if r.FilterChain != nil && len(r.FilterChain.Filters) > 0 {
 						//TODO: clone event
 						r.FilterChain.Filters[0].GetInputChannel() <- event
-						log.Ctx(ctx).Debug().Msg("debug " + dip.Mode + " " + dip.Type + " plugin " + dip.GetConfig().Name + " " + dip.Hash(ctx) + " pushed event " + fmt.Sprintf("%d", dip.EventCount) + " into filter " + r.FilterChain.Filters[0].Hash(ctx))
+						//log.Ctx(ctx).Debug().Msg("debug " + dip.Mode + " " + dip.Type + " plugin " + dip.GetConfig().Name + " " + dip.Hash(ctx) + " pushed event " + fmt.Sprintf("%d", dip.EventCount) + " into filter " + r.FilterChain.Filters[0].Hash(ctx))
 					}
+					r.lock.RUnlock()
 				}
 			}
 			log.Ctx(ctx).Debug().Msg("debug " + dip.Mode + " " + dip.Type + " plugin " + dip.GetConfig().Name + " " + dip.Hash(ctx) + " produced event " + fmt.Sprintf("%d", dip.EventCount))
+			GetIOPluginManager(ctx).lock.RUnlock()
 			dip.lock.Unlock()
 			dip.IncEventCount(1)
 		}
@@ -214,6 +218,7 @@ func (dip *DebugInputPlugin) DoSync(ctx context.Context, event *Event) error {
 	}
 	log.Ctx(ctx).Debug().Msg("debug input plugin " + dip.GetConfig().Name + " " + dip.Hash(ctx) + " produced event " + fmt.Sprintf("%d", dip.EventCount))
 	// deliver event to each interested route (first filter in chain)
+	GetIOPluginManager(ctx).lock.RLock()
 	if dip.routes != nil {
 		for _, r := range dip.routes {
 			if r.FilterChain != nil && len(r.FilterChain.Filters) > 0 {
@@ -222,6 +227,7 @@ func (dip *DebugInputPlugin) DoSync(ctx context.Context, event *Event) error {
 			}
 		}
 	}
+	GetIOPluginManager(ctx).lock.RUnlock()
 	dip.IncEventCount(1)
 	return nil
 }

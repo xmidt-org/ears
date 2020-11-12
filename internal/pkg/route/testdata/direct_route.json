@@ -4,6 +4,7 @@
     "userId" : "boris",
     "source" : {
         "type" : "debug",
+        "mode" : "input",
         "params" :
         {
             "rounds" : 1,
@@ -15,6 +16,7 @@
     },
     "destination" : {
         "type" : "debug",
+        "mode" : "output",
         "params" : {}
     },
     "deliveryMode" : "at_least_once"

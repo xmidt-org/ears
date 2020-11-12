@@ -4,6 +4,7 @@
     "userId" : "boris",
     "source" : {
         "type" : "debug",
+        "mode" : "input",
         "params" :
         {
             "rounds" : 3,
@@ -13,6 +14,7 @@
     },
     "destination" : {
         "type" : "debug",
+        "mode" : "output",
         "params" : {}
     },
     "filterChain" : {

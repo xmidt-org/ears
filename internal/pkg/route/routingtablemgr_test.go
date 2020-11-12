@@ -395,7 +395,7 @@ func TestErrors(t *testing.T) {
 	} else {
 		fmt.Printf("error %s\n", err.Error())
 	}
-	routes := []string{getTestRouteByName(t, "empty_route")}
+	/*routes := []string{getTestRouteByName(t, "empty_route")}
 	var rc *route.RouteConfig
 	for _, rstr := range routes {
 		rc = new(route.RouteConfig)
@@ -412,7 +412,7 @@ func TestErrors(t *testing.T) {
 		if !ok {
 			t.Errorf("wrong error")
 		}
-	}
+	}*/
 	// validate
 	err = rtmgr.Validate(ctx)
 	if err != nil {

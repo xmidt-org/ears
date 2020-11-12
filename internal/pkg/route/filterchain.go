@@ -19,6 +19,15 @@ package route
 
 import (
 	"context"
+	"sync"
+)
+
+type (
+	// A FilterChain is a slice of filter plugins
+	FilterChain struct {
+		Filters []*FilterPlugin `json:"filters"` // optional list of filter plugins that will be applied in order to perform arbitrary filtering and transformation functions
+		lock    sync.RWMutex
+	}
 )
 
 func NewFilterChain(ctx context.Context) *FilterChain {
@@ -31,6 +40,8 @@ func NewFilterChain(ctx context.Context) *FilterChain {
 func (fc *FilterChain) Initialize(ctx context.Context, rte *Route) error {
 	var err error
 	var eventChannel chan *Event
+	rte.lock.Lock()
+	defer rte.lock.Unlock()
 	if fc.Filters == nil {
 		fc.Filters = make([]*FilterPlugin, 0)
 	}
