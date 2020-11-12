@@ -21,6 +21,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"sync"
 
 	"github.com/rs/zerolog/log"
 )
@@ -28,6 +29,7 @@ import (
 type (
 	DefaultIOPluginManager struct {
 		pluginMap map[string]Pluginer
+		lock      sync.RWMutex
 	}
 )
 
@@ -54,6 +56,8 @@ func (pm *DefaultIOPluginManager) String() string {
 }
 
 func (pm *DefaultIOPluginManager) RegisterPlugin(ctx context.Context, rte *Route, plugin Pluginer) (Pluginer, error) {
+	pm.lock.Lock()
+	defer pm.lock.Unlock()
 	var err error
 	hash := plugin.Hash(ctx)
 	if hash == "" {
@@ -78,11 +82,13 @@ func (pm *DefaultIOPluginManager) RegisterPlugin(ctx context.Context, rte *Route
 		return plugin, err
 	}
 	pm.pluginMap[hash] = p
-	log.Ctx(ctx).Debug().Msg(fmt.Sprintf("registering new %s %s plugin %s with hash %s route count %d %d", p.GetConfig().Type, p.GetConfig().Mode, p.GetConfig().Name, hash, p.GetRouteCount(), len(p.GetConfig().routes)))
+	log.Ctx(ctx).Debug().Msg(fmt.Sprintf("registering new %s %s plugin %s with hash %s", p.GetConfig().Type, p.GetConfig().Mode, p.GetConfig().Name, hash))
 	return p, nil
 }
 
 func (pm *DefaultIOPluginManager) WithdrawPlugin(ctx context.Context, rte *Route, plugin Pluginer) error {
+	pm.lock.Lock()
+	defer pm.lock.Unlock()
 	hash := plugin.Hash(ctx)
 	if hash == "" {
 		return new(EmptyPluginHashError)

@@ -73,11 +73,6 @@ const (
 )
 
 type (
-	// A FilterChain is a slice of filter plugins
-	FilterChain struct {
-		Filters []*FilterPlugin `json:"filters"` // optional list of filter plugins that will be applied in order to perform arbitrary filtering and transformation functions
-	}
-
 	// A RoutingTable is a slice of routing entries and reprrsents the EARS routing table
 	RoutingTable []*Route
 
