@@ -56,12 +56,46 @@ func (e *NewPluginerNotImplementedError) Error() string {
 	return "NewPluginerNotImplementedError"
 }
 
+func (e *NewSendererNotImplementedError) Unwrap() error {
+	return nil
+}
+
+func (e *NewSendererNotImplementedError) Error() string {
+	return "NewSendererNotImplementedError"
+}
+
+//
+
+func (e *NewReceivererNotImplementedError) Unwrap() error {
+	return nil
+}
+
+func (e *NewReceivererNotImplementedError) Error() string {
+	return "NewReceivererNotImplementedError"
+}
+
+func (e *NewFiltererNotImplementedError) Unwrap() error {
+	return nil
+}
+
+func (e *NewFiltererNotImplementedError) Error() string {
+	return "NewFiltererNotImplementedError"
+}
+
 func (e *AlreadyRegisteredError) Unwrap() error {
 	return nil
 }
 
 func (e *AlreadyRegisteredError) Error() string {
 	return "AlreadyRegisteredError"
+}
+
+func (e *NotRegisteredError) Unwrap() error {
+	return nil
+}
+
+func (e *NotRegisteredError) Error() string {
+	return "NotRegisteredError"
 }
 
 func (e *NotFoundError) Unwrap() error {

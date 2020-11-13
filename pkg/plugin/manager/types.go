@@ -52,13 +52,18 @@ type Manager interface {
 	Plugin(name string) Registration
 
 	Receiverers() map[string]receiver.NewReceiverer
-	NewReceiver(name string, config string) (receiver.Receiver, error)
+	Receiverer(pluginName string) (receiver.NewReceiverer, error)
 
 	Filterers() map[string]filter.NewFilterer
-	NewFilterer(name string, config string) (filter.Filterer, error)
+	Filterer(pluginName string) (filter.NewFilterer, error)
 
 	Senderers() map[string]sender.NewSenderer
-	NewSender(name string, config string) (sender.Sender, error)
+	Senderer(pluginName string) (sender.NewSenderer, error)
+
+	// To Deprecate
+	NewReceiver(pluginName string, config string) (receiver.Receiver, error)
+	NewFilterer(pluginName string, config string) (filter.Filterer, error)
+	NewSender(pluginName string, config string) (sender.Sender, error)
 }
 
 // === Errors =========================================================
@@ -85,6 +90,10 @@ type VariableLookupError struct {
 // not properly implemented
 type NewPluginerNotImplementedError struct{}
 
+type NewSendererNotImplementedError struct{}
+type NewReceivererNotImplementedError struct{}
+type NewFiltererNotImplementedError struct{}
+
 type InvalidConfigError struct {
 	Err error
 }
@@ -94,3 +103,5 @@ type AlreadyRegisteredError struct{}
 type NotFoundError struct{}
 
 type NilPluginError struct{}
+
+type NotRegisteredError struct{}

@@ -98,7 +98,7 @@ func (m *manager) LoadPlugin(config Config) (plugin.Pluginer, error) {
 	return plug, m.RegisterPlugin(config.Name, plug)
 }
 
-func (m *manager) RegisterPlugin(name string, p plugin.Pluginer) error {
+func (m *manager) RegisterPlugin(pluginName string, p plugin.Pluginer) error {
 
 	if p == nil {
 		return &NilPluginError{}
@@ -111,12 +111,12 @@ func (m *manager) RegisterPlugin(name string, p plugin.Pluginer) error {
 	m.Lock()
 	defer m.Unlock()
 
-	if _, ok := m.registrations[name]; ok {
+	if _, ok := m.registrations[pluginName]; ok {
 		return &AlreadyRegisteredError{}
 	}
 
-	m.registrations[name] = Registration{
-		Config: Config{Name: name},
+	m.registrations[pluginName] = Registration{
+		Config: Config{Name: pluginName},
 		Plugin: p,
 		Capabilities: Capabilities{
 			Receiver: isReceiver,
@@ -128,11 +128,11 @@ func (m *manager) RegisterPlugin(name string, p plugin.Pluginer) error {
 	return nil
 }
 
-func (m *manager) UnregisterPlugin(name string) error {
+func (m *manager) UnregisterPlugin(pluginName string) error {
 	m.Lock()
 	defer m.Unlock()
 
-	delete(m.registrations, name)
+	delete(m.registrations, pluginName)
 	return nil
 }
 
@@ -150,8 +150,8 @@ func (m *manager) Plugins() map[string]Registration {
 	return r
 }
 
-func (m *manager) Plugin(name string) Registration {
-	r, _ := m.registrations[name]
+func (m *manager) Plugin(pluginName string) Registration {
+	r, _ := m.registrations[pluginName]
 	return r
 }
 
@@ -172,9 +172,20 @@ func (m *manager) Senderers() map[string]sender.NewSenderer {
 	return hash
 }
 
-func (m *manager) NewSender(name string, config string) (sender.Sender, error) {
+func (m *manager) Senderer(pluginName string) (sender.NewSenderer, error) {
+	p, ok := m.registrations[pluginName].Plugin.(sender.NewSenderer)
 
-	p, ok := m.registrations[name].Plugin.(sender.NewSenderer)
+	if !ok {
+		return nil, &NotFoundError{}
+	}
+
+	return p, nil
+
+}
+
+func (m *manager) NewSender(pluginName string, config string) (sender.Sender, error) {
+
+	p, ok := m.registrations[pluginName].Plugin.(sender.NewSenderer)
 
 	if !ok {
 		return nil, &NotFoundError{}
@@ -201,9 +212,21 @@ func (m *manager) Filterers() map[string]filter.NewFilterer {
 	return hash
 }
 
-func (m *manager) NewFilterer(name string, config string) (filter.Filterer, error) {
+func (m *manager) Filterer(pluginName string) (filter.NewFilterer, error) {
 
-	p, ok := m.registrations[name].Plugin.(filter.NewFilterer)
+	p, ok := m.registrations[pluginName].Plugin.(filter.NewFilterer)
+
+	if !ok {
+		return nil, &NotFoundError{}
+	}
+
+	return p, nil
+
+}
+
+func (m *manager) NewFilterer(pluginName string, config string) (filter.Filterer, error) {
+
+	p, ok := m.registrations[pluginName].Plugin.(filter.NewFilterer)
 
 	if !ok {
 		return nil, &NotFoundError{}
@@ -230,9 +253,20 @@ func (m *manager) Receiverers() map[string]receiver.NewReceiverer {
 	return hash
 }
 
-func (m *manager) NewReceiver(name string, config string) (receiver.Receiver, error) {
+func (m *manager) Receiverer(pluginName string) (receiver.NewReceiverer, error) {
+	p, ok := m.registrations[pluginName].Plugin.(receiver.NewReceiverer)
 
-	p, ok := m.registrations[name].Plugin.(receiver.NewReceiverer)
+	if !ok {
+		return nil, &NotFoundError{}
+	}
+
+	return p, nil
+
+}
+
+func (m *manager) NewReceiver(pluginName string, config string) (receiver.Receiver, error) {
+
+	p, ok := m.registrations[pluginName].Plugin.(receiver.NewReceiverer)
 
 	if !ok {
 		return nil, &NotFoundError{}
