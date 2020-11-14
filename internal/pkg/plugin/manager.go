@@ -33,27 +33,101 @@ type manager struct {
 	sendersCount   map[string]int
 }
 
+// === Receivers =====================================================
+
 func (m *manager) Receiverers() map[string]pkgreceiver.NewReceiverer {
 	return m.pm.Receiverers()
 }
 
 func (m *manager) RegisterReceiver(pluginName string, config string) (pkgreceiver.Receiver, error) {
-	return nil, &pkgmanager.NilPluginError{}
+
+	ns, err := m.pm.Receiverer(pluginName)
+	if err != nil {
+		return nil, err
+	}
+
+	hash, err := ns.ReceiverHash(config)
+	if err != nil {
+		return nil, fmt.Errorf("could not generate hash: %w", err)
+	}
+
+	w, ok := m.filters[hash]
+	if ok {
+		return w.receiver, nil
+	}
+
+	r, err := ns.NewReceiver(config)
+	if err != nil {
+		return nil, fmt.Errorf("could not create receiver: %w", err)
+	}
+
+	w = wrapper{
+		manager:     m,
+		wrapperType: typeWrapperSender,
+		receiver:    r,
+		hash:        hash,
+		active:      true,
+	}
+
+	m.receivers[hash] = w
+	m.receiversCount[hash]++
+
+	return r, nil
+
 }
-func (m *manager) UnregisterReceiver(pkgreceiver.Receiver) error {
-	return &pkgmanager.NilPluginError{}
+
+func (m *manager) UnregisterReceiver(r pkgreceiver.Receiver) error {
+	return m.unregister(m.receivers, m.receiversCount, r)
 }
+
+// === Filters =======================================================
 
 func (m *manager) Filterers() map[string]pkgfilter.NewFilterer {
 	return m.pm.Filterers()
 }
 
 func (m *manager) RegisterFilter(pluginName string, config string) (pkgfilter.Filterer, error) {
-	return nil, &pkgmanager.NilPluginError{}
+
+	ns, err := m.pm.Filterer(pluginName)
+	if err != nil {
+		return nil, err
+	}
+
+	hash, err := ns.FiltererHash(config)
+	if err != nil {
+		return nil, fmt.Errorf("could not generate hash: %w", err)
+	}
+
+	w, ok := m.filters[hash]
+	if ok {
+		return w.filterer, nil
+	}
+
+	f, err := ns.NewFilterer(config)
+	if err != nil {
+		return nil, fmt.Errorf("could not create filterer: %w", err)
+	}
+
+	w = wrapper{
+		manager:     m,
+		wrapperType: typeWrapperSender,
+		filterer:    f,
+		hash:        hash,
+		active:      true,
+	}
+
+	m.filters[hash] = w
+	m.filtersCount[hash]++
+
+	return f, nil
+
 }
-func (m *manager) UnregisterFilter(pkgfilter.Filterer) error {
-	return &pkgmanager.NilPluginError{}
+
+func (m *manager) UnregisterFilter(f pkgfilter.Filterer) error {
+	return m.unregister(m.filters, m.filtersCount, f)
 }
+
+// === Senders =======================================================
 
 func (m *manager) Senderers() map[string]pkgsender.NewSenderer {
 	return m.pm.Senderers()
@@ -99,7 +173,11 @@ func (m *manager) UnregisterSender(s pkgsender.Sender) error {
 	return m.unregister(m.senders, m.sendersCount, s)
 }
 
-func (m *manager) unregister(mapping map[string]wrapper, count map[string]int, i interface{}) error {
+// === Helper Functions ==============================================
+
+func (m *manager) unregister(
+	mapping map[string]wrapper, count map[string]int, i interface{},
+) error {
 	w, ok := i.(wrapper)
 	if !ok || !w.active {
 		return &pkgmanager.NotRegisteredError{}
