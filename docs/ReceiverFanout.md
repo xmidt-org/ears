@@ -1,4 +1,4 @@
- Receiver Fanout
+# Receiver Fanout
 
 #### The Goals (are there more?)
 1. Under <strong>normal</strong> operation, slower processing routes should not affect the speed of fast processing route
@@ -76,12 +76,12 @@ func (a *PerReceiver) next(ctx context.Context, event Event) error {
 
 #### Observation
 * Should be able to meet all of our goals
-* Goroutines per route: This will prevent abnormal route affecting normal route with in the same receiver. At some point, if the back-pressure is too much, it will affect all routes of the same receiver source. It will not affect routes with different receiver source. 
+* Goroutines per route: This will prevent abnormal route affecting normal route with in the same receiver to some extent. At some point, if the back-pressure is too much, it may still affect all routes of the same receiver source. It will not affect routes with different receiver source. 
 * Goroutines shared between routes in same receiver source: Abnormal route will saturate all goroutines and affect normal routes of the same reciever source. It will not affect routes with different receiver source.
 * Goroutines shared between routes in same tenant: Abnormal route will saturate all goroutines and affect all routes within the tenant
 
 ## Proposal 4
-What about channels and worker pools (worker counter)?
+What about channels and worker pools? (at receiver, route, or tenant level).
 
 The implementation below has a dedicated buffer channel and worker pool at receiver level:
 ```go
@@ -110,4 +110,4 @@ func (a *PerReceiver) worker() {
 * Should be able to meet all our goals
 * Trade-off between proposal 3 and 4 are:
     * pre-allocated goroutine vs on-demand goroutine
-    * buffer channel may absorb temporary down stream congestion without impacting receiver ingestion rate
+    * buffered channel may absorb temporary down stream congestion without impacting receiver ingestion rate
