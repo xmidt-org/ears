@@ -26,6 +26,7 @@ project design.
   * https://godoc.org/go.uber.org/fx
   * https://blog.huyage.dev/posts/simple-dependency-injection-in-go/
   * https://github.com/yagehu/sample-fx-app/blob/master/internal/loggerfx/module.go
+  * https://github.com/preslavmihaylov/fxappexample
 
 
 
