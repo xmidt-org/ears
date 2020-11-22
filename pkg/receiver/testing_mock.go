@@ -194,6 +194,9 @@ var _ Receiver = &ReceiverMock{}
 //             ReceiveFunc: func(ctx context.Context, next NextFn) error {
 // 	               panic("mock out the Receive method")
 //             },
+//             StopReceivingFunc: func(ctx context.Context) error {
+// 	               panic("mock out the StopReceiving method")
+//             },
 //         }
 //
 //         // use mockedReceiver in code that requires Receiver
@@ -204,6 +207,9 @@ type ReceiverMock struct {
 	// ReceiveFunc mocks the Receive method.
 	ReceiveFunc func(ctx context.Context, next NextFn) error
 
+	// StopReceivingFunc mocks the StopReceiving method.
+	StopReceivingFunc func(ctx context.Context) error
+
 	// calls tracks calls to the methods.
 	calls struct {
 		// Receive holds details about calls to the Receive method.
@@ -213,8 +219,14 @@ type ReceiverMock struct {
 			// Next is the next argument value.
 			Next NextFn
 		}
+		// StopReceiving holds details about calls to the StopReceiving method.
+		StopReceiving []struct {
+			// Ctx is the ctx argument value.
+			Ctx context.Context
+		}
 	}
-	lockReceive sync.RWMutex
+	lockReceive       sync.RWMutex
+	lockStopReceiving sync.RWMutex
 }
 
 // Receive calls ReceiveFunc.
@@ -249,5 +261,36 @@ func (mock *ReceiverMock) ReceiveCalls() []struct {
 	mock.lockReceive.RLock()
 	calls = mock.calls.Receive
 	mock.lockReceive.RUnlock()
+	return calls
+}
+
+// StopReceiving calls StopReceivingFunc.
+func (mock *ReceiverMock) StopReceiving(ctx context.Context) error {
+	if mock.StopReceivingFunc == nil {
+		panic("ReceiverMock.StopReceivingFunc: method is nil but Receiver.StopReceiving was just called")
+	}
+	callInfo := struct {
+		Ctx context.Context
+	}{
+		Ctx: ctx,
+	}
+	mock.lockStopReceiving.Lock()
+	mock.calls.StopReceiving = append(mock.calls.StopReceiving, callInfo)
+	mock.lockStopReceiving.Unlock()
+	return mock.StopReceivingFunc(ctx)
+}
+
+// StopReceivingCalls gets all the calls that were made to StopReceiving.
+// Check the length with:
+//     len(mockedReceiver.StopReceivingCalls())
+func (mock *ReceiverMock) StopReceivingCalls() []struct {
+	Ctx context.Context
+} {
+	var calls []struct {
+		Ctx context.Context
+	}
+	mock.lockStopReceiving.RLock()
+	calls = mock.calls.StopReceiving
+	mock.lockStopReceiving.RUnlock()
 	return calls
 }
