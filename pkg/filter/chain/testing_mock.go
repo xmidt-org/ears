@@ -20,11 +20,14 @@ var _ FiltererChain = &FiltererChainMock{}
 //
 //         // make and configure a mocked FiltererChain
 //         mockedFiltererChain := &FiltererChainMock{
-//             AddFunc: func(f filter.Filterer)  {
+//             AddFunc: func(f filter.Filterer) error {
 // 	               panic("mock out the Add method")
 //             },
-//             FilterFunc: func(ctx context.Context, e event.Event) ([]event.Event, []error) {
+//             FilterFunc: func(ctx context.Context, e event.Event) ([]event.Event, error) {
 // 	               panic("mock out the Filter method")
+//             },
+//             FilterersFunc: func() []filter.Filterer {
+// 	               panic("mock out the Filterers method")
 //             },
 //         }
 //
@@ -34,10 +37,13 @@ var _ FiltererChain = &FiltererChainMock{}
 //     }
 type FiltererChainMock struct {
 	// AddFunc mocks the Add method.
-	AddFunc func(f filter.Filterer)
+	AddFunc func(f filter.Filterer) error
 
 	// FilterFunc mocks the Filter method.
-	FilterFunc func(ctx context.Context, e event.Event) ([]event.Event, []error)
+	FilterFunc func(ctx context.Context, e event.Event) ([]event.Event, error)
+
+	// FilterersFunc mocks the Filterers method.
+	FilterersFunc func() []filter.Filterer
 
 	// calls tracks calls to the methods.
 	calls struct {
@@ -53,13 +59,17 @@ type FiltererChainMock struct {
 			// E is the e argument value.
 			E event.Event
 		}
+		// Filterers holds details about calls to the Filterers method.
+		Filterers []struct {
+		}
 	}
-	lockAdd    sync.RWMutex
-	lockFilter sync.RWMutex
+	lockAdd       sync.RWMutex
+	lockFilter    sync.RWMutex
+	lockFilterers sync.RWMutex
 }
 
 // Add calls AddFunc.
-func (mock *FiltererChainMock) Add(f filter.Filterer) {
+func (mock *FiltererChainMock) Add(f filter.Filterer) error {
 	if mock.AddFunc == nil {
 		panic("FiltererChainMock.AddFunc: method is nil but FiltererChain.Add was just called")
 	}
@@ -71,7 +81,7 @@ func (mock *FiltererChainMock) Add(f filter.Filterer) {
 	mock.lockAdd.Lock()
 	mock.calls.Add = append(mock.calls.Add, callInfo)
 	mock.lockAdd.Unlock()
-	mock.AddFunc(f)
+	return mock.AddFunc(f)
 }
 
 // AddCalls gets all the calls that were made to Add.
@@ -90,7 +100,7 @@ func (mock *FiltererChainMock) AddCalls() []struct {
 }
 
 // Filter calls FilterFunc.
-func (mock *FiltererChainMock) Filter(ctx context.Context, e event.Event) ([]event.Event, []error) {
+func (mock *FiltererChainMock) Filter(ctx context.Context, e event.Event) ([]event.Event, error) {
 	if mock.FilterFunc == nil {
 		panic("FiltererChainMock.FilterFunc: method is nil but FiltererChain.Filter was just called")
 	}
@@ -121,5 +131,31 @@ func (mock *FiltererChainMock) FilterCalls() []struct {
 	mock.lockFilter.RLock()
 	calls = mock.calls.Filter
 	mock.lockFilter.RUnlock()
+	return calls
+}
+
+// Filterers calls FilterersFunc.
+func (mock *FiltererChainMock) Filterers() []filter.Filterer {
+	if mock.FilterersFunc == nil {
+		panic("FiltererChainMock.FilterersFunc: method is nil but FiltererChain.Filterers was just called")
+	}
+	callInfo := struct {
+	}{}
+	mock.lockFilterers.Lock()
+	mock.calls.Filterers = append(mock.calls.Filterers, callInfo)
+	mock.lockFilterers.Unlock()
+	return mock.FilterersFunc()
+}
+
+// FilterersCalls gets all the calls that were made to Filterers.
+// Check the length with:
+//     len(mockedFiltererChain.FilterersCalls())
+func (mock *FiltererChainMock) FilterersCalls() []struct {
+} {
+	var calls []struct {
+	}
+	mock.lockFilterers.RLock()
+	calls = mock.calls.Filterers
+	mock.lockFilterers.RUnlock()
 	return calls
 }

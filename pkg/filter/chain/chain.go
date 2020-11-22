@@ -1,13 +1,29 @@
+// Copyright 2020 Comcast Cable Communications Management, LLC
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package chain
 
 import (
 	"context"
 	"fmt"
-	"sync"
 
 	"github.com/xmidt-org/ears/pkg/event"
 	"github.com/xmidt-org/ears/pkg/filter"
+	"golang.org/x/sync/errgroup"
 )
+
+var _ FiltererChain = (*Chain)(nil)
 
 func (c *Chain) Add(f filter.Filterer) error {
 	if f == nil {
@@ -27,64 +43,84 @@ func (c *Chain) Add(f filter.Filterer) error {
 	return nil
 }
 
-func (c *Chain) Filter(ctx context.Context, e event.Event) ([]event.Event, []error) {
+func (c *Chain) Filterers() []filter.Filterer {
+	c.Lock()
+	defer c.Unlock()
+	fs := []filter.Filterer{}
+	fs = append(fs, c.filterers...)
+	return fs
+}
+
+func (c *Chain) Filter(ctx context.Context, e event.Event) ([]event.Event, error) {
 
 	c.Lock()
 	defer c.Unlock()
 
-	var errs = []error{}
-	var events = []event.Event{e}
+	eventCh := make(chan event.Event)
 
-	for _, f := range c.filterers {
-		numEvents := len(events)
+	type work struct {
+		e event.Event
+		f filter.Filterer
+		i int // Index of current filterer
+	}
 
-		switch numEvents {
-		case 0:
-			return nil, nil
+	g, ctx := errgroup.WithContext(ctx)
+	wrk := make(chan work, len(c.filterers))
 
-		case 1:
-			events, errs = f.Filter(ctx, e)
-			if len(errs) > 0 {
-				return nil, errs
+	g.Go(func() error {
+		select {
+		case wrk <- work{e: e, f: c.filterers[0], i: 0}:
+		case <-ctx.Done():
+			return ctx.Err()
+		}
+		return nil
+	})
+
+	g.Go(func() error {
+		select {
+		case w := <-wrk:
+			evts, err := w.f.Filter(ctx, w.e)
+			if err != nil {
+				return err
 			}
 
-		default:
-			errArrCh := make(chan []error, numEvents)
-			eventArrCh := make(chan []event.Event, numEvents)
-			var wg sync.WaitGroup
-
-			wg.Add(len(events))
-			for _, e := range events {
-				go func(e event.Event) {
-					events, errs := f.Filter(ctx, e)
-					if len(events) > 0 {
-						eventArrCh <- events
+			next := w.i + 1
+			if next < len(c.filterers) {
+				for _, e := range evts {
+					select {
+					case wrk <- work{e: e, f: c.filterers[next], i: next}:
+					case <-ctx.Done():
+						return ctx.Err()
 					}
-					if len(errs) > 0 {
-						errArrCh <- errs
-					}
-					wg.Done()
-				}(e)
-			}
-
-			wg.Wait()
-			close(errArrCh)
-			close(eventArrCh)
-
-			if len(errArrCh) > 0 {
-				for errArr := range errArrCh {
-					errs = append(errs, errArr...)
+				}
+			} else {
+				select {
+				case eventCh <- e:
+				case <-ctx.Done():
+					return ctx.Err()
 				}
 
-				return nil, errs
 			}
 
-			events = []event.Event{}
-			for evtArr := range eventArrCh {
-				events = append(events, evtArr...)
-			}
-
+		case <-ctx.Done():
+			return ctx.Err()
 		}
+		return nil
+	})
+
+	go func() {
+		g.Wait()
+		close(eventCh)
+	}()
+
+	events := []event.Event{}
+	for e := range eventCh {
+		events = append(events, e)
+
+	}
+
+	if err := g.Wait(); err != nil {
+		return nil, err
 	}
 
 	return events, nil

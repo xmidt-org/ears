@@ -12,22 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package chain
+package chain_test
 
-import "fmt"
+import (
+	"testing"
+)
 
-func (e *InvalidArgumentError) Unwrap() error {
-	return e.Err
-}
-
-func (e *InvalidArgumentError) Error() string {
-	return errToString("InvalidArgumentError", e.Err)
-}
-
-func errToString(name string, err error) string {
-	if err == nil {
-		return name
-	}
-
-	return fmt.Sprintf("%s: %s", name, err)
+func TestAdd(t *testing.T) {
+	t.Skip()
 }
