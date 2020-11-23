@@ -12,22 +12,36 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package debug
+package debug_test
 
 import (
-	"io"
-	"sync"
+	"context"
+
+	"testing"
+	"time"
+
+	"github.com/xmidt-org/ears/pkg/plugins/debug"
+
+	"github.com/xmidt-org/ears/pkg/event"
 )
 
-type Receiver struct {
-	IntervalMs int
-	Rounds     int
-	Payload    interface{}
+func TestSender(t *testing.T) {
+	s, err := debug.NewSender("")
+	if err != nil {
+		t.Errorf(err.Error())
+	}
 
-	sync.Mutex
-	done chan struct{}
-}
+	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
+	defer cancel()
 
-type Sender struct {
-	Destination io.Writer
+	e, err := event.NewEvent("hello")
+	if err != nil {
+		t.Errorf(err.Error())
+	}
+
+	err = s.Send(ctx, e)
+
+	if err != nil {
+		t.Errorf(err.Error())
+	}
 }

@@ -29,8 +29,8 @@ var _ receiver.Receiver = (*Receiver)(nil)
 
 func NewReceiver(config string) (receiver.Receiver, error) {
 	return &Receiver{
-		IntervalMs: 1000,
-		Rounds:     10,
+		IntervalMs: 100,
+		Rounds:     4,
 		Payload:    "debug message",
 	}, nil
 }
