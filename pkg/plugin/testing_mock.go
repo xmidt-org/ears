@@ -17,7 +17,7 @@ var _ Hasher = &HasherMock{}
 //
 //         // make and configure a mocked Hasher
 //         mockedHasher := &HasherMock{
-//             PluginerHashFunc: func(config string) (string, error) {
+//             PluginerHashFunc: func(config interface{}) (string, error) {
 // 	               panic("mock out the PluginerHash method")
 //             },
 //         }
@@ -28,26 +28,26 @@ var _ Hasher = &HasherMock{}
 //     }
 type HasherMock struct {
 	// PluginerHashFunc mocks the PluginerHash method.
-	PluginerHashFunc func(config string) (string, error)
+	PluginerHashFunc func(config interface{}) (string, error)
 
 	// calls tracks calls to the methods.
 	calls struct {
 		// PluginerHash holds details about calls to the PluginerHash method.
 		PluginerHash []struct {
 			// Config is the config argument value.
-			Config string
+			Config interface{}
 		}
 	}
 	lockPluginerHash sync.RWMutex
 }
 
 // PluginerHash calls PluginerHashFunc.
-func (mock *HasherMock) PluginerHash(config string) (string, error) {
+func (mock *HasherMock) PluginerHash(config interface{}) (string, error) {
 	if mock.PluginerHashFunc == nil {
 		panic("HasherMock.PluginerHashFunc: method is nil but Hasher.PluginerHash was just called")
 	}
 	callInfo := struct {
-		Config string
+		Config interface{}
 	}{
 		Config: config,
 	}
@@ -61,10 +61,10 @@ func (mock *HasherMock) PluginerHash(config string) (string, error) {
 // Check the length with:
 //     len(mockedHasher.PluginerHashCalls())
 func (mock *HasherMock) PluginerHashCalls() []struct {
-	Config string
+	Config interface{}
 } {
 	var calls []struct {
-		Config string
+		Config interface{}
 	}
 	mock.lockPluginerHash.RLock()
 	calls = mock.calls.PluginerHash
@@ -82,10 +82,10 @@ var _ NewPluginerer = &NewPluginererMock{}
 //
 //         // make and configure a mocked NewPluginerer
 //         mockedNewPluginerer := &NewPluginererMock{
-//             NewPluginerFunc: func(config string) (Pluginer, error) {
+//             NewPluginerFunc: func(config interface{}) (Pluginer, error) {
 // 	               panic("mock out the NewPluginer method")
 //             },
-//             PluginerHashFunc: func(config string) (string, error) {
+//             PluginerHashFunc: func(config interface{}) (string, error) {
 // 	               panic("mock out the PluginerHash method")
 //             },
 //         }
@@ -96,22 +96,22 @@ var _ NewPluginerer = &NewPluginererMock{}
 //     }
 type NewPluginererMock struct {
 	// NewPluginerFunc mocks the NewPluginer method.
-	NewPluginerFunc func(config string) (Pluginer, error)
+	NewPluginerFunc func(config interface{}) (Pluginer, error)
 
 	// PluginerHashFunc mocks the PluginerHash method.
-	PluginerHashFunc func(config string) (string, error)
+	PluginerHashFunc func(config interface{}) (string, error)
 
 	// calls tracks calls to the methods.
 	calls struct {
 		// NewPluginer holds details about calls to the NewPluginer method.
 		NewPluginer []struct {
 			// Config is the config argument value.
-			Config string
+			Config interface{}
 		}
 		// PluginerHash holds details about calls to the PluginerHash method.
 		PluginerHash []struct {
 			// Config is the config argument value.
-			Config string
+			Config interface{}
 		}
 	}
 	lockNewPluginer  sync.RWMutex
@@ -119,12 +119,12 @@ type NewPluginererMock struct {
 }
 
 // NewPluginer calls NewPluginerFunc.
-func (mock *NewPluginererMock) NewPluginer(config string) (Pluginer, error) {
+func (mock *NewPluginererMock) NewPluginer(config interface{}) (Pluginer, error) {
 	if mock.NewPluginerFunc == nil {
 		panic("NewPluginererMock.NewPluginerFunc: method is nil but NewPluginerer.NewPluginer was just called")
 	}
 	callInfo := struct {
-		Config string
+		Config interface{}
 	}{
 		Config: config,
 	}
@@ -138,10 +138,10 @@ func (mock *NewPluginererMock) NewPluginer(config string) (Pluginer, error) {
 // Check the length with:
 //     len(mockedNewPluginerer.NewPluginerCalls())
 func (mock *NewPluginererMock) NewPluginerCalls() []struct {
-	Config string
+	Config interface{}
 } {
 	var calls []struct {
-		Config string
+		Config interface{}
 	}
 	mock.lockNewPluginer.RLock()
 	calls = mock.calls.NewPluginer
@@ -150,12 +150,12 @@ func (mock *NewPluginererMock) NewPluginerCalls() []struct {
 }
 
 // PluginerHash calls PluginerHashFunc.
-func (mock *NewPluginererMock) PluginerHash(config string) (string, error) {
+func (mock *NewPluginererMock) PluginerHash(config interface{}) (string, error) {
 	if mock.PluginerHashFunc == nil {
 		panic("NewPluginererMock.PluginerHashFunc: method is nil but NewPluginerer.PluginerHash was just called")
 	}
 	callInfo := struct {
-		Config string
+		Config interface{}
 	}{
 		Config: config,
 	}
@@ -169,10 +169,10 @@ func (mock *NewPluginererMock) PluginerHash(config string) (string, error) {
 // Check the length with:
 //     len(mockedNewPluginerer.PluginerHashCalls())
 func (mock *NewPluginererMock) PluginerHashCalls() []struct {
-	Config string
+	Config interface{}
 } {
 	var calls []struct {
-		Config string
+		Config interface{}
 	}
 	mock.lockPluginerHash.RLock()
 	calls = mock.calls.PluginerHash

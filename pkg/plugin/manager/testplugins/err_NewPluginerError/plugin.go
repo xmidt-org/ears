@@ -55,11 +55,11 @@ type plugin struct {
 	config PluginConfig
 }
 
-func (p *plugin) NewPluginer(config string) (earsplugin.Pluginer, error) {
+func (p *plugin) NewPluginer(config interface{}) (earsplugin.Pluginer, error) {
 	return p.new(config)
 }
 
-func (p *plugin) PluginerHash(config string) (string, error) {
+func (p *plugin) PluginerHash(config interface{}) (string, error) {
 	return "pluginerHash", nil
 }
 
@@ -83,7 +83,7 @@ func (p *plugin) Config() string {
 
 // internal helpers ============================================================
 
-func (p *plugin) new(config string) (earsplugin.Pluginer, error) {
+func (p *plugin) new(config interface{}) (earsplugin.Pluginer, error) {
 	return nil, &earsplugin.InvalidConfigError{
 		Err: fmt.Errorf("example config error"),
 	}

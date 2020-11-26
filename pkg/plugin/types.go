@@ -24,13 +24,13 @@ package plugin
 type Hasher interface {
 	// PluginerHash calculates the hash of a receiver based on the
 	// given configuration
-	PluginerHash(config string) (string, error)
+	PluginerHash(config interface{}) (string, error)
 }
 
 // NewPluginerer is something that is able to return a new Pluginer
 type NewPluginerer interface {
 	Hasher
-	NewPluginer(config string) (Pluginer, error)
+	NewPluginer(config interface{}) (Pluginer, error)
 }
 
 // Pluginer defines values that should be returned in order to

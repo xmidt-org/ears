@@ -59,11 +59,6 @@ type Manager interface {
 
 	Senderers() map[string]sender.NewSenderer
 	Senderer(pluginName string) (sender.NewSenderer, error)
-
-	// To Deprecate
-	NewReceiver(pluginName string, config string) (receiver.Receiver, error)
-	NewFilterer(pluginName string, config string) (filter.Filterer, error)
-	NewSender(pluginName string, config string) (sender.Sender, error)
 }
 
 // === Errors =========================================================

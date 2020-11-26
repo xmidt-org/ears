@@ -16,8 +16,6 @@ package main
 
 import (
 	"context"
-	"crypto/md5"
-	"encoding/hex"
 	"fmt"
 
 	"github.com/ghodss/yaml"
@@ -57,20 +55,19 @@ type PluginConfig struct {
 	Name    string `yaml:"name"`
 	Version string `yaml:"version"`
 
-	source string
+	source interface{}
 }
 
 type plugin struct {
 	config PluginConfig
 }
 
-func (p *plugin) NewPluginer(config string) (earsplugin.Pluginer, error) {
+func (p *plugin) NewPluginer(config interface{}) (earsplugin.Pluginer, error) {
 	return p.new(config)
 }
 
-func (p *plugin) PluginerHash(config string) (string, error) {
-	hash := md5.Sum([]byte(config))
-	return hex.EncodeToString(hash[:]), nil
+func (p *plugin) PluginerHash(config interface{}) (string, error) {
+	return hasher.Hash(config), nil
 }
 
 func (p *plugin) Name() string {
@@ -93,11 +90,11 @@ func (p *plugin) Config() string {
 
 // Filterer ============================================================
 
-func (p *plugin) NewFilterer(config string) (filter.Filterer, error) {
+func (p *plugin) NewFilterer(config interface{}) (filter.Filterer, error) {
 	return p, nil
 }
 
-func (p *plugin) FiltererHash(config string) (string, error) {
+func (p *plugin) FiltererHash(config interface{}) (string, error) {
 	return hasher.Hash(config), nil
 }
 
@@ -107,15 +104,16 @@ func (p *plugin) Filter(ctx context.Context, e event.Event) ([]event.Event, erro
 
 // internal helpers ============================================================
 
-func (p *plugin) new(config string) (earsplugin.Pluginer, error) {
+func (p *plugin) new(config interface{}) (earsplugin.Pluginer, error) {
 	cfg := PluginConfig{
 		Name:    defaultPluginName,
 		Version: defaultPluginVersion,
 		source:  config,
 	}
 
-	if config != "" {
-		err := yaml.Unmarshal([]byte(config), &cfg)
+	c, ok := config.(string)
+	if ok && c != "" {
+		err := yaml.Unmarshal([]byte(c), &cfg)
 		if err != nil {
 			return nil, &earsplugin.InvalidConfigError{Err: err}
 		}

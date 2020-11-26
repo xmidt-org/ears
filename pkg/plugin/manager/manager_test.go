@@ -389,7 +389,7 @@ func TestNewReceiver(t *testing.T) {
 			"myreceiver",
 			&newReceivererMock{
 				receiver.NewReceivererMock{
-					NewReceiverFunc: func(config string) (receiver.Receiver, error) {
+					NewReceiverFunc: func(config interface{}) (receiver.Receiver, error) {
 						return &receiver.ReceiverMock{}, nil
 					},
 				},
@@ -426,7 +426,7 @@ func TestNewFilterer(t *testing.T) {
 			"myfilterer",
 			&newFiltererMock{
 				filter.NewFiltererMock{
-					NewFiltererFunc: func(config string) (filter.Filterer, error) {
+					NewFiltererFunc: func(config interface{}) (filter.Filterer, error) {
 						return &filter.FiltererMock{}, nil
 					},
 				},
@@ -463,7 +463,7 @@ func TestNewSenderer(t *testing.T) {
 			"mysenderer",
 			&newSendererMock{
 				sender.NewSendererMock{
-					NewSenderFunc: func(config string) (sender.Sender, error) {
+					NewSenderFunc: func(config interface{}) (sender.Sender, error) {
 						return &sender.SenderMock{}, nil
 					},
 				},

@@ -61,18 +61,18 @@ type PluginConfig struct {
 	Name    string `yaml:"name"`
 	Version string `yaml:"version"`
 
-	source string
+	source interface{}
 }
 
 type plugin struct {
 	config PluginConfig
 }
 
-func (p *plugin) NewPluginer(config string) (earsplugin.Pluginer, error) {
+func (p *plugin) NewPluginer(config interface{}) (earsplugin.Pluginer, error) {
 	return p.new(config)
 }
 
-func (p *plugin) PluginerHash(config string) (string, error) {
+func (p *plugin) PluginerHash(config interface{}) (string, error) {
 	return hasher.Hash(config), nil
 }
 
@@ -96,11 +96,11 @@ func (p *plugin) Config() string {
 
 // Receiver ==========================================================
 
-func (p *plugin) NewReceiver(config string) (receiver.Receiver, error) {
+func (p *plugin) NewReceiver(config interface{}) (receiver.Receiver, error) {
 	return p, nil
 }
 
-func (p *plugin) ReceiverHash(config string) (string, error) {
+func (p *plugin) ReceiverHash(config interface{}) (string, error) {
 	return hasher.Hash(config), nil
 }
 
@@ -108,13 +108,17 @@ func (p *plugin) Receive(ctx context.Context, next receiver.NextFn) error {
 	return nil
 }
 
+func (p *plugin) StopReceiving(ctx context.Context) error {
+	return nil
+}
+
 // Filterer ============================================================
 
-func (p *plugin) NewFilterer(config string) (filter.Filterer, error) {
+func (p *plugin) NewFilterer(config interface{}) (filter.Filterer, error) {
 	return p, nil
 }
 
-func (p *plugin) FiltererHash(config string) (string, error) {
+func (p *plugin) FiltererHash(config interface{}) (string, error) {
 	return hasher.Hash(config), nil
 }
 
@@ -124,11 +128,11 @@ func (p *plugin) Filter(ctx context.Context, e event.Event) ([]event.Event, erro
 
 // Sender ===========================================================
 
-func (p *plugin) NewSender(config string) (sender.Sender, error) {
+func (p *plugin) NewSender(config interface{}) (sender.Sender, error) {
 	return p, nil
 }
 
-func (p *plugin) SenderHash(config string) (string, error) {
+func (p *plugin) SenderHash(config interface{}) (string, error) {
 	return hasher.Hash(config), nil
 }
 
@@ -138,15 +142,17 @@ func (p *plugin) Send(ctx context.Context, e event.Event) error {
 
 // internal helpers ============================================================
 
-func (p *plugin) new(config string) (earsplugin.Pluginer, error) {
+func (p *plugin) new(config interface{}) (earsplugin.Pluginer, error) {
 	cfg := PluginConfig{
 		Name:    defaultPluginName,
 		Version: defaultPluginVersion,
 		source:  config,
 	}
 
-	if config != "" {
-		err := yaml.Unmarshal([]byte(config), &cfg)
+	c, ok := config.(string)
+
+	if ok && c != "" {
+		err := yaml.Unmarshal([]byte(c), &cfg)
 		if err != nil {
 			return nil, &earsplugin.InvalidConfigError{Err: err}
 		}
