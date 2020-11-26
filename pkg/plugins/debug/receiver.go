@@ -24,17 +24,6 @@ import (
 	"github.com/xmidt-org/ears/pkg/receiver"
 )
 
-// var _ receiver.NewReceiverer = (*Receiver)(nil)
-var _ receiver.Receiver = (*Receiver)(nil)
-
-func NewReceiver(config interface{}) (receiver.Receiver, error) {
-	return &Receiver{
-		IntervalMs: 100,
-		Rounds:     4,
-		Payload:    "debug message",
-	}, nil
-}
-
 func (r *Receiver) Receive(ctx context.Context, next receiver.NextFn) error {
 	if next == nil {
 		return &receiver.InvalidConfigError{

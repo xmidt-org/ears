@@ -17,7 +17,28 @@ package debug
 import (
 	"io"
 	"sync"
+
+	pkgplugin "github.com/xmidt-org/ears/pkg/plugin"
+
+	"github.com/xmidt-org/ears/pkg/receiver"
+	"github.com/xmidt-org/ears/pkg/sender"
 )
+
+var _ pkgplugin.Pluginer = (*plugin)(nil)
+var _ pkgplugin.NewPluginerer = (*plugin)(nil)
+var _ receiver.NewReceiverer = (*plugin)(nil)
+var _ sender.NewSenderer = (*plugin)(nil)
+
+var _ sender.Sender = (*Sender)(nil)
+var _ receiver.Receiver = (*Receiver)(nil)
+
+var Plugin = &plugin{}
+
+type plugin struct {
+	name    string
+	version string
+	config  string
+}
 
 type Receiver struct {
 	IntervalMs int
