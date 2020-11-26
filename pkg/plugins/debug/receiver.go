@@ -27,7 +27,7 @@ import (
 // var _ receiver.NewReceiverer = (*Receiver)(nil)
 var _ receiver.Receiver = (*Receiver)(nil)
 
-func NewReceiver(config string) (receiver.Receiver, error) {
+func NewReceiver(config interface{}) (receiver.Receiver, error) {
 	return &Receiver{
 		IntervalMs: 100,
 		Rounds:     4,

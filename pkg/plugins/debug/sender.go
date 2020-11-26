@@ -23,7 +23,7 @@ import (
 	"github.com/xmidt-org/ears/pkg/sender"
 )
 
-func NewSender(config string) (sender.Sender, error) {
+func NewSender(config interface{}) (sender.Sender, error) {
 	return &Sender{
 		Destination: os.Stdout,
 	}, nil
