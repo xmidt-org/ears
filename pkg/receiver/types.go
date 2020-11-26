@@ -34,7 +34,7 @@ type InvalidConfigError struct {
 type Hasher interface {
 	// ReceiverHash calculates the hash of a receiver based on the
 	// given configuration
-	ReceiverHash(config string) (string, error)
+	ReceiverHash(config interface{}) (string, error)
 }
 
 type NewReceiverer interface {
@@ -42,7 +42,7 @@ type NewReceiverer interface {
 
 	// NewReceiver returns an object that implements the
 	// Receiver interface
-	NewReceiver(config string) (Receiver, error)
+	NewReceiver(config interface{}) (Receiver, error)
 }
 
 // NextFn defines the signature of a function that can take in an

@@ -18,7 +18,7 @@ var _ Hasher = &HasherMock{}
 //
 //         // make and configure a mocked Hasher
 //         mockedHasher := &HasherMock{
-//             ReceiverHashFunc: func(config string) (string, error) {
+//             ReceiverHashFunc: func(config interface{}) (string, error) {
 // 	               panic("mock out the ReceiverHash method")
 //             },
 //         }
@@ -29,26 +29,26 @@ var _ Hasher = &HasherMock{}
 //     }
 type HasherMock struct {
 	// ReceiverHashFunc mocks the ReceiverHash method.
-	ReceiverHashFunc func(config string) (string, error)
+	ReceiverHashFunc func(config interface{}) (string, error)
 
 	// calls tracks calls to the methods.
 	calls struct {
 		// ReceiverHash holds details about calls to the ReceiverHash method.
 		ReceiverHash []struct {
 			// Config is the config argument value.
-			Config string
+			Config interface{}
 		}
 	}
 	lockReceiverHash sync.RWMutex
 }
 
 // ReceiverHash calls ReceiverHashFunc.
-func (mock *HasherMock) ReceiverHash(config string) (string, error) {
+func (mock *HasherMock) ReceiverHash(config interface{}) (string, error) {
 	if mock.ReceiverHashFunc == nil {
 		panic("HasherMock.ReceiverHashFunc: method is nil but Hasher.ReceiverHash was just called")
 	}
 	callInfo := struct {
-		Config string
+		Config interface{}
 	}{
 		Config: config,
 	}
@@ -62,10 +62,10 @@ func (mock *HasherMock) ReceiverHash(config string) (string, error) {
 // Check the length with:
 //     len(mockedHasher.ReceiverHashCalls())
 func (mock *HasherMock) ReceiverHashCalls() []struct {
-	Config string
+	Config interface{}
 } {
 	var calls []struct {
-		Config string
+		Config interface{}
 	}
 	mock.lockReceiverHash.RLock()
 	calls = mock.calls.ReceiverHash
@@ -83,10 +83,10 @@ var _ NewReceiverer = &NewReceivererMock{}
 //
 //         // make and configure a mocked NewReceiverer
 //         mockedNewReceiverer := &NewReceivererMock{
-//             NewReceiverFunc: func(config string) (Receiver, error) {
+//             NewReceiverFunc: func(config interface{}) (Receiver, error) {
 // 	               panic("mock out the NewReceiver method")
 //             },
-//             ReceiverHashFunc: func(config string) (string, error) {
+//             ReceiverHashFunc: func(config interface{}) (string, error) {
 // 	               panic("mock out the ReceiverHash method")
 //             },
 //         }
@@ -97,22 +97,22 @@ var _ NewReceiverer = &NewReceivererMock{}
 //     }
 type NewReceivererMock struct {
 	// NewReceiverFunc mocks the NewReceiver method.
-	NewReceiverFunc func(config string) (Receiver, error)
+	NewReceiverFunc func(config interface{}) (Receiver, error)
 
 	// ReceiverHashFunc mocks the ReceiverHash method.
-	ReceiverHashFunc func(config string) (string, error)
+	ReceiverHashFunc func(config interface{}) (string, error)
 
 	// calls tracks calls to the methods.
 	calls struct {
 		// NewReceiver holds details about calls to the NewReceiver method.
 		NewReceiver []struct {
 			// Config is the config argument value.
-			Config string
+			Config interface{}
 		}
 		// ReceiverHash holds details about calls to the ReceiverHash method.
 		ReceiverHash []struct {
 			// Config is the config argument value.
-			Config string
+			Config interface{}
 		}
 	}
 	lockNewReceiver  sync.RWMutex
@@ -120,12 +120,12 @@ type NewReceivererMock struct {
 }
 
 // NewReceiver calls NewReceiverFunc.
-func (mock *NewReceivererMock) NewReceiver(config string) (Receiver, error) {
+func (mock *NewReceivererMock) NewReceiver(config interface{}) (Receiver, error) {
 	if mock.NewReceiverFunc == nil {
 		panic("NewReceivererMock.NewReceiverFunc: method is nil but NewReceiverer.NewReceiver was just called")
 	}
 	callInfo := struct {
-		Config string
+		Config interface{}
 	}{
 		Config: config,
 	}
@@ -139,10 +139,10 @@ func (mock *NewReceivererMock) NewReceiver(config string) (Receiver, error) {
 // Check the length with:
 //     len(mockedNewReceiverer.NewReceiverCalls())
 func (mock *NewReceivererMock) NewReceiverCalls() []struct {
-	Config string
+	Config interface{}
 } {
 	var calls []struct {
-		Config string
+		Config interface{}
 	}
 	mock.lockNewReceiver.RLock()
 	calls = mock.calls.NewReceiver
@@ -151,12 +151,12 @@ func (mock *NewReceivererMock) NewReceiverCalls() []struct {
 }
 
 // ReceiverHash calls ReceiverHashFunc.
-func (mock *NewReceivererMock) ReceiverHash(config string) (string, error) {
+func (mock *NewReceivererMock) ReceiverHash(config interface{}) (string, error) {
 	if mock.ReceiverHashFunc == nil {
 		panic("NewReceivererMock.ReceiverHashFunc: method is nil but NewReceiverer.ReceiverHash was just called")
 	}
 	callInfo := struct {
-		Config string
+		Config interface{}
 	}{
 		Config: config,
 	}
@@ -170,10 +170,10 @@ func (mock *NewReceivererMock) ReceiverHash(config string) (string, error) {
 // Check the length with:
 //     len(mockedNewReceiverer.ReceiverHashCalls())
 func (mock *NewReceivererMock) ReceiverHashCalls() []struct {
-	Config string
+	Config interface{}
 } {
 	var calls []struct {
-		Config string
+		Config interface{}
 	}
 	mock.lockReceiverHash.RLock()
 	calls = mock.calls.ReceiverHash
