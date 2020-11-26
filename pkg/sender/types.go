@@ -29,14 +29,14 @@ type InvalidConfigError struct {
 
 type Hasher interface {
 	// SenderHash calculates the hash of a sender based on the given configuration
-	SenderHash(config string) (string, error)
+	SenderHash(config interface{}) (string, error)
 }
 
 type NewSenderer interface {
 	Hasher
 
 	// Returns an objec that implements the Sender interface
-	NewSender(config string) (Sender, error)
+	NewSender(config interface{}) (Sender, error)
 }
 
 // or Outputter[√] or Producer[x] or Publisher[√]

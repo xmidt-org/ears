@@ -19,7 +19,7 @@ var _ Hasher = &HasherMock{}
 //
 //         // make and configure a mocked Hasher
 //         mockedHasher := &HasherMock{
-//             SenderHashFunc: func(config string) (string, error) {
+//             SenderHashFunc: func(config interface{}) (string, error) {
 // 	               panic("mock out the SenderHash method")
 //             },
 //         }
@@ -30,26 +30,26 @@ var _ Hasher = &HasherMock{}
 //     }
 type HasherMock struct {
 	// SenderHashFunc mocks the SenderHash method.
-	SenderHashFunc func(config string) (string, error)
+	SenderHashFunc func(config interface{}) (string, error)
 
 	// calls tracks calls to the methods.
 	calls struct {
 		// SenderHash holds details about calls to the SenderHash method.
 		SenderHash []struct {
 			// Config is the config argument value.
-			Config string
+			Config interface{}
 		}
 	}
 	lockSenderHash sync.RWMutex
 }
 
 // SenderHash calls SenderHashFunc.
-func (mock *HasherMock) SenderHash(config string) (string, error) {
+func (mock *HasherMock) SenderHash(config interface{}) (string, error) {
 	if mock.SenderHashFunc == nil {
 		panic("HasherMock.SenderHashFunc: method is nil but Hasher.SenderHash was just called")
 	}
 	callInfo := struct {
-		Config string
+		Config interface{}
 	}{
 		Config: config,
 	}
@@ -63,10 +63,10 @@ func (mock *HasherMock) SenderHash(config string) (string, error) {
 // Check the length with:
 //     len(mockedHasher.SenderHashCalls())
 func (mock *HasherMock) SenderHashCalls() []struct {
-	Config string
+	Config interface{}
 } {
 	var calls []struct {
-		Config string
+		Config interface{}
 	}
 	mock.lockSenderHash.RLock()
 	calls = mock.calls.SenderHash
@@ -84,10 +84,10 @@ var _ NewSenderer = &NewSendererMock{}
 //
 //         // make and configure a mocked NewSenderer
 //         mockedNewSenderer := &NewSendererMock{
-//             NewSenderFunc: func(config string) (Sender, error) {
+//             NewSenderFunc: func(config interface{}) (Sender, error) {
 // 	               panic("mock out the NewSender method")
 //             },
-//             SenderHashFunc: func(config string) (string, error) {
+//             SenderHashFunc: func(config interface{}) (string, error) {
 // 	               panic("mock out the SenderHash method")
 //             },
 //         }
@@ -98,22 +98,22 @@ var _ NewSenderer = &NewSendererMock{}
 //     }
 type NewSendererMock struct {
 	// NewSenderFunc mocks the NewSender method.
-	NewSenderFunc func(config string) (Sender, error)
+	NewSenderFunc func(config interface{}) (Sender, error)
 
 	// SenderHashFunc mocks the SenderHash method.
-	SenderHashFunc func(config string) (string, error)
+	SenderHashFunc func(config interface{}) (string, error)
 
 	// calls tracks calls to the methods.
 	calls struct {
 		// NewSender holds details about calls to the NewSender method.
 		NewSender []struct {
 			// Config is the config argument value.
-			Config string
+			Config interface{}
 		}
 		// SenderHash holds details about calls to the SenderHash method.
 		SenderHash []struct {
 			// Config is the config argument value.
-			Config string
+			Config interface{}
 		}
 	}
 	lockNewSender  sync.RWMutex
@@ -121,12 +121,12 @@ type NewSendererMock struct {
 }
 
 // NewSender calls NewSenderFunc.
-func (mock *NewSendererMock) NewSender(config string) (Sender, error) {
+func (mock *NewSendererMock) NewSender(config interface{}) (Sender, error) {
 	if mock.NewSenderFunc == nil {
 		panic("NewSendererMock.NewSenderFunc: method is nil but NewSenderer.NewSender was just called")
 	}
 	callInfo := struct {
-		Config string
+		Config interface{}
 	}{
 		Config: config,
 	}
@@ -140,10 +140,10 @@ func (mock *NewSendererMock) NewSender(config string) (Sender, error) {
 // Check the length with:
 //     len(mockedNewSenderer.NewSenderCalls())
 func (mock *NewSendererMock) NewSenderCalls() []struct {
-	Config string
+	Config interface{}
 } {
 	var calls []struct {
-		Config string
+		Config interface{}
 	}
 	mock.lockNewSender.RLock()
 	calls = mock.calls.NewSender
@@ -152,12 +152,12 @@ func (mock *NewSendererMock) NewSenderCalls() []struct {
 }
 
 // SenderHash calls SenderHashFunc.
-func (mock *NewSendererMock) SenderHash(config string) (string, error) {
+func (mock *NewSendererMock) SenderHash(config interface{}) (string, error) {
 	if mock.SenderHashFunc == nil {
 		panic("NewSendererMock.SenderHashFunc: method is nil but NewSenderer.SenderHash was just called")
 	}
 	callInfo := struct {
-		Config string
+		Config interface{}
 	}{
 		Config: config,
 	}
@@ -171,10 +171,10 @@ func (mock *NewSendererMock) SenderHash(config string) (string, error) {
 // Check the length with:
 //     len(mockedNewSenderer.SenderHashCalls())
 func (mock *NewSendererMock) SenderHashCalls() []struct {
-	Config string
+	Config interface{}
 } {
 	var calls []struct {
-		Config string
+		Config interface{}
 	}
 	mock.lockSenderHash.RLock()
 	calls = mock.calls.SenderHash

@@ -31,7 +31,7 @@ func TestErrorMessage(t *testing.T) {
 		{name: "InvalidConfigError", err: &plugin.InvalidConfigError{}},
 
 		{
-			name: "InvalidConfigError",
+			name: "InvalidConfigError_Err",
 			err:  &plugin.InvalidConfigError{Err: fmt.Errorf("wrapped error")},
 		},
 	}
