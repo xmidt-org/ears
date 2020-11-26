@@ -19,7 +19,7 @@ var _ Hasher = &HasherMock{}
 //
 //         // make and configure a mocked Hasher
 //         mockedHasher := &HasherMock{
-//             FiltererHashFunc: func(config string) (string, error) {
+//             FiltererHashFunc: func(config interface{}) (string, error) {
 // 	               panic("mock out the FiltererHash method")
 //             },
 //         }
@@ -30,26 +30,26 @@ var _ Hasher = &HasherMock{}
 //     }
 type HasherMock struct {
 	// FiltererHashFunc mocks the FiltererHash method.
-	FiltererHashFunc func(config string) (string, error)
+	FiltererHashFunc func(config interface{}) (string, error)
 
 	// calls tracks calls to the methods.
 	calls struct {
 		// FiltererHash holds details about calls to the FiltererHash method.
 		FiltererHash []struct {
 			// Config is the config argument value.
-			Config string
+			Config interface{}
 		}
 	}
 	lockFiltererHash sync.RWMutex
 }
 
 // FiltererHash calls FiltererHashFunc.
-func (mock *HasherMock) FiltererHash(config string) (string, error) {
+func (mock *HasherMock) FiltererHash(config interface{}) (string, error) {
 	if mock.FiltererHashFunc == nil {
 		panic("HasherMock.FiltererHashFunc: method is nil but Hasher.FiltererHash was just called")
 	}
 	callInfo := struct {
-		Config string
+		Config interface{}
 	}{
 		Config: config,
 	}
@@ -63,10 +63,10 @@ func (mock *HasherMock) FiltererHash(config string) (string, error) {
 // Check the length with:
 //     len(mockedHasher.FiltererHashCalls())
 func (mock *HasherMock) FiltererHashCalls() []struct {
-	Config string
+	Config interface{}
 } {
 	var calls []struct {
-		Config string
+		Config interface{}
 	}
 	mock.lockFiltererHash.RLock()
 	calls = mock.calls.FiltererHash
@@ -84,10 +84,10 @@ var _ NewFilterer = &NewFiltererMock{}
 //
 //         // make and configure a mocked NewFilterer
 //         mockedNewFilterer := &NewFiltererMock{
-//             FiltererHashFunc: func(config string) (string, error) {
+//             FiltererHashFunc: func(config interface{}) (string, error) {
 // 	               panic("mock out the FiltererHash method")
 //             },
-//             NewFiltererFunc: func(config string) (Filterer, error) {
+//             NewFiltererFunc: func(config interface{}) (Filterer, error) {
 // 	               panic("mock out the NewFilterer method")
 //             },
 //         }
@@ -98,22 +98,22 @@ var _ NewFilterer = &NewFiltererMock{}
 //     }
 type NewFiltererMock struct {
 	// FiltererHashFunc mocks the FiltererHash method.
-	FiltererHashFunc func(config string) (string, error)
+	FiltererHashFunc func(config interface{}) (string, error)
 
 	// NewFiltererFunc mocks the NewFilterer method.
-	NewFiltererFunc func(config string) (Filterer, error)
+	NewFiltererFunc func(config interface{}) (Filterer, error)
 
 	// calls tracks calls to the methods.
 	calls struct {
 		// FiltererHash holds details about calls to the FiltererHash method.
 		FiltererHash []struct {
 			// Config is the config argument value.
-			Config string
+			Config interface{}
 		}
 		// NewFilterer holds details about calls to the NewFilterer method.
 		NewFilterer []struct {
 			// Config is the config argument value.
-			Config string
+			Config interface{}
 		}
 	}
 	lockFiltererHash sync.RWMutex
@@ -121,12 +121,12 @@ type NewFiltererMock struct {
 }
 
 // FiltererHash calls FiltererHashFunc.
-func (mock *NewFiltererMock) FiltererHash(config string) (string, error) {
+func (mock *NewFiltererMock) FiltererHash(config interface{}) (string, error) {
 	if mock.FiltererHashFunc == nil {
 		panic("NewFiltererMock.FiltererHashFunc: method is nil but NewFilterer.FiltererHash was just called")
 	}
 	callInfo := struct {
-		Config string
+		Config interface{}
 	}{
 		Config: config,
 	}
@@ -140,10 +140,10 @@ func (mock *NewFiltererMock) FiltererHash(config string) (string, error) {
 // Check the length with:
 //     len(mockedNewFilterer.FiltererHashCalls())
 func (mock *NewFiltererMock) FiltererHashCalls() []struct {
-	Config string
+	Config interface{}
 } {
 	var calls []struct {
-		Config string
+		Config interface{}
 	}
 	mock.lockFiltererHash.RLock()
 	calls = mock.calls.FiltererHash
@@ -152,12 +152,12 @@ func (mock *NewFiltererMock) FiltererHashCalls() []struct {
 }
 
 // NewFilterer calls NewFiltererFunc.
-func (mock *NewFiltererMock) NewFilterer(config string) (Filterer, error) {
+func (mock *NewFiltererMock) NewFilterer(config interface{}) (Filterer, error) {
 	if mock.NewFiltererFunc == nil {
 		panic("NewFiltererMock.NewFiltererFunc: method is nil but NewFilterer.NewFilterer was just called")
 	}
 	callInfo := struct {
-		Config string
+		Config interface{}
 	}{
 		Config: config,
 	}
@@ -171,10 +171,10 @@ func (mock *NewFiltererMock) NewFilterer(config string) (Filterer, error) {
 // Check the length with:
 //     len(mockedNewFilterer.NewFiltererCalls())
 func (mock *NewFiltererMock) NewFiltererCalls() []struct {
-	Config string
+	Config interface{}
 } {
 	var calls []struct {
-		Config string
+		Config interface{}
 	}
 	mock.lockNewFilterer.RLock()
 	calls = mock.calls.NewFilterer

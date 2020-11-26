@@ -37,7 +37,7 @@ type InvalidConfigError struct {
 type Hasher interface {
 	// FiltererHash calculates the hash of a filterer based on the
 	// given configuration
-	FiltererHash(config string) (string, error)
+	FiltererHash(config interface{}) (string, error)
 }
 
 // NewFilterer defines the interface on how to
@@ -46,7 +46,7 @@ type NewFilterer interface {
 	Hasher
 
 	// NewFilterer returns an object that implements the Filterer interface
-	NewFilterer(config string) (Filterer, error)
+	NewFilterer(config interface{}) (Filterer, error)
 }
 
 // Filterer defines the interface that a filterer must implement
