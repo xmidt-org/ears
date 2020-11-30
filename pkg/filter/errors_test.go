@@ -20,7 +20,7 @@ import (
 	"testing"
 
 	"github.com/sebdah/goldie/v2"
-	"github.com/xmidt-org/ears/pkg/plugin"
+	"github.com/xmidt-org/ears/pkg/filter"
 )
 
 func TestErrorMessage(t *testing.T) {
@@ -28,11 +28,18 @@ func TestErrorMessage(t *testing.T) {
 		name string
 		err  error
 	}{
-		{name: "InvalidConfigError", err: &plugin.InvalidConfigError{}},
+		{name: "InvalidConfigError", err: &filter.InvalidConfigError{}},
 
 		{
 			name: "InvalidConfigError_Err",
-			err:  &plugin.InvalidConfigError{Err: fmt.Errorf("wrapped error")},
+			err:  &filter.InvalidConfigError{Err: fmt.Errorf("wrapped error")},
+		},
+
+		{name: "InvalidArgumentError", err: &filter.InvalidArgumentError{}},
+
+		{
+			name: "InvalidArgumentError_Err",
+			err:  &filter.InvalidArgumentError{Err: fmt.Errorf("wrapped error")},
 		},
 	}
 

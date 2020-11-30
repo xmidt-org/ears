@@ -19,16 +19,21 @@ package filter
 
 import (
 	"context"
+	"sync"
 
 	"github.com/xmidt-org/ears/pkg/event"
 )
 
 //go:generate rm -f testing_mock.go
-//go:generate moq -out testing_mock.go . Hasher NewFilterer Filterer
+//go:generate moq -out testing_mock.go . Hasher NewFilterer Filterer FiltererChain
 
 // InvalidConfigError is returned when a configuration parameter
 // results in a plugin error
 type InvalidConfigError struct {
+	Err error
+}
+
+type InvalidArgumentError struct {
 	Err error
 }
 
@@ -52,4 +57,21 @@ type NewFilterer interface {
 // Filterer defines the interface that a filterer must implement
 type Filterer interface {
 	Filter(ctx context.Context, e event.Event) ([]event.Event, error)
+}
+
+// FiltererChain
+type FiltererChain interface {
+	Filterer
+
+	// Add will add a filterer to the chain
+	Add(f Filterer) error
+	Filterers() []Filterer
+}
+
+var _ FiltererChain = (*Chain)(nil)
+
+type Chain struct {
+	sync.RWMutex
+
+	filterers []Filterer
 }

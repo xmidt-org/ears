@@ -24,6 +24,14 @@ func (e *InvalidConfigError) Error() string {
 	return errToString("InvalidConfigError", e.Err)
 }
 
+func (e *InvalidArgumentError) Unwrap() error {
+	return e.Err
+}
+
+func (e *InvalidArgumentError) Error() string {
+	return errToString("InvalidArgumentError", e.Err)
+}
+
 func errToString(name string, err error) string {
 	if err == nil {
 		return name
