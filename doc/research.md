@@ -35,6 +35,7 @@ project design.
 * [BFE Load Balancer](https://github.com/bfenetworks/bfe)
 * [OBS Plugins](https://obsproject.com/docs/plugins.html)
 * [Markdown "extensions"](https://github.com/yuin/goldmark#custom-parser-and-renderer)
+* [OpenTelemetry Exporters](https://github.com/open-telemetry/opentelemetry-collector-contrib)
 
 
 ## Data Pipelines
@@ -43,6 +44,7 @@ project design.
 * [BFE Load Balancer](https://github.com/bfenetworks/bfe)
 * [Go-pipeline](https://whiskybadger.io/post/introducing-go-pipeline/)
 * [Multistep](https://github.com/mitchellh/multistep)
+* [OpenTelemetry Collector](https://github.com/open-telemetry/opentelemetry-collector)
 
 ## Concurrency
 * [Error handling](https://bionic.fullstory.com/why-you-should-be-using-errgroup-withcontext-in-golang-server-handlers/)
