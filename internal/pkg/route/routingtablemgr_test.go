@@ -12,6 +12,7 @@ import (
 
 	"github.com/xmidt-org/ears/internal/pkg/route"
 
+	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 )
 
@@ -90,6 +91,7 @@ func TestMultiRouteTestTable(t *testing.T) {
 }
 
 func simulateSingleRoute(t *testing.T, data *TestTableSingleEntry) {
+	zerolog.SetGlobalLevel(zerolog.ErrorLevel)
 	ctx := context.Background()
 	ctx = log.Logger.WithContext(ctx)
 	// init in memory routing table manager
@@ -143,6 +145,7 @@ func simulateSingleRoute(t *testing.T, data *TestTableSingleEntry) {
 }
 
 func simulateMultiRoutes(t *testing.T, data *TestTableMultiEntry) {
+	zerolog.SetGlobalLevel(zerolog.ErrorLevel)
 	ctx := context.Background()
 	ctx = log.Logger.WithContext(ctx)
 	// init in memory routing table manager
