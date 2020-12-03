@@ -14,17 +14,21 @@
 
 package filters
 
-import "context"
+import (
+	"context"
+
+	"github.com/xmidt-org/ears/pkg/event"
+)
 
 type TransformFilter struct {
 	Transformation interface{} // transformation instructions for event payload
 }
 
 // Filter transforms an event according to its transformation spec
-func (mf *TransformFilter) Filter(ctx context.Context, event Event) ([]Event, error) {
+func (mf *TransformFilter) Filter(ctx context.Context, evt event.Event) ([]event.Event, error) {
 	// identity transform
-	events := make([]Event, 0)
+	events := make([]event.Event, 0)
 	//TODO: implement filter logic
-	events = append(events, event)
+	events = append(events, evt)
 	return events, nil
 }

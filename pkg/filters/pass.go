@@ -14,13 +14,17 @@
 
 package filters
 
-import "context"
+import (
+	"context"
+
+	"github.com/xmidt-org/ears/pkg/event"
+)
 
 // a PassFilter always passes an incoming event
 type PassFilter struct {
 }
 
 // Filter lets any event pass
-func (mf *PassFilter) Filter(ctx context.Context, event Event) ([]Event, error) {
-	return []Event{event}, nil
+func (mf *PassFilter) Filter(ctx context.Context, evt event.Event) ([]event.Event, error) {
+	return []event.Event{evt}, nil
 }

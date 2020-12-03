@@ -14,10 +14,14 @@
 
 package filters
 
-import "context"
+import (
+	"context"
+
+	"github.com/xmidt-org/ears/pkg/event"
+)
 
 const (
-	MatchModeAllow int = iota
+	MatchModeAllow MatchMode = iota
 	MatchModeDeny
 )
 
@@ -29,18 +33,18 @@ type MatchFilter struct {
 	Mode    MatchMode
 }
 
-func (mf *MatchFilter) Filter(ctx context.Context, event Event) ([]Event, error) {
+func (mf *MatchFilter) Filter(ctx context.Context, evt event.Event) ([]event.Event, error) {
 	// passes if event matches
-	events := []Event{}
-	pass := mf.Matcher.Match(ctx, event, mf.Pattern)
+	events := []event.Event{}
+	pass := mf.Matcher.Match(ctx, evt, mf.Pattern)
 
 	if mf.Mode == MatchModeDeny {
 		pass = !pass
 	}
 
 	if pass {
-		return []Event{e}, nil
+		events = []event.Event{evt}
 	}
 
-	return []Event{}, nil
+	return events, nil
 }

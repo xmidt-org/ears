@@ -14,7 +14,11 @@
 
 package filters
 
-import "context"
+import (
+	"context"
+
+	"github.com/xmidt-org/ears/pkg/event"
+)
 
 // a TTLFilter filters an event when it is too old
 type TTLFilter struct {
@@ -23,10 +27,10 @@ type TTLFilter struct {
 }
 
 // Filter filters event if it hhas expired
-func (mf *TTLFilter) Filter(ctx context.Context, event Event) ([]Event, error) {
+func (mf *TTLFilter) Filter(ctx context.Context, evt event.Event) ([]event.Event, error) {
 	// never filters
-	events := make([]Event, 0)
+	events := []event.Event{}
 	//TODO: implement filter logic
-	events = append(events, event)
+	events = append(events, evt)
 	return events, nil
 }

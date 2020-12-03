@@ -14,7 +14,11 @@
 
 package filters
 
-import "context"
+import (
+	"context"
+
+	"github.com/xmidt-org/ears/pkg/event"
+)
 
 // a SplitFilter splits and event into two or more events
 type SplitFilter struct {
@@ -22,12 +26,11 @@ type SplitFilter struct {
 }
 
 // Filter splits an event containing an array into multiple events
-func (mf *SplitFilter) Filter(ctx context.Context, event Event) ([]Event, error) {
+func (mf *SplitFilter) Filter(ctx context.Context, evt event.Event) ([]event.Event, error) {
 	// always splits into two identical events
-	events := make([]Event, 0)
+	events := make([]event.Event, 0)
 	//TODO: implement filter logic
 	//TODO: clone
-	events = append(events, event)
-	events = append(events, event)
+	events = append(events, evt, evt)
 	return events, nil
 }

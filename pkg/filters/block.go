@@ -14,13 +14,17 @@
 
 package filters
 
-import "context"
+import (
+	"context"
+
+	"github.com/xmidt-org/ears/pkg/event"
+)
 
 // a BlockFilter always blocks an incoming event
 type BlockFilter struct {
 }
 
 // Filter lets no event pass
-func (mf *BlockFilter) Filter(ctx context.Context, event Event) ([]Event, error) {
-	return []Event{}, nil
+func (mf *BlockFilter) Filter(ctx context.Context, evt event.Event) ([]event.Event, error) {
+	return []event.Event{}, nil
 }
