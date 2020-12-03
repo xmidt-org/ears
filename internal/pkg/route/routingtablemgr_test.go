@@ -31,25 +31,30 @@ type (
 	}
 )
 
-func getTestRouteByName(t *testing.T, name string) string {
+func getTestRouteByName(t *testing.T, name string) *route.RouteConfig {
 	path := filepath.Join("testdata/routes", name+".json")
 	buf, err := ioutil.ReadFile(path)
 	if err != nil {
-		t.Fatalf(err.Error())
+		t.Fatalf("unknown test route file: " + err.Error())
 	}
-	return string(buf)
+	var rc route.RouteConfig
+	err = json.Unmarshal(buf, &rc)
+	if err != nil {
+		t.Fatalf("unknown test route " + name + ": " + err.Error())
+	}
+	return &rc
 }
 
 func getTestEventByName(t *testing.T, name string) interface{} {
 	path := filepath.Join("testdata/events", name+".json")
 	buf, err := ioutil.ReadFile(path)
 	if err != nil {
-		t.Fatalf(err.Error())
+		t.Fatalf("unknown test event file: " + err.Error())
 	}
 	var evt interface{}
 	err = json.Unmarshal(buf, &evt)
 	if err != nil {
-		t.Fatalf(err.Error())
+		t.Fatalf("unknown test event " + name + ": " + err.Error())
 	}
 	return evt
 }
@@ -100,14 +105,9 @@ func simulateSingleRoute(t *testing.T, data *TestTableSingleEntry) {
 		t.Errorf("routing table not empty")
 		return
 	}
-	var rc route.RouteConfig
-	err := json.Unmarshal([]byte(getTestRouteByName(t, data.Name)), &rc)
-	if err != nil {
-		t.Errorf(err.Error())
-		return
-	}
 	// add a route
-	err = rtmgr.AddRoute(ctx, route.NewRouteFromRouteConfig(&rc))
+	rc := getTestRouteByName(t, data.Name)
+	err := rtmgr.AddRoute(ctx, route.NewRouteFromRouteConfig(rc))
 	if err != nil {
 		t.Errorf(err.Error())
 		return
@@ -156,7 +156,7 @@ func simulateMultiRoutes(t *testing.T, data *TestTableMultiEntry) {
 	}
 	// add a routes
 	for _, name := range data.Routes {
-		rstr := getTestRouteByName(t, name)
+		/*rstr := getTestRouteByName(t, name)
 		var rc *route.RouteConfig
 		rc = new(route.RouteConfig)
 		rc.Source = new(route.Plugin)
@@ -165,9 +165,9 @@ func simulateMultiRoutes(t *testing.T, data *TestTableMultiEntry) {
 		if err != nil {
 			t.Errorf(err.Error())
 			return
-		}
-		route := route.NewRouteFromRouteConfig(rc)
-		err = rtmgr.AddRoute(ctx, route)
+		}*/
+		route := route.NewRouteFromRouteConfig(getTestRouteByName(t, name))
+		err := rtmgr.AddRoute(ctx, route)
 		if err != nil {
 			t.Errorf(err.Error())
 			return
@@ -239,26 +239,6 @@ func simulateMultiRoutes(t *testing.T, data *TestTableMultiEntry) {
 	}
 }
 
-/*func TestSplitRoute(t *testing.T) {
-	simulateSingleRoute(t, getTestRouteByName(t, "split_route"), 3, 6)
-}*/
-
-/*func TestDirectRoute(t *testing.T) {
-	simulateSingleRoute(t, getTestRouteByName(t, "direct_route"), 1, 1)
-}*/
-
-/*func TestFilterRoute(t *testing.T) {
-	simulateSingleRoute(t, getTestRouteByName(t, "filter_route"), 3, 0)
-}*/
-
-/*func TestArrayRoute(t *testing.T) {
-	simulateSingleRoute(t, getTestRouteByName(t, "array_route"), 3, 0)
-}*/
-
-/*func TestWildcardRoute(t *testing.T) {
-	simulateSingleRoute(t, getTestRouteByName(t, "wildcard_route"), 3, 0)
-}*/
-
 func TestGetRoutesBy(t *testing.T) {
 	ctx := context.Background()
 	ctx = log.Logger.WithContext(ctx)
@@ -269,16 +249,9 @@ func TestGetRoutesBy(t *testing.T) {
 		return
 	}
 	// add a routes
-	routes := []string{getTestRouteByName(t, "split_route"), getTestRouteByName(t, "direct_route"), getTestRouteByName(t, "filter_route"), getTestRouteByName(t, "array_route"), getTestRouteByName(t, "wildcard_route")}
-	var rc *route.RouteConfig
-	for _, rstr := range routes {
-		rc = new(route.RouteConfig)
-		err := json.Unmarshal([]byte(rstr), rc)
-		if err != nil {
-			t.Errorf(err.Error())
-			return
-		}
-		err = rtmgr.AddRoute(ctx, route.NewRouteFromRouteConfig(rc))
+	routes := []*route.RouteConfig{getTestRouteByName(t, "split_route"), getTestRouteByName(t, "direct_route"), getTestRouteByName(t, "filter_route"), getTestRouteByName(t, "array_route"), getTestRouteByName(t, "wildcard_route")}
+	for _, rc := range routes {
+		err := rtmgr.AddRoute(ctx, route.NewRouteFromRouteConfig(rc))
 		if err != nil {
 			t.Errorf(err.Error())
 			return
@@ -298,7 +271,7 @@ func TestGetRoutesBy(t *testing.T) {
 	if rtmgr.GetRouteCount(ctx) != 5 {
 		t.Errorf("routing table doesn't have expected number of entries %d", rtmgr.GetRouteCount(ctx))
 	}
-	foundRoutes, err := rtmgr.GetRoutesBySourcePlugin(ctx, rc.Source)
+	foundRoutes, err := rtmgr.GetRoutesBySourcePlugin(ctx, routes[4].Source)
 	if err != nil {
 		t.Errorf(err.Error())
 		return
@@ -306,7 +279,7 @@ func TestGetRoutesBy(t *testing.T) {
 	if len(foundRoutes) != 1 {
 		t.Errorf("unexpected number of routes by source %d", len(foundRoutes))
 	}
-	foundRoutes, err = rtmgr.GetRoutesByDestinationPlugin(ctx, rc.Destination)
+	foundRoutes, err = rtmgr.GetRoutesByDestinationPlugin(ctx, routes[4].Destination)
 	if err != nil {
 		t.Errorf(err.Error())
 		return
@@ -334,16 +307,9 @@ func TestGetPluginsBy(t *testing.T) {
 		return
 	}
 	// add a routes
-	routes := []string{getTestRouteByName(t, "split_route"), getTestRouteByName(t, "direct_route"), getTestRouteByName(t, "filter_route"), getTestRouteByName(t, "array_route"), getTestRouteByName(t, "wildcard_route")}
-	var rc *route.RouteConfig
-	for _, rstr := range routes {
-		rc = new(route.RouteConfig)
-		err := json.Unmarshal([]byte(rstr), rc)
-		if err != nil {
-			t.Errorf(err.Error())
-			return
-		}
-		err = rtmgr.AddRoute(ctx, route.NewRouteFromRouteConfig(rc))
+	routes := []*route.RouteConfig{getTestRouteByName(t, "split_route"), getTestRouteByName(t, "direct_route"), getTestRouteByName(t, "filter_route"), getTestRouteByName(t, "array_route"), getTestRouteByName(t, "wildcard_route")}
+	for _, rc := range routes {
+		err := rtmgr.AddRoute(ctx, route.NewRouteFromRouteConfig(rc))
 		if err != nil {
 			t.Errorf(err.Error())
 			return
@@ -422,16 +388,9 @@ func TestErrors(t *testing.T) {
 	} else {
 		fmt.Printf("error %s\n", err.Error())
 	}
-	/*routes := []string{getTestRouteByName(t, "empty_route")}
-	var rc *route.RouteConfig
-	for _, rstr := range routes {
-		rc = new(route.RouteConfig)
-		err := json.Unmarshal([]byte(rstr), rc)
-		if err != nil {
-			t.Errorf(err.Error())
-			return
-		}
-		err = rtmgr.AddRoute(ctx, route.NewRouteFromRouteConfig(rc))
+	/*routes := []*route.RouteConfig{getTestRouteByName(t, "empty_route")}
+	for _, rc := range routes {
+		err := rtmgr.AddRoute(ctx, route.NewRouteFromRouteConfig(rc))
 		if err == nil {
 			t.Errorf("missing error")
 		}
@@ -462,16 +421,9 @@ func TestDoSync(t *testing.T) {
 		return
 	}
 	// add a routes
-	routes := []string{getTestRouteByName(t, "split_route")}
-	var rc *route.RouteConfig
-	for _, rstr := range routes {
-		rc = new(route.RouteConfig)
-		err := json.Unmarshal([]byte(rstr), rc)
-		if err != nil {
-			t.Errorf(err.Error())
-			return
-		}
-		err = rtmgr.AddRoute(ctx, route.NewRouteFromRouteConfig(rc))
+	routes := []*route.RouteConfig{getTestRouteByName(t, "split_route")}
+	for _, rc := range routes {
+		err := rtmgr.AddRoute(ctx, route.NewRouteFromRouteConfig(rc))
 		if err != nil {
 			t.Errorf(err.Error())
 			return
