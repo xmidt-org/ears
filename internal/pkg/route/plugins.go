@@ -44,6 +44,7 @@ type (
 		Name          string                 `json:"name,omitempty"`       // descriptive plugin name
 		Encodings     []string               `json:"encodings,omitempty"`  // list of supported encodings
 		EventCount    int                    `json:"eventCount,omitempty"` // number of events that have passed through this plugin
+		lastEvent     *Event                 // latest event received
 		routes        []*Route               // list of routes using this plugin instance
 		inputChannel  chan *Event            // event channel on which plugin receives the next event
 		outputChannel chan *Event            // event channel to which plugin forwards current event to
@@ -140,6 +141,12 @@ func (plgn *Plugin) GetEventCount() int {
 	plgn.lock.RLock()
 	defer plgn.lock.RUnlock()
 	return plgn.EventCount
+}
+
+func (plgn *Plugin) GetLastEvent() *Event {
+	plgn.lock.RLock()
+	defer plgn.lock.RUnlock()
+	return plgn.lastEvent
 }
 
 func (plgn *Plugin) IncEventCount(inc int) {
@@ -239,6 +246,9 @@ func (dip *DebugInputPlugin) DoSync(ctx context.Context, event *Event) error {
 func (dop *DebugOutputPlugin) DoSync(ctx context.Context, event *Event) error {
 	log.Ctx(ctx).Debug().Msg(dop.Mode + " " + dop.Type + " plugin " + dop.GetConfig().Name + " " + dop.Hash(ctx) + " consumed event " + strconv.Itoa(dop.GetEventCount()))
 	dop.IncEventCount(1)
+	dop.lock.Lock()
+	dop.lastEvent = event
+	dop.lock.Unlock()
 	return nil
 }
 
@@ -249,9 +259,12 @@ func (dop *DebugOutputPlugin) DoAsync(ctx context.Context) {
 		}
 		for {
 			select {
-			case <-dop.GetInputChannel():
+			case evt := <-dop.GetInputChannel():
 				log.Ctx(ctx).Debug().Msg(dop.Mode + " " + dop.Type + " plugin " + dop.GetConfig().Name + " " + dop.Hash(ctx) + " consumed event " + strconv.Itoa(dop.GetEventCount()))
 				dop.IncEventCount(1)
+				dop.lock.Lock()
+				dop.lastEvent = evt
+				dop.lock.Unlock()
 			case <-dop.done:
 				log.Ctx(ctx).Debug().Msg(dop.Mode + " " + dop.Type + " plugin " + dop.GetConfig().Name + " " + dop.Hash(ctx) + " done")
 				return
@@ -319,7 +332,7 @@ func NewOutputPlugin(ctx context.Context, rte *Route) (Pluginer, error) {
 		dop.Params = pc.Params
 		dop.routes = []*Route{rte}
 		dop.done = make(chan bool)
-		// the input chhannel of an output plugin may be shared by multiple routes
+		// the input channel of an output plugin may be shared by multiple routes
 		dop.SetInputChannel(make(chan *Event))
 		dop.DoAsync(ctx)
 		return dop, nil
