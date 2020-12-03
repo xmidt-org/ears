@@ -9,6 +9,10 @@
         "OutputPluginEventCounts" : {
             "debug_out_a" : 2,
             "debug_out_b" : 2
+        },
+        "OutputPluginEvents" : {
+            "debug_out_a" : "foobar",
+            "debug_out_b" : "foobar"
         }
     },    
     {
@@ -20,6 +24,10 @@
         "OutputPluginEventCounts" : {
             "debug_out_a" : 2,
             "debug_out_b" : 2
+        },
+        "OutputPluginEvents" : {
+            "debug_out_a" : "foobar",
+            "debug_out_b" : "foobar"
         }
     },    
     {
@@ -31,6 +39,9 @@
         },
         "OutputPluginEventCounts" : {
             "debug_out_a" : 4
+        },
+        "OutputPluginEvents" : {
+            "debug_out_a" : "foobar"
         }
     },    
     {
@@ -43,6 +54,10 @@
         "OutputPluginEventCounts" : {
             "debug_out_a" : 2,
             "debug_out_b" : 4
+        },
+        "OutputPluginEvents" : {
+            "debug_out_a" : "foobar",
+            "debug_out_b" : "foobar"
         }
     }
 ]   

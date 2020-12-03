@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"path/filepath"
+	"reflect"
 	"testing"
 	"time"
 
@@ -13,9 +14,6 @@ import (
 
 	"github.com/rs/zerolog/log"
 )
-
-//TODO: test all errors
-//TODO: test hashing and validations
 
 type (
 	TestTableSingleEntry struct {
@@ -28,16 +26,31 @@ type (
 		Routes                  []string
 		InputPluginEventCounts  map[string]int
 		OutputPluginEventCounts map[string]int
+		OutputPluginEvents      map[string]string
 	}
 )
 
 func getTestRouteByName(t *testing.T, name string) string {
-	path := filepath.Join("testdata", name+".json")
+	path := filepath.Join("testdata/routes", name+".json")
 	buf, err := ioutil.ReadFile(path)
 	if err != nil {
 		t.Fatalf(err.Error())
 	}
 	return string(buf)
+}
+
+func getTestEventByName(t *testing.T, name string) interface{} {
+	path := filepath.Join("testdata/events", name+".json")
+	buf, err := ioutil.ReadFile(path)
+	if err != nil {
+		t.Fatalf(err.Error())
+	}
+	var evt interface{}
+	err = json.Unmarshal(buf, &evt)
+	if err != nil {
+		t.Fatalf(err.Error())
+	}
+	return evt
 }
 
 func TestSingleRouteTestTable(t *testing.T) {
@@ -197,6 +210,17 @@ func simulateMultiRoutes(t *testing.T, data *TestTableMultiEntry) {
 			if r.Destination.GetConfig().Name == k {
 				if r.Destination.GetEventCount() != v {
 					t.Errorf("unexpected number of consumed events %d for %s (expected %d)", r.Destination.GetEventCount(), k, v)
+				}
+				if data.OutputPluginEvents != nil {
+					expectedEvent := getTestEventByName(t, data.OutputPluginEvents[k])
+					if expectedEvent != nil {
+						lastEvent := r.Destination.GetLastEvent()
+						if lastEvent == nil {
+							t.Errorf("no event received for %s", k)
+						} else if !reflect.DeepEqual(expectedEvent, lastEvent.Payload) {
+							t.Errorf("unexpected event payload for %s", k)
+						}
+					}
 				}
 			}
 		}

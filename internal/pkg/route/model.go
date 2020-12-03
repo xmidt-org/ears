@@ -97,6 +97,7 @@ type (
 		GetRouteCount() int
 		GetEventCount() int
 		IncEventCount(int)
+		GetLastEvent() *Event
 	}
 
 	// A Closer can close or shutdown a running thing
