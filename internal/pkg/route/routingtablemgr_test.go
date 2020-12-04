@@ -388,17 +388,6 @@ func TestErrors(t *testing.T) {
 	} else {
 		fmt.Printf("error %s\n", err.Error())
 	}
-	/*routes := []*route.RouteConfig{getTestRouteByName(t, "empty_route")}
-	for _, rc := range routes {
-		err := rtmgr.AddRoute(ctx, route.NewRouteFromRouteConfig(rc))
-		if err == nil {
-			t.Errorf("missing error")
-		}
-		_, ok := err.(*route.UnknownPluginTypeError)
-		if !ok {
-			t.Errorf("wrong error")
-		}
-	}*/
 	// validate
 	err = rtmgr.Validate(ctx)
 	if err != nil {
@@ -421,7 +410,7 @@ func TestDoSync(t *testing.T) {
 		return
 	}
 	// add a routes
-	routes := []*route.RouteConfig{getTestRouteByName(t, "split_route")}
+	routes := []*route.RouteConfig{getTestRouteByName(t, "split_route_zero_rounds")}
 	for _, rc := range routes {
 		err := rtmgr.AddRoute(ctx, route.NewRouteFromRouteConfig(rc))
 		if err != nil {
@@ -429,10 +418,10 @@ func TestDoSync(t *testing.T) {
 			return
 		}
 	}
-	// inject event
 	allRoutes, _ := rtmgr.GetAllRoutes(ctx)
 	r := allRoutes[0]
-	event := route.NewEvent(ctx, r.Source, map[string]string{"foo": "bar"})
+	event := route.NewEvent(ctx, r.Source, map[string]interface{}{"foo": "bar"})
+	// inject events
 	err := r.Source.DoSync(ctx, event)
 	if err != nil {
 		t.Errorf(err.Error())
@@ -445,7 +434,10 @@ func TestDoSync(t *testing.T) {
 	if err != nil {
 		t.Errorf(err.Error())
 	}
-	/*if r.Destination.GetEventCount() != 6 {
+	// give plugins some time to do their thing
+	time.Sleep(time.Duration(500) * time.Millisecond)
+	// check event count (two of thhe events are doubled by the event splitter)
+	if r.Destination.GetEventCount() != 5 {
 		t.Errorf("unexpected number of events %d", r.Destination.GetEventCount())
-	}*/
+	}
 }
