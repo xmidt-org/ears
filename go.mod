@@ -5,6 +5,7 @@ go 1.14
 require (
 	github.com/ThreeDotsLabs/watermill v1.1.1
 	github.com/davecgh/go-spew v1.1.1
+	github.com/faiface/beep v1.0.2 // indirect
 	github.com/fsnotify/fsnotify v1.4.9 // indirect
 	github.com/ghodss/yaml v1.0.0
 	github.com/google/addlicense v0.0.0-20200906110928-a0294312aa76 // indirect
@@ -27,7 +28,7 @@ require (
 	go.uber.org/fx v1.13.1
 	go.uber.org/multierr v1.5.0 // indirect
 	golang.org/x/lint v0.0.0-20200302205851-738671d3881b // indirect
-	golang.org/x/sync v0.0.0-20201008141435-b3e1573b7520 // indirect
+	golang.org/x/sync v0.0.0-20201008141435-b3e1573b7520
 	golang.org/x/tools v0.0.0-20200909205333-6a8222ee2526 // indirect
 	gopkg.in/ini.v1 v1.61.0 // indirect
 	honnef.co/go/tools v0.0.1-2020.1.5 // indirect
