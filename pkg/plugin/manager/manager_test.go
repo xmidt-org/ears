@@ -84,7 +84,7 @@ func TestNilPluginError(t *testing.T) {
 		{name: "nil_plugin", err: &manager.NilPluginError{}},
 	}
 
-	m := manager.NewManager()
+	m, _ := manager.New()
 
 	for _, tc := range testCases {
 		t.Run("register_"+tc.name, func(t *testing.T) {
@@ -111,7 +111,7 @@ func TestAlreadyRegisteredError(t *testing.T) {
 		{name: "registered", plug: &plugin.PluginerMock{}, err: &manager.AlreadyRegisteredError{}},
 	}
 
-	m := manager.NewManager()
+	m, _ := manager.New()
 
 	for _, tc := range testCases {
 		t.Run("register_"+tc.name, func(t *testing.T) {
@@ -139,7 +139,7 @@ func TestRegistrationLifecycle(t *testing.T) {
 		{name: "four", plug: &plugin.PluginerMock{}},
 	}
 
-	m := manager.NewManager()
+	m, _ := manager.New()
 	a := NewWithT(t)
 
 	for _, tc := range testCases {
@@ -229,7 +229,7 @@ func TestRegistrationTypes(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 
 			a := NewWithT(t)
-			m := manager.NewManager()
+			m, _ := manager.New()
 
 			// Plugins
 			for i := 0; i < tc.numPlugins; i++ {
@@ -291,7 +291,7 @@ func TestLoadPlugin(t *testing.T) {
 		t.Errorf("could not get plugin paths: %w", err)
 	}
 
-	m := manager.NewManager()
+	m, _ := manager.New()
 	for _, path := range paths {
 		t.Run(path, func(t *testing.T) {
 			a := NewWithT(t)
@@ -361,7 +361,7 @@ func TestLoadErrors(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			a := NewWithT(t)
-			m := manager.NewManager()
+			m, _ := manager.New()
 
 			_, err := m.LoadPlugin(tc.config)
 			a.Expect(err).ToNot(BeNil())
@@ -374,7 +374,7 @@ func TestLoadErrors(t *testing.T) {
 func TestNewReceiver(t *testing.T) {
 
 	a := NewWithT(t)
-	m := manager.NewManager()
+	m, _ := manager.New()
 
 	nfe := &manager.NotFoundError{}
 
@@ -411,7 +411,7 @@ func TestNewReceiver(t *testing.T) {
 
 func TestNewFilterer(t *testing.T) {
 	a := NewWithT(t)
-	m := manager.NewManager()
+	m, _ := manager.New()
 
 	nfe := &manager.NotFoundError{}
 
@@ -448,7 +448,7 @@ func TestNewFilterer(t *testing.T) {
 
 func TestNewSenderer(t *testing.T) {
 	a := NewWithT(t)
-	m := manager.NewManager()
+	m, _ := manager.New()
 
 	nfe := &manager.NotFoundError{}
 

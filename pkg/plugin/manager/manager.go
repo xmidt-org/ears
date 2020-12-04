@@ -39,10 +39,10 @@ type manager struct {
 type Option func(OptionProcessor) error
 type OptionProcessor interface{}
 
-func NewManager(options ...Option) *manager {
+func New(options ...Option) (*manager, error) {
 	return &manager{
 		registrations: map[string]Registration{},
-	}
+	}, nil
 }
 
 // === Registration ===================================================
