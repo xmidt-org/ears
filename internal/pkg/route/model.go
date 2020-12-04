@@ -24,7 +24,6 @@ import (
 const (
 
 	// plugin types
-	//TODO: where should this live?
 
 	PluginTypeKafka  = "kafka"  // generic kafka plugin
 	PluginTypeKDS    = "kds"    // generic kds plugin
@@ -37,7 +36,6 @@ const (
 	PluginTypeFilter = "filter" // a filter plugin that filters or transforms and event
 
 	// filter types
-	//TODO: where should this live?
 
 	FilterTypeFilter      = "filter"
 	FilterTypeMatcher     = "match"
@@ -75,11 +73,6 @@ const (
 )
 
 type (
-	// A FilterChain is a slice of filter plugins
-	FilterChain struct {
-		Filters []*FilterPlugin `json:"filters"` // optional list of filter plugins that will be applied in order to perform arbitrary filtering and transformation functions
-	}
-
 	// A RoutingTable is a slice of routing entries and reprrsents the EARS routing table
 	RoutingTable []*Route
 
@@ -104,6 +97,7 @@ type (
 		GetRouteCount() int
 		GetEventCount() int
 		IncEventCount(int)
+		GetLastEvent() *Event
 	}
 
 	// A Closer can close or shutdown a running thing
@@ -146,12 +140,6 @@ type (
 		Match(ctx context.Context, event *Event, pattern interface{}) bool // if pattern is contained in event the function returns true
 	}
 
-	// An AckTree is a splittable acknowledge tree object
-	AckTree interface {
-		Ack()
-		SubTree(int) []AckTree
-	}
-
 	// A RouteModifier allows modifications to a routing table
 	RouteModifier interface {
 		AddRoute(ctx context.Context, entry *Route) error             // idempotent operation to add a routing entry to a local routing table
@@ -165,7 +153,6 @@ type (
 		GetRouteCount(ctx context.Context) int                                               // get current size of routing table
 		GetRoutesBySourcePlugin(ctx context.Context, plugin Pluginer) ([]*Route, error)      // get all routes for a specifc source plugin
 		GetRoutesByDestinationPlugin(ctx context.Context, plugin Pluginer) ([]*Route, error) // get all routes for a specific destination plugin
-		GetRoutesForEvent(ctx context.Context, event *Event) ([]*Route, error)               // get all routes for a given event (and source plugin)
 	}
 
 	// A RouteInitializer
@@ -195,10 +182,11 @@ type (
 
 	// A IOPluginManager maintains a map of live plugins and ensures no two plugins with the same hash exist
 	IOPluginManager interface {
-		RegisterRoute(ctx context.Context, rte *Route) (Pluginer, error) // uses plugin parameter only for hash calculation and returns one if it already exists or creates a new one
-		WithdrawRoute(ctx context.Context, rte *Route) error             // uses plugin parameter only for hash calculation
-		GetPluginCount(ctx context.Context) int                          // get plugin count
-		GetAllPlugins(ctx context.Context) ([]Pluginer, error)           // get all plugins
+		RegisterRoute(ctx context.Context, rte *Route) (Pluginer, error)                          // uses plugin parameter only for hash calculation and returns one if it already exists or creates a new one
+		WithdrawRoute(ctx context.Context, rte *Route) error                                      // uses plugin parameter only for hash calculation
+		GetPluginCount(ctx context.Context) int                                                   // get plugin count
+		GetAllPlugins(ctx context.Context) ([]Pluginer, error)                                    // get all plugins
+		GetPlugins(ctx context.Context, pluginMode string, pluginType string) ([]Pluginer, error) // filter plugins by mode or type
 	}
 
 	// An EventSourceManager manages all event source plugins for a live ears instance

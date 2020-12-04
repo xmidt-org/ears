@@ -19,6 +19,15 @@ package route
 
 import (
 	"context"
+	"sync"
+)
+
+type (
+	// A FilterChain is a slice of filter plugins
+	FilterChain struct {
+		Filters []*FilterPlugin `json:"filters"` // optional list of filter plugins that will be applied in order to perform arbitrary filtering and transformation functions
+		lock    sync.RWMutex
+	}
 )
 
 func NewFilterChain(ctx context.Context) *FilterChain {
@@ -29,20 +38,15 @@ func NewFilterChain(ctx context.Context) *FilterChain {
 
 // Initialize sets up filter chain objects and channels based on filter chain config
 func (fc *FilterChain) Initialize(ctx context.Context, rte *Route) error {
-	//
-	// initialize filter chain
-	//
-	// for now output plugin is not connected via channel but rather via function call
-	// input plugin is decoupled from filter chain via simple buffered channel
-	// therefore the first filter reads from the buffered event channel and the last filter in the filter chain has a nil output channel
-	// we will likely change this in the future
 	var err error
 	var eventChannel chan *Event
+	rte.lock.Lock()
+	defer rte.lock.Unlock()
 	if fc.Filters == nil {
 		fc.Filters = make([]*FilterPlugin, 0)
 	}
 	if len(fc.Filters) == 0 {
-		// seed an empty filter chain with a pass filter
+		// seed an empty filter chain with a pass (aka nop) filter
 		fp := new(FilterPlugin)
 		fp.Type = FilterTypePass
 		fc.Filters = append(fc.Filters, fp)
@@ -60,11 +64,17 @@ func (fc *FilterChain) Initialize(ctx context.Context, rte *Route) error {
 			fp.done = make(chan bool)
 			fp.lock.Unlock()
 			if idx == 0 {
-				fp.SetInputChannel(rte.Source.GetOutputChannel())
+				// each filter chain gets its own set of channels
+				fp.SetInputChannel(make(chan *Event))
 			} else {
 				fp.SetInputChannel(eventChannel)
 			}
-			fp.SetOutputChannel(make(chan *Event))
+			if idx == len(fc.Filters)-1 {
+				// last channel in the filter chain is the (shared) input channel of the output plugin
+				fp.SetOutputChannel(rte.Destination.GetInputChannel())
+			} else {
+				fp.SetOutputChannel(make(chan *Event))
+			}
 			eventChannel = fp.GetOutputChannel()
 			fp.DoAsync(ctx)
 		}
