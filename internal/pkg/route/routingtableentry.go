@@ -22,6 +22,7 @@ import (
 	"crypto/md5"
 	"encoding/json"
 	"fmt"
+	"sync"
 )
 
 type (
@@ -38,6 +39,7 @@ type (
 		Debug        bool                `json:"debug,omitempty"`        // if true generate debug logs and metrics for events taking this route
 		Ts           int                 `json:"ts,omitempty"`           // timestamp when route was created or updated
 		tblMgr       RoutingTableManager `json:"-"`                      // pointer to routing table manager
+		lock         sync.RWMutex
 	}
 	RouteConfig struct {
 		OrgId        string       `json:"orgId,omitempty"`        // org ID for quota and rate limiting
@@ -87,8 +89,8 @@ func (rte *Route) Validate(ctx context.Context) error {
 	if rte.Destination == nil {
 		return &MissingPluginConfiguratonError{"", "", PluginModeOutput}
 	}
-	rte.Source.GetConfig().Mode = PluginModeInput
-	rte.Destination.GetConfig().Mode = PluginModeOutput
+	//rte.Source.GetConfig().Mode = PluginModeInput
+	//rte.Destination.GetConfig().Mode = PluginModeOutput
 	return nil
 }
 
@@ -107,19 +109,21 @@ func (rte *Route) Initialize(ctx context.Context) error {
 		return err
 	}
 	//
-	// initialize filter chain
+	// initialize destination plugin
 	//
-	if rte.FilterChain == nil {
-		rte.FilterChain = NewFilterChain(ctx)
-	}
-	err = rte.FilterChain.Initialize(ctx, rte)
+	rte.Destination, err = GetIOPluginManager(ctx).RegisterPlugin(ctx, rte, rte.Destination)
 	if err != nil {
 		return err
 	}
 	//
-	// initialize destination plugin
+	// initialize filter chain
 	//
-	rte.Destination, err = GetIOPluginManager(ctx).RegisterPlugin(ctx, rte, rte.Destination)
+	rte.lock.Lock()
+	if rte.FilterChain == nil {
+		rte.FilterChain = NewFilterChain(ctx)
+	}
+	rte.lock.Unlock()
+	err = rte.FilterChain.Initialize(ctx, rte)
 	if err != nil {
 		return err
 	}

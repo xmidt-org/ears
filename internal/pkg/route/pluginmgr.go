@@ -21,6 +21,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"sync"
 
 	"github.com/rs/zerolog/log"
 )
@@ -28,6 +29,7 @@ import (
 type (
 	DefaultIOPluginManager struct {
 		pluginMap map[string]Pluginer
+		lock      sync.RWMutex
 	}
 )
 
@@ -54,41 +56,46 @@ func (pm *DefaultIOPluginManager) String() string {
 }
 
 func (pm *DefaultIOPluginManager) RegisterPlugin(ctx context.Context, rte *Route, plugin Pluginer) (Pluginer, error) {
+	pm.lock.Lock()
+	defer pm.lock.Unlock()
 	var err error
 	hash := plugin.Hash(ctx)
 	if hash == "" {
 		return plugin, new(EmptyPluginHashError)
 	}
-	pc := plugin.GetConfig()
 	if p, ok := pm.pluginMap[hash]; ok {
+		pc := p.GetConfig()
 		if pc.routes == nil {
 			pc.routes = make([]*Route, 0)
 		}
 		pc.routes = append(pc.routes, rte)
+		log.Ctx(ctx).Debug().Msg(fmt.Sprintf("appending route to plugin %s %s route count %d %d", p.GetConfig().Name, hash, p.GetRouteCount(), len(pc.routes)))
 		return p, nil
 	}
 	var p Pluginer
-	if pc.Mode == PluginModeInput {
+	if plugin.GetConfig().Mode == PluginModeInput {
 		p, err = NewInputPlugin(ctx, rte)
-	} else if pc.Mode == PluginModeOutput {
+	} else if plugin.GetConfig().Mode == PluginModeOutput {
 		p, err = NewOutputPlugin(ctx, rte)
 	}
 	if err != nil {
 		return plugin, err
 	}
 	pm.pluginMap[hash] = p
-	log.Ctx(ctx).Debug().Msg(fmt.Sprintf("registering new %s %s plugin with hash %s", p.GetConfig().Type, p.GetConfig().Mode, hash))
+	log.Ctx(ctx).Debug().Msg(fmt.Sprintf("registering new %s %s plugin %s with hash %s", p.GetConfig().Type, p.GetConfig().Mode, p.GetConfig().Name, hash))
 	return p, nil
 }
 
 func (pm *DefaultIOPluginManager) WithdrawPlugin(ctx context.Context, rte *Route, plugin Pluginer) error {
+	pm.lock.Lock()
+	defer pm.lock.Unlock()
 	hash := plugin.Hash(ctx)
 	if hash == "" {
 		return new(EmptyPluginHashError)
 	}
-	pc := plugin.GetConfig()
 	if p, ok := pm.pluginMap[hash]; ok {
-		log.Ctx(ctx).Debug().Msg(fmt.Sprintf("unregistering %s %s plugin with hash %s", p.GetConfig().Type, p.GetConfig().Mode, hash))
+		pc := p.GetConfig()
+		log.Ctx(ctx).Debug().Msg(fmt.Sprintf("withdrawing %s %s plugin %s with hash %s", p.GetConfig().Type, p.GetConfig().Mode, p.GetConfig().Name, hash))
 		routes := make([]*Route, 0)
 		if pc.routes != nil {
 			for _, r := range pc.routes {
@@ -99,11 +106,11 @@ func (pm *DefaultIOPluginManager) WithdrawPlugin(ctx context.Context, rte *Route
 			pc.routes = routes
 			if p.GetRouteCount() <= 0 {
 				p.Close(ctx)
-				log.Ctx(ctx).Debug().Msg(fmt.Sprintf("stopped %s %s plugin with hash %s", p.GetConfig().Type, p.GetConfig().Mode, hash))
+				log.Ctx(ctx).Debug().Msg(fmt.Sprintf("stopped %s %s plugin %s with hash %s", p.GetConfig().Type, p.GetConfig().Mode, p.GetConfig().Name, hash))
 				delete(pm.pluginMap, hash)
 			}
 		}
-		log.Ctx(ctx).Debug().Msg(fmt.Sprintf("%s %s plugin route count %d %d", p.GetConfig().Type, p.GetConfig().Mode, p.GetRouteCount(), len(pc.routes)))
+		log.Ctx(ctx).Debug().Msg(fmt.Sprintf("%s %s plugin %s route count %d %d after withdrawal", p.GetConfig().Type, p.GetConfig().Mode, p.GetConfig().Name, p.GetRouteCount(), len(pc.routes)))
 	}
 	return nil
 }
@@ -114,6 +121,20 @@ func (pm *DefaultIOPluginManager) GetPluginCount(ctx context.Context) int {
 func (pm *DefaultIOPluginManager) GetAllPlugins(ctx context.Context) ([]Pluginer, error) {
 	plugins := make([]Pluginer, 0)
 	for _, p := range pm.pluginMap {
+		plugins = append(plugins, p)
+	}
+	return plugins, nil
+}
+
+func (pm *DefaultIOPluginManager) GetPlugins(ctx context.Context, pluginMode string, pluginType string) ([]Pluginer, error) {
+	plugins := make([]Pluginer, 0)
+	for _, p := range pm.pluginMap {
+		if pluginMode != "" && p.GetConfig().Mode != pluginMode {
+			continue
+		}
+		if pluginType != "" && p.GetConfig().Type != pluginType {
+			continue
+		}
 		plugins = append(plugins, p)
 	}
 	return plugins, nil
