@@ -180,7 +180,9 @@ func (dip *DebugInputPlugin) DoAsync(ctx context.Context) {
 	done := false
 	go func() {
 		<-dip.done
+		dip.lock.Lock()
 		done = true
+		dip.lock.Unlock()
 	}()
 	go func() {
 		if dip.Payload == nil {
@@ -188,11 +190,17 @@ func (dip *DebugInputPlugin) DoAsync(ctx context.Context) {
 			return
 		}
 		for {
+			if dip.Rounds == 0 && dip.IntervalMs == 0 {
+				return
+			}
 			if dip.Rounds > 0 && dip.GetEventCount() >= dip.Rounds {
 				return
 			}
 			time.Sleep(time.Duration(dip.IntervalMs) * time.Millisecond)
-			if done {
+			dip.lock.RLock()
+			d := done
+			dip.lock.RUnlock()
+			if d {
 				break
 			}
 			subCtx := context.WithValue(ctx, "foo", "bar")
@@ -223,18 +231,22 @@ func (dip *DebugInputPlugin) DoSync(ctx context.Context, event *Event) error {
 	if dip.Payload == nil {
 		return &MissingPluginConfiguratonError{dip.Type, dip.Hash(ctx), PluginModeInput}
 	}
-	log.Ctx(ctx).Debug().Msg("debug input plugin " + dip.GetConfig().Name + " " + dip.Hash(ctx) + " produced event " + fmt.Sprintf("%d", dip.EventCount))
-	// deliver event to each interested route (first filter in chain)
+	log.Ctx(ctx).Debug().Msg("debug input plugin " + dip.GetConfig().Name + " " + dip.Hash(ctx) + " produced sync event " + fmt.Sprintf("%d", dip.EventCount))
+	dip.lock.Lock()
 	GetIOPluginManager(ctx).lock.RLock()
+	// deliver event to each interested route (first filter in chain)
 	if dip.routes != nil {
 		for _, r := range dip.routes {
+			r.lock.RLock()
 			if r.FilterChain != nil && len(r.FilterChain.Filters) > 0 {
 				//TODO: clone event
 				r.FilterChain.Filters[0].GetInputChannel() <- event
 			}
+			r.lock.RUnlock()
 		}
 	}
 	GetIOPluginManager(ctx).lock.RUnlock()
+	dip.lock.Unlock()
 	dip.IncEventCount(1)
 	return nil
 }
