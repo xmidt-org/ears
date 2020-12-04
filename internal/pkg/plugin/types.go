@@ -15,21 +15,64 @@
 package plugin
 
 import (
-	"github.com/xmidt-org/ears/pkg/filter"
-	"github.com/xmidt-org/ears/pkg/receiver"
-	"github.com/xmidt-org/ears/pkg/sender"
+	"context"
+	"time"
+
+	pkgfilter "github.com/xmidt-org/ears/pkg/filter"
+	pkgmanager "github.com/xmidt-org/ears/pkg/plugin/manager"
+	pkgreceiver "github.com/xmidt-org/ears/pkg/receiver"
+	pkgsender "github.com/xmidt-org/ears/pkg/sender"
 )
 
 type Manager interface {
-	Receiverers() map[string]receiver.NewReceiverer
-	RegisterReceiver(pluginName string, config string) (receiver.Receiver, error)
-	UnregisterReceiver(receiver.Receiver) error
+	Receiverers() map[string]pkgreceiver.NewReceiverer
+	RegisterReceiver(
+		ctx context.Context, plugin string,
+		name string, config string,
+	) (pkgreceiver.Receiver, error)
+	Receivers() map[string]pkgreceiver.Receiver
+	UnregisterReceiver(ctx context.Context, r pkgreceiver.Receiver) error
 
-	Filterers() map[string]filter.NewFilterer
-	RegisterFilter(pluginName string, config string) (filter.Filterer, error)
-	UnregisterFilter(filter.Filterer) error
+	Filterers() map[string]pkgfilter.NewFilterer
+	RegisterFilter(
+		ctx context.Context, plugin string,
+		name string, config string,
+	) (pkgfilter.Filterer, error)
+	Filters() map[string]pkgfilter.Filterer
+	UnregisterFilter(ctx context.Context, f pkgfilter.Filterer) error
 
-	Senderers() map[string]sender.NewSenderer
-	RegisterSender(pluginName string, config string) (sender.Sender, error)
-	UnregisterSender(filter.Filterer) error
+	Senderers() map[string]pkgsender.NewSenderer
+	RegisterSender(
+		ctx context.Context, plugin string,
+		name string, config string,
+	) (pkgsender.Sender, error)
+	Senders() map[string]pkgsender.Sender
+	UnregisterSender(ctx context.Context, s pkgsender.Sender) error
+}
+
+type ManagerOption func(ManagerOptionProcessor) error
+
+type ManagerOptionProcessor interface {
+	WithPluginManager(p pkgmanager.Manager) error
+	WithNextFnDeadline(d time.Duration) error
+}
+
+func WithPluginManager(p pkgmanager.Manager) ManagerOption {
+	return func(o ManagerOptionProcessor) error {
+		return o.WithPluginManager(p)
+	}
+}
+
+func WithNextFnDeadline(d time.Duration) ManagerOption {
+	return func(o ManagerOptionProcessor) error {
+		return o.WithNextFnDeadline(d)
+	}
+}
+
+type OptionError struct {
+	Err error
+}
+
+type RegistrationError struct {
+	Err error
 }
