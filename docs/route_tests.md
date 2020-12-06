@@ -1,4 +1,12 @@
-# EARS Routing Unit Tests
+# Table Driven Unit Tests
+
+## Single Route Tests
+
+[test_table_single_route.json](../internal/pkg/route/testdata/test_table_single_route.json)
+
+## Multi Route Tests
+
+[test_table_multi_route.json](../internal/pkg/route/testdata/test_table_multi_route.json)
 
 ## Single Route Test - Match & Filter
 
