@@ -36,14 +36,14 @@ type sender struct {
 }
 
 func (s *sender) Send(ctx context.Context, e event.Event) error {
-	if s.sender == nil || s.active == false {
+	if s.sender == nil || !s.active {
 		return &pkgmanager.NilPluginError{}
 	}
 	return s.sender.Send(ctx, e)
 }
 
 func (s *sender) Unregister(ctx context.Context) error {
-	if s == nil || s.manager == nil || s.active == false {
+	if s == nil || s.manager == nil || !s.active {
 		return &pkgmanager.NotRegisteredError{}
 	}
 

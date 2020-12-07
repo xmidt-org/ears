@@ -14,14 +14,20 @@
 
 package plugin
 
-import "fmt"
+import "github.com/xmidt-org/ears/pkg/errs"
 
 func (e *OptionError) Unwrap() error {
 	return e.Err
 }
 
 func (e *OptionError) Error() string {
-	return errToString("OptionError", e.Err)
+	return errs.String(
+		"OptionError",
+		map[string]interface{}{
+			"message": e.Message,
+		},
+		e.Err,
+	)
 }
 
 func (e *RegistrationError) Unwrap() error {
@@ -29,13 +35,35 @@ func (e *RegistrationError) Unwrap() error {
 }
 
 func (e *RegistrationError) Error() string {
-	return errToString("RegistrationError", e.Err)
+	return errs.String(
+		"RegistrationError",
+		map[string]interface{}{
+			"message": e.Message,
+			"plugin":  e.Name,
+			"name":    e.Plugin,
+		},
+		e.Err,
+	)
 }
 
-func errToString(name string, err error) string {
-	if err == nil {
-		return name
-	}
+func (e *UnregistrationError) Unwrap() error {
+	return e.Err
+}
 
-	return fmt.Sprintf("%s: %s", name, err)
+func (e *UnregistrationError) Error() string {
+	return errs.String(
+		"UnregistrationError",
+		map[string]interface{}{
+			"message": e.Message,
+		},
+		e.Err,
+	)
+}
+
+func (e *NotRegisteredError) Unwrap() error {
+	return nil
+}
+
+func (e *NotRegisteredError) Error() string {
+	return errs.String("NotRegisteredError", nil, nil)
 }

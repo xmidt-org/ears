@@ -1,8 +1,24 @@
+// Copyright 2020 Comcast Cable Communications Management, LLC
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package plugin_test
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"sync"
 	"testing"
 
 	"github.com/xmidt-org/ears/internal/pkg/plugin"
@@ -21,7 +37,43 @@ import (
 // === Filter =========================================
 func TestFilterRegisterErrors(t *testing.T) {
 
-	t.Fail()
+	testCases := []struct {
+		id     string
+		name   string
+		plugin string
+		config interface{}
+		err    *plugin.RegistrationError
+	}{
+		{
+			id:     "no-plugin",
+			plugin: "no-plugin",
+			name:   "filter-1",
+			config: nil,
+			err: &plugin.RegistrationError{
+				Message: "could not get plugin",
+			},
+		},
+	}
+
+	ctx := context.Background()
+	m := newManager(t)
+	for _, tc := range testCases {
+		t.Run(tc.id, func(t *testing.T) {
+			a := NewWithT(t)
+			_, err := m.RegisterFilter(ctx, tc.plugin, tc.name, tc.config)
+			var re *plugin.RegistrationError
+			if errors.As(err, &re) {
+				// TODO: Once we start cueing off of messages, it's time to
+				// make a new error
+				a.Expect(re.Message).To(Equal(tc.err.Message))
+
+			} else {
+				t.Error(fmt.Errorf("expected error to be a RegistrationError"))
+			}
+
+		})
+	}
+
 }
 
 func TestFilterRegister(t *testing.T) {
@@ -47,17 +99,105 @@ func TestFilterRegister(t *testing.T) {
 }
 
 func TestFilterUnregister(t *testing.T) {
-	t.Fail()
+	ctx := context.Background()
+	a := NewWithT(t)
+
+	m := newManager(t)
+
+	fMap := m.Filters()
+	a.Expect(len(fMap)).To(Equal(0))
+
+	f, err := m.RegisterFilter(ctx, "filter", "testfilter-1", "noconfig")
+	a.Expect(err).To(BeNil())
+
+	fMap = m.Filters()
+	a.Expect(len(fMap)).To(Equal(1))
+
+	err = m.UnregisterFilter(ctx, f)
+	a.Expect(err).To(BeNil())
+
+	fMap = m.Filters()
+	a.Expect(len(fMap)).To(Equal(0))
+
 }
 
 func TestFilterLifecycle(t *testing.T) {
-	t.Fail()
+	ctx := context.Background()
+	a := NewWithT(t)
+
+	m := newManager(t)
+
+	fMap := m.Filters()
+	a.Expect(len(fMap)).To(Equal(0))
+
+	// Register the same filter twice, will only have one unique
+	f1, err := m.RegisterFilter(ctx, "filter", "testfilter-1", "noconfig")
+	a.Expect(err).To(BeNil())
+
+	fMap = m.Filters()
+	a.Expect(len(fMap)).To(Equal(1))
+
+	f2, err := m.RegisterFilter(ctx, "filter", "testfilter-1", "noconfig")
+	a.Expect(err).To(BeNil())
+
+	fMap = m.Filters()
+	a.Expect(len(fMap)).To(Equal(2))
+
+	err = m.UnregisterFilter(ctx, f1)
+	a.Expect(err).To(BeNil())
+
+	fMap = m.Filters()
+	a.Expect(len(fMap)).To(Equal(1))
+
+	err = m.UnregisterFilter(ctx, f2)
+	a.Expect(err).To(BeNil())
+
+	fMap = m.Filters()
+	a.Expect(len(fMap)).To(Equal(0))
+
 }
 
 // === Sender =========================================
 
 func TestSenderRegisterErrors(t *testing.T) {
-	t.Fail()
+
+	testCases := []struct {
+		id     string
+		name   string
+		plugin string
+		config interface{}
+		err    *plugin.RegistrationError
+	}{
+		{
+			id:     "no-plugin",
+			plugin: "no-plugin",
+			name:   "sender-1",
+			config: nil,
+			err: &plugin.RegistrationError{
+				Message: "could not get plugin",
+			},
+		},
+	}
+
+	ctx := context.Background()
+	m := newManager(t)
+	for _, tc := range testCases {
+		t.Run(tc.id, func(t *testing.T) {
+			a := NewWithT(t)
+			_, err := m.RegisterSender(ctx, tc.plugin, tc.name, tc.config)
+			var re *plugin.RegistrationError
+			if errors.As(err, &re) {
+				// TODO: Once we start cueing off of messages, it's time to
+				// make a new error
+				a.Expect(re.Message).To(Equal(tc.err.Message))
+
+			} else {
+				t.Error(fmt.Errorf("expected error to be a RegistrationError"))
+			}
+
+		})
+	}
+
 }
 
 func TestSenderRegister(t *testing.T) {
@@ -83,17 +223,107 @@ func TestSenderRegister(t *testing.T) {
 }
 
 func TestSenderUnregister(t *testing.T) {
-	t.Fail()
+
+	ctx := context.Background()
+	a := NewWithT(t)
+
+	m := newManager(t)
+
+	sMap := m.Senders()
+	a.Expect(len(sMap)).To(Equal(0))
+
+	s, err := m.RegisterSender(ctx, "sender", "testsender-1", "noconfig")
+	a.Expect(err).To(BeNil())
+
+	sMap = m.Senders()
+	a.Expect(len(sMap)).To(Equal(1))
+
+	err = m.UnregisterSender(ctx, s)
+	a.Expect(err).To(BeNil())
+
+	sMap = m.Senders()
+	a.Expect(len(sMap)).To(Equal(0))
+
 }
 
 func TestSenderLifecycle(t *testing.T) {
-	t.Fail()
+
+	ctx := context.Background()
+	a := NewWithT(t)
+
+	m := newManager(t)
+
+	sMap := m.Senders()
+	a.Expect(len(sMap)).To(Equal(0))
+
+	// Register the same sender twice
+	s1, err := m.RegisterSender(ctx, "sender", "testsender-1", "noconfig")
+	a.Expect(err).To(BeNil())
+
+	sMap = m.Senders()
+	a.Expect(len(sMap)).To(Equal(1))
+
+	s2, err := m.RegisterSender(ctx, "sender", "testsender-1", "noconfig")
+	a.Expect(err).To(BeNil())
+
+	sMap = m.Senders()
+	a.Expect(len(sMap)).To(Equal(2))
+
+	err = m.UnregisterSender(ctx, s1)
+	a.Expect(err).To(BeNil())
+
+	sMap = m.Senders()
+	a.Expect(len(sMap)).To(Equal(1))
+
+	err = m.UnregisterSender(ctx, s2)
+	a.Expect(err).To(BeNil())
+
+	sMap = m.Senders()
+	a.Expect(len(sMap)).To(Equal(0))
+
 }
 
 // === Receiver =========================================
 
 func TestReceiverRegisterErrors(t *testing.T) {
-	t.Fail()
+
+	testCases := []struct {
+		id     string
+		name   string
+		plugin string
+		config interface{}
+		err    *plugin.RegistrationError
+	}{
+		{
+			id:     "no-plugin",
+			plugin: "no-plugin",
+			name:   "receiver-1",
+			config: nil,
+			err: &plugin.RegistrationError{
+				Message: "could not get plugin",
+			},
+		},
+	}
+
+	ctx := context.Background()
+	m := newManager(t)
+	for _, tc := range testCases {
+		t.Run(tc.id, func(t *testing.T) {
+			a := NewWithT(t)
+			_, err := m.RegisterReceiver(ctx, tc.plugin, tc.name, tc.config)
+			var re *plugin.RegistrationError
+			if errors.As(err, &re) {
+				// TODO: Once we start cueing off of messages, it's time to
+				// make a new error
+				a.Expect(re.Message).To(Equal(tc.err.Message))
+
+			} else {
+				t.Error(fmt.Errorf("expected error to be a RegistrationError"))
+			}
+
+		})
+	}
+
 }
 
 func TestReceiverRegister(t *testing.T) {
@@ -120,11 +350,87 @@ func TestReceiverRegister(t *testing.T) {
 }
 
 func TestReceiverUnregister(t *testing.T) {
-	t.Fail()
+
+	ctx := context.Background()
+	a := NewWithT(t)
+
+	m := newManager(t)
+
+	rMap := m.Receivers()
+	a.Expect(len(rMap)).To(Equal(0))
+
+	r, err := m.RegisterReceiver(ctx, "receiver", "testreceiver-1", "noconfig")
+	a.Expect(err).To(BeNil())
+
+	rMap = m.Receivers()
+	a.Expect(len(rMap)).To(Equal(1))
+
+	err = m.UnregisterReceiver(ctx, r)
+	a.Expect(err).To(BeNil())
+
+	rMap = m.Receivers()
+	a.Expect(len(rMap)).To(Equal(0))
+
 }
 
 func TestReceiverLifecycle(t *testing.T) {
-	t.Fail()
+
+	ctx := context.Background()
+	a := NewWithT(t)
+
+	m := newManager(t)
+
+	rMap := m.Receivers()
+	a.Expect(len(rMap)).To(Equal(0))
+
+	// Register the same receiver twice
+	r1, err := m.RegisterReceiver(ctx, "receiver", "testreceiver-1", "noconfig")
+	a.Expect(err).To(BeNil())
+
+	rMap = m.Receivers()
+	a.Expect(len(rMap)).To(Equal(1))
+
+	r2, err := m.RegisterReceiver(ctx, "receiver", "testreceiver-1", "noconfig")
+	a.Expect(err).To(BeNil())
+
+	rMap = m.Receivers()
+	a.Expect(len(rMap)).To(Equal(2))
+
+	next := func(ctx context.Context, e pkgevent.Event) error {
+		return nil
+	}
+
+	done := make(chan struct{})
+
+	go func() {
+		err = m.UnregisterReceiver(ctx, r1)
+		a.Expect(err).To(BeNil())
+
+		rMap = m.Receivers()
+		a.Expect(len(rMap)).To(Equal(1))
+
+		err = m.UnregisterReceiver(ctx, r2)
+		a.Expect(err).To(BeNil())
+
+		rMap = m.Receivers()
+		a.Expect(len(rMap)).To(Equal(0))
+
+		close(done)
+	}()
+
+	var wg sync.WaitGroup
+
+	for i, r := range []pkgreceiver.Receiver{r1, r2} {
+		wg.Add(1)
+		go func(r pkgreceiver.Receiver, i int) {
+			r.Receive(ctx, next)
+			wg.Done()
+		}(r, i)
+	}
+
+	<-done
+	wg.Wait()
+
 }
 
 // === Helper Methods =========================================

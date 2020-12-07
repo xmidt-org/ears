@@ -28,18 +28,89 @@ func TestErrorMessage(t *testing.T) {
 		name string
 		err  error
 	}{
-		{name: "OptionError", err: &plugin.OptionError{}},
-
+		{name: "OptionError-empty", err: &plugin.OptionError{}},
 		{
-			name: "OptionError_Err",
-			err:  &plugin.OptionError{Err: fmt.Errorf("wrapped error")},
+			name: "OptionError-message",
+			err: &plugin.OptionError{
+				Message: "message goes here",
+			},
+		},
+		{
+			name: "OptionError-err",
+			err: &plugin.OptionError{
+				Err: fmt.Errorf("wrapped error"),
+			},
+		},
+		{
+			name: "OptionError-message-err",
+			err: &plugin.OptionError{
+				Message: "message goes here",
+				Err:     fmt.Errorf("wrapped error"),
+			},
 		},
 
-		{name: "RegistrationError", err: &plugin.RegistrationError{}},
+		{name: "RegistrationError-empty", err: &plugin.RegistrationError{}},
 
 		{
-			name: "RegistrationError_Err",
-			err:  &plugin.RegistrationError{Err: fmt.Errorf("wrapped error")},
+			name: "RegistrationError-error",
+			err: &plugin.RegistrationError{
+				Err: fmt.Errorf("wrapped error"),
+			},
+		},
+
+		{
+			name: "RegistrationError-message",
+			err: &plugin.RegistrationError{
+				Message: "message goes here",
+			},
+		},
+
+		{
+			name: "RegistrationError-message-error",
+			err: &plugin.RegistrationError{
+				Message: "message goes here",
+				Err:     fmt.Errorf("wrapped error"),
+			},
+		},
+
+		{
+			name: "RegistrationError-plugin",
+			err: &plugin.RegistrationError{
+				Plugin: "plugin goes here",
+			},
+		},
+
+		{
+			name: "RegistrationError-plugin-error",
+			err: &plugin.RegistrationError{
+				Plugin: "plugin goes here",
+				Err:    fmt.Errorf("wrapped error"),
+			},
+		},
+
+		{
+			name: "RegistrationError-name",
+			err: &plugin.RegistrationError{
+				Name: "name goes here",
+			},
+		},
+
+		{
+			name: "RegistrationError-name-error",
+			err: &plugin.RegistrationError{
+				Name: "name goes here",
+				Err:  fmt.Errorf("wrapped error"),
+			},
+		},
+
+		{
+			name: "RegistrationError-message-plugin-name-error",
+			err: &plugin.RegistrationError{
+				Message: "message goes here",
+				Name:    "name goes here",
+				Plugin:  "plugin goes here",
+				Err:     fmt.Errorf("wrapped error"),
+			},
 		},
 	}
 

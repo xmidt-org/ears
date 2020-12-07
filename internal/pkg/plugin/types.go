@@ -28,7 +28,7 @@ type Manager interface {
 	Receiverers() map[string]pkgreceiver.NewReceiverer
 	RegisterReceiver(
 		ctx context.Context, plugin string,
-		name string, config string,
+		name string, config interface{},
 	) (pkgreceiver.Receiver, error)
 	Receivers() map[string]pkgreceiver.Receiver
 	UnregisterReceiver(ctx context.Context, r pkgreceiver.Receiver) error
@@ -36,7 +36,7 @@ type Manager interface {
 	Filterers() map[string]pkgfilter.NewFilterer
 	RegisterFilter(
 		ctx context.Context, plugin string,
-		name string, config string,
+		name string, config interface{},
 	) (pkgfilter.Filterer, error)
 	Filters() map[string]pkgfilter.Filterer
 	UnregisterFilter(ctx context.Context, f pkgfilter.Filterer) error
@@ -44,7 +44,7 @@ type Manager interface {
 	Senderers() map[string]pkgsender.NewSenderer
 	RegisterSender(
 		ctx context.Context, plugin string,
-		name string, config string,
+		name string, config interface{},
 	) (pkgsender.Sender, error)
 	Senders() map[string]pkgsender.Sender
 	UnregisterSender(ctx context.Context, s pkgsender.Sender) error
@@ -70,9 +70,20 @@ func WithNextFnDeadline(d time.Duration) ManagerOption {
 }
 
 type OptionError struct {
-	Err error
+	Message string
+	Err     error
 }
 
 type RegistrationError struct {
-	Err error
+	Message string
+	Plugin  string
+	Name    string
+	Err     error
 }
+
+type UnregistrationError struct {
+	Message string
+	Err     error
+}
+
+type NotRegisteredError struct{}

@@ -37,10 +37,13 @@ type manager struct {
 	receiversWrapped map[string]*receiver
 	receiversFn      map[string]map[string]pkgreceiver.NextFn // map[receiverKey]map[wrapperID] -> nextFN
 
-	filters      map[string]*filter
-	filtersCount map[string]int
-	senders      map[string]*sender
-	sendersCount map[string]int
+	filters        map[string]pkgfilter.Filterer
+	filtersCount   map[string]int
+	filtersWrapped map[string]*filter
+
+	senders        map[string]pkgsender.Sender
+	sendersCount   map[string]int
+	sendersWrapped map[string]*sender
 
 	nextFnDeadline time.Duration
 }
@@ -59,18 +62,19 @@ func NewManager(options ...ManagerOption) (Manager, error) {
 		receiversFn:      map[string]map[string]pkgreceiver.NextFn{},
 		nextFnDeadline:   defaultNextFnDeadline,
 
-		filters:      map[string]*filter{},
-		filtersCount: map[string]int{},
+		filters:        map[string]pkgfilter.Filterer{},
+		filtersCount:   map[string]int{},
+		filtersWrapped: map[string]*filter{},
 
-		senders:      map[string]*sender{},
-		sendersCount: map[string]int{},
+		senders:        map[string]pkgsender.Sender{},
+		sendersCount:   map[string]int{},
+		sendersWrapped: map[string]*sender{},
 	}
 
 	var err error
 	for _, option := range options {
 		err = option(&m)
 		if err != nil {
-			// TODO: OptionError
 			return nil, &OptionError{Err: err}
 		}
 	}
@@ -80,7 +84,9 @@ func NewManager(options ...ManagerOption) (Manager, error) {
 
 func (m *manager) WithPluginManager(p pkgmanager.Manager) error {
 	if p == nil {
-		return fmt.Errorf("plugin manager cannot be nil")
+		return &OptionError{
+			Message: "plugin manager cannot be nil",
+		}
 	}
 
 	m.pm = p
@@ -103,45 +109,67 @@ func (m *manager) Receiverers() map[string]pkgreceiver.NewReceiverer {
 
 func (m *manager) RegisterReceiver(
 	ctx context.Context, plugin string,
-	name string, config string,
+	name string, config interface{},
 ) (pkgreceiver.Receiver, error) {
 
 	ns, err := m.pm.Receiverer(plugin)
 	if err != nil {
-		return nil, err
+		return nil, &RegistrationError{
+			Message: "could not get plugin",
+			Plugin:  plugin,
+			Name:    name,
+			Err:     err,
+		}
 	}
 
 	hash, err := ns.ReceiverHash(config)
 	if err != nil {
-		return nil, fmt.Errorf("could not generate hash: %w", err)
+		return nil, &RegistrationError{
+			Message: "could not generate hash",
+			Plugin:  plugin,
+			Name:    name,
+			Err:     err,
+		}
 	}
 
-	receiverKey := m.mapkey(name, hash)
+	key := m.mapkey(name, hash)
 
-	r, ok := m.receivers[receiverKey]
+	r, ok := m.receivers[key]
 	if !ok {
 		r, err = ns.NewReceiver(config)
 		if err != nil {
-			return nil, &RegistrationError{Err: fmt.Errorf("could not create new receiver: %w", err)}
+			return nil, &RegistrationError{
+				Message: "could not create new receiver",
+				Plugin:  plugin,
+				Name:    name,
+				Err:     err,
+			}
 		}
-		m.receiversCount[receiverKey]++
-		m.receiversFn[receiverKey] = map[string]pkgreceiver.NextFn{}
+
+		m.receivers[key] = r
+		m.receiversCount[key] = 0
+		m.receiversFn[key] = map[string]pkgreceiver.NextFn{}
 
 		// TODO: Determine lifecycle
 		go func() {
 			r.Receive(ctx, func(ctx context.Context, e event.Event) error {
-				return m.next(ctx, receiverKey, e)
+				return m.next(ctx, key, e)
 			})
 		}()
 	}
 
-	u, err := uuid.NewUUID()
+	u, err := uuid.NewRandom()
 	if err != nil {
-		return nil, &RegistrationError{Err: fmt.Errorf("could not generate unique id: %w", err)}
+		return nil, &RegistrationError{
+			Message: "could not generate unique id",
+			Plugin:  plugin,
+			Name:    name,
+			Err:     err,
+		}
 	}
 
 	w := &receiver{
-		key:      u.String(),
+		id:       u.String(),
 		name:     name,
 		hash:     hash,
 		manager:  m,
@@ -149,10 +177,10 @@ func (m *manager) RegisterReceiver(
 		active:   true,
 	}
 
-	m.receiversWrapped[w.key] = w
-	m.receiversCount[receiverKey]++
+	m.receiversWrapped[w.id] = w
+	m.receiversCount[key]++
 
-	return r, nil
+	return w, nil
 
 }
 
@@ -175,8 +203,6 @@ func (m *manager) next(ctx context.Context, receiverKey string, e pkgevent.Event
 
 	nextFns := m.receiversFn[receiverKey]
 	errCh := make(chan error, len(nextFns))
-
-	fmt.Println("MANAGER NEXT CALLED -- SIZE OF NEXTFNS IS ", len(nextFns))
 
 	var wg sync.WaitGroup
 	for _, n := range nextFns {
@@ -204,7 +230,7 @@ func (m *manager) next(ctx context.Context, receiverKey string, e pkgevent.Event
 func (m *manager) receive(ctx context.Context, r *receiver, nextFn pkgreceiver.NextFn) error {
 	r.done = make(chan struct{})
 
-	m.receiversFn[m.mapkey(r.name, r.hash)][r.key] = nextFn
+	m.receiversFn[m.mapkey(r.name, r.hash)][r.id] = nextFn
 
 	select {
 	case <-ctx.Done():
@@ -216,17 +242,39 @@ func (m *manager) receive(ctx context.Context, r *receiver, nextFn pkgreceiver.N
 }
 
 func (m *manager) stopreceiving(ctx context.Context, r *receiver) error {
-	delete(m.receiversFn[m.mapkey(r.name, r.hash)], r.key)
+	if r.done == nil {
+		return &NotRegisteredError{}
+	}
 	close(r.done)
+	delete(m.receiversFn[m.mapkey(r.name, r.hash)], r.id)
+
 	return nil
 }
 
-func (m *manager) UnregisterReceiver(ctx context.Context, r pkgreceiver.Receiver) error {
-	r.StopReceiving(ctx) // This in turn calls manager.stopreceiving()
-	// TODO
-	return &RegistrationError{
-		Err: fmt.Errorf("not yet implemented"),
+func (m *manager) UnregisterReceiver(ctx context.Context, pr pkgreceiver.Receiver) error {
+	r, ok := pr.(*receiver)
+	if !ok || !r.active {
+		return &RegistrationError{
+			Message: fmt.Sprintf("receiver not registered %v", ok),
+		}
 	}
+
+	r.StopReceiving(ctx) // This in turn calls manager.stopreceiving()
+
+	key := m.mapkey(r.name, r.hash)
+
+	m.receiversCount[key]--
+
+	if m.receiversCount[key] <= 0 {
+		r.receiver.StopReceiving(ctx)
+		delete(m.receiversCount, key)
+		delete(m.receivers, key)
+	}
+
+	delete(m.receiversWrapped, r.id)
+
+	return nil
+
 }
 
 // === Filters =======================================================
@@ -240,37 +288,58 @@ func (m *manager) Filterers() map[string]pkgfilter.NewFilterer {
 
 func (m *manager) RegisterFilter(
 	ctx context.Context, plugin string,
-	name string, config string,
+	name string, config interface{},
 ) (pkgfilter.Filterer, error) {
 
 	factory, err := m.pm.Filterer(plugin)
 	if err != nil {
 		return nil, &RegistrationError{
-			Err: fmt.Errorf("could not get filterer (plugin=%s): %w", plugin, err),
+			Message: "could not get plugin",
+			Plugin:  plugin,
+			Name:    name,
+			Err:     err,
 		}
 	}
 
 	hash, err := factory.FiltererHash(config)
 	if err != nil {
 		return nil, &RegistrationError{
-			Err: fmt.Errorf("could not generate filterer hash (plugin=%s): %w", plugin, err),
+			Message: "could not generate filterer hash",
+			Plugin:  plugin,
+			Name:    name,
+			Err:     err,
 		}
 	}
 
 	key := m.mapkey(name, hash)
-	w, ok := m.filters[key]
-	if ok {
-		m.filtersCount[key]++
-		return w.filterer, nil
+	f, ok := m.filters[key]
+	if !ok {
+		f, err = factory.NewFilterer(config)
+		if err != nil {
+			return nil, &RegistrationError{
+				Message: "could not create new filterer",
+				Plugin:  plugin,
+				Name:    name,
+				Err:     err,
+			}
+		}
+
+		m.filters[key] = f
+		m.filtersCount[key] = 0
 	}
 
-	f, err := factory.NewFilterer(config)
+	u, err := uuid.NewRandom()
 	if err != nil {
-		return nil, fmt.Errorf("could not create filterer (plugin=%s): %w", plugin, err)
+		return nil, &RegistrationError{
+			Message: "could not generate unique id",
+			Plugin:  plugin,
+			Name:    name,
+			Err:     err,
+		}
 	}
 
-	w = &filter{
-		id:      key,
+	w := &filter{
+		id:      u.String(),
 		name:    name,
 		hash:    hash,
 		manager: m,
@@ -279,7 +348,7 @@ func (m *manager) RegisterFilter(
 		active:   true,
 	}
 
-	m.filters[key] = w
+	m.filtersWrapped[w.id] = w
 	m.filtersCount[key]++
 
 	return w, nil
@@ -288,14 +357,31 @@ func (m *manager) RegisterFilter(
 
 func (m *manager) Filters() map[string]pkgfilter.Filterer {
 	filters := map[string]pkgfilter.Filterer{}
-	for k, v := range m.filters {
+	for k, v := range m.filtersWrapped {
 		filters[k] = v
 	}
 	return filters
 }
 
-func (m *manager) UnregisterFilter(ctx context.Context, f pkgfilter.Filterer) error {
-	// TODO:
+func (m *manager) UnregisterFilter(ctx context.Context, pf pkgfilter.Filterer) error {
+	f, ok := pf.(*filter)
+	if !ok || !f.active {
+		return &RegistrationError{
+			Message: fmt.Sprintf("filter not registered %v", ok),
+		}
+	}
+
+	key := m.mapkey(f.name, f.hash)
+
+	m.filtersCount[key]--
+
+	if m.filtersCount[key] <= 0 {
+		delete(m.filtersCount, key)
+		delete(m.filters, key)
+	}
+
+	delete(m.filtersWrapped, f.id)
+
 	return nil
 }
 
@@ -311,39 +397,59 @@ func (m *manager) Senderers() map[string]pkgsender.NewSenderer {
 
 func (m *manager) RegisterSender(
 	ctx context.Context, plugin string,
-	name string, config string,
+	name string, config interface{},
 ) (pkgsender.Sender, error) {
 
 	ns, err := m.pm.Senderer(plugin)
 	if err != nil {
 		return nil, &RegistrationError{
-			Err: fmt.Errorf("could not get senderer (%s): %w", plugin, err),
+			Message: "could not get plugin",
+			Plugin:  plugin,
+			Name:    name,
+			Err:     err,
 		}
 	}
 
 	hash, err := ns.SenderHash(config)
 	if err != nil {
 		return nil, &RegistrationError{
-			Err: fmt.Errorf("could not generate hash: %w", err),
+			Message: "could not generate hash",
+			Plugin:  plugin,
+			Name:    name,
+			Err:     err,
 		}
 	}
 
 	key := m.mapkey(name, hash)
 
-	w, ok := m.senders[key]
-	if ok {
-		return w.sender, nil
+	s, ok := m.senders[key]
+	if !ok {
+		s, err := ns.NewSender(config)
+		if err != nil {
+			return nil, &RegistrationError{
+				Message: "could not create sender",
+				Plugin:  plugin,
+				Name:    name,
+				Err:     err,
+			}
+		}
+
+		m.senders[key] = s
+		m.sendersCount[key] = 0
 	}
 
-	s, err := ns.NewSender(config)
+	u, err := uuid.NewRandom()
 	if err != nil {
 		return nil, &RegistrationError{
-			Err: fmt.Errorf("could not create sender: %w", err),
+			Message: "could not generate unique id",
+			Plugin:  plugin,
+			Name:    name,
+			Err:     err,
 		}
 	}
 
-	w = &sender{
-		id:      key,
+	w := &sender{
+		id:      u.String(),
 		name:    name,
 		hash:    hash,
 		manager: m,
@@ -351,7 +457,7 @@ func (m *manager) RegisterSender(
 		active:  true,
 	}
 
-	m.senders[key] = w
+	m.sendersWrapped[w.id] = w
 	m.sendersCount[key]++
 
 	return w, nil
@@ -359,16 +465,33 @@ func (m *manager) RegisterSender(
 
 func (m *manager) Senders() map[string]pkgsender.Sender {
 	senders := map[string]pkgsender.Sender{}
-	for k, v := range m.senders {
+	for k, v := range m.sendersWrapped {
 		senders[k] = v
 	}
 	return senders
 }
 
-func (m *manager) UnregisterSender(ctx context.Context, s pkgsender.Sender) error {
-	return &RegistrationError{
-		Err: fmt.Errorf("not yet implemented"),
+func (m *manager) UnregisterSender(ctx context.Context, ps pkgsender.Sender) error {
+
+	s, ok := ps.(*sender)
+	if !ok || !s.active {
+		return &RegistrationError{
+			Message: "sender not registered",
+		}
 	}
+
+	key := m.mapkey(s.name, s.hash)
+	m.sendersCount[key]--
+
+	if m.sendersCount[key] <= 0 {
+		delete(m.sendersCount, key)
+		delete(m.senders, key)
+	}
+
+	delete(m.sendersWrapped, s.id)
+
+	return nil
+
 }
 
 // === Helper Functions ==============================================

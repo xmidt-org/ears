@@ -18,7 +18,6 @@ import (
 	"context"
 	"fmt"
 
-	pkgmanager "github.com/xmidt-org/ears/pkg/plugin/manager"
 	pkgreceiver "github.com/xmidt-org/ears/pkg/receiver"
 )
 
@@ -27,7 +26,7 @@ var _ pkgreceiver.Receiver = (*receiver)(nil)
 type wrapperType int
 
 type receiver struct {
-	key  string
+	id   string
 	name string
 	hash string
 
@@ -46,17 +45,26 @@ func (r *receiver) Receive(ctx context.Context, next pkgreceiver.NextFn) error {
 		}
 	}
 
+	if !r.active {
+		return &NotRegisteredError{}
+	}
+
 	// Block
 	return r.manager.receive(ctx, r, next)
 }
 
 func (r *receiver) StopReceiving(ctx context.Context) error {
+	if !r.active {
+		return &NotRegisteredError{}
+	}
+
+	r.active = false
 	return r.manager.stopreceiving(ctx, r)
 }
 
 func (r *receiver) Unregister(ctx context.Context) error {
-	if r == nil || r.manager == nil || r.active == false {
-		return &pkgmanager.NotRegisteredError{}
+	if r == nil || r.manager == nil || !r.active {
+		return &NotRegisteredError{}
 	}
 
 	return r.manager.UnregisterReceiver(ctx, r)

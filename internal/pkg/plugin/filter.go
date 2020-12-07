@@ -43,7 +43,7 @@ func (f *filter) Filter(ctx context.Context, e event.Event) ([]event.Event, erro
 }
 
 func (f *filter) Unregister(ctx context.Context) error {
-	if f == nil || f.manager == nil || f.active == false {
+	if f == nil || f.manager == nil || !f.active {
 		return &pkgmanager.NotRegisteredError{}
 	}
 
