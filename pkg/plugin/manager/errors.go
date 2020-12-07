@@ -14,14 +14,14 @@
 
 package manager
 
-import "fmt"
+import "github.com/xmidt-org/ears/pkg/errs"
 
 func (e *OpenPluginError) Unwrap() error {
 	return e.Err
 }
 
 func (e *OpenPluginError) Error() string {
-	return errToString("OpenPluginError", e.Err)
+	return errs.String("OpenPluginError", nil, e.Err)
 }
 
 func (e *NewPluginerError) Unwrap() error {
@@ -29,7 +29,7 @@ func (e *NewPluginerError) Unwrap() error {
 }
 
 func (e *NewPluginerError) Error() string {
-	return errToString("NewPluginerError", e.Err)
+	return errs.String("NewPluginerError", nil, e.Err)
 }
 
 func (e *VariableLookupError) Unwrap() error {
@@ -37,7 +37,7 @@ func (e *VariableLookupError) Unwrap() error {
 }
 
 func (e *VariableLookupError) Error() string {
-	return errToString("VariableLookupError", e.Err)
+	return errs.String("VariableLookupError", nil, e.Err)
 }
 
 func (e *InvalidConfigError) Unwrap() error {
@@ -45,7 +45,7 @@ func (e *InvalidConfigError) Unwrap() error {
 }
 
 func (e *InvalidConfigError) Error() string {
-	return errToString("InvalidConfigError", e.Err)
+	return errs.String("InvalidConfigError", nil, e.Err)
 }
 
 func (e *NewPluginerNotImplementedError) Unwrap() error {
@@ -112,12 +112,4 @@ func (e *NilPluginError) Unwrap() error {
 
 func (e *NilPluginError) Error() string {
 	return "NilPluginError"
-}
-
-func errToString(name string, err error) string {
-	if err == nil {
-		return name
-	}
-
-	return fmt.Sprintf("%s: %s", name, err)
 }

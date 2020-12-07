@@ -14,20 +14,12 @@
 
 package route
 
-import "fmt"
+import "github.com/xmidt-org/ears/pkg/errs"
 
 func (e *InvalidRouteError) Unwrap() error {
 	return e.Err
 }
 
 func (e *InvalidRouteError) Error() string {
-	return errToString("InvalidRouteError", e.Err)
-}
-
-func errToString(name string, err error) string {
-	if err == nil {
-		return name
-	}
-
-	return fmt.Sprintf("%s: %s", name, err)
+	return errs.String("InvalidRouteError", nil, e.Err)
 }
