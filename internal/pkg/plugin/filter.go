@@ -16,6 +16,7 @@ package plugin
 
 import (
 	"context"
+	"sync"
 
 	"github.com/xmidt-org/ears/pkg/event"
 	pkgfilter "github.com/xmidt-org/ears/pkg/filter"
@@ -25,6 +26,8 @@ import (
 var _ pkgfilter.Filterer = (*filter)(nil)
 
 type filter struct {
+	sync.Mutex
+
 	id   string
 	name string
 	hash string
@@ -39,12 +42,28 @@ func (f *filter) Filter(ctx context.Context, e event.Event) ([]event.Event, erro
 	if f.filterer == nil {
 		return nil, &pkgmanager.NilPluginError{}
 	}
+
+	{
+		f.Lock()
+		if !f.active {
+			f.Unlock()
+			return nil, &pkgmanager.NotRegisteredError{}
+		}
+		f.Unlock()
+	}
+
 	return f.filterer.Filter(ctx, e)
 }
 
 func (f *filter) Unregister(ctx context.Context) error {
-	if f == nil || f.manager == nil || !f.active {
-		return &pkgmanager.NotRegisteredError{}
+
+	{
+		f.Lock()
+		if f == nil || f.manager == nil || !f.active {
+			f.Unlock()
+			return &pkgmanager.NotRegisteredError{}
+		}
+		f.Unlock()
 	}
 
 	return f.manager.UnregisterFilter(ctx, f)

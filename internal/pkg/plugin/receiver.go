@@ -17,6 +17,7 @@ package plugin
 import (
 	"context"
 	"fmt"
+	"sync"
 
 	pkgreceiver "github.com/xmidt-org/ears/pkg/receiver"
 )
@@ -26,6 +27,8 @@ var _ pkgreceiver.Receiver = (*receiver)(nil)
 type wrapperType int
 
 type receiver struct {
+	sync.Mutex
+
 	id   string
 	name string
 	hash string
@@ -45,8 +48,13 @@ func (r *receiver) Receive(ctx context.Context, next pkgreceiver.NextFn) error {
 		}
 	}
 
-	if !r.active {
-		return &NotRegisteredError{}
+	{
+		r.Lock()
+		if !r.active {
+			r.Unlock()
+			return &NotRegisteredError{}
+		}
+		r.Unlock()
 	}
 
 	// Block
@@ -54,17 +62,27 @@ func (r *receiver) Receive(ctx context.Context, next pkgreceiver.NextFn) error {
 }
 
 func (r *receiver) StopReceiving(ctx context.Context) error {
-	if !r.active {
-		return &NotRegisteredError{}
+
+	{
+		r.Lock()
+		if !r.active {
+			r.Unlock()
+			return &NotRegisteredError{}
+		}
+		r.Unlock()
 	}
 
-	r.active = false
 	return r.manager.stopreceiving(ctx, r)
 }
 
 func (r *receiver) Unregister(ctx context.Context) error {
-	if r == nil || r.manager == nil || !r.active {
-		return &NotRegisteredError{}
+	{
+		r.Lock()
+		if r == nil || r.manager == nil || !r.active {
+			r.Unlock()
+			return &NotRegisteredError{}
+		}
+		r.Unlock()
 	}
 
 	return r.manager.UnregisterReceiver(ctx, r)

@@ -30,6 +30,8 @@ import (
 )
 
 type manager struct {
+	sync.Mutex
+
 	pm pkgmanager.Manager
 
 	receivers        map[string]pkgreceiver.Receiver
@@ -134,6 +136,9 @@ func (m *manager) RegisterReceiver(
 
 	key := m.mapkey(name, hash)
 
+	m.Lock()
+	defer m.Unlock()
+
 	r, ok := m.receivers[key]
 	if !ok {
 		r, err = ns.NewReceiver(config)
@@ -185,6 +190,9 @@ func (m *manager) RegisterReceiver(
 }
 
 func (m *manager) Receivers() map[string]pkgreceiver.Receiver {
+	m.Lock()
+	defer m.Unlock()
+
 	receivers := map[string]pkgreceiver.Receiver{}
 	for k, v := range m.receiversWrapped {
 		receivers[k] = v
@@ -197,11 +205,14 @@ func (m *manager) Receivers() map[string]pkgreceiver.Receiver {
 // so no error can actually be returned to the receiver if a problem occurs.
 // This must leverage the Ack() interface
 func (m *manager) next(ctx context.Context, receiverKey string, e pkgevent.Event) error {
-	//
+
 	ctx, cancel := context.WithTimeout(ctx, m.nextFnDeadline)
 	defer cancel()
 
+	m.Lock()
 	nextFns := m.receiversFn[receiverKey]
+	m.Unlock()
+
 	errCh := make(chan error, len(nextFns))
 
 	var wg sync.WaitGroup
@@ -228,9 +239,13 @@ func (m *manager) next(ctx context.Context, receiverKey string, e pkgevent.Event
 }
 
 func (m *manager) receive(ctx context.Context, r *receiver, nextFn pkgreceiver.NextFn) error {
+	r.Lock()
 	r.done = make(chan struct{})
+	r.Unlock()
 
+	m.Lock()
 	m.receiversFn[m.mapkey(r.name, r.hash)][r.id] = nextFn
+	m.Unlock()
 
 	select {
 	case <-ctx.Done():
@@ -242,17 +257,26 @@ func (m *manager) receive(ctx context.Context, r *receiver, nextFn pkgreceiver.N
 }
 
 func (m *manager) stopreceiving(ctx context.Context, r *receiver) error {
+	m.Lock()
+	delete(m.receiversFn[m.mapkey(r.name, r.hash)], r.id)
+	m.Unlock()
+
+	r.Lock()
+	defer r.Unlock()
+	r.active = false
+
 	if r.done == nil {
 		return &NotRegisteredError{}
 	}
 	close(r.done)
-	delete(m.receiversFn[m.mapkey(r.name, r.hash)], r.id)
 
 	return nil
 }
 
 func (m *manager) UnregisterReceiver(ctx context.Context, pr pkgreceiver.Receiver) error {
 	r, ok := pr.(*receiver)
+
+	// NOTE: No locking on simple reads
 	if !ok || !r.active {
 		return &RegistrationError{
 			Message: fmt.Sprintf("receiver not registered %v", ok),
@@ -262,6 +286,9 @@ func (m *manager) UnregisterReceiver(ctx context.Context, pr pkgreceiver.Receive
 	r.StopReceiving(ctx) // This in turn calls manager.stopreceiving()
 
 	key := m.mapkey(r.name, r.hash)
+
+	m.Lock()
+	defer m.Unlock()
 
 	m.receiversCount[key]--
 
@@ -280,6 +307,9 @@ func (m *manager) UnregisterReceiver(ctx context.Context, pr pkgreceiver.Receive
 // === Filters =======================================================
 
 func (m *manager) Filterers() map[string]pkgfilter.NewFilterer {
+	m.Lock()
+	defer m.Unlock()
+
 	if m.pm == nil {
 		return map[string]pkgfilter.NewFilterer{}
 	}
@@ -312,6 +342,10 @@ func (m *manager) RegisterFilter(
 	}
 
 	key := m.mapkey(name, hash)
+
+	m.Lock()
+	defer m.Unlock()
+
 	f, ok := m.filters[key]
 	if !ok {
 		f, err = factory.NewFilterer(config)
@@ -356,6 +390,9 @@ func (m *manager) RegisterFilter(
 }
 
 func (m *manager) Filters() map[string]pkgfilter.Filterer {
+	m.Lock()
+	defer m.Unlock()
+
 	filters := map[string]pkgfilter.Filterer{}
 	for k, v := range m.filtersWrapped {
 		filters[k] = v
@@ -365,6 +402,8 @@ func (m *manager) Filters() map[string]pkgfilter.Filterer {
 
 func (m *manager) UnregisterFilter(ctx context.Context, pf pkgfilter.Filterer) error {
 	f, ok := pf.(*filter)
+
+	// NOTE:  No locking on simple reads
 	if !ok || !f.active {
 		return &RegistrationError{
 			Message: fmt.Sprintf("filter not registered %v", ok),
@@ -373,14 +412,24 @@ func (m *manager) UnregisterFilter(ctx context.Context, pf pkgfilter.Filterer) e
 
 	key := m.mapkey(f.name, f.hash)
 
-	m.filtersCount[key]--
+	{
+		m.Lock()
+		m.filtersCount[key]--
 
-	if m.filtersCount[key] <= 0 {
-		delete(m.filtersCount, key)
-		delete(m.filters, key)
+		if m.filtersCount[key] <= 0 {
+			delete(m.filtersCount, key)
+			delete(m.filters, key)
+		}
+
+		delete(m.filtersWrapped, f.id)
+		m.Unlock()
 	}
 
-	delete(m.filtersWrapped, f.id)
+	{
+		f.Lock()
+		f.active = false
+		f.Unlock()
+	}
 
 	return nil
 }
@@ -388,6 +437,9 @@ func (m *manager) UnregisterFilter(ctx context.Context, pf pkgfilter.Filterer) e
 // === Senders =======================================================
 
 func (m *manager) Senderers() map[string]pkgsender.NewSenderer {
+	m.Lock()
+	defer m.Unlock()
+
 	if m.pm == nil {
 		return map[string]pkgsender.NewSenderer{}
 	}
@@ -421,6 +473,9 @@ func (m *manager) RegisterSender(
 	}
 
 	key := m.mapkey(name, hash)
+
+	m.Lock()
+	defer m.Unlock()
 
 	s, ok := m.senders[key]
 	if !ok {
@@ -464,6 +519,9 @@ func (m *manager) RegisterSender(
 }
 
 func (m *manager) Senders() map[string]pkgsender.Sender {
+	m.Lock()
+	defer m.Unlock()
+
 	senders := map[string]pkgsender.Sender{}
 	for k, v := range m.sendersWrapped {
 		senders[k] = v
@@ -481,6 +539,9 @@ func (m *manager) UnregisterSender(ctx context.Context, ps pkgsender.Sender) err
 	}
 
 	key := m.mapkey(s.name, s.hash)
+
+	m.Lock()
+
 	m.sendersCount[key]--
 
 	if m.sendersCount[key] <= 0 {
@@ -489,6 +550,11 @@ func (m *manager) UnregisterSender(ctx context.Context, ps pkgsender.Sender) err
 	}
 
 	delete(m.sendersWrapped, s.id)
+	m.Unlock()
+
+	s.Lock()
+	s.active = false
+	s.Unlock()
 
 	return nil
 

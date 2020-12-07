@@ -16,6 +16,7 @@ package plugin
 
 import (
 	"context"
+	"sync"
 
 	"github.com/xmidt-org/ears/pkg/event"
 	pkgmanager "github.com/xmidt-org/ears/pkg/plugin/manager"
@@ -25,6 +26,8 @@ import (
 var _ pkgsender.Sender = (*sender)(nil)
 
 type sender struct {
+	sync.Mutex
+
 	id   string
 	name string
 	hash string
@@ -36,15 +39,27 @@ type sender struct {
 }
 
 func (s *sender) Send(ctx context.Context, e event.Event) error {
-	if s.sender == nil || !s.active {
-		return &pkgmanager.NilPluginError{}
+	{
+		s.Lock()
+		if s.sender == nil || !s.active {
+			s.Unlock()
+			return &pkgmanager.NilPluginError{}
+		}
+		s.Unlock()
 	}
+
 	return s.sender.Send(ctx, e)
 }
 
 func (s *sender) Unregister(ctx context.Context) error {
-	if s == nil || s.manager == nil || !s.active {
-		return &pkgmanager.NotRegisteredError{}
+
+	{
+		s.Lock()
+		if s == nil || s.manager == nil || !s.active {
+			s.Unlock()
+			return &pkgmanager.NotRegisteredError{}
+		}
+		s.Unlock()
 	}
 
 	return s.manager.UnregisterSender(ctx, s)

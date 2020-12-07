@@ -466,6 +466,8 @@ func newPluginManager(t *testing.T) pkgmanager.Manager {
 
 type filterFn func(ctx context.Context, e pkgevent.Event) ([]pkgevent.Event, error)
 type newFiltererPluginMock struct {
+	sync.Mutex
+
 	pkgfilter.NewFiltererMock
 	filterFn filterFn
 	events   []pkgevent.Event
@@ -476,6 +478,8 @@ func (m *newFiltererPluginMock) Version() string { return "version" }
 func (m *newFiltererPluginMock) Config() string  { return "config" }
 
 func (m *newFiltererPluginMock) SetFilter(fn filterFn) {
+	m.Lock()
+	defer m.Unlock()
 	m.filterFn = fn
 }
 
@@ -496,6 +500,8 @@ func newFiltererPlugin(t *testing.T) pkgplugin.Pluginer {
 			FilterFunc: func(ctx context.Context, e pkgevent.Event) ([]pkgevent.Event, error) {
 				fmt.Printf("FILTER EVENT: %+v\n", e)
 
+				mock.Lock()
+				defer mock.Unlock()
 				mock.events = append(mock.events, e)
 				return mock.filterFn(ctx, e)
 			},
@@ -509,6 +515,7 @@ func newFiltererPlugin(t *testing.T) pkgplugin.Pluginer {
 // === SENDERER ==========================================================
 
 type newSendererPluginMock struct {
+	sync.Mutex
 	pkgsender.NewSendererMock
 	events []pkgevent.Event
 }
@@ -528,6 +535,8 @@ func newSenderPlugin(t *testing.T) pkgplugin.Pluginer {
 		return &pkgsender.SenderMock{
 			SendFunc: func(ctx context.Context, e pkgevent.Event) error {
 				fmt.Printf("EVENT SENT: %+v\n", e)
+				mock.Lock()
+				defer mock.Unlock()
 				mock.events = append(mock.events, e)
 				return nil
 			},
@@ -541,6 +550,7 @@ func newSenderPlugin(t *testing.T) pkgplugin.Pluginer {
 // === RECEIVER PLUGIN ==========================
 
 type newReceivererPluginMock struct {
+	sync.Mutex
 	pkgreceiver.NewReceivererMock
 	nextFn pkgreceiver.NextFn
 	done   chan struct{}
@@ -561,7 +571,11 @@ func newReceiverPlugin(t *testing.T) pkgplugin.Pluginer {
 
 	receiverMock := pkgreceiver.ReceiverMock{}
 	receiverMock.ReceiveFunc = func(ctx context.Context, next receiver.NextFn) error {
+		plugMock.Lock()
+
 		plugMock.nextFn = next
+		plugMock.Unlock()
+
 		select {
 		case <-ctx.Done():
 			return ctx.Err()
@@ -572,6 +586,9 @@ func newReceiverPlugin(t *testing.T) pkgplugin.Pluginer {
 	}
 
 	receiverMock.StopReceivingFunc = func(ctx context.Context) error {
+		plugMock.Lock()
+		defer plugMock.Unlock()
+
 		close(plugMock.done)
 		return nil
 	}
