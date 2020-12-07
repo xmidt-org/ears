@@ -151,3 +151,66 @@ func contains(ctx context.Context, a interface{}, b interface{}, strength int) (
 	}
 	return true, strength
 }
+
+/*func DeepEquals(a, b interface{}) bool {
+	if a == nil && b == nil {
+		return true
+	}
+	if a == nil || b == nil {
+		return false
+	}
+	if reflect.TypeOf(a) != reflect.TypeOf(b) {
+		return false
+	}
+	switch a.(type) {
+	case string:
+		return a.(string) == b.(string)
+	case int:
+		return a.(int) == b.(int)
+	case float64:
+		return a.(float64) == b.(float64)
+	case float32:
+		return a.(float32) == b.(float32)
+	case bool:
+		return a.(bool) == b.(bool)
+	case []interface{}:
+		switch b.(type) {
+		case []interface{}:
+			if len(a.([]interface{})) != len(b.([]interface{})) {
+				return false
+			}
+			for i, ai := range a.([]interface{}) {
+				if !DeepEquals(ai, b.([]interface{})[i]) {
+					return false
+				}
+			}
+		default:
+			return false
+		}
+	case map[string]interface{}:
+		switch b.(type) {
+		case map[string]interface{}:
+			if len(a.(map[string]interface{})) != len(b.(map[string]interface{})) {
+				return false
+			}
+			for k, v := range a.(map[string]interface{}) {
+				if !DeepEquals(v, b.(map[string]interface{})[k]) {
+					return false
+				}
+			}
+		default:
+			return false
+		}
+	default:
+		bufa, err := json.Marshal(a)
+		if err != nil {
+			return false
+		}
+		bufb, err := json.Marshal(b)
+		if err != nil {
+			return false
+		}
+		return string(bufa) == string(bufb)
+	}
+	return true
+}*/

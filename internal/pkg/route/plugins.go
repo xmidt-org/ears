@@ -22,6 +22,7 @@ import (
 	"crypto/md5"
 	"encoding/json"
 	"fmt"
+	"strconv"
 	"sync"
 	"time"
 
@@ -43,6 +44,7 @@ type (
 		Name          string                 `json:"name,omitempty"`       // descriptive plugin name
 		Encodings     []string               `json:"encodings,omitempty"`  // list of supported encodings
 		EventCount    int                    `json:"eventCount,omitempty"` // number of events that have passed through this plugin
+		lastEvent     *Event                 // latest event received
 		routes        []*Route               // list of routes using this plugin instance
 		inputChannel  chan *Event            // event channel on which plugin receives the next event
 		outputChannel chan *Event            // event channel to which plugin forwards current event to
@@ -79,6 +81,9 @@ func (plgn *Plugin) Hash(ctx context.Context) string {
 	}
 	// distinguish input and output plugins
 	str += plgn.Mode
+	// distinguish instances by name
+	str += "Debug"
+	str += plgn.Name
 	// optionally distinguish by org and app here as well
 	hash := fmt.Sprintf("%x", md5.Sum([]byte(str)))
 	return hash
@@ -138,6 +143,12 @@ func (plgn *Plugin) GetEventCount() int {
 	return plgn.EventCount
 }
 
+func (plgn *Plugin) GetLastEvent() *Event {
+	plgn.lock.RLock()
+	defer plgn.lock.RUnlock()
+	return plgn.lastEvent
+}
+
 func (plgn *Plugin) IncEventCount(inc int) {
 	plgn.lock.Lock()
 	defer plgn.lock.Unlock()
@@ -152,8 +163,13 @@ func (plgn *Plugin) DoAsync(ctx context.Context) {
 }
 
 func (plgn *Plugin) Close(ctx context.Context) {
-	log.Ctx(ctx).Debug().Msg("sending done signal for " + plgn.Mode + " " + plgn.Type + " " + plgn.Hash(ctx))
-	plgn.done <- true
+	log.Ctx(ctx).Debug().Msg("sending done signal for " + plgn.Mode + " " + plgn.Type + " " + plgn.GetConfig().Name + " " + plgn.Hash(ctx))
+	until := time.After(1000 * time.Millisecond)
+	select {
+	case <-until:
+		return
+	case plgn.done <- true:
+	}
 }
 
 //
@@ -164,34 +180,47 @@ func (dip *DebugInputPlugin) DoAsync(ctx context.Context) {
 	done := false
 	go func() {
 		<-dip.done
+		dip.lock.Lock()
 		done = true
+		dip.lock.Unlock()
 	}()
 	go func() {
 		if dip.Payload == nil {
-			log.Ctx(ctx).Error().Msg("no payload configured for debug input plugin " + dip.Hash(ctx))
+			log.Ctx(ctx).Error().Msg("no payload configured for debug input plugin " + dip.GetConfig().Name + " " + dip.Hash(ctx))
 			return
 		}
 		for {
+			if dip.Rounds == 0 && dip.IntervalMs == 0 {
+				return
+			}
 			if dip.Rounds > 0 && dip.GetEventCount() >= dip.Rounds {
 				return
 			}
 			time.Sleep(time.Duration(dip.IntervalMs) * time.Millisecond)
-			if done {
+			dip.lock.RLock()
+			d := done
+			dip.lock.RUnlock()
+			if d {
 				break
 			}
 			subCtx := context.WithValue(ctx, "foo", "bar")
 			event := NewEvent(subCtx, dip, dip.Payload)
 			dip.lock.Lock()
+			GetIOPluginManager(ctx).lock.RLock()
 			// deliver event to each interested route (first filter in chain)
 			if dip.routes != nil {
 				for _, r := range dip.routes {
+					r.lock.RLock()
 					if r.FilterChain != nil && len(r.FilterChain.Filters) > 0 {
 						//TODO: clone event
 						r.FilterChain.Filters[0].GetInputChannel() <- event
+						//log.Ctx(ctx).Debug().Msg("debug " + dip.Mode + " " + dip.Type + " plugin " + dip.GetConfig().Name + " " + dip.Hash(ctx) + " pushed event " + fmt.Sprintf("%d", dip.EventCount) + " into filter " + r.FilterChain.Filters[0].Hash(ctx))
 					}
+					r.lock.RUnlock()
 				}
 			}
-			log.Ctx(ctx).Debug().Msg("debug " + dip.Mode + " " + dip.Type + " plugin " + dip.Hash(ctx) + " produced event " + fmt.Sprintf("%d", dip.EventCount))
+			log.Ctx(ctx).Debug().Msg("debug " + dip.Mode + " " + dip.Type + " plugin " + dip.GetConfig().Name + " " + dip.Hash(ctx) + " produced event " + fmt.Sprintf("%d", dip.EventCount))
+			GetIOPluginManager(ctx).lock.RUnlock()
 			dip.lock.Unlock()
 			dip.IncEventCount(1)
 		}
@@ -202,16 +231,22 @@ func (dip *DebugInputPlugin) DoSync(ctx context.Context, event *Event) error {
 	if dip.Payload == nil {
 		return &MissingPluginConfiguratonError{dip.Type, dip.Hash(ctx), PluginModeInput}
 	}
-	log.Ctx(ctx).Debug().Msg("debug input plugin " + dip.Hash(ctx) + " produced event " + fmt.Sprintf("%d", dip.EventCount))
+	log.Ctx(ctx).Debug().Msg("debug input plugin " + dip.GetConfig().Name + " " + dip.Hash(ctx) + " produced sync event " + fmt.Sprintf("%d", dip.EventCount))
+	dip.lock.Lock()
+	GetIOPluginManager(ctx).lock.RLock()
 	// deliver event to each interested route (first filter in chain)
 	if dip.routes != nil {
 		for _, r := range dip.routes {
+			r.lock.RLock()
 			if r.FilterChain != nil && len(r.FilterChain.Filters) > 0 {
 				//TODO: clone event
 				r.FilterChain.Filters[0].GetInputChannel() <- event
 			}
+			r.lock.RUnlock()
 		}
 	}
+	GetIOPluginManager(ctx).lock.RUnlock()
+	dip.lock.Unlock()
 	dip.IncEventCount(1)
 	return nil
 }
@@ -221,8 +256,11 @@ func (dip *DebugInputPlugin) DoSync(ctx context.Context, event *Event) error {
 //
 
 func (dop *DebugOutputPlugin) DoSync(ctx context.Context, event *Event) error {
-	log.Ctx(ctx).Debug().Msg(dop.Mode + " " + dop.Type + " plugin " + dop.Hash(ctx) + " passed")
+	log.Ctx(ctx).Debug().Msg(dop.Mode + " " + dop.Type + " plugin " + dop.GetConfig().Name + " " + dop.Hash(ctx) + " consumed event " + strconv.Itoa(dop.GetEventCount()))
 	dop.IncEventCount(1)
+	dop.lock.Lock()
+	dop.lastEvent = event
+	dop.lock.Unlock()
 	return nil
 }
 
@@ -233,13 +271,14 @@ func (dop *DebugOutputPlugin) DoAsync(ctx context.Context) {
 		}
 		for {
 			select {
-			case <-dop.GetInputChannel():
-				log.Ctx(ctx).Debug().Msg(dop.Mode + " " + dop.Type + " plugin " + dop.Hash(ctx) + " passed")
-				//dop.lock.Lock()
+			case evt := <-dop.GetInputChannel():
+				log.Ctx(ctx).Debug().Msg(dop.Mode + " " + dop.Type + " plugin " + dop.GetConfig().Name + " " + dop.Hash(ctx) + " consumed event " + strconv.Itoa(dop.GetEventCount()))
 				dop.IncEventCount(1)
-				//dop.lock.Unlock()
+				dop.lock.Lock()
+				dop.lastEvent = evt
+				dop.lock.Unlock()
 			case <-dop.done:
-				log.Ctx(ctx).Debug().Msg(dop.Mode + " " + dop.Type + " plugin " + dop.Hash(ctx) + " done")
+				log.Ctx(ctx).Debug().Msg(dop.Mode + " " + dop.Type + " plugin " + dop.GetConfig().Name + " " + dop.Hash(ctx) + " done")
 				return
 			}
 		}
@@ -262,10 +301,12 @@ func NewInputPlugin(ctx context.Context, rte *Route) (Pluginer, error) {
 		dip.Type = PluginTypeDebug
 		dip.Mode = PluginModeInput
 		dip.State = PluginStateReady
-		dip.Name = "Debug"
+		//dip.Name = "Debug"
+		dip.Name = rte.Source.GetConfig().Name
 		dip.Params = pc.Params
 		dip.routes = []*Route{rte}
-		dip.SetOutputChannel(make(chan *Event))
+		// each filter has its own channel
+		//dip.SetOutputChannel(make(chan *Event))
 		dip.done = make(chan bool)
 		// parse configs and overwrite defaults
 		if dip.Params != nil {
@@ -298,13 +339,13 @@ func NewOutputPlugin(ctx context.Context, rte *Route) (Pluginer, error) {
 		dop.Type = PluginTypeDebug
 		dop.Mode = PluginModeOutput
 		dop.State = PluginStateReady
-		dop.Name = "Debug"
+		//dop.Name = "Debug"
+		dop.Name = rte.Destination.GetConfig().Name
 		dop.Params = pc.Params
 		dop.routes = []*Route{rte}
 		dop.done = make(chan bool)
-		if rte.FilterChain != nil && len(rte.FilterChain.Filters) > 0 {
-			dop.SetInputChannel(rte.FilterChain.Filters[len(rte.FilterChain.Filters)-1].GetOutputChannel())
-		}
+		// the input channel of an output plugin may be shared by multiple routes
+		dop.SetInputChannel(make(chan *Event))
 		dop.DoAsync(ctx)
 		return dop, nil
 	}

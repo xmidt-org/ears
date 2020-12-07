@@ -19,7 +19,9 @@ package route
 
 import (
 	"context"
+	"crypto/md5"
 	"encoding/json"
+	"fmt"
 	"sync"
 )
 
@@ -129,10 +131,11 @@ func (mgr *InMemoryRoutingTableManager) Validate(ctx context.Context) error {
 func (mgr *InMemoryRoutingTableManager) Hash(ctx context.Context) string {
 	mgr.lock.RLock()
 	defer mgr.lock.RUnlock()
-	hash := ""
+	agg := ""
 	for _, entry := range mgr.routingTableIndex {
-		hash = hash + entry.Hash(ctx)
+		agg += entry.Hash(ctx)
 	}
+	hash := fmt.Sprintf("%x", md5.Sum([]byte(agg)))
 	return hash
 }
 
@@ -144,6 +147,7 @@ func (mgr *InMemoryRoutingTableManager) GetAllRoutes(ctx context.Context) ([]*Ro
 	idx := 0
 	for _, entry := range mgr.routingTableIndex {
 		tbl[idx] = entry
+		idx++
 	}
 	return tbl, nil
 }
@@ -172,11 +176,6 @@ func (mgr *InMemoryRoutingTableManager) GetRoutesByDestinationPlugin(ctx context
 		}
 	}
 	return tbl, nil
-}
-
-// GetRoutesForEvent gets all routes for a given event
-func (mgr *InMemoryRoutingTableManager) GetRoutesForEvent(ctx context.Context, event *Event) ([]*Route, error) {
-	return mgr.GetRoutesBySourcePlugin(ctx, event.source)
 }
 
 // GetRouteCount gets size of routing table

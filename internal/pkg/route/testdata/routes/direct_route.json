@@ -1,0 +1,23 @@
+{
+    "orgId" : "comcast",
+    "appId" : "xfi",
+    "userId" : "boris",
+    "source" : {
+        "type" : "debug",
+        "mode" : "input",
+        "params" :
+        {
+            "rounds" : 1,
+            "intervalMS" : 250,
+            "payload" : {
+                "foo" : "bar"
+            }
+        }
+    },
+    "destination" : {
+        "type" : "debug",
+        "mode" : "output",
+        "params" : {}
+    },
+    "deliveryMode" : "at_least_once"
+}
