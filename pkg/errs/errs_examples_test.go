@@ -12,12 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package errors_test
+package errs_test
 
 import (
 	"fmt"
 
-	"github.com/xmidt-org/ears/pkg/errors"
+	"github.com/xmidt-org/ears/pkg/errs"
 )
 
 type MyError struct {
@@ -27,7 +27,7 @@ type MyError struct {
 }
 
 func (e *MyError) Error() string {
-	return errors.String(
+	return errs.String(
 		"MyError",
 		map[string]interface{}{
 			"msg":  e.Message,

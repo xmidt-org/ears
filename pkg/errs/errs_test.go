@@ -12,14 +12,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package errors_test
+package errs_test
 
 import (
 	"fmt"
 	"testing"
 
 	"github.com/sebdah/goldie/v2"
-	"github.com/xmidt-org/ears/pkg/errors"
+	"github.com/xmidt-org/ears/pkg/errs"
 )
 
 func TestString(t *testing.T) {
@@ -83,7 +83,7 @@ func TestString(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.id, func(t *testing.T) {
 			g := goldie.New(t, goldie.WithTestNameForDir(true))
-			g.Assert(t, tc.id, []byte(errors.String(tc.name, tc.values, tc.wrapped)))
+			g.Assert(t, tc.id, []byte(errs.String(tc.name, tc.values, tc.wrapped)))
 		})
 	}
 
