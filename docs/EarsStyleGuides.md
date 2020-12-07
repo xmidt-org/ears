@@ -110,6 +110,9 @@ TBD
 #### 4.6 Unit tests
 TBD
 
+
+#### 4.7 Tracing
+
 ### 5.0 External libraries
 
 #### 5.1 viper and cobra
