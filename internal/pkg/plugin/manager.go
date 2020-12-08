@@ -215,6 +215,11 @@ func (m *manager) next(ctx context.Context, receiverKey string, e pkgevent.Event
 
 	errCh := make(chan error, len(nextFns))
 
+	// TODO: Issues to resove here
+	//   * https://github.com/xmidt-org/ears/issues/40 - Fan Out
+	//   * https://github.com/xmidt-org/ears/issues/52 - Event cloning
+	//   * https://github.com/xmidt-org/ears/issues/51 - Context propagation
+	//
 	var wg sync.WaitGroup
 	for _, n := range nextFns {
 		wg.Add(1)
@@ -230,6 +235,8 @@ func (m *manager) next(ctx context.Context, receiverKey string, e pkgevent.Event
 	close(errCh)
 
 	// Does it make sense to return an error if any of the filters fail?
+	// TODO:
+	//   * https://github.com/xmidt-org/ears/issues/11 - Metrics
 	if len(errCh) > 0 {
 		return <-errCh
 	}
@@ -256,7 +263,7 @@ func (m *manager) receive(ctx context.Context, r *receiver, nextFn pkgreceiver.N
 	return nil
 }
 
-func (m *manager) stopreceiving(ctx context.Context, r *receiver) error {
+func (m *manager) stopReceiving(ctx context.Context, r *receiver) error {
 	m.Lock()
 	delete(m.receiversFn[m.mapkey(r.name, r.hash)], r.id)
 	m.Unlock()

@@ -72,7 +72,7 @@ func (r *receiver) StopReceiving(ctx context.Context) error {
 		r.Unlock()
 	}
 
-	return r.manager.stopreceiving(ctx, r)
+	return r.manager.stopReceiving(ctx, r)
 }
 
 func (r *receiver) Unregister(ctx context.Context) error {
