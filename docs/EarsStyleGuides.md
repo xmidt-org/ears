@@ -36,7 +36,7 @@ Google's [Java camelCase style](https://google.github.io/styleguide/javaguide.ht
 According to [golang](https://blog.golang.org/package-names): Good package names are short and clear. They are lower case, with no under_scores or mixedCaps. They are often simple nouns.
 
 #### 3.2 Struct, interface and constants
-Struct, interface, and constants should be in PascalCase.
+Struct, interface, and constants should follow the golang conventions where public ones are in PascalCase, and private/local ones are in camelCase.
 
 #### 3.3 Variables and functions
 Variables and functions should follow the golang conventions where public ones are in PascalCase, and private/local ones are in camelCase.
