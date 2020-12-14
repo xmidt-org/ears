@@ -1,4 +1,4 @@
-# (G)EARS Style Guides
+# EARS Style Guides
 A programming style guide for (but not limit to) the EARS project.
 
 ## Golang Style Guide
@@ -36,7 +36,7 @@ Google's [Java camelCase style](https://google.github.io/styleguide/javaguide.ht
 According to [golang](https://blog.golang.org/package-names): Good package names are short and clear. They are lower case, with no under_scores or mixedCaps. They are often simple nouns.
 
 #### 3.2 Struct, interface and constants
-Struct, interface, and constants should be in PascalCase.
+Struct, interface, and constants should follow the golang conventions where public ones are in PascalCase, and private/local ones are in camelCase.
 
 #### 3.3 Variables and functions
 Variables and functions should follow the golang conventions where public ones are in PascalCase, and private/local ones are in camelCase.
@@ -110,6 +110,9 @@ TBD
 #### 4.6 Unit tests
 TBD
 
+
+#### 4.7 Tracing
+
 ### 5.0 External libraries
 
 #### 5.1 viper and cobra
@@ -166,7 +169,6 @@ For string value type, it should be in camelCase. The only exception is the `mes
 | Key | Type | Description |
 |-----|------|-------------|
 |log.level| string | debug, info, warn, error |
-|gears.app.id| string | application/tenant ID |
 |op| string | operation. For example, createUser API may have `op=createUser` |
 |action| string | step in the operation. For example, createUser may have `action=updateDB` |
 |error| string | error message, usually from the `Error()` method |
@@ -174,12 +176,11 @@ For string value type, it should be in camelCase. The only exception is the `mes
 |stat.key| string | the name of the stats that we are tracking |
 |stat.count| long | the stats count if applicable | 
 |stat.time| long | the stats duration in milliseconds if applicable |
-|location| string | basic partition unit in gears eco system |
 
 ## Configuration Guide
-Gears applications leverage [Viper/Cobra](#5.1-viper-and-cobra) for configurations. The application usually takes a configuration file through a commandline flag or an environmental variable.
-* `--config` is typically used for giving configuration file at command line
-* `GEARS_CONFIG` is typically used for giving configuration file through environmental variable
+Ears leverages [Viper/Cobra](#5.1-viper-and-cobra) for configurations. The application usually takes a configuration file through a commandline flag or an environmental variable.
+* `--config` specifies the config file command line.
+* `EARS_CONFIG` specifies the config file through environmental variable.
 
 Configurations in config file can be overwritten with:
 * environmental variables???
