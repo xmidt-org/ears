@@ -6,7 +6,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 
-* POC for in memory routing table manager and filter chain 
+- POC for in memory routing table manager and filter chain 
+- Migrate to github actions, normalize analysis tools, Dockerfiles and Makefiles. [#60](https://github.com/xmidt-org/ears/pull/60)
 
 ## [v0.1.0]
 
