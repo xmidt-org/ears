@@ -31,15 +31,14 @@ func AppConfig() app.Config {
 	v := viper.New()
 	v.Set("ears.logLevel", "info")
 	v.Set("ears.api.port", 8080)
-	v.Set("ears.env", "test")
-	return v.Sub("ears")
+	return v
 }
 
 func BadConfig() app.Config {
 	v := viper.New()
 	v.Set("ears.logLevel", "info")
 	v.Set("ears.api.port", 0)
-	return v.Sub("ears")
+	return v
 }
 
 type NilLifeCycle struct {
@@ -51,28 +50,38 @@ func (lc *NilLifeCycle) Append(hook fx.Hook) {
 
 func TestSetupAPIServer(t *testing.T) {
 	//Case 1: normal case
-	err := app.SetupAPIServer(&NilLifeCycle{}, AppConfig(), app.NewLogger(), nil)
+	err := app.SetupAPIServer(&NilLifeCycle{}, AppConfig(), &log.Logger, nil)
 	if err != nil {
 		t.Errorf("error setup API server %s", err.Error())
 	}
 
 	//Case 2: error case
 	var invalidOptionErr *app.InvalidOptionError
-	err = app.SetupAPIServer(&NilLifeCycle{}, BadConfig(), app.NewLogger(), nil)
+	err = app.SetupAPIServer(&NilLifeCycle{}, BadConfig(), &log.Logger, nil)
 	if err == nil || !errors.As(err, &invalidOptionErr) {
 		t.Error("expect invalid optional error due to bad config")
 	}
 }
 
+var applogger zerolog.Logger
+
+func GetTestLogger() *zerolog.Logger {
+	return &applogger
+}
+
 func TestAppRunSuccess(t *testing.T) {
 
 	logListener := testLog.NewLogListener()
-	log.Logger = zerolog.New(logListener)
+	applogger = zerolog.New(logListener)
 
+	err := app.InitLogger(AppConfig())
+	if err != nil {
+		t.Errorf("Fail to initLogger: %s\n", err.Error())
+	}
 	earsApp := fx.New(
 		fx.Provide(
 			AppConfig,
-			app.NewLogger,
+			GetTestLogger,
 			app.NewAPIManager,
 			app.NewRoutingTableManager,
 			app.NewMiddleware,

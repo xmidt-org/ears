@@ -21,19 +21,11 @@ import (
 	"context"
 	"fmt"
 	"github.com/rs/zerolog"
-	"github.com/rs/zerolog/log"
 	"go.uber.org/fx"
 	"net/http"
 )
 
 var Version = "v0.0.0"
-
-func NewLogger() *zerolog.Logger {
-	// Create a child logger off the global logger instead of creating a new logger from scratch because
-	// global loggers already have some context values that the child logger can inherit
-	logger := log.Logger.With().Logger()
-	return &logger
-}
 
 func NewMux(a *APIManager, middleware []func(next http.Handler) http.Handler) (http.Handler, error) {
 	for _, m := range middleware {
@@ -43,15 +35,15 @@ func NewMux(a *APIManager, middleware []func(next http.Handler) http.Handler) (h
 }
 
 func SetupAPIServer(lifecycle fx.Lifecycle, config Config, logger *zerolog.Logger, mux http.Handler) error {
-	port := config.GetInt("api.port")
+	port := config.GetInt("ears.api.port")
 	if port < 1 {
-		err := &InvalidOptionError{nil, fmt.Errorf("invalid port value %d", port)}
+		err := &InvalidOptionError{fmt.Sprintf("invalid port value %d", port)}
 		logger.Error().Msg(err.Error())
 		return err
 	}
 
 	server := &http.Server{
-		Addr:    ":" + config.GetString("api.port"),
+		Addr:    ":" + config.GetString("ears.api.port"),
 		Handler: mux,
 	}
 

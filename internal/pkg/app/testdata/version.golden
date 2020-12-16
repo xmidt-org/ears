@@ -1,3 +1,7 @@
 {
-  "item": "v1.0.2"
+  "item": "v1.0.2",
+  "status": {
+    "code": 200,
+    "message": "OK"
+  }
 }
