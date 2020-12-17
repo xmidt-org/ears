@@ -18,7 +18,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
-	"github.com/xmidt-org/ears/internal/pkg/panic"
+	"github.com/xmidt-org/ears/internal/pkg/panics"
 	"net/http"
 )
 
@@ -40,11 +40,11 @@ func initRequestMiddleware(next http.Handler) http.Handler {
 		defer func() {
 			p := recover()
 			if p != nil {
-				panicErr, stackTrace := panic.GetPanicInfo(p)
+				panicErr := panics.ToError(p)
 				resp := ErrorResponse(panicErr)
 				resp.Respond(subCtx, w)
 				log.Ctx(subCtx).Error().Str("op", "initRequestMiddleware").Str("error", panicErr.Error()).
-					Str("stackTrace", stackTrace).Msg("A panic has ocurred")
+					Str("stackTrace", panicErr.StackTrace()).Msg("A panic has ocurred")
 			}
 		}()
 
