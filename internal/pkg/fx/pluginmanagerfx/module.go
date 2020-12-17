@@ -25,10 +25,7 @@ import (
 
 var Module = fx.Options(
 	fx.Provide(
-		fx.Annotated{
-			Name:   "PluginManager",
-			Target: ProvidePluginManager,
-		},
+		ProvidePluginManager,
 	),
 )
 
@@ -42,7 +39,7 @@ type PluginIn struct {
 type PluginOut struct {
 	fx.Out
 
-	PluginManager p.Manager
+	PluginManager p.Manager `name:"PluginManager"`
 }
 
 func ProvidePluginManager(in PluginIn) (PluginOut, error) {
