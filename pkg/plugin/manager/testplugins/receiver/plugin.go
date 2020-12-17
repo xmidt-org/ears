@@ -25,6 +25,8 @@ import (
 	"github.com/xmidt-org/ears/pkg/receiver"
 )
 
+func main() {}
+
 var Plugin = plugin{}
 
 var _ earsplugin.NewPluginerer = (*plugin)(nil)

@@ -14,6 +14,8 @@
 
 package main
 
+func main() {}
+
 type plugin struct{}
 
 var Plugin = plugin{}
