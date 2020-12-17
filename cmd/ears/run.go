@@ -20,7 +20,7 @@ import (
 	"github.com/spf13/viper"
 	"github.com/xmidt-org/ears/internal/pkg/app"
 	"github.com/xmidt-org/ears/internal/pkg/cli"
-	"github.com/xmidt-org/ears/internal/pkg/panic"
+	"github.com/xmidt-org/ears/internal/pkg/panics"
 	"go.uber.org/fx"
 )
 
@@ -33,9 +33,9 @@ var runCmd = &cobra.Command{
 		defer func() {
 			p := recover()
 			if p != nil {
-				panicErr, stackTrace := panic.GetPanicInfo(p)
+				panicErr := panics.ToError(p)
 				log.Logger.Fatal().Str("op", "run").Str("error", panicErr.Error()).
-					Str("stackTrace", stackTrace).Msg("A panic has ocurred during startup")
+					Str("stackTrace", panicErr.StackTrace()).Msg("A panic has ocurred during startup")
 			}
 		}()
 
