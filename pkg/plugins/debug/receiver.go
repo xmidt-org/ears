@@ -20,7 +20,9 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/goccy/go-yaml"
 	"github.com/xmidt-org/ears/pkg/event"
+	pkgplugin "github.com/xmidt-org/ears/pkg/plugin"
 	"github.com/xmidt-org/ears/pkg/receiver"
 )
 
@@ -31,7 +33,10 @@ func (r *Receiver) Receive(ctx context.Context, next receiver.NextFn) error {
 		}
 	}
 
+	r.Lock()
 	r.done = make(chan struct{})
+	r.next = next
+	r.Unlock()
 
 	go func() {
 		defer func() {
@@ -42,21 +47,22 @@ func (r *Receiver) Receive(ctx context.Context, next receiver.NextFn) error {
 			r.Unlock()
 		}()
 
-		for count := 0; count != r.Rounds; count++ {
+		// NOTE:  If rounds < 0, this messaging will continue
+		// until the context is cancelled.
+		for count := r.config.Rounds; count != 0; count-- {
 			select {
 			case <-ctx.Done():
 				return
-			case <-time.After(time.Duration(r.IntervalMs) * time.Millisecond):
-				e, err := event.NewEvent(r.Payload)
+			case <-time.After(time.Duration(r.config.IntervalMs) * time.Millisecond):
+				e, err := event.NewEvent(r.config.Payload)
 				if err != nil {
 					return
 				}
 
-				err = next(ctx, e)
+				err = r.Trigger(ctx, e)
 				if err != nil {
 					return
 				}
-
 			}
 		}
 	}()
@@ -75,4 +81,68 @@ func (r *Receiver) StopReceiving(ctx context.Context) error {
 	}
 
 	return nil
+}
+
+func NewReceiver(config interface{}) (receiver.Receiver, error) {
+
+	var cfg ReceiverConfig
+	var err error
+
+	switch c := config.(type) {
+	case string:
+		err = yaml.Unmarshal([]byte(c), &cfg)
+	case []byte:
+		err = yaml.Unmarshal(c, &cfg)
+	case ReceiverConfig:
+		cfg = c
+	case *ReceiverConfig:
+		cfg = *c
+	}
+
+	if err != nil {
+		return nil, &pkgplugin.InvalidConfigError{
+			Err: err,
+		}
+	}
+
+	r := &Receiver{
+		config: *(cfg.WithDefaults()),
+	}
+
+	err = r.config.Validate()
+	if err != nil {
+		return nil, err
+	}
+
+	r.history = newHistory(r.config.MaxHistory)
+
+	return r, nil
+}
+
+func (r *Receiver) Count() int {
+	return r.history.Count()
+}
+
+func (r *Receiver) Trigger(ctx context.Context, e event.Event) error {
+	r.Lock()
+	defer r.Unlock()
+
+	r.history.Add(e)
+
+	return r.next(ctx, e)
+}
+
+func (r *Receiver) History() []event.Event {
+	history := r.history.History()
+
+	events := make([]event.Event, len(history))
+
+	for i, h := range history {
+		if e, ok := h.(event.Event); ok {
+			events[i] = e
+		}
+	}
+
+	return events
+
 }

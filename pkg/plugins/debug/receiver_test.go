@@ -16,7 +16,6 @@ package debug_test
 
 import (
 	"context"
-	"fmt"
 
 	"testing"
 	"time"
@@ -24,23 +23,93 @@ import (
 	"github.com/xmidt-org/ears/pkg/plugins/debug"
 
 	"github.com/xmidt-org/ears/pkg/event"
+
+	. "github.com/onsi/gomega"
 )
 
 func TestReceiver(t *testing.T) {
-	r, err := debug.NewReceiver("")
-	if err != nil {
-		t.Errorf(err.Error())
+
+	totalTimeout := 5 * time.Second
+	caseTimeout := 2 * time.Second
+
+	testCases := []struct {
+		name    string
+		timeout time.Duration
+		config  debug.ReceiverConfig
+	}{
+		{
+			name:    "none",
+			timeout: caseTimeout,
+			config: debug.ReceiverConfig{
+				Rounds:  0,
+				Payload: "none",
+			},
+		},
+
+		{
+			name:    "one",
+			timeout: caseTimeout,
+			config: debug.ReceiverConfig{
+				Rounds:     1,
+				IntervalMs: 10,
+				Payload:    "one",
+				MaxHistory: 5,
+			},
+		},
+
+		{
+			name:    "five",
+			timeout: caseTimeout,
+			config: debug.ReceiverConfig{
+				Rounds:     5,
+				IntervalMs: 10,
+				Payload:    "five",
+				MaxHistory: 3,
+			},
+		},
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 12*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), totalTimeout)
 	defer cancel()
 
-	err = r.Receive(ctx, func(ctx context.Context, e event.Event) error {
-		fmt.Printf("was sent a message: %+v\n", e)
-		return nil
-	})
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			ctx, cancel := context.WithTimeout(ctx, caseTimeout)
+			defer cancel()
 
-	if err != nil {
-		fmt.Println("receive returned an error: ", err)
+			a := NewWithT(t)
+
+			r, err := debug.NewPlugin().NewReceiver(tc.config)
+			a.Expect(err).To(BeNil())
+
+			events := []event.Event{}
+
+			err = r.Receive(ctx, func(ctx context.Context, e event.Event) error {
+				events = append(events, e)
+				return nil
+			})
+
+			a.Expect(err).To(BeNil())
+			a.Expect(events).To(HaveLen(tc.config.Rounds))
+
+			dr, ok := r.(*debug.Receiver)
+			a.Expect(ok).To(BeTrue())
+			a.Expect(dr.Count()).To(Equal(tc.config.Rounds))
+
+			history := dr.History()
+
+			a.Expect(history).To(HaveLen(
+				min(tc.config.Rounds, tc.config.MaxHistory),
+			))
+
+			for _, e := range history {
+				p, ok := e.Payload().(string)
+				a.Expect(ok).To(BeTrue())
+				a.Expect(p).To(Equal(tc.config.Payload))
+			}
+
+		})
+
 	}
+
 }

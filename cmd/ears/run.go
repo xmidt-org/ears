@@ -16,14 +16,16 @@ package main
 
 import (
 	"fmt"
-	"github.com/rs/zerolog"
 	"os"
+
+	"github.com/rs/zerolog"
 
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"github.com/xmidt-org/ears/internal/pkg/app"
 	"github.com/xmidt-org/ears/internal/pkg/cli"
+	"github.com/xmidt-org/ears/internal/pkg/fx/pluginmanagerfx"
 	"go.uber.org/fx"
 )
 
@@ -39,6 +41,7 @@ var runCmd = &cobra.Command{
 			os.Exit(1)
 		}
 		earsApp := fx.New(
+			pluginmanagerfx.Module,
 			fx.Provide(
 				ViperConfig,
 				app.NewLogger,

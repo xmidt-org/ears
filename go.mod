@@ -8,6 +8,8 @@ require (
 	github.com/faiface/beep v1.0.2 // indirect
 	github.com/fsnotify/fsnotify v1.4.9 // indirect
 	github.com/ghodss/yaml v1.0.0
+	github.com/go-ozzo/ozzo-validation/v4 v4.3.0
+	github.com/goccy/go-yaml v1.8.4
 	github.com/google/addlicense v0.0.0-20200906110928-a0294312aa76 // indirect
 	github.com/google/go-cmp v0.5.2
 	github.com/google/uuid v1.1.2
@@ -31,5 +33,6 @@ require (
 	golang.org/x/sync v0.0.0-20201008141435-b3e1573b7520
 	golang.org/x/tools v0.0.0-20200909205333-6a8222ee2526 // indirect
 	gopkg.in/ini.v1 v1.61.0 // indirect
+	gopkg.in/yaml.v2 v2.3.0
 	honnef.co/go/tools v0.0.1-2020.1.5 // indirect
 )
