@@ -18,6 +18,8 @@ import (
 	"github.com/xmidt-org/ears/pkg/plugins/debug"
 )
 
+func main() {}
+
 //go:generate ../../../../script/build-plugin.sh
 
 var (
