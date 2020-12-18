@@ -59,7 +59,7 @@ func TestSetupAPIServer(t *testing.T) {
 	var invalidOptionErr *app.InvalidOptionError
 	err = app.SetupAPIServer(&NilLifeCycle{}, BadConfig(), &log.Logger, nil)
 	if err == nil || !errors.As(err, &invalidOptionErr) {
-		t.Error("expect invalid optional error due to bad config")
+		t.Error("expect invalid optional error due to bad port")
 	}
 }
 
@@ -74,7 +74,7 @@ func TestAppRunSuccess(t *testing.T) {
 	logListener := testLog.NewLogListener()
 	applogger = zerolog.New(logListener)
 
-	err := app.InitLogger(AppConfig())
+	_, err := app.ProvideLogger(AppConfig())
 	if err != nil {
 		t.Errorf("Fail to initLogger: %s\n", err.Error())
 	}
