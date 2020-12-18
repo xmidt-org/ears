@@ -20,24 +20,30 @@ import (
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"os"
+	"sync"
 )
 
-var appLogger zerolog.Logger
+var appLogger *zerolog.Logger
+var appLoggerLock = &sync.Mutex{}
 
-func InitLogger(config Config) error {
+func ProvideLogger(config Config) (*zerolog.Logger, error) {
+	appLoggerLock.Lock()
+	defer appLoggerLock.Unlock()
+
+	if appLogger != nil {
+		return appLogger, nil
+	}
+
 	logLevel, err := zerolog.ParseLevel(config.GetString("ears.logLevel"))
 	if err != nil {
-		return &InvalidOptionError{
+		return nil, &InvalidOptionError{
 			Option: fmt.Sprintf("loglevel %s is not valid", config.GetString("ears.logLevel")),
 		}
 	}
-	appLogger = zerolog.New(os.Stdout).Level(logLevel)
+	logger := zerolog.New(os.Stdout).Level(logLevel)
 	zerolog.LevelFieldName = "log.level"
-	return nil
-}
-
-func GetLogger() *zerolog.Logger {
-	return &appLogger
+	appLogger = &logger
+	return appLogger, nil
 }
 
 func SubLoggerCtx(ctx context.Context, parent *zerolog.Logger) context.Context {
