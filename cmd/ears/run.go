@@ -39,7 +39,7 @@ var runCmd = &cobra.Command{
 			}
 		}()
 
-		err := app.InitLogger(ViperConfig())
+		logger, err := app.ProvideLogger(ViperConfig())
 		if err != nil {
 			log.Logger.Fatal().Str("op", "InitLogger").Str("error", "panic").
 				Msg("Error initialize logger")
@@ -47,13 +47,13 @@ var runCmd = &cobra.Command{
 		earsApp := fx.New(
 			fx.Provide(
 				ViperConfig,
-				app.GetLogger,
+				app.ProvideLogger,
 				app.NewRoutingTableManager,
 				app.NewAPIManager,
 				app.NewMiddleware,
 				app.NewMux,
 			),
-			fx.Logger(app.GetLogger()),
+			fx.Logger(logger),
 			fx.Invoke(app.SetupAPIServer),
 		)
 		earsApp.Run()
