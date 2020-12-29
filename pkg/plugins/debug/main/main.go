@@ -18,7 +18,9 @@ import (
 	"github.com/xmidt-org/ears/pkg/plugins/debug"
 )
 
-func main() {}
+func main() {
+	// required for `go build` completeness
+}
 
 //go:generate ../../../../script/build-plugin.sh
 
