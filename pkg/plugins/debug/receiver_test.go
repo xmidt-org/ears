@@ -21,6 +21,7 @@ import (
 	"time"
 
 	"github.com/xmidt-org/ears/pkg/plugins/debug"
+	"github.com/xorcare/pointer"
 
 	"github.com/xmidt-org/ears/pkg/event"
 
@@ -41,7 +42,7 @@ func TestReceiver(t *testing.T) {
 			name:    "none",
 			timeout: caseTimeout,
 			config: debug.ReceiverConfig{
-				Rounds:  0,
+				Rounds:  pointer.Int(0),
 				Payload: "none",
 			},
 		},
@@ -50,10 +51,10 @@ func TestReceiver(t *testing.T) {
 			name:    "one",
 			timeout: caseTimeout,
 			config: debug.ReceiverConfig{
-				Rounds:     1,
-				IntervalMs: 10,
+				Rounds:     pointer.Int(1),
+				IntervalMs: pointer.Int(10),
 				Payload:    "one",
-				MaxHistory: 5,
+				MaxHistory: pointer.Int(5),
 			},
 		},
 
@@ -61,10 +62,10 @@ func TestReceiver(t *testing.T) {
 			name:    "five",
 			timeout: caseTimeout,
 			config: debug.ReceiverConfig{
-				Rounds:     5,
-				IntervalMs: 10,
+				Rounds:     pointer.Int(5),
+				IntervalMs: pointer.Int(10),
 				Payload:    "five",
-				MaxHistory: 3,
+				MaxHistory: pointer.Int(3),
 			},
 		},
 	}
@@ -79,6 +80,9 @@ func TestReceiver(t *testing.T) {
 
 			a := NewWithT(t)
 
+			// Make sure we fill in all values
+			tc.config = *tc.config.WithDefaults()
+
 			r, err := debug.NewPlugin().NewReceiver(tc.config)
 			a.Expect(err).To(BeNil())
 
@@ -90,16 +94,16 @@ func TestReceiver(t *testing.T) {
 			})
 
 			a.Expect(err).To(BeNil())
-			a.Expect(events).To(HaveLen(tc.config.Rounds))
+			a.Expect(events).To(HaveLen(*tc.config.Rounds))
 
 			dr, ok := r.(*debug.Receiver)
 			a.Expect(ok).To(BeTrue())
-			a.Expect(dr.Count()).To(Equal(tc.config.Rounds))
+			a.Expect(dr.Count()).To(Equal(*tc.config.Rounds))
 
 			history := dr.History()
 
 			a.Expect(history).To(HaveLen(
-				min(tc.config.Rounds, tc.config.MaxHistory),
+				min(*tc.config.Rounds, *tc.config.MaxHistory),
 			))
 
 			for _, e := range history {

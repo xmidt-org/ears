@@ -21,6 +21,7 @@ import (
 	"time"
 
 	"github.com/xmidt-org/ears/pkg/plugins/debug"
+	"github.com/xorcare/pointer"
 
 	"github.com/xmidt-org/ears/pkg/event"
 
@@ -49,7 +50,7 @@ func TestSender(t *testing.T) {
 			timeout:     caseTimeout,
 			numMessages: 1,
 			config: debug.SenderConfig{
-				MaxHistory: 5,
+				MaxHistory: pointer.Int(5),
 			},
 		},
 
@@ -58,7 +59,7 @@ func TestSender(t *testing.T) {
 			timeout:     caseTimeout,
 			numMessages: 7,
 			config: debug.SenderConfig{
-				MaxHistory: 3,
+				MaxHistory: pointer.Int(3),
 			},
 		},
 	}
@@ -74,7 +75,9 @@ func TestSender(t *testing.T) {
 			a := NewWithT(t)
 
 			w := &debug.SendSlice{}
+			tc.config.Destination = debug.DestinationCustom
 			tc.config.Writer = w
+			tc.config = tc.config.WithDefaults()
 
 			s, err := debug.NewPlugin().NewSender(tc.config)
 			a.Expect(err).To(BeNil())
@@ -93,7 +96,7 @@ func TestSender(t *testing.T) {
 			a.Expect(ok).To(BeTrue())
 
 			a.Expect(ds.History()).To(HaveLen(
-				min(tc.numMessages, tc.config.MaxHistory),
+				min(tc.numMessages, *tc.config.MaxHistory),
 			))
 
 		})

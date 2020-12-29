@@ -16,27 +16,32 @@ package debug
 
 import (
 	validation "github.com/go-ozzo/ozzo-validation/v4"
+	"github.com/xorcare/pointer"
 )
 
 var minReceiverConfig = ReceiverConfig{
-	IntervalMs: 1,
-	Rounds:     -1,
-	MaxHistory: 0,
+	IntervalMs: pointer.Int(1),
+	Rounds:     pointer.Int(-1),
+	MaxHistory: pointer.Int(0),
 }
 
 func (rc *ReceiverConfig) WithDefaults() *ReceiverConfig {
 	cfg := *rc
 
-	if cfg.IntervalMs <= 0 {
+	if cfg.IntervalMs == nil {
 		cfg.IntervalMs = defaultReceiverConfig.IntervalMs
 	}
 
-	if cfg.Rounds < 0 {
+	if cfg.Rounds == nil {
 		cfg.Rounds = defaultReceiverConfig.Rounds
 	}
 
 	if cfg.Payload == nil {
 		cfg.Payload = defaultReceiverConfig.Payload
+	}
+
+	if cfg.MaxHistory == nil {
+		cfg.MaxHistory = defaultReceiverConfig.MaxHistory
 	}
 
 	return &cfg
@@ -45,10 +50,10 @@ func (rc *ReceiverConfig) WithDefaults() *ReceiverConfig {
 func (rc *ReceiverConfig) Validate() error {
 	r := *rc
 	return validation.ValidateStruct(&r,
-		validation.Field(&r.IntervalMs, validation.Min(minReceiverConfig.IntervalMs)),
-		validation.Field(&r.Rounds, validation.Min(minReceiverConfig.Rounds)),
+		validation.Field(&r.IntervalMs, validation.Min(*minReceiverConfig.IntervalMs)),
+		validation.Field(&r.Rounds, validation.Min(*minReceiverConfig.Rounds)),
 		validation.Field(&r.Payload, validation.NotNil),
-		validation.Field(&r.MaxHistory, validation.Min(minReceiverConfig.MaxHistory)),
+		validation.Field(&r.MaxHistory, validation.Min(*minReceiverConfig.MaxHistory)),
 	)
 
 }

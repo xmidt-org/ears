@@ -16,6 +16,7 @@ package debug
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/goccy/go-yaml"
 	"github.com/xmidt-org/ears/pkg/event"
@@ -31,8 +32,10 @@ func NewSender(config interface{}) (sender.Sender, error) {
 	switch c := config.(type) {
 	case string:
 		err = yaml.Unmarshal([]byte(c), &cfg)
+
 	case []byte:
 		err = yaml.Unmarshal(c, &cfg)
+
 	case SenderConfig:
 		cfg = c
 	case *SenderConfig:
@@ -45,30 +48,33 @@ func NewSender(config interface{}) (sender.Sender, error) {
 		}
 	}
 
-	s := &Sender{
-		config: *(cfg.WithDefaults()),
-	}
+	cfg = cfg.WithDefaults()
 
-	err = s.config.Validate()
+	err = cfg.Validate()
 	if err != nil {
 		return nil, err
 	}
 
-	if s.config.Writer != nil {
-		s.config.Destination = "custom"
+	s := &Sender{
+		config: cfg,
+	}
+
+	switch s.config.Destination {
+	case DestinationDevNull:
+		s.destination = nil
+	case DestinationStdout:
+		s.destination = &SendStdout{}
+	case DestinationStderr:
+		s.destination = &SendStderr{}
+	case DestinationCustom:
 		s.destination = s.config.Writer
-	} else {
-		switch s.config.Destination {
-		case "":
-			// do nothing
-		case "stdout":
-			s.destination = &SendStdout{}
-		case "stderr":
-			s.destination = &SendStderr{}
+	default:
+		return nil, &pkgplugin.InvalidConfigError{
+			Err: fmt.Errorf("config.Destination value invalid"),
 		}
 	}
 
-	s.history = newHistory(s.config.MaxHistory)
+	s.history = newHistory(*s.config.MaxHistory)
 
 	return s, nil
 

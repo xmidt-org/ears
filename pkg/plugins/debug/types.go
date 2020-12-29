@@ -23,6 +23,8 @@ import (
 
 	"github.com/xmidt-org/ears/pkg/receiver"
 	"github.com/xmidt-org/ears/pkg/sender"
+
+	"github.com/xorcare/pointer"
 )
 
 var _ pkgplugin.Pluginer = (*plugin)(nil)
@@ -39,7 +41,11 @@ var (
 	Commit  = ""
 )
 
-func NewPlugin(name string, version string, commit string) *plugin {
+func NewPlugin() *plugin {
+	return NewPluginVersion(Name, Version, Commit)
+}
+
+func NewPluginVersion(name string, version string, commit string) *plugin {
 	return &plugin{
 		name:    name,
 		version: version,
@@ -55,17 +61,24 @@ type plugin struct {
 }
 
 var defaultReceiverConfig = ReceiverConfig{
-	IntervalMs: 100,
-	Rounds:     4,
+	IntervalMs: pointer.Int(100),
+	Rounds:     pointer.Int(4),
 	Payload:    "debug message",
-	MaxHistory: 100,
+	MaxHistory: pointer.Int(100),
 }
 
+// ReceiverConfig determines how the receiver will operate.  To
+// have the debug receiver run continuously, set the `Rounds` value
+// to -1.
+//
+
+var InfiniteRounds = pointer.Int(-1)
+
 type ReceiverConfig struct {
-	IntervalMs int         `json:"intervalMs"`
-	Rounds     int         `json:"rounds"` // -1 Signifies "infinite"
+	IntervalMs *int        `json:"intervalMs"`
+	Rounds     *int        `json:"rounds"` // InfiniteRounds (-1) Signifies "infinite"
 	Payload    interface{} `json:"payload"`
-	MaxHistory int         `json:"maxHistory"`
+	MaxHistory *int        `json:"maxHistory"`
 }
 
 type Receiver struct {
@@ -100,10 +113,43 @@ type SendSlice struct {
 	events []event.Event
 }
 
+var minSenderConfig = SenderConfig{
+	MaxHistory: pointer.Int(0),
+}
+
+var DefaultSenderConfig = SenderConfig{
+	Destination: DestinationDevNull,
+	MaxHistory:  pointer.Int(0),
+	Writer:      nil,
+}
+
+//go:generate rm -f destinationtype_enum.go
+//go:generate go-enum -type=DestinationType -linecomment -sql=false
+type DestinationType int
+
+const (
+	DestinationUnknown DestinationType = iota // unknown
+	DestinationDevNull                        // devnull
+	DestinationStdout                         // stdout
+	DestinationStderr                         // stderr
+	DestinationCustom                         // custom
+
+)
+
+// SenderConfig can be passed into NewSender() in order to configure
+// the behavior of the sender.
 type SenderConfig struct {
-	Destination string      `json:"destination"` // "", stdout, stderr
-	MaxHistory  int         `json:"maxHistory"`
-	Writer      EventWriter `json:"-"`
+
+	// Destination should be set to one of the numerated DestinationType values.
+	Destination DestinationType `json:"destination"`
+
+	// MaxHistory defines the number of past events to keep.  Begins replacing the
+	// oldest event when the buffer is full.
+	MaxHistory *int `json:"maxHistory"`
+
+	// Writer defines a custom writer that will be written to on each Send.
+	// Writer should support concurrent writes.
+	Writer EventWriter `json:"-"`
 }
 
 type Sender struct {

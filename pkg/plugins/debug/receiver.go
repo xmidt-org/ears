@@ -49,19 +49,30 @@ func (r *Receiver) Receive(ctx context.Context, next receiver.NextFn) error {
 
 		// NOTE:  If rounds < 0, this messaging will continue
 		// until the context is cancelled.
-		for count := r.config.Rounds; count != 0; count-- {
+		for count := *r.config.Rounds; count != 0; {
 			select {
 			case <-ctx.Done():
 				return
-			case <-time.After(time.Duration(r.config.IntervalMs) * time.Millisecond):
+			case <-r.done:
+				return
+			case <-time.After(time.Duration(*r.config.IntervalMs) * time.Millisecond):
 				e, err := event.NewEvent(r.config.Payload)
 				if err != nil {
 					return
 				}
 
+				// TODO:  Determine context propagation lifecycle
+				//   * https://github.com/xmidt-org/ears/issues/51
+				//
+				// NOTES: Discussed that this behavior could be determined
+				//  by a configuration value
 				err = r.Trigger(ctx, e)
 				if err != nil {
 					return
+				}
+
+				if count > 0 {
+					count--
 				}
 			}
 		}
@@ -114,7 +125,7 @@ func NewReceiver(config interface{}) (receiver.Receiver, error) {
 		return nil, err
 	}
 
-	r.history = newHistory(r.config.MaxHistory)
+	r.history = newHistory(*r.config.MaxHistory)
 
 	return r, nil
 }
@@ -124,12 +135,15 @@ func (r *Receiver) Count() int {
 }
 
 func (r *Receiver) Trigger(ctx context.Context, e event.Event) error {
+	// Ensure that `next` can be slow and locking here will not
+	// prevent other requests from executing.
 	r.Lock()
-	defer r.Unlock()
+	next := r.next
+	r.Unlock()
 
 	r.history.Add(e)
 
-	return r.next(ctx, e)
+	return next(ctx, e)
 }
 
 func (r *Receiver) History() []event.Event {

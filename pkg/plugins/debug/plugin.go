@@ -28,7 +28,7 @@ func (p *plugin) PluginerHash(config interface{}) (string, error) {
 }
 
 func (p *plugin) NewPluginer(config interface{}) (pkgplugin.Pluginer, error) {
-	plug := NewPlugin(p.name, p.version, p.commit)
+	plug := NewPlugin()
 	plug.config = config
 
 	return plug, nil
