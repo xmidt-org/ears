@@ -14,6 +14,10 @@
 
 package main
 
+func main() {
+	// required for `go build` to not fail
+}
+
 type plugin struct{}
 
 var Plugin = plugin{}

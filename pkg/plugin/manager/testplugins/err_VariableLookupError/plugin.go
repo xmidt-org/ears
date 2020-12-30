@@ -13,3 +13,7 @@
 // limitations under the License.
 
 package main
+
+func main() {
+	// required for `go build` to not fail
+}
