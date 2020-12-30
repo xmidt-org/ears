@@ -116,13 +116,15 @@ func NewReceiver(config interface{}) (receiver.Receiver, error) {
 		}
 	}
 
-	r := &Receiver{
-		config: *(cfg.WithDefaults()),
-	}
+	cfg = cfg.WithDefaults()
 
-	err = r.config.Validate()
+	err = cfg.Validate()
 	if err != nil {
 		return nil, err
+	}
+
+	r := &Receiver{
+		config: cfg,
 	}
 
 	r.history = newHistory(*r.config.MaxHistory)

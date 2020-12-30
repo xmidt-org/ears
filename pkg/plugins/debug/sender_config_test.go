@@ -20,10 +20,12 @@ import (
 	"github.com/xmidt-org/ears/pkg/plugins/debug"
 	"github.com/xorcare/pointer"
 
+	"github.com/sebdah/goldie/v2"
+
 	. "github.com/onsi/gomega"
 )
 
-func TestWithDefault(t *testing.T) {
+func TestSenderWithDefault(t *testing.T) {
 
 	testCases := []struct {
 		name     string
@@ -99,7 +101,7 @@ func TestWithDefault(t *testing.T) {
 
 }
 
-func TestValidation(t *testing.T) {
+func TestSenderValidation(t *testing.T) {
 	testCases := []struct {
 		name  string
 		input debug.SenderConfig
@@ -226,7 +228,7 @@ func TestValidation(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			a := NewWithT(t)
 
-			err := tc.input.Validate()
+			err := (&tc.input).Validate()
 			if tc.valid {
 				a.Expect(err).To(BeNil())
 			} else {
@@ -235,6 +237,89 @@ func TestValidation(t *testing.T) {
 
 		})
 
+	}
+
+}
+
+func TestSenderSerialization(t *testing.T) {
+	testCases := []struct {
+		name   string
+		config debug.SenderConfig
+	}{
+		{
+			name:   "empty",
+			config: debug.SenderConfig{},
+		},
+
+		{
+			name:   "default",
+			config: (&debug.SenderConfig{}).WithDefaults(),
+		},
+
+		{
+			name:   "devnull",
+			config: debug.SenderConfig{Destination: debug.DestinationDevNull},
+		},
+
+		{
+			name:   "stdout",
+			config: debug.SenderConfig{Destination: debug.DestinationStdout},
+		},
+
+		{
+			name:   "stderr",
+			config: debug.SenderConfig{Destination: debug.DestinationStderr},
+		},
+
+		{
+			name:   "custom",
+			config: debug.SenderConfig{Destination: debug.DestinationCustom},
+		},
+
+		{
+			name:   "maxhistory-nil",
+			config: debug.SenderConfig{MaxHistory: nil},
+		},
+
+		{
+			name:   "maxhistory-zero",
+			config: debug.SenderConfig{MaxHistory: pointer.Int(0)},
+		},
+
+		{
+			name:   "maxhistory-negative",
+			config: debug.SenderConfig{MaxHistory: pointer.Int(-4)},
+		},
+
+		{
+			name:   "maxhistory-positive",
+			config: debug.SenderConfig{MaxHistory: pointer.Int(99999999999)},
+		},
+
+		{
+			name:   "maxhistory-maxint",
+			config: debug.SenderConfig{MaxHistory: pointer.Int(9223372036854775807)},
+		},
+
+		{
+			name:   "maxhistory-meaningoflife",
+			config: debug.SenderConfig{MaxHistory: pointer.Int(42)},
+		},
+
+		{
+			name: "writer-custom",
+			config: debug.SenderConfig{
+				Destination: debug.DestinationCustom,
+				Writer:      &debug.SendSlice{},
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			g := goldie.New(t, goldie.WithTestNameForDir(true))
+			g.AssertJson(t, tc.name, tc.config)
+		})
 	}
 
 }

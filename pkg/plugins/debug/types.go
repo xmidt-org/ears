@@ -60,7 +60,7 @@ type plugin struct {
 	config  interface{}
 }
 
-var defaultReceiverConfig = ReceiverConfig{
+var DefaultReceiverConfig = ReceiverConfig{
 	IntervalMs: pointer.Int(100),
 	Rounds:     pointer.Int(4),
 	Payload:    "debug message",
@@ -75,10 +75,10 @@ var defaultReceiverConfig = ReceiverConfig{
 var InfiniteRounds = pointer.Int(-1)
 
 type ReceiverConfig struct {
-	IntervalMs *int        `json:"intervalMs"`
-	Rounds     *int        `json:"rounds"` // InfiniteRounds (-1) Signifies "infinite"
-	Payload    interface{} `json:"payload"`
-	MaxHistory *int        `json:"maxHistory"`
+	IntervalMs *int        `json:"intervalMs,omitempty"`
+	Rounds     *int        `json:"rounds,omitempty"` // InfiniteRounds (-1) Signifies "infinite"
+	Payload    interface{} `json:"payload,omitempty"`
+	MaxHistory *int        `json:"maxHistory,omitempty"`
 }
 
 type Receiver struct {
@@ -141,11 +141,11 @@ const (
 type SenderConfig struct {
 
 	// Destination should be set to one of the numerated DestinationType values.
-	Destination DestinationType `json:"destination"`
+	Destination DestinationType `json:"destination,omitempty"`
 
 	// MaxHistory defines the number of past events to keep.  Begins replacing the
 	// oldest event when the buffer is full.
-	MaxHistory *int `json:"maxHistory"`
+	MaxHistory *int `json:"maxHistory,omitempty"`
 
 	// Writer defines a custom writer that will be written to on each Send.
 	// Writer should support concurrent writes.
