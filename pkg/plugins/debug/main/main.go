@@ -19,7 +19,7 @@ import (
 )
 
 func main() {
-	// required for `go build` completeness
+	// required for `go build` to not fail
 }
 
 //go:generate ../../../../script/build-plugin.sh
