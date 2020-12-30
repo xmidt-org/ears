@@ -14,4 +14,6 @@
 
 package main
 
-func main() {}
+func main() {
+	// required for `go build` to not fail
+}

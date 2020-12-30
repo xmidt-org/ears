@@ -21,7 +21,9 @@ import (
 	earsplugin "github.com/xmidt-org/ears/pkg/plugin"
 )
 
-func main() {}
+func main() {
+	// required for `go build` to not fail
+}
 
 var Plugin = plugin{}
 

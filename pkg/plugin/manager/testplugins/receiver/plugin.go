@@ -25,7 +25,9 @@ import (
 	"github.com/xmidt-org/ears/pkg/receiver"
 )
 
-func main() {}
+func main() {
+	// required for `go build` to not fail
+}
 
 var Plugin = plugin{}
 
