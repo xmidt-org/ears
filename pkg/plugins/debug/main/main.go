@@ -30,4 +30,4 @@ var (
 	GitCommit  = ""
 )
 
-var Plugin = debug.NewPlugin(Name, GitVersion, GitCommit)
+var Plugin = debug.NewPluginVersion(Name, GitVersion, GitCommit)
