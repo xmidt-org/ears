@@ -27,32 +27,17 @@ func main() {
 
 var Plugin = plugin{}
 
+// for golangci-lint
+var _ = Plugin
+
 var _ earsplugin.NewPluginerer = (*plugin)(nil)
 var _ earsplugin.Pluginer = (*plugin)(nil)
 
-// == Custom Error Codes =============================================
-
-const (
-	// ErrUnknown is returned when the error has not been properly
-	// categorized
-	ErrUnknown earsplugin.ErrorCode = iota
-
-	// ErrNotInitialized is when the plugin is not properly initialized
-	ErrNotInitialized
-)
-
 // Plugin ============================================================
-
-const (
-	defaultPluginName    = "mock"
-	defaultPluginVersion = "v0.0.0"
-)
 
 type PluginConfig struct {
 	Name    string `yaml:"name"`
 	Version string `yaml:"version"`
-
-	source string
 }
 
 type plugin struct {

@@ -569,25 +569,6 @@ func (m *manager) UnregisterSender(ctx context.Context, ps pkgsender.Sender) err
 
 // === Helper Functions ==============================================
 
-func fnWithTimeout(ctx context.Context, fn func() error) error {
-
-	done := make(chan struct{}, 1)
-	var err error
-
-	go func() {
-		err = fn()
-		close(done)
-	}()
-
-	select {
-	case <-ctx.Done():
-		return ctx.Err()
-	case <-done:
-	}
-
-	return err
-}
-
 func (m *manager) mapkey(name string, hash string) string {
 	return name + "/" + hash
 }

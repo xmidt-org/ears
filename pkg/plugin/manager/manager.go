@@ -30,7 +30,6 @@ var _ Manager = (*manager)(nil)
 
 type manager struct {
 	sync.Mutex
-	pathPrefix string
 
 	// Map of the name used in the configuration to the loaded plugin
 	registrations map[string]Registration
@@ -151,8 +150,7 @@ func (m *manager) Plugins() map[string]Registration {
 }
 
 func (m *manager) Plugin(pluginName string) Registration {
-	r, _ := m.registrations[pluginName]
-	return r
+	return m.registrations[pluginName]
 }
 
 // === Senders ========================================================

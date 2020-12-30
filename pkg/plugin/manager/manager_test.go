@@ -554,7 +554,7 @@ func buildTestPlugins() error {
 		args = append(
 			args,
 			"-o", filepath.Join(dir, baseName+".so"),
-			"./"+dir, // Must have the preceeding "./" which a filepath.Join ends up removing
+			"./"+dir, // Must have the preceding "./" which a filepath.Join ends up removing
 		)
 
 		cmd := exec.CommandContext(ctx, "go", args...)

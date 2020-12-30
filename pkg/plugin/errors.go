@@ -58,7 +58,7 @@ func (e *InvalidConfigError) Unwrap() error {
 // as well printing out the Values in key sorted order.
 func (e *InvalidConfigError) Error() string {
 
-	msg := fmt.Sprintf("InvalidConfigError")
+	msg := "InvalidConfigError"
 	if e.Err != nil {
 		msg = msg + fmt.Sprintf(": %s", e.Err.Error())
 	}

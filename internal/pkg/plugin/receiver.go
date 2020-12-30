@@ -19,12 +19,11 @@ import (
 	"fmt"
 	"sync"
 
+	pkgmanager "github.com/xmidt-org/ears/pkg/plugin/manager"
 	pkgreceiver "github.com/xmidt-org/ears/pkg/receiver"
 )
 
 var _ pkgreceiver.Receiver = (*receiver)(nil)
-
-type wrapperType int
 
 type receiver struct {
 	sync.Mutex
@@ -42,6 +41,10 @@ type receiver struct {
 }
 
 func (r *receiver) Receive(ctx context.Context, next pkgreceiver.NextFn) error {
+	if r == nil {
+		return &pkgmanager.NilPluginError{}
+	}
+
 	if next == nil {
 		return &pkgreceiver.InvalidConfigError{
 			Err: fmt.Errorf("next cannot be nil"),
@@ -62,6 +65,9 @@ func (r *receiver) Receive(ctx context.Context, next pkgreceiver.NextFn) error {
 }
 
 func (r *receiver) StopReceiving(ctx context.Context) error {
+	if r == nil {
+		return &pkgmanager.NilPluginError{}
+	}
 
 	{
 		r.Lock()
@@ -76,9 +82,13 @@ func (r *receiver) StopReceiving(ctx context.Context) error {
 }
 
 func (r *receiver) Unregister(ctx context.Context) error {
+	if r == nil {
+		return &pkgmanager.NilPluginError{}
+	}
+
 	{
 		r.Lock()
-		if r == nil || r.manager == nil || !r.active {
+		if r.manager == nil || !r.active {
 			r.Unlock()
 			return &NotRegisteredError{}
 		}
