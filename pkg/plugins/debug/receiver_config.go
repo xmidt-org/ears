@@ -18,7 +18,6 @@ import (
 	"fmt"
 
 	"github.com/xeipuuv/gojsonschema"
-	"github.com/xorcare/pointer"
 )
 
 func (rc *ReceiverConfig) WithDefaults() ReceiverConfig {
@@ -43,11 +42,11 @@ func (rc *ReceiverConfig) WithDefaults() ReceiverConfig {
 	return cfg
 }
 
-var minReceiverConfig = ReceiverConfig{
-	IntervalMs: pointer.Int(-10),
-	Rounds:     pointer.Int(-1),
-	MaxHistory: pointer.Int(0),
-}
+// var minReceiverConfig = ReceiverConfig{
+// 	IntervalMs: pointer.Int(-10),
+// 	Rounds:     pointer.Int(-1),
+// 	MaxHistory: pointer.Int(0),
+// }
 
 func (rc *ReceiverConfig) Validate() error {
 
