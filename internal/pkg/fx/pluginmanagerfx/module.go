@@ -51,7 +51,7 @@ func ProvidePluginManager(in PluginIn) (PluginOut, error) {
 	}
 
 	// Go ahead and register some default plugins
-	d := debug.NewPlugin("debug", in.Version, in.Commit)
+	d := debug.NewPluginVersion("debug", in.Version, in.Commit)
 	err = mgr.RegisterPlugin("debug", d)
 	if err != nil {
 		return out, fmt.Errorf("could register debug plugin: %w", err)
