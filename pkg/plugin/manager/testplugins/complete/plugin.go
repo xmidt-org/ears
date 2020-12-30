@@ -30,6 +30,10 @@ import (
 	"github.com/xmidt-org/ears/pkg/sender"
 )
 
+func main() {
+	// required for `go build` to not fail
+}
+
 var Plugin = plugin{}
 
 var _ earsplugin.NewPluginerer = (*plugin)(nil)
@@ -77,7 +81,7 @@ func (p *plugin) Version() string {
 func (p *plugin) Config() string {
 	c, err := yaml.Marshal(p.config)
 	if err != nil {
-		return fmt.Sprintf("config error: %w", err)
+		return fmt.Sprintf("config error: %s", err.Error())
 	}
 
 	return string(c)

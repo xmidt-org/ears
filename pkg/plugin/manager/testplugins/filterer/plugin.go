@@ -26,6 +26,10 @@ import (
 	"github.com/xmidt-org/ears/pkg/event"
 )
 
+func main() {
+	// required for `go build` to not fail
+}
+
 var Plugin = plugin{}
 
 var _ earsplugin.NewPluginerer = (*plugin)(nil)
