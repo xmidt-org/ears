@@ -30,8 +30,8 @@ func NewAPIManager(routingMgr RoutingTableManager) (*APIManager, error) {
 		muxRouter:       mux.NewRouter(),
 		routingTableMgr: routingMgr,
 	}
-	api.muxRouter.HandleFunc("/version", api.versionHandler).Methods(http.MethodGet)
-	api.muxRouter.HandleFunc("/v1/routes/{route}", api.addRouteHandler).Methods(http.MethodPut)
+	api.muxRouter.HandleFunc("/ears/version", api.versionHandler).Methods(http.MethodGet)
+	api.muxRouter.HandleFunc("/ears/v1/routes/{route}", api.addRouteHandler).Methods(http.MethodPut)
 	return api, nil
 }
 
@@ -39,10 +39,8 @@ func (a *APIManager) versionHandler(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
 	log.Ctx(ctx).Debug().Msg("versionHandler")
-	resp := Response{
-		Item: Version,
-	}
-	resp.Respond(w)
+	resp := ItemResponse(Version)
+	resp.Respond(ctx, w)
 }
 
 func (a *APIManager) addRouteHandler(w http.ResponseWriter, r *http.Request) {
@@ -51,12 +49,10 @@ func (a *APIManager) addRouteHandler(w http.ResponseWriter, r *http.Request) {
 	err := a.routingTableMgr.AddRoute(ctx, nil)
 	if err != nil {
 		log.Ctx(ctx).Error().Str("op", "addRouteHandler").Msg(err.Error())
+		resp := ErrorResponse(err)
+		resp.Respond(ctx, w)
+		return
 	}
-	resp := Response{
-		Status: &Status{
-			Code:    http.StatusNotImplemented,
-			Message: "This method is not yet implemented",
-		},
-	}
-	resp.Respond(w)
+	resp := ErrorResponse(&NotImplementedError{})
+	resp.Respond(ctx, w)
 }

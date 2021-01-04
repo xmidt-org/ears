@@ -15,6 +15,7 @@
 package app
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 )
@@ -66,11 +67,57 @@ type Response struct {
 	Data  interface{} `json:"data,omitempty" xml:"data,omitempty"`
 }
 
-func (r Response) Respond(w http.ResponseWriter) {
+func (r Response) Respond(ctx context.Context, w http.ResponseWriter) {
 	w.Header().Set("Content-Type", "application/json")
+
+	traceId, ok := ctx.Value(LogTraceId).(string)
+	if ok && traceId != "" {
+		r.Tracing.TraceId = traceId
+	}
 	if r.Status != nil {
 		r.Status.Message = http.StatusText(r.Status.Code)
 		w.WriteHeader(r.Status.Code)
 	}
 	json.NewEncoder(w).Encode(r)
+}
+
+func ErrorResponse(err error) Response {
+	apiErr, ok := err.(ApiError)
+	statusCode := http.StatusInternalServerError
+	if ok {
+		statusCode = apiErr.StatusCode()
+	}
+
+	return Response{
+		Status: &Status{
+			Code: statusCode,
+		},
+		Item: err.Error(),
+	}
+}
+
+func ItemResponse(item interface{}) Response {
+	return Response{
+		Status: &Status{
+			Code: http.StatusOK,
+		},
+		Item: item,
+	}
+}
+
+func ItemsResponse(item interface{}) Response {
+	return Response{
+		Status: &Status{
+			Code: http.StatusOK,
+		},
+		Items: item,
+	}
+}
+
+func SimpleResponse(ctx context.Context) Response {
+	return Response{
+		Status: &Status{
+			Code: http.StatusOK,
+		},
+	}
 }

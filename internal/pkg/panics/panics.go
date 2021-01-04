@@ -12,20 +12,27 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package app
+package panics
 
 import (
-	"errors"
-	"testing"
+	"bytes"
+	"fmt"
+	"runtime/debug"
 )
 
-func TestErrors(t *testing.T) {
-	err := &InvalidOptionError{
-		Option: "bad option",
+func ToError(p interface{}) *PanicError {
+	var panicErr string
+	switch t := p.(type) {
+	case string:
+		panicErr = t
+	case error:
+		panicErr = t.Error()
+	default:
+		panicErr = fmt.Sprintf("%+v", p)
 	}
-	var errType *InvalidOptionError
-	if !errors.As(err, &errType) {
-		t.Error("Error comparison failed")
+	stackTrace := bytes.NewBuffer(debug.Stack()).String()
+	if len(stackTrace) > maxStackTraceSize {
+		stackTrace = stackTrace[:maxStackTraceSize]
 	}
-
+	return &PanicError{panicErr, stackTrace}
 }
