@@ -15,10 +15,10 @@
 package app
 
 import (
-	"context"
 	"github.com/google/uuid"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
+	"github.com/xmidt-org/ears/internal/pkg/panics"
 	"net/http"
 )
 
@@ -32,25 +32,31 @@ func NewMiddleware(logger *zerolog.Logger) []func(next http.Handler) http.Handle
 	}
 }
 
-func getSubCtxWithStr(ctx context.Context, key string, value string) context.Context {
-	logger := log.Ctx(ctx).With().Str(key, value).Logger()
-	return logger.WithContext(ctx)
-}
-
 func initRequestMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
-		subCtx := middlewareLogger.WithContext(ctx)
+		subCtx := SubLoggerCtx(ctx, middlewareLogger)
+
+		defer func() {
+			p := recover()
+			if p != nil {
+				panicErr := panics.ToError(p)
+				resp := ErrorResponse(panicErr)
+				resp.Respond(subCtx, w)
+				log.Ctx(subCtx).Error().Str("op", "initRequestMiddleware").Str("error", panicErr.Error()).
+					Str("stackTrace", panicErr.StackTrace()).Msg("A panic has ocurred")
+			}
+		}()
 
 		traceId := r.Header.Get(HeaderTraceId)
 		if traceId == "" {
 			traceId = uuid.New().String()
 		}
-		subCtx = getSubCtxWithStr(subCtx, LogTraceId, traceId)
+		StrToLogCtx(subCtx, LogTraceId, traceId)
 
 		appId := r.Header.Get(HeaderTenantId)
 		if appId != "" {
-			subCtx = getSubCtxWithStr(subCtx, LogTenantId, appId)
+			StrToLogCtx(subCtx, LogTenantId, appId)
 		}
 		log.Ctx(subCtx).Debug().Msg("initializeRequestMiddleware")
 
