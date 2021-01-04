@@ -61,7 +61,7 @@ func TestConfigErrors(t *testing.T) {
 	for i, test := range testCases {
 		viper.Set("config", test[0])
 
-		err := cli.ViperConfig("")
+		err := cli.ViperConfig("", "")
 
 		switch err {
 		case nil:
@@ -190,7 +190,7 @@ func TestConfigRead(t *testing.T) {
 	for _, test := range testCases {
 
 		viper.Set("config", test.file)
-		cli.ViperConfig("")
+		cli.ViperConfig("", "")
 
 		for k, v := range test.values {
 			value := viper.Get(k)
