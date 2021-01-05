@@ -12,20 +12,22 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package app
+package panics_test
 
 import (
-	"errors"
+	"github.com/xmidt-org/ears/internal/pkg/panics"
 	"testing"
 )
 
-func TestErrors(t *testing.T) {
-	err := &InvalidOptionError{
-		Option: "bad option",
-	}
-	var errType *InvalidOptionError
-	if !errors.As(err, &errType) {
-		t.Error("Error comparison failed")
-	}
+func TestToError(t *testing.T) {
+	myPanic := "my panic"
 
+	defer func() {
+		p := recover()
+		err := panics.ToError(p)
+		if err.Error() != myPanic {
+			t.Errorf("wrong panic error")
+		}
+	}()
+	panic(myPanic)
 }

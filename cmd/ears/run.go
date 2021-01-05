@@ -15,17 +15,13 @@
 package main
 
 import (
-	"fmt"
-	"os"
-
-	"github.com/rs/zerolog"
-
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"github.com/xmidt-org/ears/internal/pkg/app"
 	"github.com/xmidt-org/ears/internal/pkg/cli"
 	"github.com/xmidt-org/ears/internal/pkg/fx/pluginmanagerfx"
+	"github.com/xmidt-org/ears/internal/pkg/panics"
 	"go.uber.org/fx"
 )
 
@@ -35,16 +31,25 @@ var runCmd = &cobra.Command{
 	Long:  `Runs the EARS microservice`,
 	Run: func(cmd *cobra.Command, args []string) {
 
-		logger, err := InitGlobalLogger(ViperConfig())
+		defer func() {
+			p := recover()
+			if p != nil {
+				panicErr := panics.ToError(p)
+				log.Logger.Fatal().Str("op", "run").Str("error", panicErr.Error()).
+					Str("stackTrace", panicErr.StackTrace()).Msg("A panic has ocurred during startup")
+			}
+		}()
+
+		logger, err := app.ProvideLogger(ViperConfig())
 		if err != nil {
-			log.Logger.Error().Str("op", "InitLogger").Msg(err.Error())
-			os.Exit(1)
+			log.Logger.Fatal().Str("op", "InitLogger").Str("error", "panic").
+				Msg("Error initialize logger")
 		}
 		earsApp := fx.New(
 			pluginmanagerfx.Module,
 			fx.Provide(
 				ViperConfig,
-				app.NewLogger,
+				app.ProvideLogger,
 				app.NewRoutingTableManager,
 				app.NewAPIManager,
 				app.NewMiddleware,
@@ -58,24 +63,7 @@ var runCmd = &cobra.Command{
 }
 
 func ViperConfig() app.Config {
-	return viper.Sub("ears")
-}
-
-//Initialize logging. We are initializing the zerolog global logger for uber/fx logging
-//The application itself will not use the global logger. Instead, it use the logger returned by
-//app.NewLogger function, which is a child logger of the global logger
-func InitGlobalLogger(config app.Config) (fx.Printer, error) {
-	logLevel, err := zerolog.ParseLevel(config.GetString("logLevel"))
-	if err != nil {
-		return nil, &app.InvalidOptionError{
-			Err: fmt.Errorf("invalid loglevel %s error %s",
-				config.GetString("logLevel"),
-				err.Error()),
-		}
-	}
-	zerolog.SetGlobalLevel(logLevel)
-	log.Logger = log.With().Str("env", config.GetString("env")).Logger()
-	return &log.Logger, nil
+	return viper.GetViper()
 }
 
 func init() {
@@ -84,13 +72,8 @@ func init() {
 		runCmd,
 		[]cli.Argument{
 			cli.Argument{
-				Name: "env", Shorthand: "", Type: cli.ArgTypeString,
-				Default: "local", LookupKey: "ears.env",
-				Description: "Environment",
-			},
-			cli.Argument{
 				Name: "logLevel", Shorthand: "", Type: cli.ArgTypeString,
-				Default: "info", LookupKey: "ears.debugLevel",
+				Default: "info", LookupKey: "ears.logLevel",
 				Description: "log level",
 			},
 			cli.Argument{

@@ -41,10 +41,21 @@ func Execute() {
 
 func init() {
 	cobra.OnInitialize(initConfig)
+
+	cli.ViperAddArguments(
+		rootCmd,
+		[]cli.Argument{
+			cli.Argument{
+				Name: "config", Shorthand: "", Type: cli.ArgTypeString,
+				Default: "", Persistent: true,
+				Description: "config file (default is $HOME/earth.yaml)",
+			},
+		},
+	)
 }
 
 func initConfig() {
-	err := cli.ViperConfig("ears")
+	err := cli.ViperConfig("EARS", "ears")
 	if err != nil {
 		log.Fatal().Str("op", "initConfig").Msg(err.Error())
 	}

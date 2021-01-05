@@ -12,20 +12,19 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package app
+package panics
 
-import (
-	"errors"
-	"testing"
-)
+const maxStackTraceSize = 8192
 
-func TestErrors(t *testing.T) {
-	err := &InvalidOptionError{
-		Option: "bad option",
-	}
-	var errType *InvalidOptionError
-	if !errors.As(err, &errType) {
-		t.Error("Error comparison failed")
-	}
+type PanicError struct {
+	err        string
+	stackTrace string
+}
 
+func (pe *PanicError) Error() string {
+	return pe.err
+}
+
+func (pe *PanicError) StackTrace() string {
+	return pe.stackTrace
 }

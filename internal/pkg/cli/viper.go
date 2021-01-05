@@ -89,8 +89,9 @@ func ViperAddArguments(cmd *cobra.Command, aList []Argument) error {
 // the environment variable prefix, plus the default config file name.
 // For example:
 //   cli.ViperConfig("ears")
-func ViperConfig(configName string) error {
+func ViperConfig(envPrefix, configName string) error {
 
+	viper.SetEnvPrefix(envPrefix)
 	viper.SetConfigName(configName)
 
 	viper.AddConfigPath(".")
