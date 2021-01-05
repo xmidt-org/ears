@@ -16,9 +16,6 @@
 
 tools=(addlicense go-enum)
 
-# Until https://github.com/searKing/golang/pull/5 is merged
-go mod edit -replace github.com/searKing/golang=github.com/gtrevg/golang
-
 toolCmds=(
 	"go get -u github.com/google/addlicense && go install github.com/google/addlicense"
 	"go get -u github.com/searKing/golang && go install github.com/searKing/golang/tools/cmd/go-enum"
