@@ -21,3 +21,6 @@ func main() {
 type plugin struct{}
 
 var Plugin = plugin{}
+
+// for golangci-lint
+var _ = Plugin

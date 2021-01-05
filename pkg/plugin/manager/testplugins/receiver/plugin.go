@@ -31,21 +31,13 @@ func main() {
 
 var Plugin = plugin{}
 
+// for golangci-lint
+var _ = Plugin
+
 var _ earsplugin.NewPluginerer = (*plugin)(nil)
 var _ earsplugin.Pluginer = (*plugin)(nil)
 var _ receiver.NewReceiverer = (*plugin)(nil)
 var _ receiver.Receiver = (*plugin)(nil)
-
-// == Custom Error Codes =============================================
-
-const (
-	// ErrUnknown is returned when the error has not been properly
-	// categorized
-	ErrUnknown earsplugin.ErrorCode = iota
-
-	// ErrNotInitialized is when the plugin is not properly initialized
-	ErrNotInitialized
-)
 
 // Plugin ============================================================
 

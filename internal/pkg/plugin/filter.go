@@ -56,10 +56,13 @@ func (f *filter) Filter(ctx context.Context, e event.Event) ([]event.Event, erro
 }
 
 func (f *filter) Unregister(ctx context.Context) error {
+	if f == nil {
+		return &pkgmanager.NilPluginError{}
+	}
 
 	{
 		f.Lock()
-		if f == nil || f.manager == nil || !f.active {
+		if f.manager == nil || !f.active {
 			f.Unlock()
 			return &pkgmanager.NotRegisteredError{}
 		}

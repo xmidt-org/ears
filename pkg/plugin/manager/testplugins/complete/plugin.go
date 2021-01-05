@@ -36,6 +36,9 @@ func main() {
 
 var Plugin = plugin{}
 
+// for golangci-lint
+var _ = Plugin
+
 var _ earsplugin.NewPluginerer = (*plugin)(nil)
 var _ earsplugin.Pluginer = (*plugin)(nil)
 var _ sender.NewSenderer = (*plugin)(nil)
@@ -53,11 +56,11 @@ type plugin struct {
 // == Custom Error Codes ==========================================================
 
 const (
-	// ErrUnknown is returned when the error has not been properly categorized
-	ErrUnknown earsplugin.ErrorCode = iota
+	// // ErrUnknown is returned when the error has not been properly categorized
+	// ErrUnknown earsplugin.ErrorCode = iota
 
 	// ErrNotInitialized is when the plugin is not properly initialized
-	ErrNotInitialized
+	ErrNotInitialized earsplugin.ErrorCode = iota + 1
 )
 
 // Plugin ============================================================

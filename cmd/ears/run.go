@@ -20,6 +20,7 @@ import (
 	"github.com/spf13/viper"
 	"github.com/xmidt-org/ears/internal/pkg/app"
 	"github.com/xmidt-org/ears/internal/pkg/cli"
+	"github.com/xmidt-org/ears/internal/pkg/fx/pluginmanagerfx"
 	"github.com/xmidt-org/ears/internal/pkg/panics"
 	"go.uber.org/fx"
 )
@@ -45,6 +46,7 @@ var runCmd = &cobra.Command{
 				Msg("Error initialize logger")
 		}
 		earsApp := fx.New(
+			pluginmanagerfx.Module,
 			fx.Provide(
 				ViperConfig,
 				app.ProvideLogger,

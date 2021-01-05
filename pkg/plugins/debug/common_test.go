@@ -14,32 +14,16 @@
 
 package debug_test
 
-import (
-	"context"
-
-	"testing"
-	"time"
-
-	"github.com/xmidt-org/ears/pkg/plugins/debug"
-)
-
-func TestSendReceive(t *testing.T) {
-	r, err := debug.NewReceiver("")
-	if err != nil {
-		t.Error(err)
+func min(vals ...int) int {
+	if len(vals) < 1 {
+		return 0
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 12*time.Second)
-	defer cancel()
-
-	s, err := debug.NewSender("")
-	if err != nil {
-		t.Error(err)
+	m := vals[0]
+	for _, v := range vals {
+		if v < m {
+			m = v
+		}
 	}
-
-	err = r.Receive(ctx, s.Send)
-
-	if err != nil {
-		t.Error(err)
-	}
+	return m
 }

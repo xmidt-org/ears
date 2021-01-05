@@ -39,6 +39,10 @@ type sender struct {
 }
 
 func (s *sender) Send(ctx context.Context, e event.Event) error {
+	if s == nil {
+		return &pkgmanager.NilPluginError{}
+	}
+
 	{
 		s.Lock()
 		if s.sender == nil || !s.active {
@@ -52,10 +56,13 @@ func (s *sender) Send(ctx context.Context, e event.Event) error {
 }
 
 func (s *sender) Unregister(ctx context.Context) error {
+	if s == nil {
+		return &pkgmanager.NilPluginError{}
+	}
 
 	{
 		s.Lock()
-		if s == nil || s.manager == nil || !s.active {
+		if s.manager == nil || !s.active {
 			s.Unlock()
 			return &pkgmanager.NotRegisteredError{}
 		}

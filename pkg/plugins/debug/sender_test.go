@@ -21,27 +21,86 @@ import (
 	"time"
 
 	"github.com/xmidt-org/ears/pkg/plugins/debug"
+	"github.com/xorcare/pointer"
 
 	"github.com/xmidt-org/ears/pkg/event"
+
+	. "github.com/onsi/gomega"
 )
 
 func TestSender(t *testing.T) {
-	s, err := debug.NewSender("")
-	if err != nil {
-		t.Errorf(err.Error())
+
+	totalTimeout := 5 * time.Second
+	caseTimeout := 2 * time.Second
+
+	testCases := []struct {
+		name        string
+		timeout     time.Duration
+		numMessages int
+		config      debug.SenderConfig
+	}{
+		{
+			name:    "none",
+			timeout: caseTimeout,
+			config:  debug.SenderConfig{},
+		},
+
+		{
+			name:        "underflow",
+			timeout:     caseTimeout,
+			numMessages: 1,
+			config: debug.SenderConfig{
+				MaxHistory: pointer.Int(5),
+			},
+		},
+
+		{
+			name:        "overflow",
+			timeout:     caseTimeout,
+			numMessages: 7,
+			config: debug.SenderConfig{
+				MaxHistory: pointer.Int(3),
+			},
+		},
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), totalTimeout)
 	defer cancel()
 
-	e, err := event.NewEvent("hello")
-	if err != nil {
-		t.Errorf(err.Error())
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			ctx, cancel := context.WithTimeout(ctx, caseTimeout)
+			defer cancel()
+
+			a := NewWithT(t)
+
+			w := &debug.SendSlice{}
+			tc.config.Destination = debug.DestinationCustom
+			tc.config.Writer = w
+			tc.config = tc.config.WithDefaults()
+
+			s, err := debug.NewPlugin().NewSender(tc.config)
+			a.Expect(err).To(BeNil())
+
+			for i := 0; i < tc.numMessages; i++ {
+				e, err := event.NewEvent(tc.name)
+				a.Expect(err).To(BeNil())
+
+				err = s.Send(ctx, e)
+				a.Expect(err).To(BeNil())
+			}
+
+			a.Expect(w.Events()).To(HaveLen(tc.numMessages))
+
+			ds, ok := s.(*debug.Sender)
+			a.Expect(ok).To(BeTrue())
+
+			a.Expect(ds.History()).To(HaveLen(
+				min(tc.numMessages, *tc.config.MaxHistory),
+			))
+
+		})
+
 	}
 
-	err = s.Send(ctx, e)
-
-	if err != nil {
-		t.Errorf(err.Error())
-	}
 }

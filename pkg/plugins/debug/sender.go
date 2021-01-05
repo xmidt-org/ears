@@ -18,17 +18,93 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/goccy/go-yaml"
 	"github.com/xmidt-org/ears/pkg/event"
+	pkgplugin "github.com/xmidt-org/ears/pkg/plugin"
 	"github.com/xmidt-org/ears/pkg/sender"
 )
 
-func (s *Sender) Send(ctx context.Context, e event.Event) error {
-	if s.Destination == nil {
-		return &sender.InvalidConfigError{
-			Err: fmt.Errorf("destination cannot be null"),
+func NewSender(config interface{}) (sender.Sender, error) {
+
+	var cfg SenderConfig
+	var err error
+
+	switch c := config.(type) {
+	case string:
+		err = yaml.Unmarshal([]byte(c), &cfg)
+
+	case []byte:
+		err = yaml.Unmarshal(c, &cfg)
+
+	case SenderConfig:
+		cfg = c
+	case *SenderConfig:
+		cfg = *c
+	}
+
+	if err != nil {
+		return nil, &pkgplugin.InvalidConfigError{
+			Err: err,
 		}
 	}
 
-	fmt.Fprintln(s.Destination, e)
+	cfg = cfg.WithDefaults()
+
+	err = cfg.Validate()
+	if err != nil {
+		return nil, err
+	}
+
+	s := &Sender{
+		config: cfg,
+	}
+
+	switch s.config.Destination {
+	case DestinationDevNull:
+		s.destination = nil
+	case DestinationStdout:
+		s.destination = &SendStdout{}
+	case DestinationStderr:
+		s.destination = &SendStderr{}
+	case DestinationCustom:
+		s.destination = s.config.Writer
+	default:
+		return nil, &pkgplugin.InvalidConfigError{
+			Err: fmt.Errorf("config.Destination value invalid"),
+		}
+	}
+
+	s.history = newHistory(*s.config.MaxHistory)
+
+	return s, nil
+
+}
+
+func (s *Sender) Send(ctx context.Context, e event.Event) error {
+	s.history.Add(e)
+
+	if s.destination != nil {
+		return s.destination.Write(e)
+	}
+
 	return nil
+}
+
+func (s *Sender) Count() int {
+	return s.history.Count()
+}
+
+func (s *Sender) History() []event.Event {
+	history := s.history.History()
+
+	events := make([]event.Event, len(history))
+
+	for i, h := range history {
+		if e, ok := h.(event.Event); ok {
+			events[i] = e
+		}
+	}
+
+	return events
+
 }

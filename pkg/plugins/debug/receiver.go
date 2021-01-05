@@ -20,18 +20,29 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/goccy/go-yaml"
 	"github.com/xmidt-org/ears/pkg/event"
+	pkgplugin "github.com/xmidt-org/ears/pkg/plugin"
 	"github.com/xmidt-org/ears/pkg/receiver"
 )
 
 func (r *Receiver) Receive(ctx context.Context, next receiver.NextFn) error {
+	if r == nil {
+		return &pkgplugin.Error{
+			Err: fmt.Errorf("Receive called on <nil> pointer"),
+		}
+	}
+
 	if next == nil {
 		return &receiver.InvalidConfigError{
 			Err: fmt.Errorf("next cannot be nil"),
 		}
 	}
 
+	r.Lock()
 	r.done = make(chan struct{})
+	r.next = next
+	r.Unlock()
 
 	go func() {
 		defer func() {
@@ -42,21 +53,33 @@ func (r *Receiver) Receive(ctx context.Context, next receiver.NextFn) error {
 			r.Unlock()
 		}()
 
-		for count := 0; count != r.Rounds; count++ {
+		// NOTE:  If rounds < 0, this messaging will continue
+		// until the context is cancelled.
+		for count := *r.config.Rounds; count != 0; {
 			select {
 			case <-ctx.Done():
 				return
-			case <-time.After(time.Duration(r.IntervalMs) * time.Millisecond):
-				e, err := event.NewEvent(r.Payload)
+			case <-r.done:
+				return
+			case <-time.After(time.Duration(*r.config.IntervalMs) * time.Millisecond):
+				e, err := event.NewEvent(r.config.Payload)
 				if err != nil {
 					return
 				}
 
-				err = next(ctx, e)
+				// TODO:  Determine context propagation lifecycle
+				//   * https://github.com/xmidt-org/ears/issues/51
+				//
+				// NOTES: Discussed that this behavior could be determined
+				//  by a configuration value
+				err = r.Trigger(ctx, e)
 				if err != nil {
 					return
 				}
 
+				if count > 0 {
+					count--
+				}
 			}
 		}
 	}()
@@ -75,4 +98,73 @@ func (r *Receiver) StopReceiving(ctx context.Context) error {
 	}
 
 	return nil
+}
+
+func NewReceiver(config interface{}) (receiver.Receiver, error) {
+
+	var cfg ReceiverConfig
+	var err error
+
+	switch c := config.(type) {
+	case string:
+		err = yaml.Unmarshal([]byte(c), &cfg)
+	case []byte:
+		err = yaml.Unmarshal(c, &cfg)
+	case ReceiverConfig:
+		cfg = c
+	case *ReceiverConfig:
+		cfg = *c
+	}
+
+	if err != nil {
+		return nil, &pkgplugin.InvalidConfigError{
+			Err: err,
+		}
+	}
+
+	cfg = cfg.WithDefaults()
+
+	err = cfg.Validate()
+	if err != nil {
+		return nil, err
+	}
+
+	r := &Receiver{
+		config: cfg,
+	}
+
+	r.history = newHistory(*r.config.MaxHistory)
+
+	return r, nil
+}
+
+func (r *Receiver) Count() int {
+	return r.history.Count()
+}
+
+func (r *Receiver) Trigger(ctx context.Context, e event.Event) error {
+	// Ensure that `next` can be slow and locking here will not
+	// prevent other requests from executing.
+	r.Lock()
+	next := r.next
+	r.Unlock()
+
+	r.history.Add(e)
+
+	return next(ctx, e)
+}
+
+func (r *Receiver) History() []event.Event {
+	history := r.history.History()
+
+	events := make([]event.Event, len(history))
+
+	for i, h := range history {
+		if e, ok := h.(event.Event); ok {
+			events[i] = e
+		}
+	}
+
+	return events
+
 }
