@@ -27,6 +27,12 @@ import (
 )
 
 func (r *Receiver) Receive(ctx context.Context, next receiver.NextFn) error {
+	if r == nil {
+		return &pkgplugin.Error{
+			Err: fmt.Errorf("Receive called on <nil> pointer"),
+		}
+	}
+
 	if next == nil {
 		return &receiver.InvalidConfigError{
 			Err: fmt.Errorf("next cannot be nil"),

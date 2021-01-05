@@ -117,3 +117,7 @@ func TestReceiver(t *testing.T) {
 	}
 
 }
+
+func TestReceiveErrors(t *testing.T) {
+
+}

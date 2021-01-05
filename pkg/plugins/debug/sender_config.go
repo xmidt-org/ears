@@ -24,8 +24,8 @@ import (
 //
 // The values will be set to the corresponding DefaultSenderConfig.* values
 //
-func (sc *SenderConfig) WithDefaults() SenderConfig {
-	cfg := *sc
+func (sc SenderConfig) WithDefaults() SenderConfig {
+	cfg := sc
 
 	if sc.Destination == DestinationUnknown {
 		cfg.Destination = DefaultSenderConfig.Destination

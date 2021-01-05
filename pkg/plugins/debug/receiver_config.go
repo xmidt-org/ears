@@ -20,6 +20,8 @@ import (
 	"github.com/xeipuuv/gojsonschema"
 )
 
+// WithDefaults returns a new config object that has all
+// of the unset (nil) values filled in.
 func (rc *ReceiverConfig) WithDefaults() ReceiverConfig {
 	cfg := *rc
 
@@ -42,12 +44,7 @@ func (rc *ReceiverConfig) WithDefaults() ReceiverConfig {
 	return cfg
 }
 
-// var minReceiverConfig = ReceiverConfig{
-// 	IntervalMs: pointer.Int(-10),
-// 	Rounds:     pointer.Int(-1),
-// 	MaxHistory: pointer.Int(0),
-// }
-
+// Validate returns an error upon validation failure
 func (rc *ReceiverConfig) Validate() error {
 
 	schema := gojsonschema.NewStringLoader(receiverSchema)
@@ -87,7 +84,7 @@ func (rc *ReceiverConfig) Validate() error {
 
 }
 
-var receiverSchema = `
+const receiverSchema = `
 {
     "$schema": "http://json-schema.org/draft-06/schema#",
     "$ref": "#/definitions/ReceiverConfig",
