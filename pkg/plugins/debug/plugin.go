@@ -15,7 +15,7 @@
 package debug
 
 import (
-	"os"
+	"fmt"
 
 	"github.com/xmidt-org/ears/pkg/hasher"
 	pkgplugin "github.com/xmidt-org/ears/pkg/plugin"
@@ -28,11 +28,10 @@ func (p *plugin) PluginerHash(config interface{}) (string, error) {
 }
 
 func (p *plugin) NewPluginer(config interface{}) (pkgplugin.Pluginer, error) {
-	return &plugin{
-		name:    "debug",
-		version: "v0.0.1",
-		config:  "",
-	}, nil
+	plug := NewPlugin()
+	plug.config = config
+
+	return plug, nil
 }
 
 func (p *plugin) Name() string {
@@ -40,11 +39,11 @@ func (p *plugin) Name() string {
 }
 
 func (p *plugin) Version() string {
-	return p.version
+	return fmt.Sprintf("%s:%s", p.version, p.commit)
 }
 
 func (p *plugin) Config() string {
-	return p.config
+	return fmt.Sprint(p.config)
 }
 
 func (p *plugin) ReceiverHash(config interface{}) (string, error) {
@@ -52,11 +51,7 @@ func (p *plugin) ReceiverHash(config interface{}) (string, error) {
 }
 
 func (p *plugin) NewReceiver(config interface{}) (receiver.Receiver, error) {
-	return &Receiver{
-		IntervalMs: 100,
-		Rounds:     4,
-		Payload:    "debug message",
-	}, nil
+	return NewReceiver(config)
 }
 
 func (p *plugin) SenderHash(config interface{}) (string, error) {
@@ -64,7 +59,5 @@ func (p *plugin) SenderHash(config interface{}) (string, error) {
 }
 
 func (p *plugin) NewSender(config interface{}) (sender.Sender, error) {
-	return &Sender{
-		Destination: os.Stdout,
-	}, nil
+	return NewSender(config)
 }
