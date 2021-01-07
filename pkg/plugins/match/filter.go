@@ -33,15 +33,12 @@ func NewFilter(config interface{}) (filter.Filterer, error) {
 	switch c := config.(type) {
 	case string:
 		err = yaml.Unmarshal([]byte(c), &cfg)
-
 	case []byte:
 		err = yaml.Unmarshal(c, &cfg)
-
 	case Config:
 		cfg = c
 	case *Config:
 		cfg = *c
-
 	default:
 		err = fmt.Errorf("invalid type %v", c)
 	}
