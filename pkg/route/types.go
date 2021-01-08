@@ -16,7 +16,6 @@ package route
 
 import (
 	"context"
-	"github.com/xmidt-org/ears/internal/pkg/route"
 	"sync"
 
 	"github.com/xmidt-org/ears/pkg/filter"
@@ -60,7 +59,7 @@ type Config struct {
 //from the context and cancel its operation gracefully when desired.
 type RouteStorer interface {
 	GetRoute(context.Context, string) (*Config, error)
-	GetAllRoutes(context.Context) ([]route.Config, error)
+	GetAllRoutes(context.Context) ([]Config, error)
 
 	//SetRoute will add the route if it new or update the route if
 	//it is an existing one. It will also update the create time and
