@@ -16,7 +16,6 @@ package pluginmanagerfx
 
 import (
 	"fmt"
-
 	p "github.com/xmidt-org/ears/internal/pkg/plugin"
 	"github.com/xmidt-org/ears/pkg/plugin/manager"
 	"github.com/xmidt-org/ears/pkg/plugins/debug"
@@ -34,15 +33,12 @@ var Module = fx.Options(
 
 type PluginIn struct {
 	fx.In
-
-	Version string
-	Commit  string
 }
 
 type PluginOut struct {
 	fx.Out
 
-	PluginManager p.Manager `name:"PluginManager"`
+	PluginManager p.Manager
 }
 
 func ProvidePluginManager(in PluginIn) (PluginOut, error) {
@@ -60,12 +56,12 @@ func ProvidePluginManager(in PluginIn) (PluginOut, error) {
 	}{
 		{
 			name:   "debug",
-			plugin: debug.NewPluginVersion("debug", in.Version, in.Commit),
+			plugin: debug.NewPluginVersion("debug", "", ""),
 		},
 
 		{
 			name:   "match",
-			plugin: match.NewPluginVersion("match", in.Version, in.Commit),
+			plugin: match.NewPluginVersion("match", "", ""),
 		},
 	}
 

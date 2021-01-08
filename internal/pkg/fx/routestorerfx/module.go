@@ -36,7 +36,8 @@ type StorageIn struct {
 
 type StorageOut struct {
 	fx.Out
-	RouteStorer route.RouteStorer `name:"RouteStorer"`
+
+	RouteStorer route.RouteStorer
 }
 
 func ProvideRouteStorer(in StorageIn) (StorageOut, error) {
