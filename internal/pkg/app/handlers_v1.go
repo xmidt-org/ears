@@ -15,9 +15,14 @@
 package app
 
 import (
+	"encoding/json"
+	"io/ioutil"
+	"net/http"
+
 	"github.com/gorilla/mux"
 	"github.com/rs/zerolog/log"
-	"net/http"
+
+	"github.com/xmidt-org/ears/pkg/route"
 )
 
 type APIManager struct {
@@ -37,16 +42,29 @@ func NewAPIManager(routingMgr RoutingTableManager) (*APIManager, error) {
 
 func (a *APIManager) versionHandler(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
-
 	log.Ctx(ctx).Debug().Msg("versionHandler")
 	resp := ItemResponse(Version)
 	resp.Respond(ctx, w)
 }
 
 func (a *APIManager) addRouteHandler(w http.ResponseWriter, r *http.Request) {
-	//TODO this handler is incomplete. It is here for demo purpose
 	ctx := r.Context()
-	err := a.routingTableMgr.AddRoute(ctx, nil)
+	body, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		log.Ctx(ctx).Error().Str("op", "addRouteHandler").Msg(err.Error())
+		resp := ErrorResponse(err)
+		resp.Respond(ctx, w)
+		return
+	}
+	var route route.Config
+	err = json.Unmarshal(body, &route)
+	if err != nil {
+		log.Ctx(ctx).Error().Str("op", "addRouteHandler").Msg(err.Error())
+		resp := ErrorResponse(err)
+		resp.Respond(ctx, w)
+		return
+	}
+	err = a.routingTableMgr.AddRoute(ctx, nil)
 	if err != nil {
 		log.Ctx(ctx).Error().Str("op", "addRouteHandler").Msg(err.Error())
 		resp := ErrorResponse(err)

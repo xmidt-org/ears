@@ -19,6 +19,7 @@ import (
 	"sync"
 
 	"github.com/xmidt-org/ears/pkg/filter"
+	"github.com/xmidt-org/ears/pkg/plugin"
 	"github.com/xmidt-org/ears/pkg/receiver"
 	"github.com/xmidt-org/ears/pkg/sender"
 )
@@ -41,18 +42,18 @@ type InvalidRouteError struct {
 }
 
 type Config struct {
-	Id     string `json:"id,omitempty"`     // route ID
-	OrgId  string `json:"orgId,omitempty"`  // org ID for quota and rate limiting
-	AppId  string `json:"appId,omitempty"`  // app ID for quota and rate limiting
-	UserId string `json:"userId,omitempty"` // user ID / author of route
-	Name   string `json:"name,omitempty"`   // optional unique name for route
-	//Source       *Plugin      `json:"source,omitempty"`       // pointer to source plugin instance
-	//Destination  *Plugin      `json:"destination,omitempty"`  // pointer to destination plugin instance
-	//FilterChain  *FilterChain `json:"filterChain,omitempty"`  // optional list of filter plugins that will be applied in order to perform arbitrary filtering and transformation functions
-	DeliveryMode string `json:"deliveryMode,omitempty"` // possible values: fire_and_forget, at_least_once, exactly_once
-	Debug        bool   `json:"debug,omitempty"`        // if true generate debug logs and metrics for events taking this route
-	Created      int64  `json:"ts,omitempty"`           // time on when route was created, in unix timestamp seconds
-	Modified     int64  `json:"ts,omitempty"`           // last time when route was modified, in unix timestamp seconds
+	Id           string          `json:"id,omitempty"`           // route ID
+	OrgId        string          `json:"orgId,omitempty"`        // org ID for quota and rate limiting
+	AppId        string          `json:"appId,omitempty"`        // app ID for quota and rate limiting
+	UserId       string          `json:"userId,omitempty"`       // user ID / author of route
+	Name         string          `json:"name,omitempty"`         // optional unique name for route
+	Source       plugin.Config   `json:"source,omitempty"`       // source plugin configuration
+	Destination  plugin.Config   `json:"destination,omitempty"`  // destination plugin configuration
+	FilterChain  []plugin.Config `json:"filterChain,omitempty"`  // filter chain configuration
+	DeliveryMode string          `json:"deliveryMode,omitempty"` // possible values: fire_and_forget, at_least_once, exactly_once
+	Debug        bool            `json:"debug,omitempty"`        // if true generate debug logs and metrics for events taking this route
+	Created      int64           `json:"ts,omitempty"`           // time on when route was created, in unix timestamp seconds
+	Modified     int64           `json:"ts,omitempty"`           // last time when route was modified, in unix timestamp seconds
 }
 
 //All route operations are synchronous. The storer should respect the cancellation
