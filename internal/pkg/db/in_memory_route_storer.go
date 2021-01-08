@@ -34,10 +34,10 @@ func (s *InMemoryRouteStorer) GetRoute(ctx context.Context, id string) (*route.C
 }
 
 func (s *InMemoryRouteStorer) GetAllRoutes(ctx context.Context) ([]route.Config, error) {
-	s.lock.RUnlock()
+	s.lock.RLock()
 	defer s.lock.RUnlock()
 
-	routes := make([]route.Config, len(s.routes))
+	routes := make([]route.Config, 0)
 	for _, r := range s.routes {
 		routes = append(routes, *r)
 	}
@@ -46,8 +46,10 @@ func (s *InMemoryRouteStorer) GetAllRoutes(ctx context.Context) ([]route.Config,
 
 func (s *InMemoryRouteStorer) setRoute(r *route.Config) {
 	r.Modified = time.Now().Unix()
-	if _, ok := s.routes[r.Id]; !ok {
+	if existing, ok := s.routes[r.Id]; !ok {
 		r.Created = r.Modified
+	} else {
+		r.Created = existing.Created
 	}
 	s.routes[r.Id] = r
 }

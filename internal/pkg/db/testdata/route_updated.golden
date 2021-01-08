@@ -1,0 +1,8 @@
+{
+  "id": "test",
+  "orgId": "myOrg",
+  "appId": "myApp",
+  "userId": "mchiang",
+  "name": "differentName",
+  "deliveryMode": "fire_and_forget"
+}
