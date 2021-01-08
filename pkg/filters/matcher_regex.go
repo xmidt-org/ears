@@ -16,10 +16,34 @@ package filters
 
 import (
 	"context"
+	"regexp"
 
 	"github.com/xmidt-org/ears/pkg/event"
 )
 
-type Matcher interface {
-	Match(ctx context.Context, event event.Event) bool
+type matcherRegex struct {
+	r *regexp.Regexp
+}
+
+// TODO: Possibly add POSIX option to pattern
+func NewMatcherRegex(pattern string) (Matcher, error) {
+	r, err := regexp.Compile(pattern)
+	if err != nil {
+		return nil, err
+	}
+
+	return &matcherRegex{r: r}, nil
+}
+
+func (m *matcherRegex) Match(ctx context.Context, event event.Event) bool {
+	if m == nil || m.r == nil || event == nil {
+		return false
+	}
+
+	p, ok := event.Payload().(string)
+	if !ok {
+		return false
+	}
+
+	return m.r.MatchString(p)
 }
