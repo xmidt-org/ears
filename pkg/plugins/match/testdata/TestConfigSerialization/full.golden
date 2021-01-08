@@ -1,0 +1,5 @@
+{
+  "mode": "allow",
+  "matcher": "regex",
+  "pattern": "^[[:alnum:]]{4,12}"
+}
