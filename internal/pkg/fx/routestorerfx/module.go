@@ -12,30 +12,45 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package app
+package routestorerfx
 
 import (
-	"context"
+	"errors"
 
-	"github.com/xmidt-org/ears/internal/pkg/plugin"
+	"github.com/xmidt-org/ears/internal/pkg/app"
+	"github.com/xmidt-org/ears/internal/pkg/db"
 	"github.com/xmidt-org/ears/pkg/route"
+	"go.uber.org/fx"
 )
 
-type DefaultRoutingTableManager struct {
-	pluginMgr  plugin.Manager
-	storageMgr route.RouteStorer
+var Module = fx.Options(
+	fx.Provide(
+		ProvideRouteStorer,
+	),
+)
+
+type StorageIn struct {
+	fx.In
+
+	Config app.Config
 }
 
-func NewRoutingTableManager(pluginMgr plugin.Manager, storageMgr route.RouteStorer) RoutingTableManager {
-	return &DefaultRoutingTableManager{pluginMgr, storageMgr}
+type StorageOut struct {
+	fx.Out
+
+	RouteStorer route.RouteStorer `name:"RouteStorer"`
 }
 
-func (r *DefaultRoutingTableManager) AddRoute(ctx context.Context, route *route.Config) error {
-	err := r.storageMgr.SetRoute(ctx, *route)
-	if err != nil {
-		return err
+func ProvideRouteStorer(in StorageIn) (StorageOut, error) {
+	out := StorageOut{}
+
+	stroageType := in.Config.GetString("ears.storageType")
+
+	if stroageType == "inmemory" {
+		out.RouteStorer = db.NewInMemoryRouteStorer(in.Config)
+	} else {
+		return out, errors.New("usupported storage type " + stroageType)
 	}
-	//todo: register plugins and filters
-	//todo: call run on receiver
-	return nil
+
+	return out, nil
 }
