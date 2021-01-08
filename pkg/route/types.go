@@ -16,6 +16,7 @@ package route
 
 import (
 	"context"
+	"github.com/xmidt-org/ears/internal/pkg/route"
 	"sync"
 
 	"github.com/xmidt-org/ears/pkg/filter"
@@ -38,4 +39,40 @@ type Route struct {
 
 type InvalidRouteError struct {
 	Err error
+}
+
+type Config struct {
+	Id     string `json:"id,omitempty"`     // route ID
+	OrgId  string `json:"orgId,omitempty"`  // org ID for quota and rate limiting
+	AppId  string `json:"appId,omitempty"`  // app ID for quota and rate limiting
+	UserId string `json:"userId,omitempty"` // user ID / author of route
+	Name   string `json:"name,omitempty"`   // optional unique name for route
+	//Source       *Plugin      `json:"source,omitempty"`       // pointer to source plugin instance
+	//Destination  *Plugin      `json:"destination,omitempty"`  // pointer to destination plugin instance
+	//FilterChain  *FilterChain `json:"filterChain,omitempty"`  // optional list of filter plugins that will be applied in order to perform arbitrary filtering and transformation functions
+	DeliveryMode string `json:"deliveryMode,omitempty"` // possible values: fire_and_forget, at_least_once, exactly_once
+	Debug        bool   `json:"debug,omitempty"`        // if true generate debug logs and metrics for events taking this route
+	Created      int64  `json:"ts,omitempty"`           // time on when route was created, in unix timestamp seconds
+	Modified     int64  `json:"ts,omitempty"`           // last time when route was modified, in unix timestamp seconds
+}
+
+//All route operations are synchronous. The storer should respect the cancellation
+//from the context and cancel its operation gracefully when desired.
+type RouteStorer interface {
+	GetRoute(context.Context, string) (*Config, error)
+	GetAllRoutes(context.Context) ([]route.Config, error)
+
+	//SetRoute will add the route if it new or update the route if
+	//it is an existing one. It will also update the create time and
+	//modified time of the route where appropriate.
+	SetRoute(context.Context, Config) error
+
+	SetRoutes(context.Context, []Config) error
+
+	DeleteRoute(context.Context, string) error
+
+	DeleteRoutes(context.Context, []string) error
+
+	//For testing purpose only
+	DeleteAllRoutes(ctx context.Context) error
 }
