@@ -84,7 +84,7 @@ func init() {
 				Description: "API port",
 			},
 			cli.Argument{
-				Name: "storagerType", Shorthand: "", Type: cli.ArgTypeString,
+				Name: "storageType", Shorthand: "", Type: cli.ArgTypeString,
 				Default: "inmemory", LookupKey: "ears.storageType",
 				Description: "persistence layer storage type",
 			},
