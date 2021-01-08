@@ -28,6 +28,7 @@ import (
 type (
 	// A Route represents an entry in the EARS routing table
 	Route struct {
+		Id           string              `json:"id,omitempty"`           // route ID
 		OrgId        string              `json:"orgId,omitempty"`        // org ID for quota and rate limiting
 		AppId        string              `json:"appId,omitempty"`        // app ID for quota and rate limiting
 		UserId       string              `json:"userId,omitempty"`       // user ID / author of route
@@ -37,11 +38,13 @@ type (
 		FilterChain  *FilterChain        `json:"filterChain,omitempty"`  // optional list of filter plugins that will be applied in order to perform arbitrary filtering and transformation functions
 		DeliveryMode string              `json:"deliveryMode,omitempty"` // possible values: fire_and_forget, at_least_once, exactly_once
 		Debug        bool                `json:"debug,omitempty"`        // if true generate debug logs and metrics for events taking this route
-		Ts           int                 `json:"ts,omitempty"`           // timestamp when route was created or updated
+		Created      int64               `json:"ts,omitempty"`           // time on when route was created, in unix timestamp seconds
+		Modified     int64               `json:"ts,omitempty"`           // last time when route was modified, in unix timestamp seconds
 		tblMgr       RoutingTableManager `json:"-"`                      // pointer to routing table manager
 		lock         sync.RWMutex
 	}
 	RouteConfig struct {
+		Id           string       `json:"id,omitempty"`           // route ID
 		OrgId        string       `json:"orgId,omitempty"`        // org ID for quota and rate limiting
 		AppId        string       `json:"appId,omitempty"`        // app ID for quota and rate limiting
 		UserId       string       `json:"userId,omitempty"`       // user ID / author of route
@@ -51,7 +54,8 @@ type (
 		FilterChain  *FilterChain `json:"filterChain,omitempty"`  // optional list of filter plugins that will be applied in order to perform arbitrary filtering and transformation functions
 		DeliveryMode string       `json:"deliveryMode,omitempty"` // possible values: fire_and_forget, at_least_once, exactly_once
 		Debug        bool         `json:"debug,omitempty"`        // if true generate debug logs and metrics for events taking this route
-		Ts           int          `json:"ts,omitempty"`           // timestamp when route was created or updated
+		Created      int64        `json:"ts,omitempty"`           // time on when route was created, in unix timestamp seconds
+		Modified     int64        `json:"ts,omitempty"`           // last time when route was modified, in unix timestamp seconds
 	}
 )
 
@@ -66,7 +70,8 @@ func NewRouteFromRouteConfig(rc *RouteConfig) *Route {
 		FilterChain:  rc.FilterChain,
 		DeliveryMode: rc.DeliveryMode,
 		Debug:        rc.Debug,
-		Ts:           rc.Ts,
+		Created:      rc.Created,
+		Modified:     rc.Modified,
 	}
 	return &re
 }
