@@ -12,7 +12,6 @@ require (
 	github.com/gorilla/mux v1.8.0
 	github.com/onsi/gomega v1.10.4
 	github.com/rs/zerolog v1.20.0
-	github.com/searKing/golang v1.0.101 // indirect
 	github.com/sebdah/goldie/v2 v2.5.3
 	github.com/spf13/cobra v1.1.1
 	github.com/spf13/pflag v1.0.5
