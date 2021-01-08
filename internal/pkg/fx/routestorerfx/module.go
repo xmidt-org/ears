@@ -31,26 +31,21 @@ var Module = fx.Options(
 
 type StorageIn struct {
 	fx.In
-
 	Config app.Config
 }
 
 type StorageOut struct {
 	fx.Out
-
 	RouteStorer route.RouteStorer `name:"RouteStorer"`
 }
 
 func ProvideRouteStorer(in StorageIn) (StorageOut, error) {
 	out := StorageOut{}
-
-	stroageType := in.Config.GetString("ears.storageType")
-
-	if stroageType == "inmemory" {
+	storageType := in.Config.GetString("ears.storageType")
+	if storageType == "inmemory" {
 		out.RouteStorer = db.NewInMemoryRouteStorer(in.Config)
 	} else {
-		return out, errors.New("usupported storage type " + stroageType)
+		return out, errors.New("usupported storage type " + storageType)
 	}
-
 	return out, nil
 }
