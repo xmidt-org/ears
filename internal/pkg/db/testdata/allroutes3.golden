@@ -1,0 +1,10 @@
+[
+  {
+    "id": "test3",
+    "orgId": "myOrg3",
+    "appId": "myApp3",
+    "userId": "tgattis",
+    "name": "myName3",
+    "deliveryMode": "at_least_once"
+  }
+]

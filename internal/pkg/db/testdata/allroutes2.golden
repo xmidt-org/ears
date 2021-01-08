@@ -1,0 +1,26 @@
+[
+  {
+    "id": "test",
+    "orgId": "myOrg",
+    "appId": "myApp",
+    "userId": "mchiang",
+    "name": "differentName",
+    "deliveryMode": "fire_and_forget"
+  },
+  {
+    "id": "test3",
+    "orgId": "myOrg3",
+    "appId": "myApp3",
+    "userId": "tgattis",
+    "name": "myName3",
+    "deliveryMode": "at_least_once"
+  },
+  {
+    "id": "test3",
+    "orgId": "myOrg3",
+    "appId": "myApp3",
+    "userId": "tgattis",
+    "name": "myName3",
+    "deliveryMode": "at_least_once"
+  }
+]

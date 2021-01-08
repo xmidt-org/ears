@@ -1,0 +1,18 @@
+[
+  {
+    "id": "test",
+    "orgId": "myOrg",
+    "appId": "myApp",
+    "userId": "mchiang",
+    "name": "differentName",
+    "deliveryMode": "fire_and_forget"
+  },
+  {
+    "id": "test2",
+    "orgId": "myOrg2",
+    "appId": "myApp2",
+    "userId": "bwolf",
+    "name": "myName2",
+    "deliveryMode": "at_least_once"
+  }
+]
