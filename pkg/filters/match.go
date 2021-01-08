@@ -28,7 +28,6 @@ const (
 type MatchMode int
 
 type MatchFilter struct {
-	Pattern interface{} // match pattern
 	Matcher Matcher
 	Mode    MatchMode
 }
@@ -36,7 +35,7 @@ type MatchFilter struct {
 func (mf *MatchFilter) Filter(ctx context.Context, evt event.Event) ([]event.Event, error) {
 	// passes if event matches
 	events := []event.Event{}
-	pass := mf.Matcher.Match(ctx, evt, mf.Pattern)
+	pass := mf.Matcher.Match(ctx, evt)
 
 	if mf.Mode == MatchModeDeny {
 		pass = !pass
