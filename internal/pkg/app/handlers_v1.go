@@ -64,7 +64,7 @@ func (a *APIManager) addRouteHandler(w http.ResponseWriter, r *http.Request) {
 		resp.Respond(ctx, w)
 		return
 	}
-	err = a.routingTableMgr.AddRoute(ctx, nil)
+	err = a.routingTableMgr.AddRoute(ctx, &route)
 	if err != nil {
 		log.Ctx(ctx).Error().Str("op", "addRouteHandler").Msg(err.Error())
 		resp := ErrorResponse(err)

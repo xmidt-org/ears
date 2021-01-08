@@ -46,7 +46,7 @@ type Config struct {
 	Name    string      `json:"name,omitempty"`    // descriptive plugin name to allow multiple instances of otherwise identical plugin configurations
 	Type    string      `json:"type,omitempty"`    // plugin or filter type, e.g. kafka, kds, sqs, webhook, filter
 	Version string      `json:"version,omitempty"` // plugin version
-	SOName  string      `json:"soName,omitempty"`  // name of shared library file implementing this plugin
+	Path    string      `json:"path,omitempty"`    // path to shared library file implementing this plugin
 	Config  interface{} `json:"config,omitempty"`  // plugin specific configuration parameters
 }
 

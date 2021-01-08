@@ -26,8 +26,12 @@ type DefaultRoutingTableManager struct {
 	storageMgr route.RouteStorer
 }
 
-func NewRoutingTableManager(pluginMgr plugin.Manager, storageMgr route.RouteStorer) RoutingTableManager {
+/*func NewRoutingTableManager(pluginMgr plugin.Manager, storageMgr route.RouteStorer) RoutingTableManager {
 	return &DefaultRoutingTableManager{pluginMgr, storageMgr}
+}*/
+
+func NewRoutingTableManager() RoutingTableManager {
+	return &DefaultRoutingTableManager{nil, nil}
 }
 
 func (r *DefaultRoutingTableManager) AddRoute(ctx context.Context, route *route.Config) error {
