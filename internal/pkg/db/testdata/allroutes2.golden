@@ -8,11 +8,11 @@
     "deliveryMode": "fire_and_forget"
   },
   {
-    "id": "test3",
-    "orgId": "myOrg3",
-    "appId": "myApp3",
-    "userId": "tgattis",
-    "name": "myName3",
+    "id": "test2",
+    "orgId": "myOrg2",
+    "appId": "myApp2",
+    "userId": "bwolf",
+    "name": "anotherName",
     "deliveryMode": "at_least_once"
   },
   {
