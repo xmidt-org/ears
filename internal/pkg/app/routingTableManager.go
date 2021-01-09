@@ -16,6 +16,7 @@ package app
 
 import (
 	"context"
+	"github.com/xmidt-org/ears/pkg/event"
 
 	"github.com/xmidt-org/ears/internal/pkg/plugin"
 	"github.com/xmidt-org/ears/pkg/route"
@@ -26,10 +27,6 @@ type DefaultRoutingTableManager struct {
 	storageMgr route.RouteStorer
 }
 
-/*func NewRoutingTableManager(pluginMgr plugin.Manager, storageMgr route.RouteStorer) RoutingTableManager {
-	return &DefaultRoutingTableManager{pluginMgr, storageMgr}
-}*/
-
 func NewRoutingTableManager(plugMgr plugin.Manager, storageMgr route.RouteStorer) RoutingTableManager {
 	return &DefaultRoutingTableManager{plugMgr, storageMgr}
 }
@@ -39,7 +36,15 @@ func (r *DefaultRoutingTableManager) AddRoute(ctx context.Context, route *route.
 	if err != nil {
 		return err
 	}
-	//todo: register plugins and filters
-	//todo: call run on receiver
+	receiver, err := r.pluginMgr.RegisterReceiver(ctx, "debug", "myDebugIn", route.Source.Config)
+	sender, err := r.pluginMgr.RegisterSender(ctx, "debug", "myDebugOut", route.Destination.Config)
+	go func() {
+		receiver.Receive(ctx, func(ctx context.Context, e event.Event) error {
+			return sender.Send(ctx, e)
+		})
+	}()
+	/*for _, f := range route.FilterChain {
+		r.pluginMgr.RegisterFilter(ctx, "match", "myMatch", f.Config)
+	}*/
 	return nil
 }
