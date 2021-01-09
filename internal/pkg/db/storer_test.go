@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"github.com/sebdah/goldie/v2"
+	"sort"
 	"testing"
 	"time"
 
@@ -165,6 +166,9 @@ func testRouteStorer(s route.RouteStorer, t *testing.T) {
 		routes[i].Created = 0
 		routes[i].Modified = 0
 	}
+	sort.SliceStable(routes, func(i int, j int) bool {
+		return routes[i].Id < routes[j].Id
+	})
 	g.AssertJson(t, "allroutes", routes)
 
 	var configs []route.Config
@@ -191,6 +195,9 @@ func testRouteStorer(s route.RouteStorer, t *testing.T) {
 		routes[i].Created = 0
 		routes[i].Modified = 0
 	}
+	sort.SliceStable(routes, func(i int, j int) bool {
+		return routes[i].Id < routes[j].Id
+	})
 	g.AssertJson(t, "allroutes2", routes)
 
 	err = s.DeleteRoutes(ctx, []string{"test", "test2"})
@@ -219,5 +226,21 @@ func testRouteStorer(s route.RouteStorer, t *testing.T) {
 		routes[i].Created = 0
 		routes[i].Modified = 0
 	}
+	sort.SliceStable(routes, func(i int, j int) bool {
+		return routes[i].Id < routes[j].Id
+	})
 	g.AssertJson(t, "allroutes3", routes)
+
+	err = s.DeleteRoute(ctx, "test3")
+	if err != nil {
+		t.Fatalf("DeleteRoute test3 error: %s\n", err.Error())
+	}
+
+	routes, err = s.GetAllRoutes(ctx)
+	if err != nil {
+		t.Fatalf("GetAllRoutes error: %s\n", err.Error())
+	}
+	if len(routes) != 0 {
+		t.Fatalf("Expect 0 routes but get %d instead\n", len(routes))
+	}
 }
