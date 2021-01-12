@@ -20,16 +20,19 @@ import (
 	"github.com/xmidt-org/ears/pkg/route"
 )
 
-type (
+/*type (
 	// A RoutingEntry represents an entry in the EARS routing table
 	RoutingTableEntry struct {
 	}
-)
+)*/
 
 type (
 
 	// A RoutingTableManager supports modifying and querying an EARS routing table
 	RoutingTableManager interface {
-		AddRoute(ctx context.Context, route *route.Config) error // idempotent operation to add a routing entry to a local routing table 		// get hash for local version of routing table
+		// AddRoute adds a route to live routing table and runs it and also stores the route in the persistence layer
+		AddRoute(ctx context.Context, route *route.Config) error
+		// RemoveRoute removes a route from a live routing table and stops it and also removes the route from the persistence layer
+		RemoveRoute(ctx context.Context, routeId string) error
 	}
 )
