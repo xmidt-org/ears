@@ -16,8 +16,7 @@ package app
 
 import (
 	"context"
-	"github.com/xmidt-org/ears/pkg/event"
-
+	"errors"
 	"github.com/xmidt-org/ears/internal/pkg/plugin"
 	"github.com/xmidt-org/ears/pkg/route"
 )
@@ -25,26 +24,53 @@ import (
 type DefaultRoutingTableManager struct {
 	pluginMgr  plugin.Manager
 	storageMgr route.RouteStorer
+	routeMap   map[string]*route.Route // to hold in-memory references to live routes
 }
 
 func NewRoutingTableManager(plugMgr plugin.Manager, storageMgr route.RouteStorer) RoutingTableManager {
-	return &DefaultRoutingTableManager{plugMgr, storageMgr}
+	return &DefaultRoutingTableManager{plugMgr, storageMgr, make(map[string]*route.Route, 0)}
 }
 
-func (r *DefaultRoutingTableManager) AddRoute(ctx context.Context, route *route.Config) error {
-	err := r.storageMgr.SetRoute(ctx, *route)
+func (r *DefaultRoutingTableManager) RemoveRoute(ctx context.Context, routeId string) error {
+	err := r.storageMgr.DeleteRoute(ctx, routeId)
 	if err != nil {
 		return err
 	}
-	receiver, err := r.pluginMgr.RegisterReceiver(ctx, "debug", "myDebugIn", route.Source.Config)
-	sender, err := r.pluginMgr.RegisterSender(ctx, "debug", "myDebugOut", route.Destination.Config)
+	//TODO: consider idempotency
+	//TODO: locks
+	liveRoute, ok := r.routeMap[routeId]
+	if !ok {
+		return errors.New("no live route exists with ID " + routeId)
+	}
+	err = liveRoute.Stop(ctx)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (r *DefaultRoutingTableManager) AddRoute(ctx context.Context, routeConfig *route.Config) error {
+	err := r.storageMgr.SetRoute(ctx, *routeConfig)
+	//TODO: locks
+	if err != nil {
+		return err
+	}
+	receiver, err := r.pluginMgr.RegisterReceiver(ctx, "debug", "myDebugIn", routeConfig.Receiver.Config)
+	if err != nil {
+		return err
+	}
+	sender, err := r.pluginMgr.RegisterSender(ctx, "debug", "myDebugOut", routeConfig.Sender.Config)
+	if err != nil {
+		return err
+	}
+	route := &route.Route{}
+	//TODO: what about hash generation and validation?
+	r.routeMap[routeConfig.Id] = route
 	go func() {
-		receiver.Receive(ctx, func(ctx context.Context, e event.Event) error {
-			return sender.Send(ctx, e)
-		})
+		//TODO: how to pass in a filter chain?
+		route.Run(ctx, receiver, nil, sender) // run is blocking
+		//TODO: what to do when Run() returns?
+		//TODO: what to do if Run() returns an error?
 	}()
-	/*for _, f := range route.FilterChain {
-		r.pluginMgr.RegisterFilter(ctx, "match", "myMatch", f.Config)
-	}*/
 	return nil
 }

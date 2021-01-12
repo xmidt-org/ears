@@ -36,7 +36,8 @@ func NewAPIManager(routingMgr RoutingTableManager) (*APIManager, error) {
 		routingTableMgr: routingMgr,
 	}
 	api.muxRouter.HandleFunc("/ears/version", api.versionHandler).Methods(http.MethodGet)
-	api.muxRouter.HandleFunc("/ears/v1/routes/{route}", api.addRouteHandler).Methods(http.MethodPut)
+	api.muxRouter.HandleFunc("/ears/v1/routes/{routeId}", api.addRouteHandler).Methods(http.MethodPut)
+	api.muxRouter.HandleFunc("/ears/v1/routes/{routeId}", api.addRouteHandler).Methods(http.MethodDelete)
 	return api, nil
 }
 
@@ -71,6 +72,21 @@ func (a *APIManager) addRouteHandler(w http.ResponseWriter, r *http.Request) {
 		resp.Respond(ctx, w)
 		return
 	}
-	resp := ErrorResponse(&NotImplementedError{})
+	resp := ItemResponse(route)
+	resp.Respond(ctx, w)
+}
+
+func (a *APIManager) removeRouteHandler(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	vars := mux.Vars(r)
+	routeId := vars["routeId"]
+	err := a.routingTableMgr.RemoveRoute(ctx, routeId)
+	if err != nil {
+		log.Ctx(ctx).Error().Str("op", "removeRouteHandler").Msg(err.Error())
+		resp := ErrorResponse(err)
+		resp.Respond(ctx, w)
+		return
+	}
+	resp := ItemResponse(routeId)
 	resp.Respond(ctx, w)
 }
