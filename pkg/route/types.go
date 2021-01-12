@@ -41,8 +41,8 @@ type InvalidRouteError struct {
 }
 
 type PluginConfig struct {
-	Plugin string      `json:"type,omitempty"`   // "debug" plugin or filter type, e.g. kafka, kds, sqs, webhook, filter
-	Name   string      `json:"name,omitempty"`   // "mydebug" descriptive plugin name to allow multiple instances of otherwise identical plugin configurations
+	Plugin string      `json:"plugin,omitempty"` // plugin or filter type, e.g. kafka, kds, sqs, webhook, filter
+	Name   string      `json:"name,omitempty"`   // plugin label to allow multiple instances of otherwise identical plugin configurations
 	Config interface{} `json:"config,omitempty"` // plugin specific configuration parameters
 	//CommitVersion string
 	//FeatureVersion string
@@ -54,8 +54,8 @@ type Config struct {
 	AppId        string         `json:"appId,omitempty"`        // app ID for quota and rate limiting
 	UserId       string         `json:"userId,omitempty"`       // user ID / author of route
 	Name         string         `json:"name,omitempty"`         // optional unique name for route
-	Receiver     PluginConfig   `json:"source,omitempty"`       // source plugin configuration
-	Sender       PluginConfig   `json:"destination,omitempty"`  // destination plugin configuration
+	Receiver     PluginConfig   `json:"receiver,omitempty"`     // source plugin configuration
+	Sender       PluginConfig   `json:"sender,omitempty"`       // destination plugin configuration
 	FilterChain  []PluginConfig `json:"filterChain,omitempty"`  // filter chain configuration
 	DeliveryMode string         `json:"deliveryMode,omitempty"` // possible values: fire_and_forget, at_least_once, exactly_once
 	Debug        bool           `json:"debug,omitempty"`        // if true generate debug logs and metrics for events taking this route

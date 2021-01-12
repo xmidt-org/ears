@@ -58,6 +58,8 @@ func (r *DefaultRoutingTableManager) AddRoute(ctx context.Context, routeConfig *
 	if err != nil {
 		return err
 	}
+	//buf, _ := json.Marshal(routeConfig)
+	//fmt.Printf("%v\n", string(buf))
 	receiver, err := r.pluginMgr.RegisterReceiver(ctx, routeConfig.Receiver.Plugin, routeConfig.Receiver.Name, routeConfig.Receiver.Config)
 	if err != nil {
 		return err
@@ -82,6 +84,7 @@ func (r *DefaultRoutingTableManager) AddRoute(ctx context.Context, routeConfig *
 
 func (r *DefaultRoutingTableManager) GetRoute(ctx context.Context, routeId string) (*route.Config, error) {
 	route, err := r.storageMgr.GetRoute(ctx, routeId)
+	//TODO: hpow do we treat a non-existent route? is it error worthy?
 	if err != nil {
 		return nil, err
 	}
