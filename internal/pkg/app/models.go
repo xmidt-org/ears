@@ -34,5 +34,9 @@ type (
 		AddRoute(ctx context.Context, route *route.Config) error
 		// RemoveRoute removes a route from a live routing table and stops it and also removes the route from the persistence layer
 		RemoveRoute(ctx context.Context, routeId string) error
+		// GetRoute gets a single route by its ID
+		GetRoute(ctx context.Context, routeId string) (*route.Config, error)
+		// GetAllRoutes gets all live routes from persistence layer
+		GetAllRoutes(ctx context.Context) ([]route.Config, error)
 	}
 )

@@ -55,7 +55,6 @@ func (r *DefaultRoutingTableManager) RemoveRoute(ctx context.Context, routeId st
 
 func (r *DefaultRoutingTableManager) AddRoute(ctx context.Context, routeConfig *route.Config) error {
 	err := r.storageMgr.SetRoute(ctx, *routeConfig)
-	//TODO: locks
 	if err != nil {
 		return err
 	}
@@ -79,4 +78,21 @@ func (r *DefaultRoutingTableManager) AddRoute(ctx context.Context, routeConfig *
 		//TODO: what to do if Run() returns an error?
 	}()
 	return nil
+}
+
+func (r *DefaultRoutingTableManager) GetRoute(ctx context.Context, routeId string) (*route.Config, error) {
+	route, err := r.storageMgr.GetRoute(ctx, routeId)
+	if err != nil {
+		return nil, err
+	}
+	return route, nil
+}
+
+func (r *DefaultRoutingTableManager) GetAllRoutes(ctx context.Context) ([]route.Config, error) {
+	//TODO: shouldn't the type be []*route.Config?
+	routes, err := r.storageMgr.GetAllRoutes(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return routes, nil
 }
