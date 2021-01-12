@@ -34,7 +34,7 @@ func (s *InMemoryRouteStorer) GetRoute(ctx context.Context, id string) (*route.C
 }
 
 func (s *InMemoryRouteStorer) GetAllRoutes(ctx context.Context) ([]route.Config, error) {
-	s.lock.RUnlock()
+	s.lock.RLock()
 	defer s.lock.RUnlock()
 
 	routes := make([]route.Config, len(s.routes))
