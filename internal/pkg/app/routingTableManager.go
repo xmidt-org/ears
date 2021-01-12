@@ -19,16 +19,18 @@ import (
 	"errors"
 	"github.com/xmidt-org/ears/internal/pkg/plugin"
 	"github.com/xmidt-org/ears/pkg/route"
+	"sync"
 )
 
 type DefaultRoutingTableManager struct {
-	pluginMgr  plugin.Manager
-	storageMgr route.RouteStorer
-	routeMap   map[string]*route.Route // to hold in-memory references to live routes
+	sync.Mutex
+	pluginMgr    plugin.Manager
+	storageMgr   route.RouteStorer
+	liveRouteMap map[string]*route.Route // to hold in-memory references to live routes
 }
 
-func NewRoutingTableManager(plugMgr plugin.Manager, storageMgr route.RouteStorer) RoutingTableManager {
-	return &DefaultRoutingTableManager{plugMgr, storageMgr, make(map[string]*route.Route, 0)}
+func NewRoutingTableManager(pluginMgr plugin.Manager, storageMgr route.RouteStorer) RoutingTableManager {
+	return &DefaultRoutingTableManager{pluginMgr: pluginMgr, storageMgr: storageMgr, liveRouteMap: make(map[string]*route.Route, 0)}
 }
 
 func (r *DefaultRoutingTableManager) RemoveRoute(ctx context.Context, routeId string) error {
@@ -37,11 +39,13 @@ func (r *DefaultRoutingTableManager) RemoveRoute(ctx context.Context, routeId st
 		return err
 	}
 	//TODO: consider idempotency
-	//TODO: locks
-	liveRoute, ok := r.routeMap[routeId]
+	liveRoute, ok := r.liveRouteMap[routeId]
 	if !ok {
 		return errors.New("no live route exists with ID " + routeId)
 	}
+	r.Lock()
+	delete(r.liveRouteMap, routeId)
+	r.Unlock()
 	err = liveRoute.Stop(ctx)
 	if err != nil {
 		return err
@@ -55,20 +59,22 @@ func (r *DefaultRoutingTableManager) AddRoute(ctx context.Context, routeConfig *
 	if err != nil {
 		return err
 	}
-	receiver, err := r.pluginMgr.RegisterReceiver(ctx, "debug", "myDebugIn", routeConfig.Receiver.Config)
+	receiver, err := r.pluginMgr.RegisterReceiver(ctx, routeConfig.Receiver.Plugin, routeConfig.Receiver.Name, routeConfig.Receiver.Config)
 	if err != nil {
 		return err
 	}
-	sender, err := r.pluginMgr.RegisterSender(ctx, "debug", "myDebugOut", routeConfig.Sender.Config)
+	sender, err := r.pluginMgr.RegisterSender(ctx, routeConfig.Sender.Plugin, routeConfig.Sender.Name, routeConfig.Sender.Config)
 	if err != nil {
 		return err
 	}
-	route := &route.Route{}
+	liveRoute := &route.Route{}
 	//TODO: what about hash generation and validation?
-	r.routeMap[routeConfig.Id] = route
+	r.Lock()
+	r.liveRouteMap[routeConfig.Id] = liveRoute
+	r.Unlock()
 	go func() {
 		//TODO: how to pass in a filter chain?
-		route.Run(ctx, receiver, nil, sender) // run is blocking
+		liveRoute.Run(ctx, receiver, nil, sender) // run is blocking
 		//TODO: what to do when Run() returns?
 		//TODO: what to do if Run() returns an error?
 	}()
