@@ -26,6 +26,6 @@ func (b *Bitmask) Flip(flag Bitmask) {
 	*b ^= flag
 }
 
-func (b *Bitmask) IsSet(flag Bitmask) bool {
-	return *b&flag != 0
+func (b Bitmask) IsSet(flag Bitmask) bool {
+	return b&flag != 0
 }

@@ -20,11 +20,11 @@ import (
 
 	"github.com/xmidt-org/ears/pkg/event"
 	"github.com/xmidt-org/ears/pkg/filter"
-	pkgregex "github.com/xmidt-org/ears/pkg/filter/match/regex"
+	"github.com/xmidt-org/ears/pkg/filter/match/regex"
 )
 
 // Ensure supporting matchers implement Matcher interface
-var _ Matcher = (*pkgregex.Matcher)(nil)
+var _ Matcher = (*regex.Matcher)(nil)
 
 func NewFilter(config interface{}) (*Filter, error) {
 
@@ -47,7 +47,7 @@ func NewFilter(config interface{}) (*Filter, error) {
 
 	switch cfg.Matcher {
 	case MatcherRegex:
-		matcher, err = pkgregex.NewMatcher(*cfg.Pattern)
+		matcher, err = regex.NewMatcher(*cfg.Pattern)
 		if err != nil {
 			return nil, &filter.InvalidConfigError{
 				Err: err,

@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package match_test
+package regex_test
 
 import (
 	"context"
@@ -20,7 +20,7 @@ import (
 
 	"github.com/xmidt-org/ears/pkg/event"
 
-	"github.com/xmidt-org/ears/pkg/filters/match"
+	"github.com/xmidt-org/ears/pkg/filter/match/regex"
 
 	. "github.com/onsi/gomega"
 )
@@ -36,7 +36,7 @@ func TestRegexPatternError(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.pattern, func(t *testing.T) {
 			a := NewWithT(t)
-			m, err := match.NewRegex(tc.pattern)
+			m, err := regex.NewMatcher(tc.pattern)
 			a.Expect(m).To(BeNil())
 			a.Expect(err).ToNot(BeNil())
 		})
@@ -72,7 +72,7 @@ func TestRegexMatchError(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			a := NewWithT(t)
-			m, err := match.NewRegex(".*")
+			m, err := regex.NewMatcher(".*")
 			a.Expect(m).ToNot(BeNil())
 			a.Expect(err).To(BeNil())
 
@@ -126,7 +126,7 @@ func TestMatcherRegex(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			a := NewWithT(t)
 
-			m, err := match.NewRegex(tc.pattern)
+			m, err := regex.NewMatcher(tc.pattern)
 			a.Expect(err).To(BeNil())
 
 			for _, in := range tc.succeed {

@@ -34,3 +34,4 @@ var Plugin, PluginErr = block.NewPluginVersion(Name, GitVersion, GitCommit)
 
 // for golangci-lint
 var _ = Plugin
+var _ = PluginErr

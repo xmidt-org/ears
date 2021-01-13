@@ -182,7 +182,7 @@ func (p *Plugin) NewPluginer(config interface{}) (Pluginer, error) {
 	}
 
 	if p.newPluginer == nil {
-		return nil, &NotSupportedError{}
+		return p, nil
 	}
 
 	return p.newPluginer(config)

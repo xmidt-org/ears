@@ -11,6 +11,7 @@ require (
 	github.com/bombsimon/wsl/v2 v2.0.0 // indirect
 	github.com/bombsimon/wsl/v3 v3.1.0 // indirect
 	github.com/daixiang0/gci v0.2.7 // indirect
+	github.com/davecgh/go-spew v1.1.1
 	github.com/denis-tingajkin/go-header v0.4.2 // indirect
 	github.com/ghodss/yaml v1.0.0
 	github.com/go-critic/go-critic v0.5.3 // indirect

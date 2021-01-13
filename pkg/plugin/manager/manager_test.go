@@ -107,8 +107,8 @@ func TestAlreadyRegisteredError(t *testing.T) {
 		plug plugin.Pluginer
 		err  error
 	}{
-		{name: "registered", plug: &plugin.PluginerMock{}},
-		{name: "registered", plug: &plugin.PluginerMock{}, err: &manager.AlreadyRegisteredError{}},
+		{name: "registered", plug: &newPluginererMock{}},
+		{name: "registered", plug: &newPluginererMock{}, err: &manager.AlreadyRegisteredError{}},
 	}
 
 	m, _ := manager.New()
@@ -133,10 +133,10 @@ func TestRegistrationLifecycle(t *testing.T) {
 		name string
 		plug plugin.Pluginer
 	}{
-		{name: "one", plug: &plugin.PluginerMock{}},
-		{name: "two", plug: &plugin.PluginerMock{}},
-		{name: "three", plug: &plugin.PluginerMock{}},
-		{name: "four", plug: &plugin.PluginerMock{}},
+		{name: "one", plug: &newPluginererMock{}},
+		{name: "two", plug: &newPluginererMock{}},
+		{name: "three", plug: &newPluginererMock{}},
+		{name: "four", plug: &newPluginererMock{}},
 	}
 
 	m, _ := manager.New()
@@ -235,7 +235,7 @@ func TestRegistrationTypes(t *testing.T) {
 			for i := 0; i < tc.numPlugins; i++ {
 				err := m.RegisterPlugin(
 					"plugins_"+strconv.Itoa(i),
-					&plugin.PluginerMock{},
+					&newPluginererMock{},
 				)
 				a.Expect(err).To(BeNil())
 			}
@@ -591,26 +591,50 @@ func getTestPluginSOPaths() ([]string, error) {
 
 // == Helper Structures ==============================================
 
+type newPluginererMock struct {
+	plugin.NewPluginererMock
+}
+
+func (m *newPluginererMock) Name() string     { return "newPluginerMock" }
+func (m *newPluginererMock) Version() string  { return "version" }
+func (m *newPluginererMock) CommitID() string { return "commitID" }
+func (m *newPluginererMock) Config() string   { return "config" }
+func (m *newPluginererMock) SupportedTypes() plugin.Bitmask {
+	return plugin.TypePluginer
+}
+
 type newReceivererMock struct {
 	receiver.NewReceivererMock
 }
 
-func (m *newReceivererMock) Name() string    { return "newReceivererMock" }
-func (m *newReceivererMock) Version() string { return "version" }
-func (m *newReceivererMock) Config() string  { return "config" }
+func (m *newReceivererMock) Name() string     { return "newReceivererMock" }
+func (m *newReceivererMock) Version() string  { return "version" }
+func (m *newReceivererMock) CommitID() string { return "commitID" }
+func (m *newReceivererMock) Config() string   { return "config" }
+func (m *newReceivererMock) SupportedTypes() plugin.Bitmask {
+	return plugin.TypeReceiver | plugin.TypePluginer
+}
 
 type newSendererMock struct {
 	sender.NewSendererMock
 }
 
-func (m *newSendererMock) Name() string    { return "newSendererMock" }
-func (m *newSendererMock) Version() string { return "version" }
-func (m *newSendererMock) Config() string  { return "config" }
+func (m *newSendererMock) Name() string     { return "newSendererMock" }
+func (m *newSendererMock) Version() string  { return "version" }
+func (m *newSendererMock) CommitID() string { return "commitID" }
+func (m *newSendererMock) Config() string   { return "config" }
+func (m *newSendererMock) SupportedTypes() plugin.Bitmask {
+	return plugin.TypeSender | plugin.TypePluginer
+}
 
 type newFiltererMock struct {
 	filter.NewFiltererMock
 }
 
-func (m *newFiltererMock) Name() string    { return "newFiltererMock" }
-func (m *newFiltererMock) Version() string { return "version" }
-func (m *newFiltererMock) Config() string  { return "config" }
+func (m *newFiltererMock) Name() string     { return "newFiltererMock" }
+func (m *newFiltererMock) Version() string  { return "version" }
+func (m *newFiltererMock) CommitID() string { return "commitID" }
+func (m *newFiltererMock) Config() string   { return "config" }
+func (m *newFiltererMock) SupportedTypes() plugin.Bitmask {
+	return plugin.TypeFilter | plugin.TypePluginer
+}

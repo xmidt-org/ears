@@ -18,7 +18,6 @@ import (
 	"context"
 
 	"github.com/xmidt-org/ears/pkg/filter"
-	"github.com/xmidt-org/ears/pkg/hasher"
 	pkgplugin "github.com/xmidt-org/ears/pkg/plugin"
 
 	"github.com/xmidt-org/ears/pkg/event"
@@ -28,40 +27,41 @@ func main() {
 	// required for `go build` to not fail
 }
 
-var Plugin = plugin{}
+var Plugin, PluginErr = NewPlugin()
 
 // for golangci-lint
 var _ = Plugin
+var _ = PluginErr
 
-var _ pkgplugin.NewPluginerer = (*plugin)(nil)
-var _ filter.NewFilterer = (*plugin)(nil)
 var _ filter.Filterer = (*plugin)(nil)
 
 type plugin struct{}
 
-// Pluginer ============================================================
+const (
+	Name     = "name"
+	Version  = "version"
+	CommitID = "commitID"
+)
 
-func (p *plugin) NewPluginer(config interface{}) (pkgplugin.Pluginer, error) {
-	return pkgplugin.NewPlugin(
-		pkgplugin.WithName("name"),
-		pkgplugin.WithVersion("version"),
-		pkgplugin.WithCommitID("commitId"),
-		pkgplugin.WithConfig(config),
-	)
+// ===================================================
+
+func NewPlugin() (*pkgplugin.Plugin, error) {
+	return NewPluginVersion(Name, Version, CommitID)
 }
 
-func (p *plugin) PluginerHash(config interface{}) (string, error) {
-	return "pluginerHash", nil
+func NewPluginVersion(name string, version string, commitID string) (*pkgplugin.Plugin, error) {
+	return pkgplugin.NewPlugin(
+		pkgplugin.WithName(name),
+		pkgplugin.WithVersion(version),
+		pkgplugin.WithCommitID(commitID),
+		pkgplugin.WithNewFilterer(NewFilterer),
+	)
 }
 
 // Filterer ============================================================
 
-func (p *plugin) NewFilterer(config interface{}) (filter.Filterer, error) {
-	return p, nil
-}
-
-func (p *plugin) FiltererHash(config interface{}) (string, error) {
-	return hasher.Hash(config), nil
+func NewFilterer(config interface{}) (filter.Filterer, error) {
+	return &plugin{}, nil
 }
 
 func (p *plugin) Filter(ctx context.Context, e event.Event) ([]event.Event, error) {
