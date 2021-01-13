@@ -23,7 +23,9 @@ import (
 	"github.com/xmidt-org/ears/pkg/event"
 	"github.com/xorcare/pointer"
 
-	"github.com/xmidt-org/ears/pkg/plugins/match"
+	"github.com/xmidt-org/ears/pkg/filter/match"
+
+	plugmatch "github.com/xmidt-org/ears/pkg/plugins/match"
 
 	. "github.com/onsi/gomega"
 )
@@ -89,7 +91,9 @@ func TestFilterRegex(t *testing.T) {
 		},
 	}
 
-	p := match.NewPlugin()
+	a := NewWithT(t)
+	p, err := plugmatch.NewPlugin()
+	a.Expect(err).To(BeNil())
 
 	for _, tc := range testCases {
 		name := tc.name
@@ -179,12 +183,15 @@ func TestNewFilterConfig(t *testing.T) {
 
 		{
 			name:     "with-defaults",
-			config:   (&match.Config{}).WithDefaults(),
-			expected: (&match.Config{}).WithDefaults(),
+			config:   *(match.Config{}.WithDefaults()),
+			expected: *(match.Config{}.WithDefaults()),
 		},
 	}
 
-	p := match.NewPlugin()
+	a := NewWithT(t)
+	p, err := plugmatch.NewPlugin()
+	a.Expect(err).To(BeNil())
+
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			a := NewWithT(t)
@@ -243,14 +250,14 @@ func TestNewFilterConfig(t *testing.T) {
 					a.Expect(f).ToNot(BeNil())
 
 					fcfg, ok := f.(interface {
-						Config() string
+						Config() match.Config
 					})
 					a.Expect(ok).To(BeTrue(), "filter supports Config interface")
 					a.Expect(fcfg).ToNot(BeNil())
 
 					cfg := fcfg.Config()
 
-					a.Expect(cfg).To(Equal(expectedStr))
+					a.Expect(cfg.String()).To(Equal(expectedStr))
 
 				})
 
@@ -264,9 +271,9 @@ func TestNewFilterConfig(t *testing.T) {
 
 func TestNewFilterBadConfig(t *testing.T) {
 
-	p := match.NewPlugin()
-
 	a := NewWithT(t)
+	p, err := plugmatch.NewPlugin()
+	a.Expect(err).To(BeNil())
 
 	{
 		f, err := p.NewFilterer(match.Config{
@@ -298,5 +305,5 @@ func TestNilFilter(t *testing.T) {
 	_, err := f.Filter(context.Background(), nil)
 	a.Expect(err).ToNot(BeNil())
 
-	a.Expect(f.Config()).To(Equal(`error: "nil filter"`))
+	a.Expect(f.Config()).To(Equal(match.Config{}))
 }

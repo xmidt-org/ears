@@ -18,12 +18,10 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/ThreeDotsLabs/watermill"
 	"github.com/ThreeDotsLabs/watermill/pubsub/gochannel"
-	"github.com/ghodss/yaml"
 	"github.com/xmidt-org/ears/pkg/filter"
 	"github.com/xmidt-org/ears/pkg/hasher"
-	earsplugin "github.com/xmidt-org/ears/pkg/plugin"
+	pkgplugin "github.com/xmidt-org/ears/pkg/plugin"
 
 	"github.com/xmidt-org/ears/pkg/event"
 	"github.com/xmidt-org/ears/pkg/receiver"
@@ -39,8 +37,7 @@ var Plugin = plugin{}
 // for golangci-lint
 var _ = Plugin
 
-var _ earsplugin.NewPluginerer = (*plugin)(nil)
-var _ earsplugin.Pluginer = (*plugin)(nil)
+var _ pkgplugin.NewPluginerer = (*plugin)(nil)
 var _ sender.NewSenderer = (*plugin)(nil)
 var _ sender.Sender = (*plugin)(nil)
 var _ receiver.NewReceiverer = (*plugin)(nil)
@@ -60,41 +57,29 @@ const (
 	// ErrUnknown earsplugin.ErrorCode = iota
 
 	// ErrNotInitialized is when the plugin is not properly initialized
-	ErrNotInitialized earsplugin.ErrorCode = iota + 1
+	ErrNotInitialized pkgplugin.ErrorCode = iota + 1
 )
 
-// Plugin ============================================================
+// Pluginer ============================================================
 
-func (p *plugin) NewPluginer(config interface{}) (earsplugin.Pluginer, error) {
-	return p.new(config)
+func (p *plugin) NewPluginer(config interface{}) (pkgplugin.Pluginer, error) {
+	return pkgplugin.NewPlugin(
+		pkgplugin.WithName("name"),
+		pkgplugin.WithVersion("version"),
+		pkgplugin.WithCommitID("commitId"),
+		pkgplugin.WithConfig(config),
+	)
 }
 
 func (p *plugin) PluginerHash(config interface{}) (string, error) {
-	return hasher.Hash(config), nil
-}
-
-func (p *plugin) Name() string {
-	return "managerTestPlugin"
-}
-
-func (p *plugin) Version() string {
-	return "v0.0.0"
-}
-
-func (p *plugin) Config() string {
-	c, err := yaml.Marshal(p.config)
-	if err != nil {
-		return fmt.Sprintf("config error: %s", err.Error())
-	}
-
-	return string(c)
+	return "pluginerHash", nil
 }
 
 // Receiver ============================================================
 
 func (p *plugin) NewReceiver(config interface{}) (receiver.Receiver, error) {
 	if p.pubsub == nil {
-		return nil, &earsplugin.Error{
+		return nil, &pkgplugin.Error{
 			Code: ErrNotInitialized,
 			Err:  fmt.Errorf("NotInitialized"),
 		}
@@ -133,7 +118,7 @@ func (p *plugin) Filter(ctx context.Context, e event.Event) ([]event.Event, erro
 
 func (p *plugin) NewSender(config interface{}) (sender.Sender, error) {
 	if p.pubsub == nil {
-		return nil, &earsplugin.Error{
+		return nil, &pkgplugin.Error{
 			Code: ErrNotInitialized,
 			Err:  fmt.Errorf("NotInitialized"),
 		}
@@ -148,27 +133,4 @@ func (p *plugin) SenderHash(config interface{}) (string, error) {
 
 func (p *plugin) Send(ctx context.Context, event event.Event) error {
 	return nil
-}
-
-// internal helpers ============================================================
-
-func (p *plugin) new(config interface{}) (earsplugin.Pluginer, error) {
-	p.config = config
-	cfg := gochannel.Config{}
-
-	c, ok := config.(string)
-	if ok && c != "" {
-		err := yaml.Unmarshal([]byte(c), &cfg)
-		if err != nil {
-			return nil, &earsplugin.InvalidConfigError{Err: err}
-		}
-	}
-
-	return &plugin{
-		pubsub: gochannel.NewGoChannel(
-			cfg,
-			watermill.NewStdLogger(false, false),
-		),
-	}, nil
-
 }

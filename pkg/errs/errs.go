@@ -30,11 +30,11 @@ error coding style.  This will:
   * Append any wrapped errors to the end of the message (separated by a ":")
 
 */
-func String(name string, values map[string]interface{}, wrapped error) string {
+func String(msg string, values map[string]interface{}, wrapped error) string {
 	msgs := []string{}
 
-	if name != "" {
-		msgs = append(msgs, name)
+	if msg != "" {
+		msgs = append(msgs, msg)
 	}
 
 	if len(values) > 0 {
@@ -53,7 +53,7 @@ func String(name string, values map[string]interface{}, wrapped error) string {
 
 	}
 
-	msg := strings.Join(msgs, " ")
+	msg = strings.Join(msgs, " ")
 	errMsg := ""
 	if wrapped != nil {
 		errMsg = wrapped.Error()

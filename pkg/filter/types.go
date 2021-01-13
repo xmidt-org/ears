@@ -55,12 +55,14 @@ type NewFilterer interface {
 }
 
 // Filterer defines the interface that a filterer must implement
+// TODO: https://github.com/xmidt-org/ears/issues/74
 type Filterer interface {
 	Filter(ctx context.Context, e event.Event) ([]event.Event, error)
 }
 
-// FiltererChain
-type FiltererChain interface {
+// Chainer
+// TODO: https://github.com/xmidt-org/ears/issues/74
+type Chainer interface {
 	Filterer
 
 	// Add will add a filterer to the chain
@@ -68,7 +70,7 @@ type FiltererChain interface {
 	Filterers() []Filterer
 }
 
-var _ FiltererChain = (*Chain)(nil)
+var _ Chainer = (*Chain)(nil)
 
 type Chain struct {
 	sync.RWMutex
