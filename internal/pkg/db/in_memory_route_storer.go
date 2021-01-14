@@ -2,6 +2,8 @@ package db
 
 import (
 	"context"
+	"fmt"
+	"github.com/rs/zerolog/log"
 	"github.com/xmidt-org/ears/internal/pkg/app"
 	"github.com/xmidt-org/ears/pkg/route"
 	"sync"
@@ -41,6 +43,8 @@ func (s *InMemoryRouteStorer) GetAllRoutes(ctx context.Context) ([]route.Config,
 	for _, r := range s.routes {
 		routes = append(routes, *r)
 	}
+	log.Ctx(ctx).Debug().Str("op", "GetAllRoutes").Msg(fmt.Sprintf("getting %d routes", len(routes)))
+
 	return routes, nil
 }
 
@@ -53,6 +57,7 @@ func (s *InMemoryRouteStorer) setRoute(r *route.Config) {
 }
 
 func (s *InMemoryRouteStorer) SetRoute(ctx context.Context, r route.Config) error {
+	log.Ctx(ctx).Debug().Str("op", "SetRoute").Msg("storing route " + r.Id + " in memory")
 	s.lock.Lock()
 	defer s.lock.Unlock()
 
