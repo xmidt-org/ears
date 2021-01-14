@@ -16,7 +16,7 @@ package app
 
 import (
 	"context"
-	"errors"
+	"github.com/rs/zerolog/log"
 	"github.com/xmidt-org/ears/internal/pkg/plugin"
 	"github.com/xmidt-org/ears/pkg/route"
 	"sync"
@@ -38,17 +38,18 @@ func (r *DefaultRoutingTableManager) RemoveRoute(ctx context.Context, routeId st
 	if err != nil {
 		return err
 	}
-	//TODO: consider idempotency
 	liveRoute, ok := r.liveRouteMap[routeId]
 	if !ok {
-		return errors.New("no live route exists with ID " + routeId)
-	}
-	r.Lock()
-	delete(r.liveRouteMap, routeId)
-	r.Unlock()
-	err = liveRoute.Stop(ctx)
-	if err != nil {
-		return err
+		// no error to make this idempotent
+		//return errors.New("no live route exists with ID " + routeId)
+	} else {
+		r.Lock()
+		delete(r.liveRouteMap, routeId)
+		r.Unlock()
+		err = liveRoute.Stop(ctx)
+		if err != nil {
+			return err
+		}
 	}
 	return nil
 }
@@ -83,9 +84,10 @@ func (r *DefaultRoutingTableManager) AddRoute(ctx context.Context, routeConfig *
 	r.Unlock()
 	go func() {
 		//TODO: how to pass in a filter chain?
-		liveRoute.Run(ctx, receiver, nil, sender) // run is blocking
-		//TODO: what to do when Run() returns?
-		//TODO: what to do if Run() returns an error?
+		err = liveRoute.Run(ctx, receiver, nil, sender) // run is blocking
+		if err != nil {
+			log.Ctx(ctx).Error().Str("op", "AddRoute").Msg(err.Error())
+		}
 	}()
 	return nil
 }
