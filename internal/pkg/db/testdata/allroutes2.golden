@@ -5,6 +5,9 @@
     "appId": "myApp",
     "userId": "mchiang",
     "name": "differentName",
+    "source": {
+      "SomeField": "blah"
+    },
     "deliveryMode": "fire_and_forget"
   },
   {
@@ -13,6 +16,9 @@
     "appId": "myApp2",
     "userId": "bwolf",
     "name": "anotherName",
+    "source": {
+      "SomeField": "blah"
+    },
     "deliveryMode": "at_least_once"
   },
   {
@@ -21,6 +27,9 @@
     "appId": "myApp3",
     "userId": "tgattis",
     "name": "myName3",
+    "source": {
+      "SomeField": "blah"
+    },
     "deliveryMode": "at_least_once"
   }
 ]

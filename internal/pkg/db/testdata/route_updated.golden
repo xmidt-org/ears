@@ -4,5 +4,8 @@
   "appId": "myApp",
   "userId": "mchiang",
   "name": "differentName",
+  "source": {
+    "SomeField": "blah"
+  },
   "deliveryMode": "fire_and_forget"
 }
