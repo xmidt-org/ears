@@ -1,12 +1,12 @@
 {
-  "id" : "",
+  "id" : "r123",
   "orgId" : "comcast",
   "appId" : "xfi",
   "userId" : "boris",
-  "name" : "simpleRouteBlankID",
+  "name" : "simpleRoute8",
   "receiver" : {
     "plugin" : "debug",
-    "name" : "mydebug",
+    "name" : "mydebug8",
     "config" :
     {
       "rounds" : 1,
@@ -18,7 +18,7 @@
   },
   "sender" : {
     "plugin" : "debug",
-    "name" : "mydebug",
+    "name" : "mydebug8",
     "config" : {}
   },
   "deliveryMode" : "whoCares"
