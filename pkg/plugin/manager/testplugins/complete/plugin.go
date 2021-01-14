@@ -44,14 +44,6 @@ type plugin struct{}
 // == Custom Error Codes ==========================================================
 
 const (
-	// // ErrUnknown is returned when the error has not been properly categorized
-	// ErrUnknown earsplugin.ErrorCode = iota
-
-	// ErrNotInitialized is when the plugin is not properly initialized
-	ErrNotInitialized pkgplugin.ErrorCode = iota + 1
-)
-
-const (
 	Name     = "name"
 	Version  = "version"
 	CommitID = "commitID"

@@ -474,9 +474,9 @@ type newFiltererPluginMock struct {
 }
 
 func (m *newFiltererPluginMock) Name() string     { return "newFiltererPluginMock" }
-func (m *newFiltererPluginMock) Version() string  { return "version" }
-func (m *newFiltererPluginMock) Config() string   { return "config" }
-func (m *newFiltererPluginMock) CommitID() string { return "commitID" }
+func (m *newFiltererPluginMock) Version() string  { return "filterVersion" }
+func (m *newFiltererPluginMock) Config() string   { return "filterConfig" }
+func (m *newFiltererPluginMock) CommitID() string { return "filterCommitID" }
 func (m *newFiltererPluginMock) SupportedTypes() pkgplugin.Bitmask {
 	return pkgplugin.TypeFilter | pkgplugin.TypePluginer
 }
@@ -525,9 +525,9 @@ type newSendererPluginMock struct {
 }
 
 func (m *newSendererPluginMock) Name() string     { return "newSendererPluginMock" }
-func (m *newSendererPluginMock) Version() string  { return "version" }
-func (m *newSendererPluginMock) Config() string   { return "config" }
-func (m *newSendererPluginMock) CommitID() string { return "commitID" }
+func (m *newSendererPluginMock) Version() string  { return "senderVersion" }
+func (m *newSendererPluginMock) Config() string   { return "senderConfig" }
+func (m *newSendererPluginMock) CommitID() string { return "senderCommitID" }
 func (m *newSendererPluginMock) SupportedTypes() pkgplugin.Bitmask {
 	return pkgplugin.TypeSender | pkgplugin.TypePluginer
 }
@@ -565,9 +565,9 @@ type newReceivererPluginMock struct {
 }
 
 func (m *newReceivererPluginMock) Name() string     { return "newReceivererPluginMock" }
-func (m *newReceivererPluginMock) Version() string  { return "version" }
-func (m *newReceivererPluginMock) Config() string   { return "config" }
-func (m *newReceivererPluginMock) CommitID() string { return "commitID" }
+func (m *newReceivererPluginMock) Version() string  { return "senderVersion" }
+func (m *newReceivererPluginMock) Config() string   { return "senderConfig" }
+func (m *newReceivererPluginMock) CommitID() string { return "senderCommitID" }
 func (m *newReceivererPluginMock) SupportedTypes() pkgplugin.Bitmask {
 	return pkgplugin.TypeReceiver | pkgplugin.TypePluginer
 }

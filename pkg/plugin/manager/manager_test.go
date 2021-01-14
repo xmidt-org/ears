@@ -591,6 +591,8 @@ func getTestPluginSOPaths() ([]string, error) {
 
 // == Helper Structures ==============================================
 
+// TODO: These may be able to be deprecated due to the new plugin.Plugin
+// structure.
 type newPluginererMock struct {
 	plugin.NewPluginererMock
 }
