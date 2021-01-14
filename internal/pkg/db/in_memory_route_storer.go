@@ -2,8 +2,6 @@ package db
 
 import (
 	"context"
-	"fmt"
-	"github.com/rs/zerolog/log"
 	"github.com/xmidt-org/ears/internal/pkg/app"
 	"github.com/xmidt-org/ears/pkg/route"
 	"sync"
@@ -38,13 +36,10 @@ func (s *InMemoryRouteStorer) GetRoute(ctx context.Context, id string) (*route.C
 func (s *InMemoryRouteStorer) GetAllRoutes(ctx context.Context) ([]route.Config, error) {
 	s.lock.RLock()
 	defer s.lock.RUnlock()
-
-	routes := make([]route.Config, len(s.routes))
+	routes := make([]route.Config, 0)
 	for _, r := range s.routes {
 		routes = append(routes, *r)
 	}
-	log.Ctx(ctx).Debug().Str("op", "GetAllRoutes").Msg(fmt.Sprintf("getting %d routes", len(routes)))
-
 	return routes, nil
 }
 
@@ -57,10 +52,8 @@ func (s *InMemoryRouteStorer) setRoute(r *route.Config) {
 }
 
 func (s *InMemoryRouteStorer) SetRoute(ctx context.Context, r route.Config) error {
-	log.Ctx(ctx).Debug().Str("op", "SetRoute").Msg("storing route " + r.Id + " in memory")
 	s.lock.Lock()
 	defer s.lock.Unlock()
-
 	s.setRoute(&r)
 	return nil
 }
@@ -68,7 +61,6 @@ func (s *InMemoryRouteStorer) SetRoute(ctx context.Context, r route.Config) erro
 func (s *InMemoryRouteStorer) SetRoutes(ctx context.Context, routes []route.Config) error {
 	s.lock.Lock()
 	defer s.lock.Unlock()
-
 	for _, r := range routes {
 		s.setRoute(&r)
 	}
