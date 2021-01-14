@@ -6,9 +6,17 @@ curl -X PUT http://localhost:3000/ears/v1/routes --data @testdata/simpleRouteBla
 
 curl -X PUT http://localhost:3000/ears/v1/routes --data @testdata/simpleRouteBadName.json | jq .
 
+curl -X PUT http://localhost:3000/ears/v1/routes --data @testdata/simpleRouteBadPluginName.json | jq .
+
 curl -X PUT http://localhost:3000/ears/v1/routes --data @testdata/simpleRouteNoReceiver.json | jq .
 
 curl -X PUT http://localhost:3000/ears/v1/routes --data @testdata/simpleRouteNoSender.json | jq .
+
+curl -X PUT http://localhost:3000/ears/v1/routes --data @testdata/simpleRouteNoApp.json | jq .
+
+curl -X PUT http://localhost:3000/ears/v1/routes --data @testdata/simpleRouteNoOrg.json | jq .
+
+curl -X PUT http://localhost:3000/ears/v1/routes --data @testdata/simpleRouteNoUser.json | jq .
 
 echo "get routes"
 

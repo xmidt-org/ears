@@ -3,10 +3,10 @@
   "orgId" : "comcast",
   "appId" : "xfi",
   "userId" : "boris",
-  "name" : "simpleRoute8",
+  "name" : "simpleRoute",
   "receiver" : {
     "plugin" : "debug",
-    "name" : "mydebug",
+    "name" : "mydebug8",
     "config" :
     {
       "rounds" : 1,
@@ -18,7 +18,7 @@
   },
   "sender" : {
     "plugin" : "debug",
-    "name" : "mydebug",
+    "name" : "mydebug8",
     "config" : {}
   },
   "deliveryMode" : "whoCares"

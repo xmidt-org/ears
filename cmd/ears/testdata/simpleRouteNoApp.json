@@ -1,9 +1,8 @@
 {
   "id" : "r123",
   "orgId" : "comcast",
-  "appId" : "xfi",
   "userId" : "boris",
-  "name" : "simpleRoute8",
+  "name" : "simpleRoute",
   "receiver" : {
     "plugin" : "debug",
     "name" : "mydebug",
