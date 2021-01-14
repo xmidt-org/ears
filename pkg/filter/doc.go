@@ -13,10 +13,7 @@
 // limitations under the License.
 
 /*
-When creating a new filter, follow this pattern:
-
-NewConfig(config interface{}) (*Config, error)
-NewFilter(config interface{}) (*Filter, error)
-
+Please check out the _example filter for a pattern for creating
+new filters.
 */
 package filter

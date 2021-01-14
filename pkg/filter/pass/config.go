@@ -23,7 +23,7 @@ var _ config.Exporter = (*Config)(nil)
 var _ config.Importer = (*Config)(nil)
 
 func NewConfig(config interface{}) (*Config, error) {
-	return nil, nil
+	return &Config{}, nil
 }
 
 type Config struct{}
@@ -38,17 +38,21 @@ func (c *Config) String() string {
 }
 
 func (c *Config) YAML() (string, error) {
-	return "{}", nil
+	return config.ToYAML(c)
 }
 
 func (c *Config) FromYAML(in string) error {
-	return nil
+	return config.FromYAML(in, c)
 }
 
 func (c *Config) JSON() (string, error) {
-	return "{}", nil
+	return config.ToJSON(c)
 }
 
 func (c *Config) FromJSON(in string) error {
+	return config.FromJSON(in, c)
+}
+
+func (c *Config) Validate() error {
 	return nil
 }
