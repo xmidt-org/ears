@@ -56,7 +56,7 @@ func ProvidePluginManager(in PluginIn) (PluginOut, error) {
 	}
 
 	// Go ahead and register some default plugins
-	µ := func(a ...interface{}) []interface{} { return a }
+	toArr := func(a ...interface{}) []interface{} { return a }
 
 	defaultPlugins := []struct {
 		name   string
@@ -64,22 +64,22 @@ func ProvidePluginManager(in PluginIn) (PluginOut, error) {
 	}{
 		{
 			name:   "debug",
-			plugin: µ(debug.NewPluginVersion("debug", in.Version, in.Commit))[0].(pkgplugin.Pluginer),
+			plugin: toArr(debug.NewPluginVersion("debug", in.Version, in.Commit))[0].(pkgplugin.Pluginer),
 		},
 
 		{
 			name:   "match",
-			plugin: µ(match.NewPluginVersion("match", in.Version, in.Commit))[0].(pkgplugin.Pluginer),
+			plugin: toArr(match.NewPluginVersion("match", in.Version, in.Commit))[0].(pkgplugin.Pluginer),
 		},
 
 		{
 			name:   "pass",
-			plugin: µ(pass.NewPluginVersion("pass", in.Version, in.Commit))[0].(pkgplugin.Pluginer),
+			plugin: toArr(pass.NewPluginVersion("pass", in.Version, in.Commit))[0].(pkgplugin.Pluginer),
 		},
 
 		{
 			name:   "block",
-			plugin: µ(block.NewPluginVersion("block", in.Version, in.Commit))[0].(pkgplugin.Pluginer),
+			plugin: toArr(block.NewPluginVersion("block", in.Version, in.Commit))[0].(pkgplugin.Pluginer),
 		},
 	}
 
