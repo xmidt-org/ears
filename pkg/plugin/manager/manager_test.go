@@ -30,6 +30,7 @@ import (
 	"time"
 
 	"github.com/sebdah/goldie/v2"
+	"github.com/xmidt-org/ears/pkg/bit"
 	"github.com/xmidt-org/ears/pkg/filter"
 	"github.com/xmidt-org/ears/pkg/plugin"
 	"github.com/xmidt-org/ears/pkg/plugin/manager"
@@ -601,7 +602,7 @@ func (m *newPluginererMock) Name() string     { return "newPluginerMock" }
 func (m *newPluginererMock) Version() string  { return "pluginVersion" }
 func (m *newPluginererMock) CommitID() string { return "pluginCommitID" }
 func (m *newPluginererMock) Config() string   { return "pluginConfig" }
-func (m *newPluginererMock) SupportedTypes() plugin.Bitmask {
+func (m *newPluginererMock) SupportedTypes() bit.Mask {
 	return plugin.TypePluginer
 }
 
@@ -613,7 +614,7 @@ func (m *newReceivererMock) Name() string     { return "newReceivererMock" }
 func (m *newReceivererMock) Version() string  { return "receiverVersion" }
 func (m *newReceivererMock) CommitID() string { return "receiverCommitID" }
 func (m *newReceivererMock) Config() string   { return "receiverConfig" }
-func (m *newReceivererMock) SupportedTypes() plugin.Bitmask {
+func (m *newReceivererMock) SupportedTypes() bit.Mask {
 	return plugin.TypeReceiver | plugin.TypePluginer
 }
 
@@ -625,7 +626,7 @@ func (m *newSendererMock) Name() string     { return "newSendererMock" }
 func (m *newSendererMock) Version() string  { return "senderVersion" }
 func (m *newSendererMock) CommitID() string { return "senderCommitID" }
 func (m *newSendererMock) Config() string   { return "senderConfig" }
-func (m *newSendererMock) SupportedTypes() plugin.Bitmask {
+func (m *newSendererMock) SupportedTypes() bit.Mask {
 	return plugin.TypeSender | plugin.TypePluginer
 }
 
@@ -637,6 +638,6 @@ func (m *newFiltererMock) Name() string     { return "newFiltererMock" }
 func (m *newFiltererMock) Version() string  { return "filterVersion" }
 func (m *newFiltererMock) CommitID() string { return "filterCommitID" }
 func (m *newFiltererMock) Config() string   { return "filterConfig" }
-func (m *newFiltererMock) SupportedTypes() plugin.Bitmask {
+func (m *newFiltererMock) SupportedTypes() bit.Mask {
 	return plugin.TypeFilter | plugin.TypePluginer
 }

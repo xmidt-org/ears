@@ -12,20 +12,28 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package plugin
+package bit
 
-func (b *Bitmask) Set(flag Bitmask) {
+import "fmt"
+
+type Mask uint
+
+func (b *Mask) Set(flag Mask) {
 	*b = *b | flag
 }
 
-func (b *Bitmask) Clear(flag Bitmask) {
+func (b *Mask) Clear(flag Mask) {
 	*b = *b & ^flag
 }
 
-func (b *Bitmask) Flip(flag Bitmask) {
+func (b *Mask) Flip(flag Mask) {
 	*b ^= flag
 }
 
-func (b Bitmask) IsSet(flag Bitmask) bool {
+func (b Mask) IsSet(flag Mask) bool {
 	return b&flag != 0
+}
+
+func (b Mask) String() string {
+	return fmt.Sprintf("%b", b)
 }

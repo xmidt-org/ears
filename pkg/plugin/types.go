@@ -17,6 +17,7 @@ package plugin
 import (
 	"sync"
 
+	"github.com/xmidt-org/ears/pkg/bit"
 	"github.com/xmidt-org/ears/pkg/filter"
 	"github.com/xmidt-org/ears/pkg/receiver"
 	"github.com/xmidt-org/ears/pkg/sender"
@@ -51,13 +52,11 @@ type Pluginer interface {
 	Config() string
 
 	// A bitmask of supported types
-	SupportedTypes() Bitmask
+	SupportedTypes() bit.Mask
 }
 
-type Bitmask uint
-
 const (
-	TypePluginer Bitmask = 1 << iota
+	TypePluginer bit.Mask = 1 << iota
 	TypeReceiver
 	TypeSender
 	TypeFilter
@@ -81,7 +80,7 @@ type Plugin struct {
 	commitID string
 	config   interface{}
 
-	types Bitmask
+	types bit.Mask
 
 	hashPluginer HashFn
 	hashReceiver HashFn

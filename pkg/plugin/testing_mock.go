@@ -4,6 +4,7 @@
 package plugin
 
 import (
+	"github.com/xmidt-org/ears/pkg/bit"
 	"sync"
 )
 
@@ -199,7 +200,7 @@ var _ Pluginer = &PluginerMock{}
 //             NameFunc: func() string {
 // 	               panic("mock out the Name method")
 //             },
-//             SupportedTypesFunc: func() Bitmask {
+//             SupportedTypesFunc: func() bit.Mask {
 // 	               panic("mock out the SupportedTypes method")
 //             },
 //             VersionFunc: func() string {
@@ -222,7 +223,7 @@ type PluginerMock struct {
 	NameFunc func() string
 
 	// SupportedTypesFunc mocks the SupportedTypes method.
-	SupportedTypesFunc func() Bitmask
+	SupportedTypesFunc func() bit.Mask
 
 	// VersionFunc mocks the Version method.
 	VersionFunc func() string
@@ -331,7 +332,7 @@ func (mock *PluginerMock) NameCalls() []struct {
 }
 
 // SupportedTypes calls SupportedTypesFunc.
-func (mock *PluginerMock) SupportedTypes() Bitmask {
+func (mock *PluginerMock) SupportedTypes() bit.Mask {
 	if mock.SupportedTypesFunc == nil {
 		panic("PluginerMock.SupportedTypesFunc: method is nil but Pluginer.SupportedTypes was just called")
 	}

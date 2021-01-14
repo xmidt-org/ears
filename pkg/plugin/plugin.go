@@ -18,6 +18,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/xmidt-org/ears/pkg/bit"
 	"github.com/xmidt-org/ears/pkg/filter"
 	"github.com/xmidt-org/ears/pkg/hasher"
 	"github.com/xmidt-org/ears/pkg/receiver"
@@ -131,9 +132,9 @@ func (p *Plugin) WithSenderHasher(fn HashFn) error {
 	return p.setHasher(&p.hashSender, fn)
 }
 
-func (p *Plugin) SupportedTypes() Bitmask {
+func (p *Plugin) SupportedTypes() bit.Mask {
 	if p == nil {
-		return Bitmask(0)
+		return bit.Mask(0)
 	}
 
 	return p.types
