@@ -4,6 +4,12 @@ curl -X PUT http://localhost:3000/ears/v1/routes --data @testdata/simpleRoute.js
 
 curl -X PUT http://localhost:3000/ears/v1/routes --data @testdata/simpleRouteBlankID.json | jq .
 
+curl -X PUT http://localhost:3000/ears/v1/routes --data @testdata/simpleRouteBadName.json | jq .
+
+curl -X PUT http://localhost:3000/ears/v1/routes --data @testdata/simpleRouteNoReceiver.json | jq .
+
+curl -X PUT http://localhost:3000/ears/v1/routes --data @testdata/simpleRouteNoSender.json | jq .
+
 echo "get routes"
 
 curl -X GET http://localhost:3000/ears/v1/routes | jq .

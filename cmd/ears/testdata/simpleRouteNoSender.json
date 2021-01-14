@@ -1,9 +1,9 @@
 {
-  "id" : "",
+  "id" : "r123",
   "orgId" : "comcast",
   "appId" : "xfi",
   "userId" : "boris",
-  "name" : "simpleRouteBlankID",
+  "name" : "simpleRoute",
   "receiver" : {
     "plugin" : "debug",
     "name" : "mydebug",
@@ -15,11 +15,6 @@
         "foo" : "bar"
       }
     }
-  },
-  "sender" : {
-    "plugin" : "debug",
-    "name" : "mydebug",
-    "config" : {}
   },
   "deliveryMode" : "whoCares"
 }
