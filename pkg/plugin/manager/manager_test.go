@@ -598,9 +598,9 @@ type newPluginererMock struct {
 }
 
 func (m *newPluginererMock) Name() string     { return "newPluginerMock" }
-func (m *newPluginererMock) Version() string  { return "version" }
-func (m *newPluginererMock) CommitID() string { return "commitID" }
-func (m *newPluginererMock) Config() string   { return "config" }
+func (m *newPluginererMock) Version() string  { return "pluginVersion" }
+func (m *newPluginererMock) CommitID() string { return "pluginCommitID" }
+func (m *newPluginererMock) Config() string   { return "pluginConfig" }
 func (m *newPluginererMock) SupportedTypes() plugin.Bitmask {
 	return plugin.TypePluginer
 }
@@ -610,9 +610,9 @@ type newReceivererMock struct {
 }
 
 func (m *newReceivererMock) Name() string     { return "newReceivererMock" }
-func (m *newReceivererMock) Version() string  { return "version" }
-func (m *newReceivererMock) CommitID() string { return "commitID" }
-func (m *newReceivererMock) Config() string   { return "config" }
+func (m *newReceivererMock) Version() string  { return "receiverVersion" }
+func (m *newReceivererMock) CommitID() string { return "receiverCommitID" }
+func (m *newReceivererMock) Config() string   { return "receiverConfig" }
 func (m *newReceivererMock) SupportedTypes() plugin.Bitmask {
 	return plugin.TypeReceiver | plugin.TypePluginer
 }
@@ -622,9 +622,9 @@ type newSendererMock struct {
 }
 
 func (m *newSendererMock) Name() string     { return "newSendererMock" }
-func (m *newSendererMock) Version() string  { return "version" }
-func (m *newSendererMock) CommitID() string { return "commitID" }
-func (m *newSendererMock) Config() string   { return "config" }
+func (m *newSendererMock) Version() string  { return "senderVersion" }
+func (m *newSendererMock) CommitID() string { return "senderCommitID" }
+func (m *newSendererMock) Config() string   { return "senderConfig" }
 func (m *newSendererMock) SupportedTypes() plugin.Bitmask {
 	return plugin.TypeSender | plugin.TypePluginer
 }
@@ -634,9 +634,9 @@ type newFiltererMock struct {
 }
 
 func (m *newFiltererMock) Name() string     { return "newFiltererMock" }
-func (m *newFiltererMock) Version() string  { return "version" }
-func (m *newFiltererMock) CommitID() string { return "commitID" }
-func (m *newFiltererMock) Config() string   { return "config" }
+func (m *newFiltererMock) Version() string  { return "filterVersion" }
+func (m *newFiltererMock) CommitID() string { return "filterCommitID" }
+func (m *newFiltererMock) Config() string   { return "filterConfig" }
 func (m *newFiltererMock) SupportedTypes() plugin.Bitmask {
 	return plugin.TypeFilter | plugin.TypePluginer
 }
