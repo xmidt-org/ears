@@ -9,11 +9,12 @@
     "name" : "mydebug",
     "config" :
     {
-      "rounds" : 1,
-      "intervalMS" : 250,
+      "rounds" : 10,
+      "intervalMs" : 250,
       "payload" : {
         "foo" : "bar"
-      }
+      },
+      "maxHistory": 100
     }
   },
   "deliveryMode" : "whoCares"
