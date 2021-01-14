@@ -16,8 +16,10 @@ package app
 
 import (
 	"context"
+	"errors"
 	"github.com/rs/zerolog/log"
 	"github.com/xmidt-org/ears/internal/pkg/plugin"
+	"github.com/xmidt-org/ears/pkg/filter"
 	"github.com/xmidt-org/ears/pkg/route"
 	"sync"
 )
@@ -68,8 +70,7 @@ func (r *DefaultRoutingTableManager) AddRoute(ctx context.Context, routeConfig *
 	if err != nil {
 		return err
 	}
-	//buf, _ := json.Marshal(routeConfig)
-	//fmt.Printf("%v\n", string(buf))
+	// set up receiver and sender
 	receiver, err := r.pluginMgr.RegisterReceiver(ctx, routeConfig.Receiver.Plugin, routeConfig.Receiver.Name, routeConfig.Receiver.Config)
 	if err != nil {
 		return err
@@ -78,13 +79,30 @@ func (r *DefaultRoutingTableManager) AddRoute(ctx context.Context, routeConfig *
 	if err != nil {
 		return err
 	}
+	// set up filter chain
+	var filterChain filter.Chain
+	if routeConfig.FilterChain != nil {
+		for _, f := range routeConfig.FilterChain {
+			filter, err := r.pluginMgr.RegisterFilter(ctx, f.Plugin, f.Name, f.Config)
+			filterChain.Add(filter)
+			if err != nil {
+				return err
+			}
+		}
+	}
+	filters := filterChain.Filterers()
+	var firstFilter filter.Filterer
+	if len(filters) > 0 {
+		firstFilter = filters[0]
+	}
+	// create live route
 	liveRoute := &route.Route{}
 	r.Lock()
 	r.liveRouteMap[routeConfig.Id] = liveRoute
 	r.Unlock()
 	go func() {
-		//TODO: how to pass in a filter chain?
-		err = liveRoute.Run(ctx, receiver, nil, sender) // run is blocking
+		//TODO: review setup of filter chain
+		err = liveRoute.Run(ctx, receiver, firstFilter, sender) // run is blocking
 		if err != nil {
 			log.Ctx(ctx).Error().Str("op", "AddRoute").Msg(err.Error())
 		}
@@ -94,9 +112,12 @@ func (r *DefaultRoutingTableManager) AddRoute(ctx context.Context, routeConfig *
 
 func (r *DefaultRoutingTableManager) GetRoute(ctx context.Context, routeId string) (*route.Config, error) {
 	route, err := r.storageMgr.GetRoute(ctx, routeId)
-	//TODO: how do we treat a non-existent route? is it error worthy?
 	if err != nil {
 		return nil, err
+	}
+	if route == nil {
+		//TODO: create error type
+		return nil, errors.New("no route with ID " + routeId)
 	}
 	return route, nil
 }
