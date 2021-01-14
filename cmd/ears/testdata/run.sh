@@ -30,6 +30,10 @@ echo "get routes"
 
 curl -X GET http://localhost:3000/ears/v1/routes | jq .
 
+curl -X GET http://localhost:3000/ears/v1/routes/r123 | jq .
+
+curl -X GET http://localhost:3000/ears/v1/routes/foo | jq .
+
 echo "delete routes"
 
 curl -X DELETE http://localhost:3000/ears/v1/routes/2abe4d167883f594f7b48ee7e1d247ac  | jq .
