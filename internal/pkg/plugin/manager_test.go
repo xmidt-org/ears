@@ -22,6 +22,7 @@ import (
 	"testing"
 
 	"github.com/xmidt-org/ears/internal/pkg/plugin"
+	"github.com/xmidt-org/ears/pkg/bit"
 	pkgevent "github.com/xmidt-org/ears/pkg/event"
 	pkgfilter "github.com/xmidt-org/ears/pkg/filter"
 	"github.com/xmidt-org/ears/pkg/hasher"
@@ -477,7 +478,7 @@ func (m *newFiltererPluginMock) Name() string     { return "newFiltererPluginMoc
 func (m *newFiltererPluginMock) Version() string  { return "filterVersion" }
 func (m *newFiltererPluginMock) Config() string   { return "filterConfig" }
 func (m *newFiltererPluginMock) CommitID() string { return "filterCommitID" }
-func (m *newFiltererPluginMock) SupportedTypes() pkgplugin.Bitmask {
+func (m *newFiltererPluginMock) SupportedTypes() bit.Mask {
 	return pkgplugin.TypeFilter | pkgplugin.TypePluginer
 }
 
@@ -528,7 +529,7 @@ func (m *newSendererPluginMock) Name() string     { return "newSendererPluginMoc
 func (m *newSendererPluginMock) Version() string  { return "senderVersion" }
 func (m *newSendererPluginMock) Config() string   { return "senderConfig" }
 func (m *newSendererPluginMock) CommitID() string { return "senderCommitID" }
-func (m *newSendererPluginMock) SupportedTypes() pkgplugin.Bitmask {
+func (m *newSendererPluginMock) SupportedTypes() bit.Mask {
 	return pkgplugin.TypeSender | pkgplugin.TypePluginer
 }
 
@@ -568,7 +569,7 @@ func (m *newReceivererPluginMock) Name() string     { return "newReceivererPlugi
 func (m *newReceivererPluginMock) Version() string  { return "senderVersion" }
 func (m *newReceivererPluginMock) Config() string   { return "senderConfig" }
 func (m *newReceivererPluginMock) CommitID() string { return "senderCommitID" }
-func (m *newReceivererPluginMock) SupportedTypes() pkgplugin.Bitmask {
+func (m *newReceivererPluginMock) SupportedTypes() bit.Mask {
 	return pkgplugin.TypeReceiver | pkgplugin.TypePluginer
 }
 
