@@ -80,7 +80,7 @@ func (r *DefaultRoutingTableManager) AddRoute(ctx context.Context, routeConfig *
 		return err
 	}
 	// set up filter chain
-	var filterChain filter.Chain
+	filterChain := &filter.Chain{}
 	if routeConfig.FilterChain != nil {
 		for _, f := range routeConfig.FilterChain {
 			filter, err := r.pluginMgr.RegisterFilter(ctx, f.Plugin, f.Name, f.Config)
@@ -90,19 +90,15 @@ func (r *DefaultRoutingTableManager) AddRoute(ctx context.Context, routeConfig *
 			}
 		}
 	}
-	filters := filterChain.Filterers()
-	var firstFilter filter.Filterer
-	if len(filters) > 0 {
-		firstFilter = filters[0]
-	}
 	// create live route
 	liveRoute := &route.Route{}
 	r.Lock()
 	r.liveRouteMap[routeConfig.Id] = liveRoute
 	r.Unlock()
 	go func() {
-		//TODO: review setup of filter chain
-		err = liveRoute.Run(ctx, receiver, firstFilter, sender) // run is blocking
+		sctx := context.Background()
+		//TODO: use application context here? see issue #51
+		err = liveRoute.Run(sctx, receiver, filterChain, sender) // run is blocking
 		if err != nil {
 			log.Ctx(ctx).Error().Str("op", "AddRoute").Msg(err.Error())
 		}

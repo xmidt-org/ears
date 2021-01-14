@@ -30,8 +30,8 @@
       "plugin" : "match",
       "name" : "mymatch",
       "config" : {
-        "mode" : "ModeAllow",
-        "matcher" : "MatcherRegex",
+        "mode" : "allow",
+        "matcher" : "regex",
         "pattern" : "^.*$"
       }
     }
