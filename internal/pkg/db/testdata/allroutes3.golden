@@ -5,6 +5,9 @@
     "appId": "myApp3",
     "userId": "tgattis",
     "name": "myName3",
+    "source": {
+      "SomeField": "blah"
+    },
     "deliveryMode": "at_least_once"
   }
 ]

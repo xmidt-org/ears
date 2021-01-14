@@ -80,6 +80,11 @@ var myErr *MyError
 if err.As(&myErr)
 ```
 
+The `Error()` string should be in the following format:
+```
+MyError (code=42, k1=v1, k2=v2): wrapped Err.Error() goes here
+```
+
 Avoid this:
 ```go
 //generic error type, not useful
@@ -89,7 +94,7 @@ return &fmt.Errorf("something is wrong")
 if err.Error() == "something is wrong"
 ```
 
-What about this?
+Avoid sentinel errors as they are deprecated:
 ```go
 SomethingIsWrong = errors.New("something is wrong")
 

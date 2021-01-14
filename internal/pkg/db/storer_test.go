@@ -4,17 +4,35 @@ import (
 	"context"
 	"encoding/json"
 	"github.com/sebdah/goldie/v2"
+	"github.com/spf13/viper"
+	"github.com/xmidt-org/ears/internal/pkg/app"
 	"sort"
 	"testing"
 	"time"
 
 	"github.com/xmidt-org/ears/internal/pkg/db"
+	"github.com/xmidt-org/ears/internal/pkg/db/dynamo"
 	"github.com/xmidt-org/ears/pkg/route"
 )
 
 func TestInMemoryRouteStorer(t *testing.T) {
 	s := db.NewInMemoryRouteStorer(nil)
+	testRouteStorer(s, t)
+}
 
+func dynamoDbConfig() app.Config {
+	v := viper.New()
+	v.Set("ears.db.region", "us-west-2")
+	v.Set("ears.db.tableName", "gears.dev.ears")
+	return v
+}
+
+//
+func TestDynamoRouteStorer(t *testing.T) {
+	s, err := dynamo.NewDynamoDbStorer(dynamoDbConfig())
+	if err != nil {
+		t.Fatalf("Error instantiate dynamodb %s\n", err.Error())
+	}
 	testRouteStorer(s, t)
 }
 
@@ -35,7 +53,10 @@ var testRouteConfig2 = `
   "appId": "myApp",
   "userId": "mchiang",
   "name": "differentName",
-  "deliveryMode": "fire_and_forget"
+  "deliveryMode": "fire_and_forget",
+  "source": {
+    "someField": "blah"
+  }
 }
 `
 
@@ -46,7 +67,10 @@ var testRouteConfig3 = `
   "appId": "myApp2",
   "userId": "bwolf",
   "name": "myName2",
-  "deliveryMode": "at_least_once"
+  "deliveryMode": "at_least_once",
+  "source": {
+    "someField": "blah"
+  }
 }
 `
 
@@ -58,7 +82,10 @@ var testRouteConfig4 = `
 	  "appId": "myApp2",
 	  "userId": "bwolf",
 	  "name": "anotherName",
-	  "deliveryMode": "at_least_once"
+	  "deliveryMode": "at_least_once",
+	  "source": {
+		"someField": "blah"
+	  }
 	},
 	{
 	  "id": "test3",
@@ -66,7 +93,10 @@ var testRouteConfig4 = `
 	  "appId": "myApp3",
 	  "userId": "tgattis",
 	  "name": "myName3",
-	  "deliveryMode": "at_least_once"
+	  "deliveryMode": "at_least_once",
+	  "source": {
+		"someField": "blah"
+	  }
 	}
 ]
 `
@@ -75,10 +105,11 @@ func testRouteStorer(s route.RouteStorer, t *testing.T) {
 	ctx := context.Background()
 
 	//start from a clean slate
-	err := s.DeleteAllRoutes(ctx)
+	err := s.DeleteRoutes(ctx, []string{"test", "test2", "test3"})
 	if err != nil {
 		t.Fatalf("DeleteAllRoutes error: %s\n", err.Error())
 	}
+	time.Sleep(500 * time.Millisecond)
 
 	r, err := s.GetRoute(ctx, "does_not_exist")
 	if err != nil {
@@ -102,6 +133,9 @@ func testRouteStorer(s route.RouteStorer, t *testing.T) {
 	r, err = s.GetRoute(ctx, "test")
 	if err != nil {
 		t.Fatalf("GetRoute test error: %s\n", err.Error())
+	}
+	if r == nil {
+		t.Fatalf("GetRoute return nil")
 	}
 
 	//confirm create and modified time are set and they are equal

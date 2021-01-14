@@ -89,11 +89,3 @@ func (s *InMemoryRouteStorer) DeleteRoutes(ctx context.Context, ids []string) er
 	}
 	return nil
 }
-
-func (s *InMemoryRouteStorer) DeleteAllRoutes(ctx context.Context) error {
-	s.lock.Lock()
-	defer s.lock.Unlock()
-
-	s.routes = make(map[string]*route.Config)
-	return nil
-}
