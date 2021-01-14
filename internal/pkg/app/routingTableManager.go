@@ -54,7 +54,16 @@ func (r *DefaultRoutingTableManager) RemoveRoute(ctx context.Context, routeId st
 }
 
 func (r *DefaultRoutingTableManager) AddRoute(ctx context.Context, routeConfig *route.Config) error {
-	err := r.storageMgr.SetRoute(ctx, *routeConfig)
+	// use hashed ID if none is provided - this ID will be returned by the AddRoute REST API
+	if routeConfig.Id == "" {
+		routeConfig.Id = routeConfig.Hash(ctx)
+	}
+	err := routeConfig.Validate(ctx)
+	if err != nil {
+		return err
+	}
+	// currently storage layer handles created and updated timestamps
+	err = r.storageMgr.SetRoute(ctx, *routeConfig)
 	if err != nil {
 		return err
 	}
@@ -69,7 +78,6 @@ func (r *DefaultRoutingTableManager) AddRoute(ctx context.Context, routeConfig *
 		return err
 	}
 	liveRoute := &route.Route{}
-	//TODO: what about hash generation and validation?
 	r.Lock()
 	r.liveRouteMap[routeConfig.Id] = liveRoute
 	r.Unlock()
@@ -84,7 +92,7 @@ func (r *DefaultRoutingTableManager) AddRoute(ctx context.Context, routeConfig *
 
 func (r *DefaultRoutingTableManager) GetRoute(ctx context.Context, routeId string) (*route.Config, error) {
 	route, err := r.storageMgr.GetRoute(ctx, routeId)
-	//TODO: hpow do we treat a non-existent route? is it error worthy?
+	//TODO: how do we treat a non-existent route? is it error worthy?
 	if err != nil {
 		return nil, err
 	}

@@ -1,0 +1,25 @@
+{
+  "id" : "",
+  "orgId" : "comcast",
+  "appId" : "xfi",
+  "userId" : "boris",
+  "name" : "simpleRoute",
+  "receiver" : {
+    "plugin" : "debug",
+    "name" : "mydebug",
+    "config" :
+    {
+      "rounds" : 1,
+      "intervalMS" : 250,
+      "payload" : {
+        "foo" : "bar"
+      }
+    }
+  },
+  "sender" : {
+    "plugin" : "debug",
+    "name" : "mydebug",
+    "config" : {}
+  },
+  "deliveryMode" : "whoCares"
+}
