@@ -3,6 +3,7 @@ package db_test
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"github.com/sebdah/goldie/v2"
 	"sort"
 	"testing"
@@ -99,11 +100,12 @@ func testRouteStorer(s route.RouteStorer, t *testing.T) {
 	time.Sleep(500 * time.Millisecond)
 
 	r, err := s.GetRoute(ctx, "does_not_exist")
-	if err != nil {
-		t.Fatalf("GetRoute does_not_exist error: %s\n", err.Error())
+	if err == nil {
+		t.Fatalf("Expect an error but instead get no error")
 	}
-	if r != nil {
-		t.Fatalf("Expect empty route but instead get a route")
+	var routeNotFoundErr *route.RouteNotFoundError
+	if !errors.As(err, &routeNotFoundErr) {
+		t.Fatalf("GetRoute does_not_exist unexpected error: %s\n", err.Error())
 	}
 
 	var config route.Config
@@ -120,9 +122,6 @@ func testRouteStorer(s route.RouteStorer, t *testing.T) {
 	r, err = s.GetRoute(ctx, "test")
 	if err != nil {
 		t.Fatalf("GetRoute test error: %s\n", err.Error())
-	}
-	if r == nil {
-		t.Fatalf("GetRoute return nil")
 	}
 
 	//confirm create and modified time are set and they are equal
@@ -227,11 +226,11 @@ func testRouteStorer(s route.RouteStorer, t *testing.T) {
 	}
 
 	r, err = s.GetRoute(ctx, "test2")
-	if err != nil {
-		t.Fatalf("GetRoute test2 error: %s\n", err.Error())
+	if err == nil {
+		t.Fatalf("GetRoute test2 Expect an error but instead get no error")
 	}
-	if r != nil {
-		t.Fatalf("Expect empty route but instead get a route")
+	if !errors.As(err, &routeNotFoundErr) {
+		t.Fatalf("GetRoute test2 unexpected error: %s\n", err.Error())
 	}
 
 	routes, err = s.GetAllRoutes(ctx)

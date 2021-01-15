@@ -16,7 +16,6 @@ package app
 
 import (
 	"context"
-	"errors"
 	"github.com/rs/zerolog/log"
 	"github.com/xmidt-org/ears/internal/pkg/plugin"
 	"github.com/xmidt-org/ears/pkg/filter"
@@ -111,11 +110,7 @@ func (r *DefaultRoutingTableManager) GetRoute(ctx context.Context, routeId strin
 	if err != nil {
 		return nil, err
 	}
-	if route == nil {
-		//TODO: create error type
-		return nil, errors.New("no route with ID " + routeId)
-	}
-	return route, nil
+	return &route, nil
 }
 
 func (r *DefaultRoutingTableManager) GetAllRoutes(ctx context.Context) ([]route.Config, error) {

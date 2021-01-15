@@ -147,8 +147,8 @@ func (pc *Config) Hash(ctx context.Context) string {
 //All route operations are synchronous. The storer should respect the cancellation
 //from the context and cancel its operation gracefully when desired.
 type RouteStorer interface {
-	//If route is not found, the function should return a nil config without any error
-	GetRoute(context.Context, string) (*Config, error)
+	//If route is not found, the function should return a item not found error
+	GetRoute(context.Context, string) (Config, error)
 	GetAllRoutes(context.Context) ([]Config, error)
 
 	//SetRoute will add the route if it new or update the route if
