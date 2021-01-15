@@ -23,3 +23,11 @@ func (e *InvalidRouteError) Unwrap() error {
 func (e *InvalidRouteError) Error() string {
 	return errs.String("InvalidRouteError", nil, e.Err)
 }
+
+type RouteNotFoundError struct {
+	RouteId string
+}
+
+func (e *RouteNotFoundError) Error() string {
+	return errs.String("RouteNotFoundError", map[string]interface{}{"routeId": e.RouteId}, nil)
+}
