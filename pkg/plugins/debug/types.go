@@ -27,37 +27,27 @@ import (
 	"github.com/xorcare/pointer"
 )
 
-var _ pkgplugin.Pluginer = (*plugin)(nil)
-var _ pkgplugin.NewPluginerer = (*plugin)(nil)
-var _ receiver.NewReceiverer = (*plugin)(nil)
-var _ sender.NewSenderer = (*plugin)(nil)
-
 var _ sender.Sender = (*Sender)(nil)
 var _ receiver.Receiver = (*Receiver)(nil)
 
 var (
-	Name    = "debug"
-	Version = "v0.0.0"
-	Commit  = ""
+	Name     = "debug"
+	Version  = "v0.0.0"
+	CommitID = ""
 )
 
-func NewPlugin() *plugin {
-	return NewPluginVersion(Name, Version, Commit)
+func NewPlugin() (*pkgplugin.Plugin, error) {
+	return NewPluginVersion(Name, Version, CommitID)
 }
 
-func NewPluginVersion(name string, version string, commit string) *plugin {
-	return &plugin{
-		name:    name,
-		version: version,
-		commit:  commit,
-	}
-}
-
-type plugin struct {
-	name    string
-	version string
-	commit  string
-	config  interface{}
+func NewPluginVersion(name string, version string, commitID string) (*pkgplugin.Plugin, error) {
+	return pkgplugin.NewPlugin(
+		pkgplugin.WithName(name),
+		pkgplugin.WithVersion(version),
+		pkgplugin.WithCommitID(commitID),
+		pkgplugin.WithNewReceiver(NewReceiver),
+		pkgplugin.WithNewSender(NewSender),
+	)
 }
 
 var DefaultReceiverConfig = ReceiverConfig{

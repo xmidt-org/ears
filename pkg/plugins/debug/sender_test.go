@@ -67,6 +67,10 @@ func TestSender(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), totalTimeout)
 	defer cancel()
 
+	a := NewWithT(t)
+	p, err := debug.NewPlugin()
+	a.Expect(err).To(BeNil())
+
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			ctx, cancel := context.WithTimeout(ctx, caseTimeout)
@@ -79,7 +83,7 @@ func TestSender(t *testing.T) {
 			tc.config.Writer = w
 			tc.config = tc.config.WithDefaults()
 
-			s, err := debug.NewPlugin().NewSender(tc.config)
+			s, err := p.NewSender(tc.config)
 			a.Expect(err).To(BeNil())
 
 			for i := 0; i < tc.numMessages; i++ {
