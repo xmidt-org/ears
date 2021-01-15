@@ -73,6 +73,10 @@ func TestReceiver(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), totalTimeout)
 	defer cancel()
 
+	a := NewWithT(t)
+	p, err := debug.NewPlugin()
+	a.Expect(err).To(BeNil())
+
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			ctx, cancel := context.WithTimeout(ctx, caseTimeout)
@@ -83,7 +87,7 @@ func TestReceiver(t *testing.T) {
 			// Make sure we fill in all values
 			tc.config = tc.config.WithDefaults()
 
-			r, err := debug.NewPlugin().NewReceiver(tc.config)
+			r, err := p.NewReceiver(tc.config)
 			a.Expect(err).To(BeNil())
 
 			events := []event.Event{}

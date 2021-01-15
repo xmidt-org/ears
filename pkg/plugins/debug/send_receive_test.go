@@ -20,26 +20,24 @@ import (
 	"testing"
 	"time"
 
+	. "github.com/onsi/gomega"
 	"github.com/xmidt-org/ears/pkg/plugins/debug"
 )
 
 func TestSendReceive(t *testing.T) {
-	r, err := debug.NewPlugin().NewReceiver("")
-	if err != nil {
-		t.Error(err)
-	}
+	a := NewWithT(t)
+	p, err := debug.NewPlugin()
+	a.Expect(err).To(BeNil())
+
+	r, err := p.NewReceiver("")
+	a.Expect(err).To(BeNil())
 
 	ctx, cancel := context.WithTimeout(context.Background(), 12*time.Second)
 	defer cancel()
 
-	s, err := debug.NewPlugin().NewSender("")
-	if err != nil {
-		t.Error(err)
-	}
+	s, err := p.NewSender("")
+	a.Expect(err).To(BeNil())
 
 	err = r.Receive(ctx, s.Send)
-
-	if err != nil {
-		t.Error(err)
-	}
+	a.Expect(err).To(BeNil())
 }

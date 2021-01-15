@@ -16,12 +16,9 @@ package main
 
 import (
 	"context"
-	"fmt"
 
-	"github.com/ghodss/yaml"
 	"github.com/xmidt-org/ears/pkg/filter"
-	"github.com/xmidt-org/ears/pkg/hasher"
-	earsplugin "github.com/xmidt-org/ears/pkg/plugin"
+	pkgplugin "github.com/xmidt-org/ears/pkg/plugin"
 
 	"github.com/xmidt-org/ears/pkg/event"
 )
@@ -30,91 +27,43 @@ func main() {
 	// required for `go build` to not fail
 }
 
-var Plugin = plugin{}
+var Plugin, PluginErr = NewPlugin()
 
 // for golangci-lint
 var _ = Plugin
+var _ = PluginErr
 
-var _ earsplugin.NewPluginerer = (*plugin)(nil)
-var _ earsplugin.Pluginer = (*plugin)(nil)
-var _ filter.NewFilterer = (*plugin)(nil)
 var _ filter.Filterer = (*plugin)(nil)
 
-// Plugin ============================================================
+type plugin struct{}
 
 const (
-	defaultPluginName    = "mock"
-	defaultPluginVersion = "v0.0.0"
+	Name     = "name"
+	Version  = "version"
+	CommitID = "commitID"
 )
 
-type PluginConfig struct {
-	Name    string `yaml:"name"`
-	Version string `yaml:"version"`
+// ===================================================
 
-	source interface{}
+func NewPlugin() (*pkgplugin.Plugin, error) {
+	return NewPluginVersion(Name, Version, CommitID)
 }
 
-type plugin struct {
-	config PluginConfig
-}
-
-func (p *plugin) NewPluginer(config interface{}) (earsplugin.Pluginer, error) {
-	return p.new(config)
-}
-
-func (p *plugin) PluginerHash(config interface{}) (string, error) {
-	return hasher.Hash(config), nil
-}
-
-func (p *plugin) Name() string {
-	return p.config.Name
-}
-
-func (p *plugin) Version() string {
-	return p.config.Version
-}
-
-func (p *plugin) Config() string {
-	cfg, err := yaml.Marshal(p.config)
-
-	if err != nil {
-		return "error: |\n  " + fmt.Sprint(err)
-	}
-
-	return string(cfg)
+func NewPluginVersion(name string, version string, commitID string) (*pkgplugin.Plugin, error) {
+	return pkgplugin.NewPlugin(
+		pkgplugin.WithName(name),
+		pkgplugin.WithVersion(version),
+		pkgplugin.WithCommitID(commitID),
+		pkgplugin.WithNewFilterer(NewFilterer),
+	)
 }
 
 // Filterer ============================================================
 
-func (p *plugin) NewFilterer(config interface{}) (filter.Filterer, error) {
-	return p, nil
-}
-
-func (p *plugin) FiltererHash(config interface{}) (string, error) {
-	return hasher.Hash(config), nil
+func NewFilterer(config interface{}) (filter.Filterer, error) {
+	return &plugin{}, nil
 }
 
 func (p *plugin) Filter(ctx context.Context, e event.Event) ([]event.Event, error) {
 	return nil, nil
-}
-
-// internal helpers ============================================================
-
-func (p *plugin) new(config interface{}) (earsplugin.Pluginer, error) {
-	cfg := PluginConfig{
-		Name:    defaultPluginName,
-		Version: defaultPluginVersion,
-		source:  config,
-	}
-
-	c, ok := config.(string)
-	if ok && c != "" {
-		err := yaml.Unmarshal([]byte(c), &cfg)
-		if err != nil {
-			return nil, &earsplugin.InvalidConfigError{Err: err}
-		}
-	}
-
-	return &plugin{config: cfg}, nil
-
 }

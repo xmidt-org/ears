@@ -4,6 +4,7 @@
 package plugin
 
 import (
+	"github.com/xmidt-org/ears/pkg/bit"
 	"sync"
 )
 
@@ -190,11 +191,17 @@ var _ Pluginer = &PluginerMock{}
 //
 //         // make and configure a mocked Pluginer
 //         mockedPluginer := &PluginerMock{
+//             CommitIDFunc: func() string {
+// 	               panic("mock out the CommitID method")
+//             },
 //             ConfigFunc: func() string {
 // 	               panic("mock out the Config method")
 //             },
 //             NameFunc: func() string {
 // 	               panic("mock out the Name method")
+//             },
+//             SupportedTypesFunc: func() bit.Mask {
+// 	               panic("mock out the SupportedTypes method")
 //             },
 //             VersionFunc: func() string {
 // 	               panic("mock out the Version method")
@@ -206,30 +213,70 @@ var _ Pluginer = &PluginerMock{}
 //
 //     }
 type PluginerMock struct {
+	// CommitIDFunc mocks the CommitID method.
+	CommitIDFunc func() string
+
 	// ConfigFunc mocks the Config method.
 	ConfigFunc func() string
 
 	// NameFunc mocks the Name method.
 	NameFunc func() string
 
+	// SupportedTypesFunc mocks the SupportedTypes method.
+	SupportedTypesFunc func() bit.Mask
+
 	// VersionFunc mocks the Version method.
 	VersionFunc func() string
 
 	// calls tracks calls to the methods.
 	calls struct {
+		// CommitID holds details about calls to the CommitID method.
+		CommitID []struct {
+		}
 		// Config holds details about calls to the Config method.
 		Config []struct {
 		}
 		// Name holds details about calls to the Name method.
 		Name []struct {
 		}
+		// SupportedTypes holds details about calls to the SupportedTypes method.
+		SupportedTypes []struct {
+		}
 		// Version holds details about calls to the Version method.
 		Version []struct {
 		}
 	}
-	lockConfig  sync.RWMutex
-	lockName    sync.RWMutex
-	lockVersion sync.RWMutex
+	lockCommitID       sync.RWMutex
+	lockConfig         sync.RWMutex
+	lockName           sync.RWMutex
+	lockSupportedTypes sync.RWMutex
+	lockVersion        sync.RWMutex
+}
+
+// CommitID calls CommitIDFunc.
+func (mock *PluginerMock) CommitID() string {
+	if mock.CommitIDFunc == nil {
+		panic("PluginerMock.CommitIDFunc: method is nil but Pluginer.CommitID was just called")
+	}
+	callInfo := struct {
+	}{}
+	mock.lockCommitID.Lock()
+	mock.calls.CommitID = append(mock.calls.CommitID, callInfo)
+	mock.lockCommitID.Unlock()
+	return mock.CommitIDFunc()
+}
+
+// CommitIDCalls gets all the calls that were made to CommitID.
+// Check the length with:
+//     len(mockedPluginer.CommitIDCalls())
+func (mock *PluginerMock) CommitIDCalls() []struct {
+} {
+	var calls []struct {
+	}
+	mock.lockCommitID.RLock()
+	calls = mock.calls.CommitID
+	mock.lockCommitID.RUnlock()
+	return calls
 }
 
 // Config calls ConfigFunc.
@@ -281,6 +328,32 @@ func (mock *PluginerMock) NameCalls() []struct {
 	mock.lockName.RLock()
 	calls = mock.calls.Name
 	mock.lockName.RUnlock()
+	return calls
+}
+
+// SupportedTypes calls SupportedTypesFunc.
+func (mock *PluginerMock) SupportedTypes() bit.Mask {
+	if mock.SupportedTypesFunc == nil {
+		panic("PluginerMock.SupportedTypesFunc: method is nil but Pluginer.SupportedTypes was just called")
+	}
+	callInfo := struct {
+	}{}
+	mock.lockSupportedTypes.Lock()
+	mock.calls.SupportedTypes = append(mock.calls.SupportedTypes, callInfo)
+	mock.lockSupportedTypes.Unlock()
+	return mock.SupportedTypesFunc()
+}
+
+// SupportedTypesCalls gets all the calls that were made to SupportedTypes.
+// Check the length with:
+//     len(mockedPluginer.SupportedTypesCalls())
+func (mock *PluginerMock) SupportedTypesCalls() []struct {
+} {
+	var calls []struct {
+	}
+	mock.lockSupportedTypes.RLock()
+	calls = mock.calls.SupportedTypes
+	mock.lockSupportedTypes.RUnlock()
 	return calls
 }
 

@@ -16,6 +16,7 @@ package manager
 
 import (
 	"fmt"
+	"reflect"
 	"sync"
 
 	goplugin "plugin"
@@ -74,7 +75,31 @@ func (m *manager) LoadPlugin(config Config) (plugin.Pluginer, error) {
 		}
 	}
 
-	newer, ok := newerVar.(plugin.NewPluginerer)
+	// Background:
+	//   The `Plugin` variable could be a struct or a pointer to
+	//   a struct. The value returned by lookup will be a pointer
+	//   to the object.  If we try to type assert on a double pointer,
+	//   the type assertion will fail.  Therefore, we make it easier
+	//   for plugin developers to set Plugin to be a struct or a pointer
+	//   to a struct.  We will normalize to a struct reference here.
+	//
+	// Goal:
+	//   * We need to remove pointers to get back to the main struct
+	//   * We will then wrap the struct in an interface and apply type
+	//       assertion.
+	//
+	// Algorithm:
+	//   * Use the reflect interface to pull off pointers and interfaces
+	//   * Once we've unwrapped the object, we make a reference to it
+	//   * We then wrap it with an interface (required for type assertion)
+	//   * We are then prepped for our type assertion.
+
+	rv := reflect.ValueOf(newerVar)
+	for rv.Kind() == reflect.Ptr || rv.Kind() == reflect.Interface {
+		rv = rv.Elem()
+	}
+
+	newer, ok := rv.Addr().Interface().(plugin.NewPluginerer)
 	if !ok {
 		return nil, &NewPluginerNotImplementedError{}
 	}
@@ -103,9 +128,9 @@ func (m *manager) RegisterPlugin(pluginName string, p plugin.Pluginer) error {
 		return &NilPluginError{}
 	}
 
-	_, isReceiver := p.(receiver.NewReceiverer)
-	_, isFilterer := p.(filter.NewFilterer)
-	_, isSender := p.(sender.NewSenderer)
+	isReceiver := p.SupportedTypes().IsSet(plugin.TypeReceiver)
+	isFilterer := p.SupportedTypes().IsSet(plugin.TypeFilter)
+	isSender := p.SupportedTypes().IsSet(plugin.TypeSender)
 
 	m.Lock()
 	defer m.Unlock()
