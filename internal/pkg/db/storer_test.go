@@ -68,8 +68,12 @@ var testRouteConfig3 = `
   "userId": "bwolf",
   "name": "myName2",
   "deliveryMode": "at_least_once",
-  "source": {
-    "someField": "blah"
+  "sender": {
+    "plugin": "debug",
+    "name": "my_debug",
+    "config": {
+      "key": "value"
+    }
   }
 }
 `
@@ -83,8 +87,12 @@ var testRouteConfig4 = `
 	  "userId": "bwolf",
 	  "name": "anotherName",
 	  "deliveryMode": "at_least_once",
-	  "source": {
-		"someField": "blah"
+	  "sender": {
+		"plugin": "debug",
+		"name": "my_debug",
+		"config": {
+		  "key": "value"
+		}
 	  }
 	},
 	{
@@ -94,8 +102,12 @@ var testRouteConfig4 = `
 	  "userId": "tgattis",
 	  "name": "myName3",
 	  "deliveryMode": "at_least_once",
-	  "source": {
-		"someField": "blah"
+	  "sender": {
+		"plugin": "debug",
+		"name": "my_debug",
+		"config": {
+		  "key": "value"
+		}
 	  }
 	}
 ]

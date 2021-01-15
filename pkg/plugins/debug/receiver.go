@@ -145,6 +145,7 @@ func (r *Receiver) Count() int {
 func (r *Receiver) Trigger(ctx context.Context, e event.Event) error {
 	// Ensure that `next` can be slow and locking here will not
 	// prevent other requests from executing.
+	//BW TODO: where is the next slice here?
 	r.Lock()
 	next := r.next
 	r.Unlock()

@@ -16,10 +16,12 @@ package pluginmanagerfx
 
 import (
 	"fmt"
-
 	p "github.com/xmidt-org/ears/internal/pkg/plugin"
 	"github.com/xmidt-org/ears/pkg/plugin/manager"
 	"github.com/xmidt-org/ears/pkg/plugins/debug"
+	"github.com/xmidt-org/ears/pkg/plugins/match"
+
+	pkgplugin "github.com/xmidt-org/ears/pkg/plugin"
 	"go.uber.org/fx"
 )
 
@@ -31,15 +33,12 @@ var Module = fx.Options(
 
 type PluginIn struct {
 	fx.In
-
-	Version string
-	Commit  string
 }
 
 type PluginOut struct {
 	fx.Out
 
-	PluginManager p.Manager `name:"PluginManager"`
+	PluginManager p.Manager
 }
 
 func ProvidePluginManager(in PluginIn) (PluginOut, error) {
@@ -51,10 +50,26 @@ func ProvidePluginManager(in PluginIn) (PluginOut, error) {
 	}
 
 	// Go ahead and register some default plugins
-	d := debug.NewPluginVersion("debug", in.Version, in.Commit)
-	err = mgr.RegisterPlugin("debug", d)
-	if err != nil {
-		return out, fmt.Errorf("could register debug plugin: %w", err)
+	defaultPlugins := []struct {
+		name   string
+		plugin pkgplugin.Pluginer
+	}{
+		{
+			name:   "debug",
+			plugin: debug.NewPluginVersion("debug", "", ""),
+		},
+
+		{
+			name:   "match",
+			plugin: match.NewPluginVersion("match", "", ""),
+		},
+	}
+
+	for _, plug := range defaultPlugins {
+		err = mgr.RegisterPlugin(plug.name, plug.plugin)
+		if err != nil {
+			return out, fmt.Errorf("could register %s plugin: %w", plug.name, err)
+		}
 	}
 
 	m, err := p.NewManager(p.WithPluginManager(mgr))

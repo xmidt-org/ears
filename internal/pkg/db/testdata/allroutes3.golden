@@ -5,8 +5,13 @@
     "appId": "myApp3",
     "userId": "tgattis",
     "name": "myName3",
-    "source": {
-      "SomeField": "blah"
+    "receiver": {},
+    "sender": {
+      "plugin": "debug",
+      "name": "my_debug",
+      "config": {
+        "key": "value"
+      }
     },
     "deliveryMode": "at_least_once"
   }

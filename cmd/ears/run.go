@@ -21,6 +21,7 @@ import (
 	"github.com/xmidt-org/ears/internal/pkg/app"
 	"github.com/xmidt-org/ears/internal/pkg/cli"
 	"github.com/xmidt-org/ears/internal/pkg/fx/pluginmanagerfx"
+	"github.com/xmidt-org/ears/internal/pkg/fx/routestorerfx"
 	"github.com/xmidt-org/ears/internal/pkg/panics"
 	"go.uber.org/fx"
 )
@@ -47,6 +48,7 @@ var runCmd = &cobra.Command{
 		}
 		earsApp := fx.New(
 			pluginmanagerfx.Module,
+			routestorerfx.Module,
 			fx.Provide(
 				ViperConfig,
 				app.ProvideLogger,
@@ -80,6 +82,11 @@ func init() {
 				Name: "port", Shorthand: "", Type: cli.ArgTypeInt,
 				Default: 8080, LookupKey: "ears.api.port",
 				Description: "API port",
+			},
+			cli.Argument{
+				Name: "storageType", Shorthand: "", Type: cli.ArgTypeString,
+				Default: "inmemory", LookupKey: "ears.storageType",
+				Description: "persistence layer storage type",
 			},
 		},
 	)

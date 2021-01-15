@@ -65,7 +65,6 @@ func (s *InMemoryRouteStorer) SetRoute(ctx context.Context, r route.Config) erro
 func (s *InMemoryRouteStorer) SetRoutes(ctx context.Context, routes []route.Config) error {
 	s.lock.Lock()
 	defer s.lock.Unlock()
-
 	for _, r := range routes {
 		s.setRoute(r)
 	}
