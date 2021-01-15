@@ -12,14 +12,25 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package filters
+package main
 
 import (
-	"context"
-
-	"github.com/xmidt-org/ears/pkg/event"
+	"github.com/xmidt-org/ears/pkg/plugins/match"
 )
 
-type Matcher interface {
-	Match(ctx context.Context, event event.Event) bool
+func main() {
+	// required for `go build` to not fail
 }
+
+//go:generate ../../../../script/build-plugin.sh
+
+var (
+	Name       = "match"
+	GitVersion = "v0.0.0"
+	GitCommit  = ""
+)
+
+var Plugin = match.NewPluginVersion(Name, GitVersion, GitCommit)
+
+// for golangci-lint
+var _ = Plugin
