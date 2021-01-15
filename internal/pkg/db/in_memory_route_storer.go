@@ -28,7 +28,7 @@ func (s *InMemoryRouteStorer) GetRoute(ctx context.Context, id string) (route.Co
 
 	r, ok := s.routes[id]
 	if !ok {
-		return empty, &route.RouteNotFoundError{id}
+		return empty, &route.RouteNotFoundError{RouteId: id}
 	}
 
 	newCopy := *r
