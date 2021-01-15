@@ -36,6 +36,7 @@ func (s *InMemoryRouteStorer) GetRoute(ctx context.Context, id string) (*route.C
 func (s *InMemoryRouteStorer) GetAllRoutes(ctx context.Context) ([]route.Config, error) {
 	s.lock.RLock()
 	defer s.lock.RUnlock()
+
 	routes := make([]route.Config, 0)
 	for _, r := range s.routes {
 		routes = append(routes, *r)
@@ -43,18 +44,21 @@ func (s *InMemoryRouteStorer) GetAllRoutes(ctx context.Context) ([]route.Config,
 	return routes, nil
 }
 
-func (s *InMemoryRouteStorer) setRoute(r *route.Config) {
+func (s *InMemoryRouteStorer) setRoute(r route.Config) {
 	r.Modified = time.Now().Unix()
-	if _, ok := s.routes[r.Id]; !ok {
+	if existing, ok := s.routes[r.Id]; !ok {
 		r.Created = r.Modified
+	} else {
+		r.Created = existing.Created
 	}
-	s.routes[r.Id] = r
+	s.routes[r.Id] = &r
 }
 
 func (s *InMemoryRouteStorer) SetRoute(ctx context.Context, r route.Config) error {
 	s.lock.Lock()
 	defer s.lock.Unlock()
-	s.setRoute(&r)
+
+	s.setRoute(r)
 	return nil
 }
 
@@ -62,7 +66,7 @@ func (s *InMemoryRouteStorer) SetRoutes(ctx context.Context, routes []route.Conf
 	s.lock.Lock()
 	defer s.lock.Unlock()
 	for _, r := range routes {
-		s.setRoute(&r)
+		s.setRoute(r)
 	}
 	return nil
 }
@@ -82,13 +86,5 @@ func (s *InMemoryRouteStorer) DeleteRoutes(ctx context.Context, ids []string) er
 	for _, id := range ids {
 		delete(s.routes, id)
 	}
-	return nil
-}
-
-func (s *InMemoryRouteStorer) DeleteAllRoutes(ctx context.Context) error {
-	s.lock.Lock()
-	defer s.lock.Unlock()
-
-	s.routes = make(map[string]*route.Config)
 	return nil
 }

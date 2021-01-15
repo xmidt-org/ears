@@ -85,8 +85,18 @@ func init() {
 			},
 			cli.Argument{
 				Name: "storageType", Shorthand: "", Type: cli.ArgTypeString,
-				Default: "inmemory", LookupKey: "ears.storageType",
-				Description: "persistence layer storage type",
+				Default: "inmemory", LookupKey: "ears.storage.type",
+				Description: "persistence layer storage type (inmemory, dynamodb)",
+			},
+			cli.Argument{
+				Name: "storageDynamoRegion", Shorthand: "", Type: cli.ArgTypeString,
+				Default: "us-west-2", LookupKey: "ears.storage.region",
+				Description: "dynamodb region",
+			},
+			cli.Argument{
+				Name: "storageDynamoTable", Shorthand: "", Type: cli.ArgTypeString,
+				Default: "gears.dev.ears", LookupKey: "ears.storage.table",
+				Description: "dynamodb table name",
 			},
 		},
 	)
