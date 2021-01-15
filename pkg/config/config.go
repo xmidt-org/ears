@@ -29,37 +29,33 @@ import (
 func NewConfig(data interface{}, target interface{}) error {
 
 	if target == nil {
-		return &InvalidArgumentError{
-			Err: fmt.Errorf("target is nil"),
-		}
+		return &InvalidArgumentError{Err: fmt.Errorf("target is nil")}
 	}
 
 	if data == nil {
-		return &InvalidArgumentError{
-			Err: fmt.Errorf("data is nil"),
-		}
+		return &InvalidArgumentError{Err: fmt.Errorf("data is nil")}
 	}
 
-	switch data.(type) {
+	switch d := data.(type) {
 	case []rune:
-		err := FromYAML(string(data.([]rune)), target)
+		err := FromYAML(string(d), target)
 		if err != nil {
 			return &DataParseError{Err: err}
 		}
 		return nil
 	case string, []byte:
-		err := FromYAML(data, target)
+		err := FromYAML(d, target)
 		if err != nil {
 			return &DataParseError{Err: err}
 		}
 		return nil
 
 	default:
-		dt := strings.TrimPrefix(reflect.TypeOf(data).String(), "*")
+		dt := strings.TrimPrefix(reflect.TypeOf(d).String(), "*")
 		tt := strings.TrimPrefix(reflect.TypeOf(target).String(), "*")
 
 		if dt == tt {
-			dv := reflect.ValueOf(data)
+			dv := reflect.ValueOf(d)
 			for dv.Kind() == reflect.Ptr || dv.Kind() == reflect.Interface {
 				dv = dv.Elem()
 			}
@@ -70,28 +66,22 @@ func NewConfig(data interface{}, target interface{}) error {
 			}
 
 			if !tv.CanSet() {
-				return &InvalidArgumentError{
-					Err: fmt.Errorf("target is not a pointer"),
-				}
+				return &InvalidArgumentError{Err: fmt.Errorf("target is not a pointer")}
 			}
 			tv.Set(dv)
 
 			return nil
 		} else {
 			return &InvalidArgumentError{
-				Err: fmt.Errorf(
-					errs.String(
-						"incompatible object types",
-						map[string]interface{}{
-							"data":   dt,
-							"config": tt,
-						},
-						nil,
-					),
-				),
+				Err: fmt.Errorf(errs.String(
+					"incompatible object types",
+					map[string]interface{}{
+						"data":   dt,
+						"config": tt,
+					},
+					nil,
+				)),
 			}
 		}
-
 	}
-
 }
