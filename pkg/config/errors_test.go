@@ -35,6 +35,20 @@ func TestErrorMessage(t *testing.T) {
 				Err: fmt.Errorf("wrapped error"),
 			},
 		},
+		{name: "InvalidArgumentError-empty", err: &config.InvalidArgumentError{}},
+		{
+			name: "InvalidArgumentError-err",
+			err: &config.InvalidArgumentError{
+				Err: fmt.Errorf("wrapped error"),
+			},
+		},
+		{name: "DataParseError-empty", err: &config.DataParseError{}},
+		{
+			name: "DataParseError-err",
+			err: &config.DataParseError{
+				Err: fmt.Errorf("wrapped error"),
+			},
+		},
 	}
 
 	for _, tc := range testCases {

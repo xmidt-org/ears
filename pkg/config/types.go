@@ -48,3 +48,11 @@ type JSONImporter interface {
 type Error struct {
 	Err error
 }
+
+type InvalidArgumentError struct {
+	Err error
+}
+
+type DataParseError struct {
+	Err error
+}

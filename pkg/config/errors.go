@@ -22,7 +22,31 @@ func (e *Error) Unwrap() error {
 
 func (e *Error) Error() string {
 	return errs.String(
-		"",
+		e,
+		nil,
+		e.Err,
+	)
+}
+
+func (e *DataParseError) Unwrap() error {
+	return e.Err
+}
+
+func (e *DataParseError) Error() string {
+	return errs.String(
+		e,
+		nil,
+		e.Err,
+	)
+}
+
+func (e *InvalidArgumentError) Unwrap() error {
+	return e.Err
+}
+
+func (e *InvalidArgumentError) Error() string {
+	return errs.String(
+		e,
 		nil,
 		e.Err,
 	)

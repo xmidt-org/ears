@@ -30,8 +30,20 @@ error coding style.  This will:
   * Append any wrapped errors to the end of the message (separated by a ":")
 
 */
-func String(msg string, values map[string]interface{}, wrapped error) string {
+func String(prefix interface{}, values map[string]interface{}, wrapped error) string {
 	msgs := []string{}
+
+	msg := ""
+	if prefix != nil {
+		switch p := prefix.(type) {
+		case string:
+			msg = p
+		case []byte:
+			msg = string(p)
+		default:
+			msg = strings.TrimPrefix(reflect.TypeOf(prefix).String(), "*")
+		}
+	}
 
 	if msg != "" {
 		msgs = append(msgs, msg)

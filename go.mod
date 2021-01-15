@@ -15,6 +15,7 @@ require (
 	github.com/denis-tingajkin/go-header v0.4.2 // indirect
 	github.com/ghodss/yaml v1.0.0
 	github.com/go-critic/go-critic v0.5.3 // indirect
+	github.com/go-git/go-git/v5 v5.2.0
 	github.com/go-lintpack/lintpack v0.5.2 // indirect
 	github.com/go-ozzo/ozzo-validation/v4 v4.3.0
 	github.com/gobwas/glob v0.2.3

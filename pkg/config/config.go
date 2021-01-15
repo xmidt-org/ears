@@ -18,27 +18,43 @@ import (
 	"fmt"
 	"reflect"
 	"strings"
+
+	"github.com/xmidt-org/ears/pkg/errs"
 )
 
+// NewConfig will create process the data and will fill the
+// target with the values supplied.  For the data object,
+// this function supports YAML, JSON, the target type,
+// and a pointer to the target type.
 func NewConfig(data interface{}, target interface{}) error {
-	// fmt.Println("DATA (", reflect.TypeOf(data), "):", data)
-	// fmt.Println("TARGET (", reflect.TypeOf(target), "):", target)
 
 	if target == nil {
-		return fmt.Errorf("target is nil")
+		return &InvalidArgumentError{
+			Err: fmt.Errorf("target is nil"),
+		}
 	}
 
 	if data == nil {
-		return fmt.Errorf("data is nil")
+		return &InvalidArgumentError{
+			Err: fmt.Errorf("data is nil"),
+		}
 	}
 
 	switch data.(type) {
-	case string, []byte, []rune:
-		// fmt.Println("  FROM YAML ---")
-		return FromYAML(data, target)
+	case []rune:
+		err := FromYAML(string(data.([]rune)), target)
+		if err != nil {
+			return &DataParseError{Err: err}
+		}
+		return nil
+	case string, []byte:
+		err := FromYAML(data, target)
+		if err != nil {
+			return &DataParseError{Err: err}
+		}
+		return nil
 
 	default:
-		// fmt.Println("  default ---")
 		dt := strings.TrimPrefix(reflect.TypeOf(data).String(), "*")
 		tt := strings.TrimPrefix(reflect.TypeOf(target).String(), "*")
 
@@ -52,14 +68,30 @@ func NewConfig(data interface{}, target interface{}) error {
 			for tv.Kind() == reflect.Ptr || tv.Kind() == reflect.Interface {
 				tv = tv.Elem()
 			}
+
+			if !tv.CanSet() {
+				return &InvalidArgumentError{
+					Err: fmt.Errorf("target is not a pointer"),
+				}
+			}
 			tv.Set(dv)
 
 			return nil
+		} else {
+			return &InvalidArgumentError{
+				Err: fmt.Errorf(
+					errs.String(
+						"incompatible object types",
+						map[string]interface{}{
+							"data":   dt,
+							"config": tt,
+						},
+						nil,
+					),
+				),
+			}
 		}
 
 	}
 
-	return &Error{
-		Err: fmt.Errorf("could not set config object"),
-	}
 }
