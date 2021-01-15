@@ -15,7 +15,7 @@
 package routestorerfx
 
 import (
-	"errors"
+	"github.com/xmidt-org/ears/internal/pkg/db/dynamo"
 
 	"github.com/xmidt-org/ears/internal/pkg/app"
 	"github.com/xmidt-org/ears/internal/pkg/db"
@@ -42,11 +42,18 @@ type StorageOut struct {
 
 func ProvideRouteStorer(in StorageIn) (StorageOut, error) {
 	out := StorageOut{}
-	storageType := in.Config.GetString("ears.storageType")
-	if storageType == "inmemory" {
+	storageType := in.Config.GetString("ears.storage.type")
+	switch storageType {
+	case "inmemory":
 		out.RouteStorer = db.NewInMemoryRouteStorer(in.Config)
-	} else {
-		return out, errors.New("usupported storage type " + storageType)
+	case "dynamodb":
+		routeStorer, err := dynamo.NewDynamoDbStorer(in.Config)
+		if err != nil {
+			return out, err
+		}
+		out.RouteStorer = routeStorer
+	default:
+		return out, &UnsupportedStorageError{storageType}
 	}
 	return out, nil
 }

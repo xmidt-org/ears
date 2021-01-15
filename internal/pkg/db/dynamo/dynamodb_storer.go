@@ -44,7 +44,7 @@ func (d *DynamoDbStorer) getRoute(ctx context.Context, id string, svc *dynamodb.
 
 	result, err := svc.GetItemWithContext(ctx, input)
 	if err != nil {
-		return nil, &DynamoDbError{"Fail to get item", err}
+		return nil, &DynamoDbGetItemError{err}
 	}
 
 	if result.Item == nil {
@@ -54,7 +54,7 @@ func (d *DynamoDbStorer) getRoute(ctx context.Context, id string, svc *dynamodb.
 	var routeConfig route.Config
 	err = dynamodbattribute.UnmarshalMap(result.Item, &routeConfig)
 	if err != nil {
-		return nil, &DynamoDbError{"Fail to unmarshal data", err}
+		return nil, &DynamoDbMarshalError{err}
 	}
 
 	return &routeConfig, nil
@@ -65,7 +65,7 @@ func (d *DynamoDbStorer) GetRoute(ctx context.Context, id string) (*route.Config
 		Region: aws.String(d.region),
 	})
 	if err != nil {
-		return nil, &DynamoDbError{"Fail to initialize session", err}
+		return nil, &DynamoDbNewSessionError{err}
 	}
 
 	svc := dynamodb.New(sess)
@@ -77,7 +77,7 @@ func (d *DynamoDbStorer) GetAllRoutes(ctx context.Context) ([]route.Config, erro
 		Region: aws.String(d.region),
 	})
 	if err != nil {
-		return nil, &DynamoDbError{"Fail to initialize session", err}
+		return nil, &DynamoDbNewSessionError{err}
 	}
 
 	svc := dynamodb.New(sess)
@@ -87,7 +87,7 @@ func (d *DynamoDbStorer) GetAllRoutes(ctx context.Context) ([]route.Config, erro
 
 	result, err := svc.ScanWithContext(ctx, input)
 	if err != nil {
-		return nil, &DynamoDbError{"Fail to get all items", err}
+		return nil, &DynamoDbGetItemError{err}
 	}
 
 	routes := make([]route.Config, 0)
@@ -95,7 +95,7 @@ func (d *DynamoDbStorer) GetAllRoutes(ctx context.Context) ([]route.Config, erro
 		var routeConfig route.Config
 		err = dynamodbattribute.UnmarshalMap(item, &routeConfig)
 		if err != nil {
-			return nil, &DynamoDbError{"Fail to unmarshal data", err}
+			return nil, &DynamoDbMarshalError{err}
 		}
 		routes = append(routes, routeConfig)
 	}
@@ -106,8 +106,7 @@ func (d *DynamoDbStorer) setRoute(ctx context.Context, r route.Config, svc *dyna
 	//First see if the route already exists
 	oldRoute, err := d.getRoute(ctx, r.Id, svc)
 	if err != nil {
-		dynamoErr, _ := err.(*DynamoDbError)
-		return &DynamoDbError{"Fail to get older route", dynamoErr.Source}
+		return err
 	}
 	r.Created = time.Now().Unix()
 	r.Modified = r.Created
@@ -118,7 +117,7 @@ func (d *DynamoDbStorer) setRoute(ctx context.Context, r route.Config, svc *dyna
 
 	item, err := dynamodbattribute.MarshalMap(r)
 	if err != nil {
-		return &DynamoDbError{"Fail to marshal data", err}
+		return &DynamoDbMarshalError{err}
 	}
 
 	input := &dynamodb.PutItemInput{
@@ -128,7 +127,7 @@ func (d *DynamoDbStorer) setRoute(ctx context.Context, r route.Config, svc *dyna
 
 	_, err = svc.PutItemWithContext(ctx, input)
 	if err != nil {
-		return &DynamoDbError{"Fail to put item", err}
+		return &DynamoDbPutItemError{err}
 	}
 	return nil
 }
@@ -138,7 +137,7 @@ func (d *DynamoDbStorer) SetRoute(ctx context.Context, r route.Config) error {
 		Region: aws.String(d.region),
 	})
 	if err != nil {
-		return &DynamoDbError{"Fail to initialize session", err}
+		return &DynamoDbNewSessionError{err}
 	}
 	svc := dynamodb.New(sess)
 	return d.setRoute(ctx, r, svc)
@@ -151,7 +150,7 @@ func (d *DynamoDbStorer) SetRoutes(ctx context.Context, routes []route.Config) e
 		Region: aws.String(d.region),
 	})
 	if err != nil {
-		return &DynamoDbError{"Fail to initialize session", err}
+		return &DynamoDbNewSessionError{err}
 	}
 	svc := dynamodb.New(sess)
 
@@ -178,7 +177,7 @@ func (d *DynamoDbStorer) deleteRoute(ctx context.Context, id string, svc *dynamo
 
 	_, err := svc.DeleteItemWithContext(ctx, input)
 	if err != nil {
-		return &DynamoDbError{"Fail to delete item", err}
+		return &DynamoDbDeleteItemError{err}
 	}
 	return nil
 }
@@ -188,7 +187,7 @@ func (d *DynamoDbStorer) DeleteRoute(ctx context.Context, id string) error {
 		Region: aws.String(d.region),
 	})
 	if err != nil {
-		return &DynamoDbError{"Fail to initialize session", err}
+		return &DynamoDbNewSessionError{err}
 	}
 	svc := dynamodb.New(sess)
 	return d.deleteRoute(ctx, id, svc)
@@ -199,7 +198,7 @@ func (d *DynamoDbStorer) DeleteRoutes(ctx context.Context, ids []string) error {
 		Region: aws.String(d.region),
 	})
 	if err != nil {
-		return &DynamoDbError{"Fail to initialize session", err}
+		return &DynamoDbNewSessionError{err}
 	}
 	svc := dynamodb.New(sess)
 
