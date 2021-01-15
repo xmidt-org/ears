@@ -62,8 +62,8 @@ type Config struct {
 	FilterChain  []PluginConfig `json:"filterChain,omitempty"`  // filter chain configuration
 	DeliveryMode string         `json:"deliveryMode,omitempty"` // possible values: fire_and_forget, at_least_once, exactly_once
 	Debug        bool           `json:"debug,omitempty"`        // if true generate debug logs and metrics for events taking this route
-	Created      int64          `json:"ts,omitempty"`           // time on when route was created, in unix timestamp seconds
-	Modified     int64          `json:"ts,omitempty"`           // last time when route was modified, in unix timestamp seconds
+	Created      int64          `json:"created,omitempty"`      // time on when route was created, in unix timestamp seconds
+	Modified     int64          `json:"modified,omitempty"`     // last time when route was modified, in unix timestamp seconds
 }
 
 //Validate returns an error if the plugin config is invalid and nil otherwise

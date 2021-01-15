@@ -4,37 +4,12 @@ import (
 	"context"
 	"encoding/json"
 	"github.com/sebdah/goldie/v2"
-	"github.com/spf13/viper"
-	"github.com/xmidt-org/ears/internal/pkg/app"
 	"sort"
 	"testing"
 	"time"
 
-	"github.com/xmidt-org/ears/internal/pkg/db"
-	"github.com/xmidt-org/ears/internal/pkg/db/dynamo"
 	"github.com/xmidt-org/ears/pkg/route"
 )
-
-func TestInMemoryRouteStorer(t *testing.T) {
-	s := db.NewInMemoryRouteStorer(nil)
-	testRouteStorer(s, t)
-}
-
-func dynamoDbConfig() app.Config {
-	v := viper.New()
-	v.Set("ears.db.region", "us-west-2")
-	v.Set("ears.db.tableName", "gears.dev.ears")
-	return v
-}
-
-//
-func TestDynamoRouteStorer(t *testing.T) {
-	s, err := dynamo.NewDynamoDbStorer(dynamoDbConfig())
-	if err != nil {
-		t.Fatalf("Error instantiate dynamodb %s\n", err.Error())
-	}
-	testRouteStorer(s, t)
-}
 
 var testRouteConfig1 = `
 {
