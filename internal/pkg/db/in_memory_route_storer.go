@@ -20,17 +20,19 @@ func NewInMemoryRouteStorer(config app.Config) *InMemoryRouteStorer {
 	}
 }
 
-func (s *InMemoryRouteStorer) GetRoute(ctx context.Context, id string) (*route.Config, error) {
+func (s *InMemoryRouteStorer) GetRoute(ctx context.Context, id string) (route.Config, error) {
 	s.lock.RLock()
 	defer s.lock.RUnlock()
 
+	empty := route.Config{}
+
 	r, ok := s.routes[id]
 	if !ok {
-		return nil, nil
+		return empty, &route.RouteNotFoundError{RouteId: id}
 	}
 
 	newCopy := *r
-	return &newCopy, nil
+	return newCopy, nil
 }
 
 func (s *InMemoryRouteStorer) GetAllRoutes(ctx context.Context) ([]route.Config, error) {

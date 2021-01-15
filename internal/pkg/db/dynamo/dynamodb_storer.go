@@ -48,7 +48,7 @@ func (d *DynamoDbStorer) getRoute(ctx context.Context, id string, svc *dynamodb.
 	}
 
 	if result.Item == nil {
-		return nil, nil
+		return nil, &route.RouteNotFoundError{id}
 	}
 
 	var routeConfig route.Config
@@ -60,16 +60,21 @@ func (d *DynamoDbStorer) getRoute(ctx context.Context, id string, svc *dynamodb.
 	return &routeConfig, nil
 }
 
-func (d *DynamoDbStorer) GetRoute(ctx context.Context, id string) (*route.Config, error) {
+func (d *DynamoDbStorer) GetRoute(ctx context.Context, id string) (route.Config, error) {
 	sess, err := session.NewSession(&aws.Config{
 		Region: aws.String(d.region),
 	})
+	empty := route.Config{}
 	if err != nil {
-		return nil, &DynamoDbNewSessionError{err}
+		return empty, &DynamoDbNewSessionError{err}
 	}
 
 	svc := dynamodb.New(sess)
-	return d.getRoute(ctx, id, svc)
+	r, err := d.getRoute(ctx, id, svc)
+	if err != nil {
+		return empty, err
+	}
+	return *r, nil
 }
 
 func (d *DynamoDbStorer) GetAllRoutes(ctx context.Context) ([]route.Config, error) {
