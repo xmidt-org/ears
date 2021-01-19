@@ -1,0 +1,37 @@
+{
+  "$schema": "http://json-schema.org/draft-06/schema#",
+  "$ref": "#/definitions/ReceiverConfig",
+  "definitions": {
+      "ReceiverConfig": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+              "mylist": {
+                  "type": ["string", "null"],
+                  "enum": ["one", "two", "three", "four", null]
+              },
+              "intervalMS": {
+                  "type": "integer",
+                  "minimum": 1
+              },
+              "rounds": {
+                  "type": "integer",
+                  "minimum": -1
+              },
+              "payload": {
+                  "type": "string"
+              },
+              "maxHistory": {
+                  "type": "integer",
+                  "minimum": 0
+              }
+          },
+          "required": [
+              "intervalMS",
+              "maxHistory",
+              "rounds"
+          ],
+          "title": "ReceiverConfig"
+      }
+  }
+}
