@@ -1,0 +1,6 @@
+{
+  "intervalMS": 120,
+  "rounds": -2,
+  "payload": "hello world",
+  "maxHistory": 10
+}

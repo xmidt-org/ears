@@ -14,23 +14,48 @@
 
 package validation
 
-type Validator interface {
-	Validate() error
+import (
+	"strings"
+
+	"github.com/xmidt-org/ears/pkg/errs"
+)
+
+func (e *Errors) Unwrap() error {
+	if len(e.Errs) > 0 {
+		return e.Errs[0]
+	}
+	return nil
 }
 
-type SchemaProvider interface {
-	Schema() string
+func (e *Errors) Error() string {
+	var msgs = []string{}
+	for _, err := range e.Errs {
+		msgs = append(msgs, err.Error())
+	}
+
+	return strings.Join(msgs, ", ")
 }
 
-type Error struct {
-	// TODO
-	Err error
+func (e *Error) Unwrap() error {
+	return e.Err
 }
 
-type Errors struct {
-	Errs []error
+func (e *Error) Error() string {
+	return errs.String(
+		nil,
+		nil,
+		e.Err,
+	)
 }
 
-type ProcessingError struct {
-	Err error
+func (e *ProcessingError) Unwrap() error {
+	return e.Err
+}
+
+func (e *ProcessingError) Error() string {
+	return errs.String(
+		e,
+		nil,
+		e.Err,
+	)
 }

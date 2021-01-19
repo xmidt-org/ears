@@ -1,0 +1,7 @@
+{
+  "mylist": "two",
+  "intervalMS": 120,
+  "rounds": 4,
+  "payload": "hello world",
+  "maxHistory": 10
+}
