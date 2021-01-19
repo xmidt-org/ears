@@ -48,7 +48,7 @@ const (
 // pattern is bad.  If OptionNotRequired is passed in, we will
 // not fail if no files were found.
 func Glob(t *testing.T, pattern string, options ...Option) []File {
-	var files []File
+	files := []File{}
 
 	matches, err := filepath.Glob(pattern)
 	if err != nil {
