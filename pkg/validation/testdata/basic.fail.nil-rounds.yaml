@@ -1,0 +1,5 @@
+{
+  "intervalMS": 120,
+  "payload": "hello world",
+  "maxHistory": 10
+}

@@ -18,7 +18,19 @@ type Validator interface {
 	Validate() error
 }
 
+type SchemaProvider interface {
+	Schema() string
+}
+
 type Error struct {
 	// TODO
+	Err error
+}
+
+type Errors struct {
 	Errs []error
+}
+
+type ProcessingError struct {
+	Err error
 }
