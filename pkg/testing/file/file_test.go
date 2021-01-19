@@ -55,7 +55,7 @@ func TestRead(t *testing.T) {
 			root:      "file",
 		},
 
-		// Have one of the letters in the extention match
+		// Have one of the letters in the extension match
 		// some character on the left side of the `.`.
 		// In this case, `l`.
 		{
