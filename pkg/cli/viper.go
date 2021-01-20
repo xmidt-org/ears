@@ -160,7 +160,7 @@ func ViperConfig(envPrefix, configName string) error {
 	default:
 		// Value is a path to a local file
 		if len(parts) > 1 {
-			return &ConfigNotSupportedProtocolError{}
+			return &ConfigNotSupportedProtocolError{parts[0]}
 		}
 		viper.SetConfigFile(config)
 		if err := viper.ReadInConfig(); err != nil {

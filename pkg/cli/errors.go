@@ -36,10 +36,11 @@ func (e *NoDefaultSetError) Error() string {
 }
 
 type ConfigNotSupportedProtocolError struct {
+	protocol string
 }
 
 func (e *ConfigNotSupportedProtocolError) Error() string {
-	return errs.String("ConfigNotSupportedProtocolError", nil, nil)
+	return errs.String("ConfigNotSupportedProtocolError", map[string]interface{}{"protocol": e.protocol}, nil)
 }
 
 type ConfigError struct {
