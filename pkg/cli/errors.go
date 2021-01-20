@@ -18,69 +18,37 @@
 package cli
 
 import (
-	"fmt"
-	"strings"
+	"github.com/xmidt-org/ears/pkg/errs"
 )
 
-const (
-	ErrConfigNotSupportedProtocol = "ConfigNotSupportedProtocol"
-)
-
-// argError =============================================================
-
-type ArgError struct {
-	Err   error
-	key   string
-	value interface{}
+type EmptyCmdArgumentError struct {
 }
 
-func (a ArgError) Key() string {
-	return a.key
+func (e *EmptyCmdArgumentError) Error() string {
+	return errs.String("EmptyCmdArgumentError", nil, nil)
 }
 
-func (a ArgError) Value() interface{} {
-	return a.value
+type NoDefaultSetError struct {
 }
 
-func (a ArgError) Error() string {
-	msg := "key=" + a.key
-	if a.value != nil {
-		msg += fmt.Sprintf(", value=%v", a.value)
-	}
-
-	if a.Err != nil {
-		msg = a.Err.Error() + ", " + msg
-	}
-	return msg
+func (e *NoDefaultSetError) Error() string {
+	return errs.String("NoDefaultSetError", nil, nil)
 }
 
-func (a *ArgError) Unwrap() error {
-	return a.Err
+type ConfigNotSupportedProtocolError struct {
 }
 
-// configError =============================================================
+func (e *ConfigNotSupportedProtocolError) Error() string {
+	return errs.String("ConfigNotSupportedProtocolError", nil, nil)
+}
 
 type ConfigError struct {
 	Err  error
 	path string
 }
 
-func (c ConfigError) Path() string {
-	return c.path
-}
-
-func (c ConfigError) Error() string {
-	msg := ""
-	if c.Err != nil {
-		// In case there are newlines in the error text
-		msg = strings.Replace(c.Err.Error(), "\n", " ", -1)
-	}
-
-	if msg != "" {
-		msg += ", "
-	}
-
-	return msg + "path: " + c.Path()
+func (c *ConfigError) Error() string {
+	return errs.String("ConfigError", map[string]interface{}{"path": c.path}, c.Err)
 }
 
 func (c *ConfigError) Unwrap() error {
