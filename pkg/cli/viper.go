@@ -22,6 +22,7 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
+	"github.com/xmidt-org/ears/internal/pkg/aws/s3"
 	"path/filepath"
 	"strings"
 )
@@ -30,11 +31,11 @@ import (
 func ViperAddArgument(cmd *cobra.Command, a Argument) error {
 
 	if cmd == nil {
-		return &ArgError{errors.New("nil cmd argument"), "cmd", nil}
+		return &EmptyCmdArgumentError{}
 	}
 
 	if a.Default == nil {
-		return &ArgError{errors.New("no default set"), "a", a}
+		return &NoDefaultSetError{}
 	}
 
 	var fs *pflag.FlagSet
@@ -72,7 +73,7 @@ func ViperAddArgument(cmd *cobra.Command, a Argument) error {
 // ViperAddArguments allows you to pass in many argument configs
 func ViperAddArguments(cmd *cobra.Command, aList []Argument) error {
 	if cmd == nil {
-		return &ArgError{errors.New("nil cmd argument"), "cmd", nil}
+		return &EmptyCmdArgumentError{}
 	}
 
 	for _, a := range aList {
@@ -135,8 +136,21 @@ func ViperConfig(envPrefix, configName string) error {
 	//case "http", "https":
 	//TODO: do we need this?
 
-	//case "s3":
-	//TODO: do we need this?
+	case "s3":
+		svc, err := s3.New()
+		if err != nil {
+			return &ConfigError{err, config}
+		}
+
+		data, err := svc.GetObject(config)
+		if err != nil {
+			return &ConfigError{err, config}
+		}
+
+		err = viper.ReadConfig(strings.NewReader(data))
+		if err != nil {
+			return &ConfigError{err, config}
+		}
 
 	case "file":
 		// Set parts[0] to the file path and fall through to file path processing
@@ -146,7 +160,7 @@ func ViperConfig(envPrefix, configName string) error {
 	default:
 		// Value is a path to a local file
 		if len(parts) > 1 {
-			return &ConfigError{errors.New(ErrConfigNotSupportedProtocol), config}
+			return &ConfigNotSupportedProtocolError{}
 		}
 		viper.SetConfigFile(config)
 		if err := viper.ReadInConfig(); err != nil {
