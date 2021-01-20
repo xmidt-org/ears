@@ -19,9 +19,9 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"github.com/xmidt-org/ears/internal/pkg/app"
-	"github.com/xmidt-org/ears/internal/pkg/cli"
 	"github.com/xmidt-org/ears/internal/pkg/fx/pluginmanagerfx"
-	"github.com/xmidt-org/ears/internal/pkg/panics"
+	"github.com/xmidt-org/ears/pkg/cli"
+	"github.com/xmidt-org/ears/pkg/panics"
 	"go.uber.org/fx"
 )
 
