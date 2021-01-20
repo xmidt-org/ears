@@ -19,7 +19,7 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
-	"github.com/xmidt-org/ears/internal/pkg/cli"
+	"github.com/xmidt-org/ears/pkg/cli"
 	"reflect"
 	"strings"
 	"testing"
