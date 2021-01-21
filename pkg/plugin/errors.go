@@ -15,8 +15,7 @@
 package plugin
 
 import (
-	"fmt"
-	// We're going to be lazy and reference the full Watermill Message object.
+	"github.com/xmidt-org/ears/pkg/errs"
 )
 
 // Unwrap implement's Go v1.13's error pattern
@@ -30,16 +29,13 @@ func (e *Error) Unwrap() error {
 //   plugin error (code=42): wrapped Err.Error() goes here
 //
 func (e *Error) Error() string {
-	if e == nil {
-		return "<nil>"
-	}
-
-	var suffix = ""
-	if e.Err != nil {
-		suffix = ": " + e.Err.Error()
-	}
-
-	return fmt.Sprintf("plugin error (code=%d)%s", e.Code, suffix)
+	return errs.String(
+		"plugin error",
+		map[string]interface{}{
+			"code": e.Code,
+		},
+		e.Err,
+	)
 }
 
 // Is compares two Error.  It does a simple string comparison.
@@ -57,13 +53,7 @@ func (e *InvalidConfigError) Unwrap() error {
 // Error implements the standard error interface.  It'll display the code
 // as well printing out the Values in key sorted order.
 func (e *InvalidConfigError) Error() string {
-
-	msg := "InvalidConfigError"
-	if e.Err != nil {
-		msg = msg + fmt.Sprintf(": %s", e.Err.Error())
-	}
-
-	return msg
+	return errs.String("InvalidConfigError", nil, e.Err)
 }
 
 // Is compares two Error.  It does a simple string comparison.
@@ -76,7 +66,7 @@ func (e *InvalidConfigError) Is(target error) bool {
 // Error implements the standard error interface.  It'll display the code
 // as well printing out the Values in key sorted order.
 func (e *NotSupportedError) Error() string {
-	return "NotSupportedError"
+	return errs.String("NotSupportedError", nil, nil)
 }
 
 // Is compares two Error.  It does a simple string comparison.
@@ -84,4 +74,13 @@ func (e *NotSupportedError) Error() string {
 // key will result in different strings, thus causing `Is` to return false.
 func (e *NotSupportedError) Is(target error) bool {
 	return e.Error() == target.Error()
+}
+
+// TODO
+func (e *OptionError) Error() string {
+	return errs.String("OptionError", nil, e.Err)
+}
+
+func (e *NilPluginError) Error() string {
+	return errs.String("NilPluginError", nil, nil)
 }

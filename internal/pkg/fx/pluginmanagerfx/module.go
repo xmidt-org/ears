@@ -18,8 +18,10 @@ import (
 	"fmt"
 	p "github.com/xmidt-org/ears/internal/pkg/plugin"
 	"github.com/xmidt-org/ears/pkg/plugin/manager"
+	"github.com/xmidt-org/ears/pkg/plugins/block"
 	"github.com/xmidt-org/ears/pkg/plugins/debug"
 	"github.com/xmidt-org/ears/pkg/plugins/match"
+	"github.com/xmidt-org/ears/pkg/plugins/pass"
 
 	pkgplugin "github.com/xmidt-org/ears/pkg/plugin"
 	"go.uber.org/fx"
@@ -50,18 +52,30 @@ func ProvidePluginManager(in PluginIn) (PluginOut, error) {
 	}
 
 	// Go ahead and register some default plugins
+	toArr := func(a ...interface{}) []interface{} { return a }
+
 	defaultPlugins := []struct {
 		name   string
 		plugin pkgplugin.Pluginer
 	}{
 		{
 			name:   "debug",
-			plugin: debug.NewPluginVersion("debug", "", ""),
+			plugin: toArr(debug.NewPluginVersion("debug", "", ""))[0].(pkgplugin.Pluginer),
 		},
 
 		{
 			name:   "match",
-			plugin: match.NewPluginVersion("match", "", ""),
+			plugin: toArr(match.NewPluginVersion("match", "", ""))[0].(pkgplugin.Pluginer),
+		},
+
+		{
+			name:   "pass",
+			plugin: toArr(pass.NewPluginVersion("pass", "", ""))[0].(pkgplugin.Pluginer),
+		},
+
+		{
+			name:   "block",
+			plugin: toArr(block.NewPluginVersion("block", "", ""))[0].(pkgplugin.Pluginer),
 		},
 	}
 

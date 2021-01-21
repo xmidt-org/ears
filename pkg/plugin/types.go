@@ -14,6 +14,15 @@
 
 package plugin
 
+import (
+	"sync"
+
+	"github.com/xmidt-org/ears/pkg/bit"
+	"github.com/xmidt-org/ears/pkg/filter"
+	"github.com/xmidt-org/ears/pkg/receiver"
+	"github.com/xmidt-org/ears/pkg/sender"
+)
+
 // === Plugin =========================================================
 
 //go:generate rm -f testing_mock.go
@@ -39,7 +48,49 @@ type NewPluginerer interface {
 type Pluginer interface {
 	Name() string
 	Version() string
+	CommitID() string
 	Config() string
+
+	// A bitmask of supported types
+	SupportedTypes() bit.Mask
+}
+
+const (
+	TypePluginer bit.Mask = 1 << iota
+	TypeReceiver
+	TypeSender
+	TypeFilter
+)
+
+type HashFn func(i interface{}) (string, error)
+
+// TODO: Question -- How do these stay in sync with the package?
+// Do we define them in the package alongside the interface definition?
+type NewPluginerFn func(config interface{}) (Pluginer, error)
+type NewReceiverFn func(config interface{}) (receiver.Receiver, error)
+type NewSenderFn func(config interface{}) (sender.Sender, error)
+type NewFiltererFn func(config interface{}) (filter.Filterer, error)
+
+// Plugin implements Pluginer
+type Plugin struct {
+	sync.Mutex
+
+	name     string
+	version  string
+	commitID string
+	config   interface{}
+
+	types bit.Mask
+
+	hashPluginer HashFn
+	hashReceiver HashFn
+	hashFilter   HashFn
+	hashSender   HashFn
+
+	newPluginer NewPluginerFn
+	newReceiver NewReceiverFn
+	newSender   NewSenderFn
+	newFilterer NewFiltererFn
 }
 
 // === Errors =========================================================
@@ -70,3 +121,5 @@ type InvalidConfigError struct {
 // NotSupportedError can be returned if a plugin doesn't support publishing
 // subscribing.
 type NotSupportedError struct{}
+
+type NilPluginError struct{}

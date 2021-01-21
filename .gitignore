@@ -29,3 +29,6 @@ ears
 
 # GoLand
 .idea/
+
+# VS Code
+.vscode/
