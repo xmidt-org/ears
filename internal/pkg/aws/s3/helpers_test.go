@@ -126,9 +126,7 @@ func TestGetSvc(t *testing.T) {
 
 	if svc == nil {
 		t.Errorf("c2.getSvc returned nil service")
-	}
-
-	if *svc != fakeSvc {
+	} else if *svc != fakeSvc {
 		t.Errorf("c2.getSvc did not return original fakeSvc")
 	}
 

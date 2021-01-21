@@ -38,7 +38,7 @@ type NotFoundError struct {
 }
 
 func (e *NotFoundError) Error() string {
-	return fmt.Sprintf("Item not found")
+	return "Item not found"
 }
 
 func (e *NotFoundError) StatusCode() int {
@@ -49,7 +49,7 @@ type NotImplementedError struct {
 }
 
 func (e *NotImplementedError) Error() string {
-	return fmt.Sprintf("Method not implemented")
+	return "Method not implemented"
 }
 
 func (e *NotImplementedError) StatusCode() int {
