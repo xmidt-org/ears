@@ -62,10 +62,9 @@ func TestConfigErrors(t *testing.T) {
 
 		err := cli.ViperConfig("", "")
 
-		switch err {
-		case nil:
+		if err == nil {
 			t.Errorf("expected '%s' but error was <nil>", test[1])
-		default:
+		} else {
 			if err.Error() != test[1] {
 				t.Errorf("#%d expected '%s' != '%s'", i, test[1], err.Error())
 			}

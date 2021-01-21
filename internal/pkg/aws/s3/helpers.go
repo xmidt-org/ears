@@ -38,7 +38,12 @@ func (s *client) getSvc() (*s3.S3, error) {
 		return nil, err
 	}
 
-	return s3.New(session.New(cfg)), nil
+	sess, err := session.NewSession(cfg)
+	if err != nil {
+		return nil, err
+	}
+
+	return s3.New(sess), nil
 }
 
 func DefaultConfig() (*aws.Config, error) {
