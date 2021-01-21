@@ -106,6 +106,12 @@ func (s *client) ListFiles(url string) ([]string, error) {
 	return files, nil
 }
 
+const (
+	AwsRequestTimeout     = "RequestTimeout"
+	AwsServiceUnavailable = "ServiceUnavailable"
+	AwsSlowDown           = "SlowDown"
+)
+
 // GetObject will return the contents of the requested item
 func (s *client) GetObject(url string) (string, error) {
 	svc, err := s.getSvc()
@@ -129,7 +135,7 @@ func (s *client) GetObject(url string) (string, error) {
 		if aerr, ok := err.(awserr.Error); ok {
 			// Some errors are re-tryable
 			switch aerr.Code() {
-			case "RequestTimeout", "ServiceUnavailable", "SlowDown":
+			case AwsRequestTimeout, AwsServiceUnavailable, AwsSlowDown:
 				retry = true
 			}
 		}
@@ -183,7 +189,7 @@ func (s *client) PutObjectStream(url string, r io.Reader) error {
 		if aerr, ok := err.(awserr.Error); ok {
 			// Some errors are re-tryable
 			switch aerr.Code() {
-			case "RequestTimeout", "ServiceUnavailable", "SlowDown":
+			case AwsRequestTimeout, AwsServiceUnavailable, AwsSlowDown:
 				retry = true
 			}
 		}
@@ -223,7 +229,7 @@ func (s *client) DeleteObject(url string) error {
 		if aerr, ok := err.(awserr.Error); ok {
 			// Some errors are re-tryable
 			switch aerr.Code() {
-			case "RequestTimeout", "ServiceUnavailable", "SlowDown":
+			case AwsRequestTimeout, AwsServiceUnavailable, AwsSlowDown:
 				retry = true
 			}
 		}
