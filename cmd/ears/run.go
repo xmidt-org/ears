@@ -36,7 +36,7 @@ var runCmd = &cobra.Command{
 			if p != nil {
 				panicErr := panics.ToError(p)
 				log.Logger.Fatal().Str("op", "run").Str("error", panicErr.Error()).
-					Str("stackTrace", panicErr.StackTrace()).Msg("A panic has ocurred during startup")
+					Str("stackTrace", panicErr.StackTrace()).Msg("A panic has occurred during startup")
 			}
 		}()
 
