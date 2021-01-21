@@ -22,6 +22,7 @@ import (
 	"testing"
 
 	"github.com/xmidt-org/ears/internal/pkg/plugin"
+	"github.com/xmidt-org/ears/pkg/bit"
 	pkgevent "github.com/xmidt-org/ears/pkg/event"
 	pkgfilter "github.com/xmidt-org/ears/pkg/filter"
 	"github.com/xmidt-org/ears/pkg/hasher"
@@ -473,9 +474,13 @@ type newFiltererPluginMock struct {
 	events   []pkgevent.Event
 }
 
-func (m *newFiltererPluginMock) Name() string    { return "newFiltererPluginMock" }
-func (m *newFiltererPluginMock) Version() string { return "version" }
-func (m *newFiltererPluginMock) Config() string  { return "config" }
+func (m *newFiltererPluginMock) Name() string     { return "newFiltererPluginMock" }
+func (m *newFiltererPluginMock) Version() string  { return "filterVersion" }
+func (m *newFiltererPluginMock) Config() string   { return "filterConfig" }
+func (m *newFiltererPluginMock) CommitID() string { return "filterCommitID" }
+func (m *newFiltererPluginMock) SupportedTypes() bit.Mask {
+	return pkgplugin.TypeFilter | pkgplugin.TypePluginer
+}
 
 func (m *newFiltererPluginMock) SetFilter(fn filterFn) {
 	m.Lock()
@@ -520,9 +525,13 @@ type newSendererPluginMock struct {
 	events []pkgevent.Event
 }
 
-func (m *newSendererPluginMock) Name() string    { return "newSendererPluginMock" }
-func (m *newSendererPluginMock) Version() string { return "version" }
-func (m *newSendererPluginMock) Config() string  { return "config" }
+func (m *newSendererPluginMock) Name() string     { return "newSendererPluginMock" }
+func (m *newSendererPluginMock) Version() string  { return "senderVersion" }
+func (m *newSendererPluginMock) Config() string   { return "senderConfig" }
+func (m *newSendererPluginMock) CommitID() string { return "senderCommitID" }
+func (m *newSendererPluginMock) SupportedTypes() bit.Mask {
+	return pkgplugin.TypeSender | pkgplugin.TypePluginer
+}
 
 func newSenderPlugin(t *testing.T) pkgplugin.Pluginer {
 	mock := newSendererPluginMock{}
@@ -556,9 +565,13 @@ type newReceivererPluginMock struct {
 	done   chan struct{}
 }
 
-func (m *newReceivererPluginMock) Name() string    { return "newReceivererPluginMock" }
-func (m *newReceivererPluginMock) Version() string { return "version" }
-func (m *newReceivererPluginMock) Config() string  { return "config" }
+func (m *newReceivererPluginMock) Name() string     { return "newReceivererPluginMock" }
+func (m *newReceivererPluginMock) Version() string  { return "senderVersion" }
+func (m *newReceivererPluginMock) Config() string   { return "senderConfig" }
+func (m *newReceivererPluginMock) CommitID() string { return "senderCommitID" }
+func (m *newReceivererPluginMock) SupportedTypes() bit.Mask {
+	return pkgplugin.TypeReceiver | pkgplugin.TypePluginer
+}
 
 func (m *newReceivererPluginMock) ReceiveEvent(ctx context.Context, e pkgevent.Event) error {
 	return m.nextFn(ctx, e)
