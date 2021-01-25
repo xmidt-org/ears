@@ -16,6 +16,7 @@ package app
 
 import (
 	"encoding/json"
+	"errors"
 	"io/ioutil"
 	"net/http"
 
@@ -36,7 +37,8 @@ func NewAPIManager(routingMgr RoutingTableManager) (*APIManager, error) {
 		routingTableMgr: routingMgr,
 	}
 	api.muxRouter.HandleFunc("/ears/version", api.versionHandler).Methods(http.MethodGet)
-	api.muxRouter.HandleFunc("/ears/v1/routes", api.addRouteHandler).Methods(http.MethodPut)
+	api.muxRouter.HandleFunc("/ears/v1/routes/{routeid}", api.addRouteHandler).Methods(http.MethodPut)
+	api.muxRouter.HandleFunc("/ears/v1/routes", api.addRouteHandler).Methods(http.MethodPost)
 	api.muxRouter.HandleFunc("/ears/v1/routes/{routeId}", api.removeRouteHandler).Methods(http.MethodDelete)
 	api.muxRouter.HandleFunc("/ears/v1/routes/{routeId}", api.getRouteHandler).Methods(http.MethodGet)
 	api.muxRouter.HandleFunc("/ears/v1/routes", api.getAllRoutesHandler).Methods(http.MethodGet)
@@ -52,6 +54,8 @@ func (a *APIManager) versionHandler(w http.ResponseWriter, r *http.Request) {
 
 func (a *APIManager) addRouteHandler(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
+	vars := mux.Vars(r)
+	routeId := vars["routeId"]
 	body, err := ioutil.ReadAll(r.Body)
 	if err != nil {
 		log.Ctx(ctx).Error().Str("op", "addRouteHandler").Msg(err.Error())
@@ -66,6 +70,16 @@ func (a *APIManager) addRouteHandler(w http.ResponseWriter, r *http.Request) {
 		resp := ErrorResponse(err)
 		resp.Respond(ctx, w)
 		return
+	}
+	if routeId != "" && route.Id != "" && routeId != route.Id {
+		err := errors.New("route ID mismatch " + routeId + " vs " + route.Id)
+		log.Ctx(ctx).Error().Str("op", "addRouteHandler").Msg(err.Error())
+		resp := ErrorResponse(err)
+		resp.Respond(ctx, w)
+		return
+	}
+	if routeId != "" && route.Id == "" {
+		route.Id = routeId
 	}
 	err = a.routingTableMgr.AddRoute(ctx, &route)
 	if err != nil {
