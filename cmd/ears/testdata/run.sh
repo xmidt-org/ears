@@ -26,6 +26,8 @@ curl -X POST http://localhost:3000/ears/v1/routes --data @testdata/simpleFilterR
 
 echo "invalid routes"
 
+curl -X PUT http://localhost:3000/ears/v1/routes/wrongid --data @testdata/simpleRoute.json | jq .
+
 curl -X POST http://localhost:3000/ears/v1/routes --data @testdata/simpleRouteBadName.json | jq .
 
 curl -X POST http://localhost:3000/ears/v1/routes --data @testdata/simpleRouteBadPluginName.json | jq .
