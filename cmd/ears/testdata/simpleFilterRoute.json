@@ -21,7 +21,7 @@
     "plugin" : "debug",
     "name" : "mydebug",
     "config" : {
-      "destination" : "DestinationStdout",
+      "destination" : "stdout",
       "maxHistory": 100
     }
   },
