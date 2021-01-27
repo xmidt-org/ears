@@ -122,7 +122,7 @@ info:
 paths:
   /v1/routes:
     get:
-      operationId: getRoutesId
+      operationId: getRoutes
       responses:
         "200":
           $ref: '#/responses/routesResponse'
@@ -132,12 +132,13 @@ paths:
       tags:
       - routes
     post:
-      operationId: postRouteId
+      operationId: postRoute
       parameters:
       - description: Route configuration including sender, receiver and optional filter
           chain.
         in: body
         name: Body
+        required: true
         schema:
           $ref: '#/definitions/Config'
       responses:
@@ -152,7 +153,14 @@ paths:
       - routes
   /v1/routes/{routeId}:
     delete:
-      operationId: deleteRouteId
+      operationId: deleteRoute
+      parameters:
+      - description: Route ID
+        in: path
+        name: routeId
+        required: true
+        type: string
+        x-go-name: RouteId
       responses:
         "200":
           $ref: '#/responses/routeDeleteResponse'
@@ -163,7 +171,14 @@ paths:
       tags:
       - routes
     get:
-      operationId: getRouteId
+      operationId: getRoute
+      parameters:
+      - description: Route ID
+        in: path
+        name: routeId
+        required: true
+        type: string
+        x-go-name: RouteId
       responses:
         "200":
           $ref: '#/responses/routeResponse'
@@ -176,14 +191,21 @@ paths:
       tags:
       - routes
     put:
-      operationId: putRouteId
+      operationId: putRoute
       parameters:
       - description: Route configuration including sender, receiver and optional filter
           chain.
         in: body
         name: Body
+        required: true
         schema:
           $ref: '#/definitions/Config'
+      - description: Route ID
+        in: path
+        name: routeId
+        required: true
+        type: string
+        x-go-name: RouteId
       responses:
         "200":
           $ref: '#/responses/routeResponse'
@@ -196,7 +218,7 @@ paths:
       - routes
   /version:
     get:
-      operationId: versionId
+      operationId: version
       responses:
         "200":
           $ref: '#/responses/versionResponse'
@@ -228,7 +250,7 @@ responses:
     schema:
       $ref: '#/definitions/versionResponse'
 schemes:
-- http
+- http https
 securityDefinitions:
   basic:
     type: basic

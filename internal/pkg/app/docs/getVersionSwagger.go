@@ -1,6 +1,6 @@
 package docs
 
-// swagger:route GET /version version versionId
+// swagger:route GET /version version version
 // version gets current version of API.
 // responses:
 //   200: versionResponse
@@ -8,7 +8,7 @@ package docs
 // This text will appear as description of your response body.
 // swagger:response versionResponse
 type versionResponseWrapper struct {
-	// in:body
+	// in: body
 	Body versionResponse
 }
 
