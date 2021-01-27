@@ -114,9 +114,15 @@ func (a *APIManager) getRouteHandler(w http.ResponseWriter, r *http.Request) {
 	routeConfig, err := a.routingTableMgr.GetRoute(ctx, routeId)
 	if err != nil {
 		log.Ctx(ctx).Error().Str("op", "getRouteHandler").Msg(err.Error())
-		resp := ErrorResponse(err)
-		resp.Respond(ctx, w)
+		if _, ok := err.(*route.RouteNotFoundError); ok {
+			resp := ErrorResponse(&NotFoundError{})
+			resp.Respond(ctx, w)
+		} else {
+			resp := ErrorResponse(err)
+			resp.Respond(ctx, w)
+		}
 		return
+
 	}
 	resp := ItemResponse(routeConfig)
 	resp.Respond(ctx, w)
