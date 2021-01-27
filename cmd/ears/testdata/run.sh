@@ -12,6 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+echo "version"
+
+curl -X GET http://localhost:3000/ears/version | jq .
+
 echo "add routes"
 
 curl -X POST http://localhost:3000/ears/v1/routes --data @testdata/simpleRoute.json | jq .
