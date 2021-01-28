@@ -1,0 +1,7 @@
+{
+  "item": "invalid route name simpleRoute8",
+  "status": {
+    "code": 500,
+    "message": "Internal Server Error"
+  }
+}
