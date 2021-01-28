@@ -1,7 +1,34 @@
 {
-  "item": "Method not implemented",
   "status": {
-    "code": 501,
-    "message": "Not Implemented"
+    "code": 200,
+    "message": "OK"
+  },
+  "item": {
+    "id": "r123",
+    "orgId": "comcast",
+    "appId": "xfi",
+    "userId": "boris",
+    "name": "simpleRoute",
+    "receiver": {
+      "plugin": "debug",
+      "name": "mydebug",
+      "config": {
+        "intervalMs": 1000,
+        "maxHistory": 100,
+        "payload": {
+          "foo": "bar"
+        },
+        "rounds": 1
+      }
+    },
+    "sender": {
+      "plugin": "debug",
+      "name": "mydebug",
+      "config": {
+        "destination": "stdout",
+        "maxHistory": 100
+      }
+    },
+    "deliveryMode": "whoCares"
   }
 }
