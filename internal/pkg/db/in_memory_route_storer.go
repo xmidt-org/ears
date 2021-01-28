@@ -16,7 +16,6 @@ package db
 
 import (
 	"context"
-	"github.com/xmidt-org/ears/internal/pkg/app"
 	"github.com/xmidt-org/ears/pkg/route"
 	"sync"
 	"time"
@@ -27,7 +26,13 @@ type InMemoryRouteStorer struct {
 	lock   *sync.RWMutex
 }
 
-func NewInMemoryRouteStorer(config app.Config) *InMemoryRouteStorer {
+type Config interface {
+	GetString(key string) string
+	GetInt(key string) int
+	GetBool(key string) bool
+}
+
+func NewInMemoryRouteStorer(config Config) *InMemoryRouteStorer {
 	return &InMemoryRouteStorer{
 		routes: make(map[string]*route.Config),
 		lock:   &sync.RWMutex{},
