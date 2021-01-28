@@ -20,7 +20,6 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/dynamodb"
 	"github.com/aws/aws-sdk-go/service/dynamodb/dynamodbattribute"
-	"github.com/xmidt-org/ears/internal/pkg/app"
 	"github.com/xmidt-org/ears/pkg/route"
 	"time"
 )
@@ -30,7 +29,13 @@ type DynamoDbStorer struct {
 	tableName string
 }
 
-func NewDynamoDbStorer(config app.Config) (*DynamoDbStorer, error) {
+type Config interface {
+	GetString(key string) string
+	GetInt(key string) int
+	GetBool(key string) bool
+}
+
+func NewDynamoDbStorer(config Config) (*DynamoDbStorer, error) {
 	region := config.GetString("ears.db.region")
 	if region == "" {
 		return nil, &MissingConfigError{"ears.db.region"}
