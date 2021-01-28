@@ -31,40 +31,16 @@ import (
 	"testing"
 )
 
-func TestVersionHandler(t *testing.T) {
-	Version = "v1.0.2"
-	w := httptest.NewRecorder()
-	r := httptest.NewRequest(http.MethodGet, "/version", nil)
-	api, err := NewAPIManager(&DefaultRoutingTableManager{})
-	if err != nil {
-		t.Fatalf("Fail to instaniate api manager: %s\n", err.Error())
-	}
-	api.versionHandler(w, r)
-	g := goldie.New(t)
-	var data interface{}
-	err = json.Unmarshal(w.Body.Bytes(), &data)
-	if err != nil {
-		t.Fatalf("cannot unmarshal response %s into json %s", string(w.Body.Bytes()), err.Error())
-	}
-	g.AssertJson(t, "version", data)
-}
-
-func TestAddRouteHandler(t *testing.T) {
-	Version = "v1.0.2"
-	w := httptest.NewRecorder()
-	// rename to .json
-	simpleRouteReader, err := os.Open("testdata/route.golden")
-	if err != nil {
-		t.Fatalf("cannot read testdata/route.golden")
-	}
-	r := httptest.NewRequest(http.MethodPost, "/ears/v1/routes", simpleRouteReader)
+func setupRestApi() (*APIManager, error) {
 	inMemStorageMgr := db.NewInMemoryRouteStorer(nil)
 	mgr, err := manager.New()
 	if err != nil {
-		t.Fatalf("cannot create plugin manager: %s\n", err.Error())
+		return nil, err
 	}
 	pluginMgr, err := plugin.NewManager(plugin.WithPluginManager(mgr))
-	// register plugins
+	if err != nil {
+		return nil, err
+	}
 	toArr := func(a ...interface{}) []interface{} { return a }
 	defaultPlugins := []struct {
 		name   string
@@ -90,15 +66,44 @@ func TestAddRouteHandler(t *testing.T) {
 	for _, plug := range defaultPlugins {
 		err = mgr.RegisterPlugin(plug.name, plug.plugin)
 		if err != nil {
-			t.Fatalf("could register %s plugin: %s", plug.name, err.Error())
+			return nil, err
 		}
 	}
-	//
 	routingMgr := NewRoutingTableManager(pluginMgr, inMemStorageMgr)
-	api, err := NewAPIManager(routingMgr)
+	return NewAPIManager(routingMgr)
+
+}
+
+func TestVersionHandler(t *testing.T) {
+	Version = "v1.0.2"
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest(http.MethodGet, "/version", nil)
+	api, err := NewAPIManager(&DefaultRoutingTableManager{})
+	if err != nil {
+		t.Fatalf("Fail to setup api manager: %s\n", err.Error())
+	}
+	api.versionHandler(w, r)
+	g := goldie.New(t)
+	var data interface{}
+	err = json.Unmarshal(w.Body.Bytes(), &data)
+	if err != nil {
+		t.Fatalf("cannot unmarshal response %s into json %s", string(w.Body.Bytes()), err.Error())
+	}
+	g.AssertJson(t, "version", data)
+}
+
+func TestPostRouteHandler(t *testing.T) {
+	Version = "v1.0.2"
+	w := httptest.NewRecorder()
+	simpleRouteReader, err := os.Open("testdata/route.json")
+	if err != nil {
+		t.Fatalf("cannot read route.json")
+	}
+	r := httptest.NewRequest(http.MethodPost, "/ears/v1/routes", simpleRouteReader)
 	if err != nil {
 		t.Fatalf("cannot create api manager: %s\n", err.Error())
 	}
+	api, err := setupRestApi()
 	api.muxRouter.ServeHTTP(w, r)
 	g := goldie.New(t)
 	var data interface{}
