@@ -1,0 +1,7 @@
+{
+  "item": "missing app ID for plugin configuration",
+  "status": {
+    "code": 500,
+    "message": "Internal Server Error"
+  }
+}
