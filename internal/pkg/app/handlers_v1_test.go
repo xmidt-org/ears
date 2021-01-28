@@ -16,7 +16,6 @@ package app
 
 import (
 	"encoding/json"
-	"fmt"
 	goldie "github.com/sebdah/goldie/v2"
 	"github.com/xmidt-org/ears/internal/pkg/db"
 	"github.com/xmidt-org/ears/internal/pkg/plugin"
@@ -53,11 +52,12 @@ func TestVersionHandler(t *testing.T) {
 func TestAddRouteHandler(t *testing.T) {
 	Version = "v1.0.2"
 	w := httptest.NewRecorder()
+	// rename to .json
 	simpleRouteReader, err := os.Open("testdata/route.golden")
 	if err != nil {
 		t.Fatalf("cannot read testdata/route.golden")
 	}
-	r := httptest.NewRequest(http.MethodPost, "/v1/routes", simpleRouteReader)
+	r := httptest.NewRequest(http.MethodPost, "/ears/v1/routes", simpleRouteReader)
 	inMemStorageMgr := db.NewInMemoryRouteStorer(nil)
 	mgr, err := manager.New()
 	if err != nil {
@@ -99,10 +99,9 @@ func TestAddRouteHandler(t *testing.T) {
 	if err != nil {
 		t.Fatalf("cannot create api manager: %s\n", err.Error())
 	}
-	api.addRouteHandler(w, r)
+	api.muxRouter.ServeHTTP(w, r)
 	g := goldie.New(t)
 	var data interface{}
-	fmt.Printf("%s\n", string(w.Body.Bytes()))
 	err = json.Unmarshal(w.Body.Bytes(), &data)
 	if err != nil {
 		t.Fatalf("cannot unmarshal response %s into json %s", string(w.Body.Bytes()), err.Error())

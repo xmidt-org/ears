@@ -1,17 +1,11 @@
 {
-  "status": {
-    "code": 200,
-    "message": "OK"
-  },
   "item": {
-    "id": "r123",
-    "orgId": "comcast",
     "appId": "xfi",
-    "userId": "boris",
+    "deliveryMode": "whoCares",
+    "id": "r123",
     "name": "simpleRoute",
+    "orgId": "comcast",
     "receiver": {
-      "plugin": "debug",
-      "name": "mydebug",
       "config": {
         "intervalMs": 1000,
         "maxHistory": 100,
@@ -19,16 +13,22 @@
           "foo": "bar"
         },
         "rounds": 1
-      }
+      },
+      "name": "mydebug",
+      "plugin": "debug"
     },
     "sender": {
-      "plugin": "debug",
-      "name": "mydebug",
       "config": {
         "destination": "stdout",
         "maxHistory": 100
-      }
+      },
+      "name": "mydebug",
+      "plugin": "debug"
     },
-    "deliveryMode": "whoCares"
+    "userId": "boris"
+  },
+  "status": {
+    "code": 200,
+    "message": "OK"
   }
 }
