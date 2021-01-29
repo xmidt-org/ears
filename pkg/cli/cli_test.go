@@ -19,9 +19,8 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
-	"github.com/xmidt-org/ears/internal/pkg/cli"
+	"github.com/xmidt-org/ears/pkg/cli"
 	"reflect"
-	"strings"
 	"testing"
 )
 
@@ -43,12 +42,12 @@ func TestConfigErrors(t *testing.T) {
 	)
 
 	testCases := [][]string{
-		[]string{"noextension", `open noextension: no such file or directory, path: noextension`},
-		[]string{"./mymissingfile.yaml", `open ./mymissingfile.yaml: no such file or directory, path: ./mymissingfile.yaml`},
-		[]string{"./config.weirdext", `Unsupported Config Type "weirdext", path: ./config.weirdext`},
-		[]string{"file://config", `open config: no such file or directory, path: config`},
-		[]string{"file://config.yaml", `open config.yaml: no such file or directory, path: config.yaml`},
-		[]string{"f://random/protocol.json", `ConfigNotSupportedProtocol, path: f://random/protocol.json`},
+		[]string{"noextension", `ConfigError (path=noextension): open noextension: no such file or directory`},
+		[]string{"./mymissingfile.yaml", `ConfigError (path=./mymissingfile.yaml): open ./mymissingfile.yaml: no such file or directory`},
+		[]string{"./config.weirdext", `ConfigError (path=./config.weirdext): Unsupported Config Type "weirdext"`},
+		[]string{"file://config", `ConfigError (path=config): open config: no such file or directory`},
+		[]string{"file://config.yaml", `ConfigError (path=config.yaml): open config.yaml: no such file or directory`},
+		[]string{"f://random/protocol.json", `ConfigNotSupportedProtocolError (protocol=f)`},
 
 		// TODO:  Need to look into possibly not embedding dynamic info into the error string
 		// such as request and host ids (which the aws error does)
@@ -63,10 +62,9 @@ func TestConfigErrors(t *testing.T) {
 
 		err := cli.ViperConfig("", "")
 
-		switch err {
-		case nil:
+		if err == nil {
 			t.Errorf("expected '%s' but error was <nil>", test[1])
-		default:
+		} else {
 			if err.Error() != test[1] {
 				t.Errorf("#%d expected '%s' != '%s'", i, test[1], err.Error())
 			}
@@ -83,20 +81,13 @@ func TestConfigError(t *testing.T) {
 			Description: "config file (default is $HOME/cli.yaml)",
 		},
 	)
-	var argErr *cli.ArgError
+	var emptyCmdErr *cli.EmptyCmdArgumentError
 	if err == nil {
 		t.Errorf("Expect an error, got no error")
 		return
 	}
-	if !errors.As(err, &argErr) {
+	if !errors.As(err, &emptyCmdErr) {
 		t.Errorf("Expect ArgError type, got a different error type %s", reflect.TypeOf(err))
-	}
-	argErr, _ = err.(*cli.ArgError)
-	if argErr.Unwrap().Error() != "nil cmd argument" {
-		t.Errorf("Unexpected error message %s", argErr.Unwrap().Error())
-	}
-	if err.Error() != "nil cmd argument, key=cmd" {
-		t.Errorf("Unexpected error message %s", err.Error())
 	}
 
 	cmd := &cobra.Command{
@@ -112,21 +103,14 @@ func TestConfigError(t *testing.T) {
 			Description: "config file (default is $HOME/cli.yaml)",
 		},
 	)
+	var noDefaultSetErr *cli.NoDefaultSetError
 	if err == nil {
 		t.Errorf("Expect an error, got no error")
 		return
 	}
-	if !errors.As(err, &argErr) {
+	if !errors.As(err, &noDefaultSetErr) {
 		t.Errorf("Expect ArgError type, got a different error type %s", reflect.TypeOf(err))
 	}
-	argErr, _ = err.(*cli.ArgError)
-	if argErr.Unwrap().Error() != "no default set" {
-		t.Errorf("Unexpected error message %s", argErr.Unwrap().Error())
-	}
-	if !strings.HasPrefix(err.Error(), "no default set, key=a, value=") {
-		t.Errorf("Unexpected error message %s", err.Error())
-	}
-
 }
 
 func TestConfigRead(t *testing.T) {
