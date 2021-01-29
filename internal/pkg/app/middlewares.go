@@ -18,7 +18,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
-	"github.com/xmidt-org/ears/internal/pkg/panics"
+	"github.com/xmidt-org/ears/pkg/panics"
 	"net/http"
 )
 
@@ -44,7 +44,7 @@ func initRequestMiddleware(next http.Handler) http.Handler {
 				resp := ErrorResponse(panicErr)
 				resp.Respond(subCtx, w)
 				log.Ctx(subCtx).Error().Str("op", "initRequestMiddleware").Str("error", panicErr.Error()).
-					Str("stackTrace", panicErr.StackTrace()).Msg("A panic has ocurred")
+					Str("stackTrace", panicErr.StackTrace()).Msg("A panic has occurred")
 			}
 		}()
 
@@ -67,7 +67,7 @@ func initRequestMiddleware(next http.Handler) http.Handler {
 func authenticateMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		subCtx := r.Context()
-		log.Ctx(subCtx).Debug().Msg("authenticateMiddleare")
+		log.Ctx(subCtx).Debug().Msg("authenticateMiddleware")
 		next.ServeHTTP(w, r.WithContext(subCtx))
 	})
 }
