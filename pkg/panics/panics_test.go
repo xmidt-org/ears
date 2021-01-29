@@ -15,7 +15,7 @@
 package panics_test
 
 import (
-	"github.com/xmidt-org/ears/internal/pkg/panics"
+	"github.com/xmidt-org/ears/pkg/panics"
 	"testing"
 )
 
