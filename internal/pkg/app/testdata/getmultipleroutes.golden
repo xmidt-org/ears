@@ -8,12 +8,12 @@
       "orgId": "comcast",
       "receiver": {
         "config": {
-          "intervalMs": 1000,
+          "intervalMs": 100,
           "maxHistory": 100,
           "payload": {
             "foo": "bar"
           },
-          "rounds": 1
+          "rounds": 5
         },
         "name": "mydebug",
         "plugin": "debug"
