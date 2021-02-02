@@ -3,8 +3,8 @@ package docs
 // swagger:route PUT /v1/routes/{routeId} routes putRoute
 // Adds a new route to the routing table or updates an existing route. Route ID can be given in the body. If it is omitted a hash will be calculates and used instead.
 // responses:
-//   200: routeResponse
-//   500: routeErrorResponse
+//   200: RouteResponse
+//   500: RouteErrorResponse
 
 import "github.com/xmidt-org/ears/pkg/route"
 
@@ -12,14 +12,14 @@ import "github.com/xmidt-org/ears/pkg/route"
 // swagger:response routeResponse
 type routeResponseWrapper struct {
 	// in: body
-	Body routeResponse
+	Body RouteResponse
 }
 
 // Item response containing a route error.
 // swagger:response routeErrorResponse
 type routeErrorResponseWrapper struct {
 	// in: body
-	Body routeErrorResponse
+	Body RouteErrorResponse
 }
 
 // swagger:parameters putRoute postRoute
@@ -38,12 +38,12 @@ type routeIdParamWrapper struct {
 	RouteId string `json:"routeId"`
 }
 
-type routeResponse struct {
+type RouteResponse struct {
 	Status responseStatus `json:"status"`
 	Item   route.Config   `json:"item"`
 }
 
-type routeErrorResponse struct {
+type RouteErrorResponse struct {
 	Status responseStatus `json:"status"`
 	Item   string         `json:"item"`
 }
