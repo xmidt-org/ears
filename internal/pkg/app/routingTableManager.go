@@ -16,6 +16,7 @@ package app
 
 import (
 	"context"
+	"encoding/json"
 	"github.com/rs/zerolog/log"
 	"github.com/xmidt-org/ears/internal/pkg/plugin"
 	"github.com/xmidt-org/ears/pkg/filter"
@@ -55,7 +56,19 @@ func (r *DefaultRoutingTableManager) RemoveRoute(ctx context.Context, routeId st
 	return nil
 }
 
+func stringify(data interface{}) string {
+	if data == nil {
+		return ""
+	}
+	buf, err := json.Marshal(data)
+	if err != nil {
+		return ""
+	}
+	return string(buf)
+}
+
 func (r *DefaultRoutingTableManager) AddRoute(ctx context.Context, routeConfig *route.Config) error {
+	ctx = context.Background()
 	// use hashed ID if none is provided - this ID will be returned by the AddRoute REST API
 	if routeConfig.Id == "" {
 		routeConfig.Id = routeConfig.Hash(ctx)
@@ -69,12 +82,13 @@ func (r *DefaultRoutingTableManager) AddRoute(ctx context.Context, routeConfig *
 	if err != nil {
 		return err
 	}
-	// set up receiver and sender
-	receiver, err := r.pluginMgr.RegisterReceiver(ctx, routeConfig.Receiver.Plugin, routeConfig.Receiver.Name, routeConfig.Receiver.Config)
+	// set up sender
+	sender, err := r.pluginMgr.RegisterSender(ctx, routeConfig.Sender.Plugin, routeConfig.Sender.Name, stringify(routeConfig.Sender.Config))
 	if err != nil {
 		return err
 	}
-	sender, err := r.pluginMgr.RegisterSender(ctx, routeConfig.Sender.Plugin, routeConfig.Sender.Name, routeConfig.Sender.Config)
+	// set up receiver
+	receiver, err := r.pluginMgr.RegisterReceiver(ctx, routeConfig.Receiver.Plugin, routeConfig.Receiver.Name, stringify(routeConfig.Receiver.Config))
 	if err != nil {
 		return err
 	}
