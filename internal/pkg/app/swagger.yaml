@@ -57,18 +57,7 @@ definitions:
         x-go-name: Plugin
     type: object
     x-go-package: github.com/xmidt-org/ears/pkg/route
-  responseStatus:
-    properties:
-      code:
-        format: int64
-        type: integer
-        x-go-name: Code
-      message:
-        type: string
-        x-go-name: Message
-    type: object
-    x-go-package: github.com/xmidt-org/ears/internal/pkg/app/docs
-  routeDeleteResponse:
+  RouteDeleteResponse:
     properties:
       item:
         type: string
@@ -77,7 +66,7 @@ definitions:
         $ref: '#/definitions/responseStatus'
     type: object
     x-go-package: github.com/xmidt-org/ears/internal/pkg/app/docs
-  routeErrorResponse:
+  RouteErrorResponse:
     properties:
       item:
         type: string
@@ -86,7 +75,7 @@ definitions:
         $ref: '#/definitions/responseStatus'
     type: object
     x-go-package: github.com/xmidt-org/ears/internal/pkg/app/docs
-  routeResponse:
+  RouteResponse:
     properties:
       item:
         $ref: '#/definitions/Config'
@@ -94,7 +83,7 @@ definitions:
         $ref: '#/definitions/responseStatus'
     type: object
     x-go-package: github.com/xmidt-org/ears/internal/pkg/app/docs
-  routesResponse:
+  RoutesResponse:
     properties:
       items:
         items:
@@ -105,13 +94,24 @@ definitions:
         $ref: '#/definitions/responseStatus'
     type: object
     x-go-package: github.com/xmidt-org/ears/internal/pkg/app/docs
-  versionResponse:
+  VersionResponse:
     properties:
       item:
         type: string
         x-go-name: Item
       status:
         $ref: '#/definitions/responseStatus'
+    type: object
+    x-go-package: github.com/xmidt-org/ears/internal/pkg/app/docs
+  responseStatus:
+    properties:
+      code:
+        format: int64
+        type: integer
+        x-go-name: Code
+      message:
+        type: string
+        x-go-name: Message
     type: object
     x-go-package: github.com/xmidt-org/ears/internal/pkg/app/docs
 host: ears.comcast.com
@@ -125,9 +125,13 @@ paths:
       operationId: getRoutes
       responses:
         "200":
-          $ref: '#/responses/routesResponse'
+          description: RoutesResponse
+          schema:
+            $ref: '#/definitions/RoutesResponse'
         "500":
-          $ref: '#/responses/routeErrorResponse'
+          description: RouteErrorResponse
+          schema:
+            $ref: '#/definitions/RouteErrorResponse'
       summary: Gets list of all routes currently present in the routing table.
       tags:
       - routes
@@ -143,9 +147,13 @@ paths:
           $ref: '#/definitions/Config'
       responses:
         "200":
-          $ref: '#/responses/routeResponse'
+          description: RouteResponse
+          schema:
+            $ref: '#/definitions/RouteResponse'
         "500":
-          $ref: '#/responses/routeErrorResponse'
+          description: RouteErrorResponse
+          schema:
+            $ref: '#/definitions/RouteErrorResponse'
       summary: Adds a new route to the routing table or updates an existing route.
         Route ID can be given in the body. If it is omitted a hash will be calculates
         and used instead.
@@ -163,9 +171,13 @@ paths:
         x-go-name: RouteId
       responses:
         "200":
-          $ref: '#/responses/routeDeleteResponse'
+          description: RouteDeleteResponse
+          schema:
+            $ref: '#/definitions/RouteDeleteResponse'
         "500":
-          $ref: '#/responses/routeErrorResponse'
+          description: RouteErrorResponse
+          schema:
+            $ref: '#/definitions/RouteErrorResponse'
       summary: Removes an existing route from the routing table if a route with the
         given ID exists.
       tags:
@@ -181,11 +193,17 @@ paths:
         x-go-name: RouteId
       responses:
         "200":
-          $ref: '#/responses/routeResponse'
+          description: RouteResponse
+          schema:
+            $ref: '#/definitions/RouteResponse'
         "404":
-          $ref: '#/responses/routeErrorResponse'
+          description: RouteErrorResponse
+          schema:
+            $ref: '#/definitions/RouteErrorResponse'
         "500":
-          $ref: '#/responses/routeErrorResponse'
+          description: RouteErrorResponse
+          schema:
+            $ref: '#/definitions/RouteErrorResponse'
       summary: Gets a route for a given ID. If no route by that ID exists and error
         is returned instead.
       tags:
@@ -208,9 +226,13 @@ paths:
         x-go-name: RouteId
       responses:
         "200":
-          $ref: '#/responses/routeResponse'
+          description: RouteResponse
+          schema:
+            $ref: '#/definitions/RouteResponse'
         "500":
-          $ref: '#/responses/routeErrorResponse'
+          description: RouteErrorResponse
+          schema:
+            $ref: '#/definitions/RouteErrorResponse'
       summary: Adds a new route to the routing table or updates an existing route.
         Route ID can be given in the body. If it is omitted a hash will be calculates
         and used instead.
@@ -221,7 +243,9 @@ paths:
       operationId: version
       responses:
         "200":
-          $ref: '#/responses/versionResponse'
+          description: VersionResponse
+          schema:
+            $ref: '#/definitions/VersionResponse'
       summary: version gets current version of API.
       tags:
       - version
@@ -231,24 +255,24 @@ responses:
   routeDeleteResponse:
     description: Item response containing the ID of the deleted route.
     schema:
-      $ref: '#/definitions/routeDeleteResponse'
+      $ref: '#/definitions/RouteDeleteResponse'
   routeErrorResponse:
     description: Item response containing a route error.
     schema:
-      $ref: '#/definitions/routeErrorResponse'
+      $ref: '#/definitions/RouteErrorResponse'
   routeResponse:
     description: Item response containing a complete route configuration including
       sender, receiver and optional filter chain.
     schema:
-      $ref: '#/definitions/routeResponse'
+      $ref: '#/definitions/RouteResponse'
   routesResponse:
     description: Items response containing a list of routes.
     schema:
-      $ref: '#/definitions/routesResponse'
+      $ref: '#/definitions/RoutesResponse'
   versionResponse:
     description: This text will appear as description of your response body.
     schema:
-      $ref: '#/definitions/versionResponse'
+      $ref: '#/definitions/VersionResponse'
 schemes:
 - http https
 securityDefinitions:
