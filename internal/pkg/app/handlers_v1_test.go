@@ -92,12 +92,12 @@ func TestRestVersionHandler(t *testing.T) {
 	g.AssertJson(t, "version", data)
 }
 
-func TestRestPostRouteHandler(t *testing.T) {
+func TestRestPostSimpleRouteHandler(t *testing.T) {
 	Version = "v1.0.2"
 	w := httptest.NewRecorder()
 	simpleRouteReader, err := os.Open("testdata/simpleRoute.json")
 	if err != nil {
-		t.Fatalf("cannot read route.json")
+		t.Fatalf("cannot read file: %s", err.Error())
 	}
 	r := httptest.NewRequest(http.MethodPost, "/ears/v1/routes", simpleRouteReader)
 	api, err := setupRestApi()
@@ -114,12 +114,12 @@ func TestRestPostRouteHandler(t *testing.T) {
 	g.AssertJson(t, "addroute", data)
 }
 
-func TestRestPutRouteHandler(t *testing.T) {
+func TestRestPutSimpleRouteHandler(t *testing.T) {
 	Version = "v1.0.2"
 	w := httptest.NewRecorder()
 	simpleRouteReader, err := os.Open("testdata/simpleRoute.json")
 	if err != nil {
-		t.Fatalf("cannot read route.json")
+		t.Fatalf("cannot read file: %s", err.Error())
 	}
 	r := httptest.NewRequest(http.MethodPut, "/ears/v1/routes/r123", simpleRouteReader)
 	api, err := setupRestApi()
@@ -136,12 +136,34 @@ func TestRestPutRouteHandler(t *testing.T) {
 	g.AssertJson(t, "addroute", data)
 }
 
+func TestRestPostFilterMatchAllowRouteHandler(t *testing.T) {
+	Version = "v1.0.2"
+	w := httptest.NewRecorder()
+	simpleRouteReader, err := os.Open("testdata/simpleFilterMatchAllowRoute.json")
+	if err != nil {
+		t.Fatalf("cannot read file: %s", err.Error())
+	}
+	r := httptest.NewRequest(http.MethodPost, "/ears/v1/routes", simpleRouteReader)
+	api, err := setupRestApi()
+	if err != nil {
+		t.Fatalf("cannot create api manager: %s\n", err.Error())
+	}
+	api.muxRouter.ServeHTTP(w, r)
+	g := goldie.New(t)
+	var data interface{}
+	err = json.Unmarshal(w.Body.Bytes(), &data)
+	if err != nil {
+		t.Fatalf("cannot unmarshal response %s into json %s", string(w.Body.Bytes()), err.Error())
+	}
+	g.AssertJson(t, "addfiltermatchallowroute", data)
+}
+
 func TestRestRouteHandlerIdMismatch(t *testing.T) {
 	Version = "v1.0.2"
 	w := httptest.NewRecorder()
 	simpleRouteReader, err := os.Open("testdata/simpleRoute.json")
 	if err != nil {
-		t.Fatalf("cannot read route.json")
+		t.Fatalf("cannot read file: %s", err.Error())
 	}
 	r := httptest.NewRequest(http.MethodPut, "/ears/v1/routes/badid", simpleRouteReader)
 	api, err := setupRestApi()
@@ -180,7 +202,7 @@ func TestRestGetRouteHandler(t *testing.T) {
 	Version = "v1.0.2"
 	simpleRouteReader, err := os.Open("testdata/simpleRoute.json")
 	if err != nil {
-		t.Fatalf("cannot read route.json")
+		t.Fatalf("cannot read file: %s", err.Error())
 	}
 	api, err := setupRestApi()
 	if err != nil {
@@ -208,12 +230,12 @@ func TestRestGetMultipleRoutesHandler(t *testing.T) {
 	Version = "v1.0.2"
 	simpleRouteReader, err := os.Open("testdata/simpleRoute.json")
 	if err != nil {
-		t.Fatalf("cannot read route.json")
+		t.Fatalf("cannot read file: %s", err.Error())
 	}
-	simpleFilterRouteReader, err := os.Open("testdata/simpleFilterRoute.json")
+	/*simpleFilterRouteReader, err := os.Open("testdata/simpleFilterMatchAllowRoute.json")
 	if err != nil {
-		t.Fatalf("cannot read route.json")
-	}
+		t.Fatalf("cannot read file: %s", err.Error())
+	}*/
 	api, err := setupRestApi()
 	if err != nil {
 		t.Fatalf("cannot create api manager: %s\n", err.Error())
@@ -221,9 +243,9 @@ func TestRestGetMultipleRoutesHandler(t *testing.T) {
 	w := httptest.NewRecorder()
 	r := httptest.NewRequest(http.MethodPost, "/ears/v1/routes", simpleRouteReader)
 	api.muxRouter.ServeHTTP(w, r)
-	w = httptest.NewRecorder()
+	/*w = httptest.NewRecorder()
 	r = httptest.NewRequest(http.MethodPost, "/ears/v1/routes", simpleFilterRouteReader)
-	api.muxRouter.ServeHTTP(w, r)
+	api.muxRouter.ServeHTTP(w, r)*/
 	w = httptest.NewRecorder()
 	r = httptest.NewRequest(http.MethodGet, "/ears/v1/routes", nil)
 	api.muxRouter.ServeHTTP(w, r)
@@ -245,11 +267,11 @@ func TestRestDeleteRouteHandler(t *testing.T) {
 	Version = "v1.0.2"
 	simpleRouteReader, err := os.Open("testdata/simpleRoute.json")
 	if err != nil {
-		t.Fatalf("cannot read route.json")
+		t.Fatalf("cannot read file: %s", err.Error())
 	}
-	simpleFilterRouteReader, err := os.Open("testdata/simpleFilterRoute.json")
+	simpleFilterRouteReader, err := os.Open("testdata/simpleFilterMatchAllowRoute.json")
 	if err != nil {
-		t.Fatalf("cannot read route.json")
+		t.Fatalf("cannot read file: %s", err.Error())
 	}
 	api, err := setupRestApi()
 	if err != nil {
@@ -286,7 +308,7 @@ func TestRestPostRouteHandlerBadName(t *testing.T) {
 	w := httptest.NewRecorder()
 	simpleRouteReader, err := os.Open("testdata/simpleRouteBadName.json")
 	if err != nil {
-		t.Fatalf("cannot read route.json")
+		t.Fatalf("cannot read file: %s", err.Error())
 	}
 	r := httptest.NewRequest(http.MethodPost, "/ears/v1/routes", simpleRouteReader)
 	api, err := setupRestApi()
@@ -308,7 +330,7 @@ func TestRestPostRouteHandlerBadPluginName(t *testing.T) {
 	w := httptest.NewRecorder()
 	simpleRouteReader, err := os.Open("testdata/simpleRouteBadPluginName.json")
 	if err != nil {
-		t.Fatalf("cannot read route.json")
+		t.Fatalf("cannot read file: %s", err.Error())
 	}
 	r := httptest.NewRequest(http.MethodPost, "/ears/v1/routes", simpleRouteReader)
 	api, err := setupRestApi()
@@ -330,7 +352,7 @@ func TestRestPostRouteHandlerNoApp(t *testing.T) {
 	w := httptest.NewRecorder()
 	simpleRouteReader, err := os.Open("testdata/simpleRouteNoApp.json")
 	if err != nil {
-		t.Fatalf("cannot read route.json")
+		t.Fatalf("cannot read file: %s", err.Error())
 	}
 	r := httptest.NewRequest(http.MethodPost, "/ears/v1/routes", simpleRouteReader)
 	api, err := setupRestApi()
@@ -352,7 +374,7 @@ func TestRestPostRouteHandlerNoOrg(t *testing.T) {
 	w := httptest.NewRecorder()
 	simpleRouteReader, err := os.Open("testdata/simpleRouteNoOrg.json")
 	if err != nil {
-		t.Fatalf("cannot read route.json")
+		t.Fatalf("cannot read file: %s", err.Error())
 	}
 	r := httptest.NewRequest(http.MethodPost, "/ears/v1/routes", simpleRouteReader)
 	api, err := setupRestApi()
@@ -374,7 +396,7 @@ func TestRestPostRouteHandlerNoSender(t *testing.T) {
 	w := httptest.NewRecorder()
 	simpleRouteReader, err := os.Open("testdata/simpleRouteNoSender.json")
 	if err != nil {
-		t.Fatalf("cannot read route.json")
+		t.Fatalf("cannot read file: %s", err.Error())
 	}
 	r := httptest.NewRequest(http.MethodPost, "/ears/v1/routes", simpleRouteReader)
 	api, err := setupRestApi()
@@ -396,7 +418,7 @@ func TestRestPostRouteHandlerNoReceiver(t *testing.T) {
 	w := httptest.NewRecorder()
 	simpleRouteReader, err := os.Open("testdata/simpleRouteNoReceiver.json")
 	if err != nil {
-		t.Fatalf("cannot read route.json")
+		t.Fatalf("cannot read file: %s", err.Error())
 	}
 	r := httptest.NewRequest(http.MethodPost, "/ears/v1/routes", simpleRouteReader)
 	api, err := setupRestApi()
@@ -418,7 +440,7 @@ func TestRestPostRouteHandlerNoUser(t *testing.T) {
 	w := httptest.NewRecorder()
 	simpleRouteReader, err := os.Open("testdata/simpleRouteNoUser.json")
 	if err != nil {
-		t.Fatalf("cannot read route.json")
+		t.Fatalf("cannot read file: %s", err.Error())
 	}
 	r := httptest.NewRequest(http.MethodPost, "/ears/v1/routes", simpleRouteReader)
 	api, err := setupRestApi()
