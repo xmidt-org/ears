@@ -3,14 +3,14 @@
   "orgId" : "comcast",
   "appId" : "xfi",
   "userId" : "boris",
-  "name" : "simpleRoute",
+  "name" : "simpleFilterRoute",
   "receiver" : {
     "plugin" : "debug",
     "name" : "mydebug",
     "config" :
     {
-      "rounds" : 1,
-      "intervalMs" : 1000,
+      "rounds" : 5,
+      "intervalMs" : 100,
       "payload" : {
         "foo" : "bar"
       },
@@ -30,7 +30,7 @@
       "plugin" : "match",
       "name" : "mymatch",
       "config" : {
-        "mode" : "allow",
+        "mode" : "deny",
         "matcher" : "regex",
         "pattern" : "^.*$"
       }
