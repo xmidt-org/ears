@@ -16,6 +16,7 @@ package regex
 
 import (
 	"context"
+	"encoding/json"
 	"regexp"
 
 	"github.com/xmidt-org/ears/pkg/event"
@@ -39,11 +40,18 @@ func (m *Matcher) Match(ctx context.Context, event event.Event) bool {
 	if m == nil || m.r == nil || event == nil {
 		return false
 	}
-
-	p, ok := event.Payload().(string)
-	if !ok {
-		return false
+	eventString := ""
+	switch event.Payload().(type) {
+	case string:
+		eventString = event.Payload().(string)
+	case []byte:
+		eventString = string(event.Payload().([]byte))
+	default:
+		buf, err := json.Marshal(event.Payload())
+		if err != nil {
+			return false
+		}
+		eventString = string(buf)
 	}
-
-	return m.r.MatchString(p)
+	return m.r.MatchString(eventString)
 }
