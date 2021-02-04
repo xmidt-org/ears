@@ -30,6 +30,7 @@ import (
 	"github.com/xmidt-org/ears/pkg/plugins/debug"
 	"github.com/xmidt-org/ears/pkg/plugins/match"
 	"github.com/xmidt-org/ears/pkg/plugins/pass"
+	"github.com/xmidt-org/ears/pkg/plugins/split"
 	"github.com/xmidt-org/ears/pkg/route"
 	"io/ioutil"
 	"net/http"
@@ -69,6 +70,10 @@ func setupRestApi() (*APIManager, RoutingTableManager, plugin.Manager, route.Rou
 		{
 			name:   "block",
 			plugin: toArr(block.NewPluginVersion("block", "", ""))[0].(pkgplugin.Pluginer),
+		},
+		{
+			name:   "split",
+			plugin: toArr(split.NewPluginVersion("split", "", ""))[0].(pkgplugin.Pluginer),
 		},
 	}
 	for _, plug := range defaultPlugins {
@@ -264,6 +269,34 @@ func TestRestPostFilterChainMatchRouteHandler(t *testing.T) {
 	g.AssertJson(t, "addfilterchainmatchroute", data)
 	// check number of events received by output plugin
 	err = checkEventsSent(1, routeFileName, pluginMgr, 5)
+	if err != nil {
+		t.Fatalf("check events sent error: %s", err.Error())
+	}
+}
+
+func TestRestPostFilterSplitRouteHandler(t *testing.T) {
+	Version = "v1.0.2"
+	w := httptest.NewRecorder()
+	routeFileName := "testdata/simpleFilterSplitRoute.json"
+	simpleRouteReader, err := os.Open(routeFileName)
+	if err != nil {
+		t.Fatalf("cannot read file: %s", err.Error())
+	}
+	r := httptest.NewRequest(http.MethodPost, "/ears/v1/routes", simpleRouteReader)
+	api, _, pluginMgr, _, err := setupRestApi()
+	if err != nil {
+		t.Fatalf("cannot create api manager: %s\n", err.Error())
+	}
+	api.muxRouter.ServeHTTP(w, r)
+	g := goldie.New(t)
+	var data interface{}
+	err = json.Unmarshal(w.Body.Bytes(), &data)
+	if err != nil {
+		t.Fatalf("cannot unmarshal response %s into json %s", string(w.Body.Bytes()), err.Error())
+	}
+	g.AssertJson(t, "addsimplefiltersplitroute", data)
+	// check number of events received by output plugin
+	err = checkEventsSent(1, routeFileName, pluginMgr, 10)
 	if err != nil {
 		t.Fatalf("check events sent error: %s", err.Error())
 	}
