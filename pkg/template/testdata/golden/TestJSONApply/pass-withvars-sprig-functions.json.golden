@@ -1,0 +1,22 @@
+{
+	"crypto": [
+		"d3486ae9136e7856bc42212385ea797094475802"
+	],
+	"defaultFunctions": [
+		"oohhhh snap!",
+		"false",
+		"foo"
+	],
+	"introduction": "Here is an example of sprig functions in action.  For the complete \ndocumentation, go to:  http: //masterminds.github.io/sprig",
+	"string": [
+		"hello",
+		"5.00",
+		"hello",
+		"hello",
+		"hello",
+		"true"
+	],
+	"typeConversion": [
+		"[1 2 3]"
+	]
+}

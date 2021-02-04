@@ -1,0 +1,1 @@
+Could not walk tree: Failed applying values to primitive: value=no {{ .value }} to apply: MissingKeyError: key="value", content="no {{ .value }} to apply", values=<nil>, err=template: text:1:6: executing "text" at <.value>: nil data; no entry for key "value"

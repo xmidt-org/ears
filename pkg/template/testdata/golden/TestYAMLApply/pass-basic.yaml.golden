@@ -1,0 +1,10 @@
+someArray:
+- some string
+- 2
+- 3
+- 4
+someBool: true
+someInt: 0
+someMap:
+  mapKey: mapValue
+someString: Here ye, here ye.

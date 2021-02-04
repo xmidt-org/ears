@@ -1,0 +1,1 @@
+Could not Apply values: Could not walk tree: Failed applying values to map value: content={{ .value: ParseError: content="{{ .value", err=template: text:1: unclosed action

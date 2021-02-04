@@ -1,0 +1,14 @@
+{
+  "someInt": 0,
+  "someBool": true,
+  "someString": "Here ye, here ye.",
+  "someArray": [
+    "some string",
+    2,
+    3,
+    4
+  ],
+  "someMap": {
+    "mapKey": "mapValue"
+  }
+}

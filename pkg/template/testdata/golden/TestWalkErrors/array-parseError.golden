@@ -1,0 +1,1 @@
+Could not walk tree: Failed applying values to primitive: value=a bad {{ .value  template here : ParseError: content="a bad {{ .value template he...", err=template: text:1: unexpected <template> in operand

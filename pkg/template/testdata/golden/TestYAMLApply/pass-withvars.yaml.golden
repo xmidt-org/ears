@@ -1,0 +1,11 @@
+replacementVarKey: some var value
+someArray:
+- some string replacement value here
+- 2
+- 3
+- 4
+someBool: true
+someInt: 0
+someMap:
+  mapKey: mapValue replacement value here
+someString: Here ye, replacement value here here ye.

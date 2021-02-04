@@ -1,0 +1,22 @@
+Here is an example of sprig functions in action.  For the complete
+documentation, go to:  http://masterminds.github.io/sprig
+
+String:
+* hello
+* 5.00
+* hello
+* hello
+* hello
+* true
+
+Type Conversion:
+* [1 2 3]
+
+Default functions:
+* foo
+* true
+* foo
+
+
+Crypto:
+* d3486ae9136e7856bc42212385ea797094475802

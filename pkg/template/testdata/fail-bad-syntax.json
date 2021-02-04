@@ -1,0 +1,3 @@
+{
+  unquotedKey: "This is an invalid document It should be throwing a yaml parsing error"
+}

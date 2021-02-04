@@ -1,0 +1,23 @@
+introduction: |
+  Here is an example of sprig functions in action.  For the complete
+  documentation, go to:  http://masterminds.github.io/sprig
+
+string:
+  - '{{ trim "   hello    " }}'
+  - '{{ trimAll "$" "$5.00" }}'
+  - '{{ trimSuffix "-" "hello-" }}'
+  - '{{ substr 0 5 "hello world" }}'
+  - '{{ trunc 5 "hello world" }}'
+  - '{{ contains "cat" "catch" }}'
+
+typeConversion:
+  - "{{ list 1 2 3 | toStrings }}"
+
+defaultFunctions:
+  - '{{ default "foo" .Action }}'
+  - "{{ empty .Foo }}"
+  - '{{ true | ternary "foo" "bar" }}'
+
+crypto:
+  - '{{ sha1sum "Hello world!" }}'
+

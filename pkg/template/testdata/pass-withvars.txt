@@ -1,0 +1,9 @@
+Here is an example of {{ .Action }} values in a file.
+
+
+https://github.com/golang/go/issues/24963
+
+For a template option of `missingkey=zero`, a nil value will have a `<no value>`
+replacement text.  Similar to the comments made in the ticket, I think this is
+odd as the value has now been turned into a string anyways, so turning it into
+"" probably would have made more sense.

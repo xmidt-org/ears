@@ -1,0 +1,15 @@
+{
+  "someInt": 0,
+  "someBool": true,
+  "someString": "Here ye, {{ .value }} here ye.",
+  "someArray": [
+    "some string {{ .value }}",
+    2,
+    3,
+    4
+  ],
+  "someMap": {
+    "mapKey": "mapValue {{ .value }}"
+  },
+  "{{ .someVarKey }}": "some var value"
+}

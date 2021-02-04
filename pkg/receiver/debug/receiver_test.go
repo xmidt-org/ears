@@ -20,9 +20,7 @@ import (
 	"testing"
 	"time"
 
-	plugdebug "github.com/xmidt-org/ears/pkg/plugins/debug"
-
-	"github.com/xmidt-org/ears/pkg/sender/debug"
+	"github.com/xmidt-org/ears/pkg/plugins/debug"
 	"github.com/xorcare/pointer"
 
 	"github.com/xmidt-org/ears/pkg/event"
@@ -30,37 +28,43 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-func TestSender(t *testing.T) {
+func TestReceiver(t *testing.T) {
 
 	totalTimeout := 5 * time.Second
 	caseTimeout := 2 * time.Second
 
 	testCases := []struct {
-		name        string
-		timeout     time.Duration
-		numMessages int
-		config      *debug.Config
+		name    string
+		timeout time.Duration
+		config  debug.Config
 	}{
 		{
 			name:    "none",
 			timeout: caseTimeout,
-			config:  &debug.Config{},
+			config: debug.Config{
+				Rounds:  pointer.Int(0),
+				Payload: "none",
+			},
 		},
 
 		{
-			name:        "underflow",
-			timeout:     caseTimeout,
-			numMessages: 1,
-			config: &debug.Config{
+			name:    "one",
+			timeout: caseTimeout,
+			config: debug.Config{
+				Rounds:     pointer.Int(1),
+				IntervalMs: pointer.Int(10),
+				Payload:    "one",
 				MaxHistory: pointer.Int(5),
 			},
 		},
 
 		{
-			name:        "overflow",
-			timeout:     caseTimeout,
-			numMessages: 7,
-			config: &debug.Config{
+			name:    "five",
+			timeout: caseTimeout,
+			config: debug.Config{
+				Rounds:     pointer.Int(5),
+				IntervalMs: pointer.Int(10),
+				Payload:    "five",
 				MaxHistory: pointer.Int(3),
 			},
 		},
@@ -70,7 +74,7 @@ func TestSender(t *testing.T) {
 	defer cancel()
 
 	a := NewWithT(t)
-	p, err := plugdebug.NewPlugin()
+	p, err := debug.NewPlugin()
 	a.Expect(err).To(BeNil())
 
 	for _, tc := range testCases {
@@ -80,30 +84,37 @@ func TestSender(t *testing.T) {
 
 			a := NewWithT(t)
 
-			w := &debug.SendSlice{}
-			tc.config.Destination = debug.DestinationCustom
-			tc.config.Writer = w
+			// Make sure we fill in all values
 			tc.config = tc.config.WithDefaults()
 
-			s, err := p.NewSender(tc.config)
+			r, err := p.NewReceiver(tc.config)
 			a.Expect(err).To(BeNil())
 
-			for i := 0; i < tc.numMessages; i++ {
-				e, err := event.NewEvent(tc.name)
-				a.Expect(err).To(BeNil())
+			events := []event.Event{}
 
-				err = s.Send(ctx, e)
-				a.Expect(err).To(BeNil())
-			}
+			err = r.Receive(ctx, func(ctx context.Context, e event.Event) error {
+				events = append(events, e)
+				return nil
+			})
 
-			a.Expect(w.Events()).To(HaveLen(tc.numMessages))
+			a.Expect(err).To(BeNil())
+			a.Expect(events).To(HaveLen(*tc.config.Rounds))
 
-			ds, ok := s.(*debug.Sender)
+			dr, ok := r.(*debug.Receiver)
 			a.Expect(ok).To(BeTrue())
+			a.Expect(dr.Count()).To(Equal(*tc.config.Rounds))
 
-			a.Expect(ds.Records()).To(HaveLen(
-				min(tc.numMessages, *tc.config.MaxHistory),
+			history := dr.History()
+
+			a.Expect(history).To(HaveLen(
+				min(*tc.config.Rounds, *tc.config.MaxHistory),
 			))
+
+			for _, e := range history {
+				p, ok := e.Payload().(string)
+				a.Expect(ok).To(BeTrue())
+				a.Expect(p).To(Equal(tc.config.Payload))
+			}
 
 		})
 
@@ -111,16 +122,6 @@ func TestSender(t *testing.T) {
 
 }
 
-func min(vals ...int) int {
-	if len(vals) < 1 {
-		return 0
-	}
+func TestReceiveErrors(t *testing.T) {
 
-	m := vals[0]
-	for _, v := range vals {
-		if v < m {
-			m = v
-		}
-	}
-	return m
 }

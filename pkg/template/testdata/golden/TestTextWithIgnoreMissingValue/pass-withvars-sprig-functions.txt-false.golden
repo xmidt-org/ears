@@ -1,0 +1,1 @@
+MissingKeyError: key="Action", content="Here is an example of sprig...", values=<nil>, err=template: text:16:19: executing "text" at <.Action>: nil data; no entry for key "Action"

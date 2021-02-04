@@ -1,0 +1,7 @@
+---
+someInt: 0
+someBool: true
+someString: "{{ .value "
+someArray: ["some string  }}", 2, 3, 4]
+someMap:
+  mapKey: mapValue {{ .value }}

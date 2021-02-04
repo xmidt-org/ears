@@ -1,0 +1,1 @@
+Could not walk tree: Failed applying values to primitive: value=no {{ doit }} to apply: ParseError: content="no {{ doit }} to apply", err=template: text:1: function "doit" not defined
