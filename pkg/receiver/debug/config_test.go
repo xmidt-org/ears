@@ -17,7 +17,7 @@ package debug_test
 import (
 	"testing"
 
-	"github.com/xmidt-org/ears/pkg/plugins/debug"
+	"github.com/xmidt-org/ears/pkg/receiver/debug"
 	"github.com/xorcare/pointer"
 
 	"github.com/sebdah/goldie/v2"
@@ -35,7 +35,7 @@ func TestReceiverWithDefault(t *testing.T) {
 		{
 			name:     "empty",
 			input:    debug.Config{},
-			expected: debug.DefaultConfig,
+			expected: *debug.DefaultConfig,
 		},
 
 		{
@@ -202,7 +202,7 @@ func TestReceiverWithDefault(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			a := NewWithT(t)
 
-			d := tc.input.WithDefaults()
+			d := *tc.input.WithDefaults()
 			a.Expect(d).To(Equal(tc.expected))
 
 		})
@@ -224,12 +224,12 @@ func TestReceiverValidation(t *testing.T) {
 
 		{
 			name:  "default",
-			input: debug.DefaultConfig,
+			input: *debug.DefaultConfig,
 			valid: true,
 		},
 		{
 			name:  "with-defaults",
-			input: (&debug.Config{}).WithDefaults(),
+			input: *(&debug.Config{}).WithDefaults(),
 			valid: true,
 		},
 
@@ -407,7 +407,7 @@ func TestReceiverSerialization(t *testing.T) {
 
 		{
 			name:   "default",
-			config: (&debug.Config{}).WithDefaults(),
+			config: *(&debug.Config{}).WithDefaults(),
 		},
 
 		{

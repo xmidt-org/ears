@@ -20,7 +20,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/xmidt-org/ears/pkg/plugins/debug"
+	plugdebug "github.com/xmidt-org/ears/pkg/plugins/debug"
+
+	"github.com/xmidt-org/ears/pkg/receiver/debug"
 	"github.com/xorcare/pointer"
 
 	"github.com/xmidt-org/ears/pkg/event"
@@ -74,7 +76,7 @@ func TestReceiver(t *testing.T) {
 	defer cancel()
 
 	a := NewWithT(t)
-	p, err := debug.NewPlugin()
+	p, err := plugdebug.NewPlugin()
 	a.Expect(err).To(BeNil())
 
 	for _, tc := range testCases {
@@ -85,7 +87,7 @@ func TestReceiver(t *testing.T) {
 			a := NewWithT(t)
 
 			// Make sure we fill in all values
-			tc.config = tc.config.WithDefaults()
+			tc.config = *tc.config.WithDefaults()
 
 			r, err := p.NewReceiver(tc.config)
 			a.Expect(err).To(BeNil())
@@ -104,7 +106,7 @@ func TestReceiver(t *testing.T) {
 			a.Expect(ok).To(BeTrue())
 			a.Expect(dr.Count()).To(Equal(*tc.config.Rounds))
 
-			history := dr.History()
+			history := dr.Records()
 
 			a.Expect(history).To(HaveLen(
 				min(*tc.config.Rounds, *tc.config.MaxHistory),
