@@ -17,6 +17,8 @@ package app
 import (
 	"context"
 	"encoding/json"
+	"errors"
+	"fmt"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	goldie "github.com/sebdah/goldie/v2"
@@ -84,6 +86,34 @@ func setupRestApi() (*APIManager, RoutingTableManager, plugin.Manager, route.Rou
 
 }
 
+func checkEventsSent(waitSeconds int, routeFileName string, pluginMgr plugin.Manager, expectedNumberOfEvents int) error {
+	time.Sleep(time.Duration(waitSeconds) * time.Second)
+	zerolog.SetGlobalLevel(zerolog.ErrorLevel)
+	ctx := context.Background()
+	ctx = log.Logger.WithContext(ctx)
+	buf, err := ioutil.ReadFile(routeFileName)
+	if err != nil {
+		return err
+	}
+	var rt route.Config
+	err = json.Unmarshal(buf, &rt)
+	if err != nil {
+		return err
+	}
+	sdr, err := pluginMgr.RegisterSender(ctx, rt.Sender.Plugin, rt.Sender.Name, stringify(rt.Sender.Config))
+	if err != nil {
+		return err
+	}
+	debugSender, ok := sdr.Unwrap().(*debug.Sender)
+	if !ok {
+		return errors.New("bad type assertion debug sender")
+	}
+	if debugSender.Count() != expectedNumberOfEvents {
+		return errors.New(fmt.Sprintf("unexpected number of events in sender %d (%d)", debugSender.Count(), expectedNumberOfEvents))
+	}
+	return nil
+}
+
 func TestRestVersionHandler(t *testing.T) {
 	Version = "v1.0.2"
 	w := httptest.NewRecorder()
@@ -124,29 +154,9 @@ func TestRestPostSimpleRouteHandler(t *testing.T) {
 	}
 	g.AssertJson(t, "addroute", data)
 	// check number of events received by output plugin
-	time.Sleep(1 * time.Second)
-	zerolog.SetGlobalLevel(zerolog.ErrorLevel)
-	ctx := context.Background()
-	ctx = log.Logger.WithContext(ctx)
-	buf, err := ioutil.ReadFile(routeFileName)
+	err = checkEventsSent(1, routeFileName, pluginMgr, 5)
 	if err != nil {
-		t.Fatalf("cannot read file: %s", err.Error())
-	}
-	var rt route.Config
-	err = json.Unmarshal(buf, &rt)
-	if err != nil {
-		t.Fatalf("cannot parse file: %s", err.Error())
-	}
-	sdr, err := pluginMgr.RegisterSender(ctx, rt.Sender.Plugin, rt.Sender.Name, stringify(rt.Sender.Config))
-	if err != nil {
-		t.Fatalf("failed to register sender: %s", err.Error())
-	}
-	debugSender, ok := sdr.Unwrap().(*debug.Sender)
-	if !ok {
-		t.Fatalf("bad type assertion debug sender")
-	}
-	if debugSender.Count() != 5 {
-		t.Fatalf("unexpected number of events in sender %d", debugSender.Count())
+		t.Fatalf("check events sent error: %s", err.Error())
 	}
 }
 
@@ -195,29 +205,9 @@ func TestRestPostFilterMatchAllowRouteHandler(t *testing.T) {
 	}
 	g.AssertJson(t, "addfiltermatchallowroute", data)
 	// check number of events received by output plugin
-	time.Sleep(1 * time.Second)
-	zerolog.SetGlobalLevel(zerolog.ErrorLevel)
-	ctx := context.Background()
-	ctx = log.Logger.WithContext(ctx)
-	buf, err := ioutil.ReadFile(routeFileName)
+	err = checkEventsSent(1, routeFileName, pluginMgr, 5)
 	if err != nil {
-		t.Fatalf("cannot read file: %s", err.Error())
-	}
-	var rt route.Config
-	err = json.Unmarshal(buf, &rt)
-	if err != nil {
-		t.Fatalf("cannot parse file: %s", err.Error())
-	}
-	sdr, err := pluginMgr.RegisterSender(ctx, rt.Sender.Plugin, rt.Sender.Name, stringify(rt.Sender.Config))
-	if err != nil {
-		t.Fatalf("failed to register sender: %s", err.Error())
-	}
-	debugSender, ok := sdr.Unwrap().(*debug.Sender)
-	if !ok {
-		t.Fatalf("bad type assertion debug sender")
-	}
-	if debugSender.Count() != 5 {
-		t.Fatalf("unexpected number of events in sender %d", debugSender.Count())
+		t.Fatalf("check events sent error: %s", err.Error())
 	}
 }
 
@@ -243,29 +233,9 @@ func TestRestPostFilterMatchDenyRouteHandler(t *testing.T) {
 	}
 	g.AssertJson(t, "addfiltermatchdenyroute", data)
 	// check number of events received by output plugin
-	time.Sleep(1 * time.Second)
-	zerolog.SetGlobalLevel(zerolog.ErrorLevel)
-	ctx := context.Background()
-	ctx = log.Logger.WithContext(ctx)
-	buf, err := ioutil.ReadFile(routeFileName)
+	err = checkEventsSent(1, routeFileName, pluginMgr, 0)
 	if err != nil {
-		t.Fatalf("cannot read file: %s", err.Error())
-	}
-	var rt route.Config
-	err = json.Unmarshal(buf, &rt)
-	if err != nil {
-		t.Fatalf("cannot parse file: %s", err.Error())
-	}
-	sdr, err := pluginMgr.RegisterSender(ctx, rt.Sender.Plugin, rt.Sender.Name, stringify(rt.Sender.Config))
-	if err != nil {
-		t.Fatalf("failed to register sender: %s", err.Error())
-	}
-	debugSender, ok := sdr.Unwrap().(*debug.Sender)
-	if !ok {
-		t.Fatalf("bad type assertion debug sender")
-	}
-	if debugSender.Count() != 0 {
-		t.Fatalf("unexpected number of events in sender %d", debugSender.Count())
+		t.Fatalf("check events sent error: %s", err.Error())
 	}
 }
 
@@ -291,29 +261,9 @@ func TestRestPostFilterChainMatchRouteHandler(t *testing.T) {
 	}
 	g.AssertJson(t, "addfilterchainmatchroute", data)
 	// check number of events received by output plugin
-	time.Sleep(1 * time.Second)
-	zerolog.SetGlobalLevel(zerolog.ErrorLevel)
-	ctx := context.Background()
-	ctx = log.Logger.WithContext(ctx)
-	buf, err := ioutil.ReadFile(routeFileName)
+	err = checkEventsSent(1, routeFileName, pluginMgr, 5)
 	if err != nil {
-		t.Fatalf("cannot read file: %s", err.Error())
-	}
-	var rt route.Config
-	err = json.Unmarshal(buf, &rt)
-	if err != nil {
-		t.Fatalf("cannot parse file: %s", err.Error())
-	}
-	sdr, err := pluginMgr.RegisterSender(ctx, rt.Sender.Plugin, rt.Sender.Name, stringify(rt.Sender.Config))
-	if err != nil {
-		t.Fatalf("failed to register sender: %s", err.Error())
-	}
-	debugSender, ok := sdr.Unwrap().(*debug.Sender)
-	if !ok {
-		t.Fatalf("bad type assertion debug sender")
-	}
-	if debugSender.Count() != 5 {
-		t.Fatalf("unexpected number of events in sender %d", debugSender.Count())
+		t.Fatalf("check events sent error: %s", err.Error())
 	}
 }
 
