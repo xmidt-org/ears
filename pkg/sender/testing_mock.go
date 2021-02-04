@@ -236,6 +236,10 @@ func (mock *SenderMock) Send(ctx context.Context, e event.Event) error {
 	return mock.SendFunc(ctx, e)
 }
 
+func (mock *SenderMock) Unwrap() Sender {
+	return mock
+}
+
 // SendCalls gets all the calls that were made to Send.
 // Check the length with:
 //     len(mockedSender.SendCalls())
