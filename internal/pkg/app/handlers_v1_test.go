@@ -132,6 +132,8 @@ func TestRestVersionHandler(t *testing.T) {
 	g.AssertJson(t, "version", data)
 }
 
+// single route tests
+
 func TestRestPostSimpleRouteHandler(t *testing.T) {
 	Version = "v1.0.2"
 	w := httptest.NewRecorder()
@@ -267,46 +269,94 @@ func TestRestPostFilterChainMatchRouteHandler(t *testing.T) {
 	}
 }
 
-func TestRestRouteHandlerIdMismatch(t *testing.T) {
+// multi route tests
+
+func TestRestMultiRouteAABB(t *testing.T) {
 	Version = "v1.0.2"
 	w := httptest.NewRecorder()
-	routeFileName := "testdata/simpleRoute.json"
+	routeFileName := "testdata/simpleRouteAA.json"
 	simpleRouteReader, err := os.Open(routeFileName)
 	if err != nil {
 		t.Fatalf("cannot read file: %s", err.Error())
 	}
-	r := httptest.NewRequest(http.MethodPut, "/ears/v1/routes/badid", simpleRouteReader)
-	api, _, _, _, err := setupRestApi()
+	routeFileName2 := "testdata/simpleRouteBB.json"
+	simpleRouteReader2, err := os.Open(routeFileName2)
+	if err != nil {
+		t.Fatalf("cannot read file: %s", err.Error())
+	}
+	api, _, pluginMgr, _, err := setupRestApi()
 	if err != nil {
 		t.Fatalf("cannot create api manager: %s\n", err.Error())
 	}
+	r := httptest.NewRequest(http.MethodPost, "/ears/v1/routes", simpleRouteReader)
 	api.muxRouter.ServeHTTP(w, r)
-	g := goldie.New(t)
+	r = httptest.NewRequest(http.MethodPost, "/ears/v1/routes", simpleRouteReader2)
+	api.muxRouter.ServeHTTP(w, r)
+	/*g := goldie.New(t)
 	var data interface{}
 	err = json.Unmarshal(w.Body.Bytes(), &data)
 	if err != nil {
 		t.Fatalf("cannot unmarshal response %s into json %s", string(w.Body.Bytes()), err.Error())
 	}
-	g.AssertJson(t, "addrouteidmismatch", data)
+	g.AssertJson(t, "addroute", data)*/
+	// check number of events received by output plugin
+	err = checkEventsSent(1, routeFileName, pluginMgr, 5)
+	if err != nil {
+		t.Fatalf("check events sent error: %s", err.Error())
+	}
+	err = checkEventsSent(0, routeFileName2, pluginMgr, 5)
+	if err != nil {
+		t.Fatalf("check events sent error: %s", err.Error())
+	}
 }
 
-func TestRestMissingRouteHandler(t *testing.T) {
+func TestRestMultiRouteAABBAB(t *testing.T) {
 	Version = "v1.0.2"
 	w := httptest.NewRecorder()
-	r := httptest.NewRequest(http.MethodGet, "/ears/v1/routes/fakeid", nil)
-	api, _, _, _, err := setupRestApi()
+	routeFileName := "testdata/simpleRouteAA.json"
+	simpleRouteReader, err := os.Open(routeFileName)
+	if err != nil {
+		t.Fatalf("cannot read file: %s", err.Error())
+	}
+	routeFileName2 := "testdata/simpleRouteBB.json"
+	simpleRouteReader2, err := os.Open(routeFileName2)
+	if err != nil {
+		t.Fatalf("cannot read file: %s", err.Error())
+	}
+	routeFileName3 := "testdata/simpleRouteAB.json"
+	simpleRouteReader3, err := os.Open(routeFileName3)
+	if err != nil {
+		t.Fatalf("cannot read file: %s", err.Error())
+	}
+	api, _, pluginMgr, _, err := setupRestApi()
 	if err != nil {
 		t.Fatalf("cannot create api manager: %s\n", err.Error())
 	}
+	r := httptest.NewRequest(http.MethodPost, "/ears/v1/routes", simpleRouteReader)
 	api.muxRouter.ServeHTTP(w, r)
-	g := goldie.New(t)
+	r = httptest.NewRequest(http.MethodPost, "/ears/v1/routes", simpleRouteReader2)
+	api.muxRouter.ServeHTTP(w, r)
+	r = httptest.NewRequest(http.MethodPost, "/ears/v1/routes", simpleRouteReader3)
+	api.muxRouter.ServeHTTP(w, r)
+	/*g := goldie.New(t)
 	var data interface{}
 	err = json.Unmarshal(w.Body.Bytes(), &data)
 	if err != nil {
 		t.Fatalf("cannot unmarshal response %s into json %s", string(w.Body.Bytes()), err.Error())
 	}
-	g.AssertJson(t, "missingroute", data)
+	g.AssertJson(t, "addroute", data)*/
+	// check number of events received by output plugin
+	err = checkEventsSent(1, routeFileName, pluginMgr, 5)
+	if err != nil {
+		t.Fatalf("check events sent error: %s", err.Error())
+	}
+	err = checkEventsSent(0, routeFileName2, pluginMgr, 10)
+	if err != nil {
+		t.Fatalf("check events sent error: %s", err.Error())
+	}
 }
+
+// various api tests
 
 func TestRestGetRouteHandler(t *testing.T) {
 	Version = "v1.0.2"
@@ -415,6 +465,49 @@ func TestRestDeleteRouteHandler(t *testing.T) {
 		delete(item.(map[string]interface{}), "modified")
 	}
 	g.AssertJson(t, "deleteroute", data)
+}
+
+// tests for various error conditions
+
+func TestRestRouteHandlerIdMismatch(t *testing.T) {
+	Version = "v1.0.2"
+	w := httptest.NewRecorder()
+	routeFileName := "testdata/simpleRoute.json"
+	simpleRouteReader, err := os.Open(routeFileName)
+	if err != nil {
+		t.Fatalf("cannot read file: %s", err.Error())
+	}
+	r := httptest.NewRequest(http.MethodPut, "/ears/v1/routes/badid", simpleRouteReader)
+	api, _, _, _, err := setupRestApi()
+	if err != nil {
+		t.Fatalf("cannot create api manager: %s\n", err.Error())
+	}
+	api.muxRouter.ServeHTTP(w, r)
+	g := goldie.New(t)
+	var data interface{}
+	err = json.Unmarshal(w.Body.Bytes(), &data)
+	if err != nil {
+		t.Fatalf("cannot unmarshal response %s into json %s", string(w.Body.Bytes()), err.Error())
+	}
+	g.AssertJson(t, "addrouteidmismatch", data)
+}
+
+func TestRestMissingRouteHandler(t *testing.T) {
+	Version = "v1.0.2"
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest(http.MethodGet, "/ears/v1/routes/fakeid", nil)
+	api, _, _, _, err := setupRestApi()
+	if err != nil {
+		t.Fatalf("cannot create api manager: %s\n", err.Error())
+	}
+	api.muxRouter.ServeHTTP(w, r)
+	g := goldie.New(t)
+	var data interface{}
+	err = json.Unmarshal(w.Body.Bytes(), &data)
+	if err != nil {
+		t.Fatalf("cannot unmarshal response %s into json %s", string(w.Body.Bytes()), err.Error())
+	}
+	g.AssertJson(t, "missingroute", data)
 }
 
 func TestRestPostRouteHandlerBadName(t *testing.T) {
