@@ -20,6 +20,7 @@ import (
 	"github.com/spf13/viper"
 	"github.com/xmidt-org/ears/internal/pkg/app"
 	"github.com/xmidt-org/ears/internal/pkg/fx/pluginmanagerfx"
+	"github.com/xmidt-org/ears/internal/pkg/fx/routestorerfx"
 	"github.com/xmidt-org/ears/pkg/cli"
 	"github.com/xmidt-org/ears/pkg/panics"
 	"go.uber.org/fx"
@@ -47,6 +48,7 @@ var runCmd = &cobra.Command{
 		}
 		earsApp := fx.New(
 			pluginmanagerfx.Module,
+			routestorerfx.Module,
 			fx.Provide(
 				ViperConfig,
 				app.ProvideLogger,
@@ -80,6 +82,21 @@ func init() {
 				Name: "port", Shorthand: "", Type: cli.ArgTypeInt,
 				Default: 8080, LookupKey: "ears.api.port",
 				Description: "API port",
+			},
+			cli.Argument{
+				Name: "storageType", Shorthand: "", Type: cli.ArgTypeString,
+				Default: "inmemory", LookupKey: "ears.storage.type",
+				Description: "persistence layer storage type (inmemory, dynamodb)",
+			},
+			cli.Argument{
+				Name: "storageDynamoRegion", Shorthand: "", Type: cli.ArgTypeString,
+				Default: "us-west-2", LookupKey: "ears.storage.region",
+				Description: "dynamodb region",
+			},
+			cli.Argument{
+				Name: "storageDynamoTable", Shorthand: "", Type: cli.ArgTypeString,
+				Default: "gears.dev.ears", LookupKey: "ears.storage.table",
+				Description: "dynamodb table name",
 			},
 		},
 	)

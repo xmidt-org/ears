@@ -43,4 +43,5 @@ type NewSenderer interface {
 type Sender interface {
 	// Send consumes and event and sends it to the target
 	Send(ctx context.Context, e event.Event) error
+	Unwrap() Sender
 }

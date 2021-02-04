@@ -1,0 +1,7 @@
+{
+  "item": "missing org ID for plugin configuration",
+  "status": {
+    "code": 500,
+    "message": "Internal Server Error"
+  }
+}

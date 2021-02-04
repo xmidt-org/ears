@@ -1,0 +1,10 @@
+{
+  "id": "test",
+  "orgId": "myOrg",
+  "appId": "myApp",
+  "userId": "mchiang",
+  "name": "differentName",
+  "receiver": {},
+  "sender": {},
+  "deliveryMode": "fire_and_forget"
+}

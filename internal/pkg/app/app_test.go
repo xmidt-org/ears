@@ -20,6 +20,8 @@ import (
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/viper"
 	"github.com/xmidt-org/ears/internal/pkg/app"
+	"github.com/xmidt-org/ears/internal/pkg/fx/pluginmanagerfx"
+	"github.com/xmidt-org/ears/internal/pkg/fx/routestorerfx"
 	testLog "github.com/xmidt-org/ears/test/log"
 	"go.uber.org/fx"
 	"os"
@@ -31,6 +33,7 @@ func AppConfig() app.Config {
 	v := viper.New()
 	v.Set("ears.logLevel", "info")
 	v.Set("ears.api.port", 8080)
+	v.Set("ears.storage.type", "inmemory")
 	return v
 }
 
@@ -38,6 +41,7 @@ func BadConfig() app.Config {
 	v := viper.New()
 	v.Set("ears.logLevel", "info")
 	v.Set("ears.api.port", 0)
+	v.Set("ears.storage.type", "inmemory")
 	return v
 }
 
@@ -79,6 +83,8 @@ func TestAppRunSuccess(t *testing.T) {
 		t.Errorf("Fail to initLogger: %s\n", err.Error())
 	}
 	earsApp := fx.New(
+		pluginmanagerfx.Module,
+		routestorerfx.Module,
 		fx.Provide(
 			AppConfig,
 			GetTestLogger,

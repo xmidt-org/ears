@@ -15,9 +15,15 @@
 package app
 
 import (
+	"encoding/json"
+	"errors"
+	"io/ioutil"
+	"net/http"
+
 	"github.com/gorilla/mux"
 	"github.com/rs/zerolog/log"
-	"net/http"
+
+	"github.com/xmidt-org/ears/pkg/route"
 )
 
 type APIManager struct {
@@ -31,28 +37,106 @@ func NewAPIManager(routingMgr RoutingTableManager) (*APIManager, error) {
 		routingTableMgr: routingMgr,
 	}
 	api.muxRouter.HandleFunc("/ears/version", api.versionHandler).Methods(http.MethodGet)
-	api.muxRouter.HandleFunc("/ears/v1/routes/{route}", api.addRouteHandler).Methods(http.MethodPut)
+	api.muxRouter.HandleFunc("/ears/v1/routes/{routeId}", api.addRouteHandler).Methods(http.MethodPut)
+	api.muxRouter.HandleFunc("/ears/v1/routes", api.addRouteHandler).Methods(http.MethodPost)
+	api.muxRouter.HandleFunc("/ears/v1/routes/{routeId}", api.removeRouteHandler).Methods(http.MethodDelete)
+	api.muxRouter.HandleFunc("/ears/v1/routes/{routeId}", api.getRouteHandler).Methods(http.MethodGet)
+	api.muxRouter.HandleFunc("/ears/v1/routes", api.getAllRoutesHandler).Methods(http.MethodGet)
 	return api, nil
 }
 
 func (a *APIManager) versionHandler(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
-
 	log.Ctx(ctx).Debug().Msg("versionHandler")
 	resp := ItemResponse(Version)
 	resp.Respond(ctx, w)
 }
 
 func (a *APIManager) addRouteHandler(w http.ResponseWriter, r *http.Request) {
-	//TODO this handler is incomplete. It is here for demo purpose
 	ctx := r.Context()
-	err := a.routingTableMgr.AddRoute(ctx, nil)
+	vars := mux.Vars(r)
+	routeId := vars["routeId"]
+	body, err := ioutil.ReadAll(r.Body)
 	if err != nil {
 		log.Ctx(ctx).Error().Str("op", "addRouteHandler").Msg(err.Error())
 		resp := ErrorResponse(err)
 		resp.Respond(ctx, w)
 		return
 	}
-	resp := ErrorResponse(&NotImplementedError{})
+	var route route.Config
+	err = json.Unmarshal(body, &route)
+	if err != nil {
+		log.Ctx(ctx).Error().Str("op", "addRouteHandler").Msg(err.Error())
+		resp := ErrorResponse(err)
+		resp.Respond(ctx, w)
+		return
+	}
+	if routeId != "" && route.Id != "" && routeId != route.Id {
+		err := errors.New("route ID mismatch " + routeId + " vs " + route.Id)
+		log.Ctx(ctx).Error().Str("op", "addRouteHandler").Msg(err.Error())
+		resp := ErrorResponse(err)
+		resp.Respond(ctx, w)
+		return
+	}
+	if routeId != "" && route.Id == "" {
+		route.Id = routeId
+	}
+	err = a.routingTableMgr.AddRoute(ctx, &route)
+	if err != nil {
+		log.Ctx(ctx).Error().Str("op", "addRouteHandler").Msg(err.Error())
+		resp := ErrorResponse(err)
+		resp.Respond(ctx, w)
+		return
+	}
+	resp := ItemResponse(route)
+	resp.Respond(ctx, w)
+}
+
+func (a *APIManager) removeRouteHandler(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	vars := mux.Vars(r)
+	routeId := vars["routeId"]
+	err := a.routingTableMgr.RemoveRoute(ctx, routeId)
+	if err != nil {
+		log.Ctx(ctx).Error().Str("op", "removeRouteHandler").Msg(err.Error())
+		resp := ErrorResponse(err)
+		resp.Respond(ctx, w)
+		return
+	}
+	resp := ItemResponse(routeId)
+	resp.Respond(ctx, w)
+}
+
+func (a *APIManager) getRouteHandler(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	vars := mux.Vars(r)
+	routeId := vars["routeId"]
+	routeConfig, err := a.routingTableMgr.GetRoute(ctx, routeId)
+	if err != nil {
+		log.Ctx(ctx).Error().Str("op", "getRouteHandler").Msg(err.Error())
+		if _, ok := err.(*route.RouteNotFoundError); ok {
+			resp := ErrorResponse(&NotFoundError{})
+			resp.Respond(ctx, w)
+		} else {
+			resp := ErrorResponse(err)
+			resp.Respond(ctx, w)
+		}
+		return
+
+	}
+	resp := ItemResponse(routeConfig)
+	resp.Respond(ctx, w)
+}
+
+func (a *APIManager) getAllRoutesHandler(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	allRouteConfigs, err := a.routingTableMgr.GetAllRoutes(ctx)
+	if err != nil {
+		log.Ctx(ctx).Error().Str("op", "getAllRoutesHandler").Msg(err.Error())
+		resp := ErrorResponse(err)
+		resp.Respond(ctx, w)
+		return
+	}
+	resp := ItemsResponse(allRouteConfigs)
 	resp.Respond(ctx, w)
 }

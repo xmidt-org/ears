@@ -4,3 +4,6 @@ ears:
 
   api:
     port: 3000
+
+  storage:
+    type: inmemory

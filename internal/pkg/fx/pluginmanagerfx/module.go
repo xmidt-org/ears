@@ -16,13 +16,13 @@ package pluginmanagerfx
 
 import (
 	"fmt"
-
 	p "github.com/xmidt-org/ears/internal/pkg/plugin"
 	"github.com/xmidt-org/ears/pkg/plugin/manager"
 	"github.com/xmidt-org/ears/pkg/plugins/block"
 	"github.com/xmidt-org/ears/pkg/plugins/debug"
 	"github.com/xmidt-org/ears/pkg/plugins/match"
 	"github.com/xmidt-org/ears/pkg/plugins/pass"
+	"github.com/xmidt-org/ears/pkg/plugins/split"
 
 	pkgplugin "github.com/xmidt-org/ears/pkg/plugin"
 	"go.uber.org/fx"
@@ -36,15 +36,12 @@ var Module = fx.Options(
 
 type PluginIn struct {
 	fx.In
-
-	Version string
-	Commit  string
 }
 
 type PluginOut struct {
 	fx.Out
 
-	PluginManager p.Manager `name:"PluginManager"`
+	PluginManager p.Manager
 }
 
 func ProvidePluginManager(in PluginIn) (PluginOut, error) {
@@ -64,22 +61,26 @@ func ProvidePluginManager(in PluginIn) (PluginOut, error) {
 	}{
 		{
 			name:   "debug",
-			plugin: toArr(debug.NewPluginVersion("debug", in.Version, in.Commit))[0].(pkgplugin.Pluginer),
+			plugin: toArr(debug.NewPluginVersion("debug", "", ""))[0].(pkgplugin.Pluginer),
 		},
 
 		{
 			name:   "match",
-			plugin: toArr(match.NewPluginVersion("match", in.Version, in.Commit))[0].(pkgplugin.Pluginer),
+			plugin: toArr(match.NewPluginVersion("match", "", ""))[0].(pkgplugin.Pluginer),
 		},
 
 		{
 			name:   "pass",
-			plugin: toArr(pass.NewPluginVersion("pass", in.Version, in.Commit))[0].(pkgplugin.Pluginer),
+			plugin: toArr(pass.NewPluginVersion("pass", "", ""))[0].(pkgplugin.Pluginer),
 		},
 
 		{
 			name:   "block",
-			plugin: toArr(block.NewPluginVersion("block", in.Version, in.Commit))[0].(pkgplugin.Pluginer),
+			plugin: toArr(block.NewPluginVersion("block", "", ""))[0].(pkgplugin.Pluginer),
+		},
+		{
+			name:   "split",
+			plugin: toArr(split.NewPluginVersion("split", "", ""))[0].(pkgplugin.Pluginer),
 		},
 	}
 

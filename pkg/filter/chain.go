@@ -53,6 +53,11 @@ func (c *Chain) Filter(ctx context.Context, e event.Event) ([]event.Event, error
 	c.Lock()
 	defer c.Unlock()
 
+	// pass event through in case of empty filter chain
+	if len(c.filterers) == 0 {
+		return []event.Event{e}, nil
+	}
+
 	type work struct {
 		e event.Event
 		f Filterer

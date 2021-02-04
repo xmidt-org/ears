@@ -14,16 +14,124 @@
 
 package app
 
-import "context"
+import (
+	"context"
+	"encoding/json"
+	"github.com/rs/zerolog/log"
+	"github.com/xmidt-org/ears/internal/pkg/plugin"
+	"github.com/xmidt-org/ears/pkg/filter"
+	"github.com/xmidt-org/ears/pkg/route"
+	"sync"
+)
 
 type DefaultRoutingTableManager struct {
+	sync.Mutex
+	pluginMgr    plugin.Manager
+	storageMgr   route.RouteStorer
+	liveRouteMap map[string]*route.Route // to hold in-memory references to live routes
 }
 
-func NewRoutingTableManager() RoutingTableManager {
-	return &DefaultRoutingTableManager{}
+func NewRoutingTableManager(pluginMgr plugin.Manager, storageMgr route.RouteStorer) RoutingTableManager {
+	return &DefaultRoutingTableManager{pluginMgr: pluginMgr, storageMgr: storageMgr, liveRouteMap: make(map[string]*route.Route, 0)}
 }
 
-func (r *DefaultRoutingTableManager) AddRoute(ctx context.Context, entry *RoutingTableEntry) error {
-	//TODO implement me
+func (r *DefaultRoutingTableManager) RemoveRoute(ctx context.Context, routeId string) error {
+	err := r.storageMgr.DeleteRoute(ctx, routeId)
+	if err != nil {
+		return err
+	}
+	liveRoute, ok := r.liveRouteMap[routeId]
+	if !ok {
+		// no error to make this idempotent
+		//return errors.New("no live route exists with ID " + routeId)
+	} else {
+		r.Lock()
+		delete(r.liveRouteMap, routeId)
+		r.Unlock()
+		err = liveRoute.Stop(ctx)
+		if err != nil {
+			return err
+		}
+	}
 	return nil
+}
+
+func stringify(data interface{}) string {
+	if data == nil {
+		return ""
+	}
+	buf, err := json.Marshal(data)
+	if err != nil {
+		return ""
+	}
+	return string(buf)
+}
+
+func (r *DefaultRoutingTableManager) AddRoute(ctx context.Context, routeConfig *route.Config) error {
+	ctx = context.Background()
+	// use hashed ID if none is provided - this ID will be returned by the AddRoute REST API
+	if routeConfig.Id == "" {
+		routeConfig.Id = routeConfig.Hash(ctx)
+	}
+	err := routeConfig.Validate(ctx)
+	if err != nil {
+		return err
+	}
+	// currently storage layer handles created and updated timestamps
+	err = r.storageMgr.SetRoute(ctx, *routeConfig)
+	if err != nil {
+		return err
+	}
+	// set up sender
+	sender, err := r.pluginMgr.RegisterSender(ctx, routeConfig.Sender.Plugin, routeConfig.Sender.Name, stringify(routeConfig.Sender.Config))
+	if err != nil {
+		return err
+	}
+	// set up receiver
+	receiver, err := r.pluginMgr.RegisterReceiver(ctx, routeConfig.Receiver.Plugin, routeConfig.Receiver.Name, stringify(routeConfig.Receiver.Config))
+	if err != nil {
+		return err
+	}
+	// set up filter chain
+	filterChain := &filter.Chain{}
+	if routeConfig.FilterChain != nil {
+		for _, f := range routeConfig.FilterChain {
+			filter, err := r.pluginMgr.RegisterFilter(ctx, f.Plugin, f.Name, stringify(f.Config))
+			filterChain.Add(filter)
+			if err != nil {
+				return err
+			}
+		}
+	}
+	// create live route
+	liveRoute := &route.Route{}
+	r.Lock()
+	r.liveRouteMap[routeConfig.Id] = liveRoute
+	r.Unlock()
+	go func() {
+		sctx := context.Background()
+		//TODO: use application context here? see issue #51
+		err = liveRoute.Run(sctx, receiver, filterChain, sender) // run is blocking
+		if err != nil {
+			log.Ctx(ctx).Error().Str("op", "AddRoute").Msg(err.Error())
+		}
+	}()
+	return nil
+}
+
+func (r *DefaultRoutingTableManager) GetRoute(ctx context.Context, routeId string) (*route.Config, error) {
+	route, err := r.storageMgr.GetRoute(ctx, routeId)
+	if err != nil {
+		return nil, err
+	}
+	return &route, nil
+}
+
+func (r *DefaultRoutingTableManager) GetAllRoutes(ctx context.Context) ([]route.Config, error) {
+	//TODO: shouldn't the type be []*route.Config?
+	routes, err := r.storageMgr.GetAllRoutes(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return routes, nil
 }
