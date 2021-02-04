@@ -15,7 +15,10 @@
 package app
 
 import (
+	//"context"
 	"encoding/json"
+	//"github.com/rs/zerolog"
+	//"github.com/rs/zerolog/log"
 	goldie "github.com/sebdah/goldie/v2"
 	"github.com/xmidt-org/ears/internal/pkg/db"
 	"github.com/xmidt-org/ears/internal/pkg/plugin"
@@ -25,21 +28,24 @@ import (
 	"github.com/xmidt-org/ears/pkg/plugins/debug"
 	"github.com/xmidt-org/ears/pkg/plugins/match"
 	"github.com/xmidt-org/ears/pkg/plugins/pass"
+	"github.com/xmidt-org/ears/pkg/route"
+	//"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"os"
 	"testing"
+	//"time"
 )
 
-func setupRestApi() (*APIManager, error) {
+func setupRestApi() (*APIManager, RoutingTableManager, plugin.Manager, route.RouteStorer, error) {
 	inMemStorageMgr := db.NewInMemoryRouteStorer(nil)
 	mgr, err := manager.New()
 	if err != nil {
-		return nil, err
+		return nil, nil, nil, nil, err
 	}
 	pluginMgr, err := plugin.NewManager(plugin.WithPluginManager(mgr))
 	if err != nil {
-		return nil, err
+		return nil, nil, nil, nil, err
 	}
 	toArr := func(a ...interface{}) []interface{} { return a }
 	defaultPlugins := []struct {
@@ -66,11 +72,15 @@ func setupRestApi() (*APIManager, error) {
 	for _, plug := range defaultPlugins {
 		err = mgr.RegisterPlugin(plug.name, plug.plugin)
 		if err != nil {
-			return nil, err
+			return nil, nil, nil, nil, err
 		}
 	}
 	routingMgr := NewRoutingTableManager(pluginMgr, inMemStorageMgr)
-	return NewAPIManager(routingMgr)
+	apiMgr, err := NewAPIManager(routingMgr)
+	if err != nil {
+		return nil, nil, nil, nil, err
+	}
+	return apiMgr, routingMgr, pluginMgr, inMemStorageMgr, nil
 
 }
 
@@ -100,7 +110,7 @@ func TestRestPostSimpleRouteHandler(t *testing.T) {
 		t.Fatalf("cannot read file: %s", err.Error())
 	}
 	r := httptest.NewRequest(http.MethodPost, "/ears/v1/routes", simpleRouteReader)
-	api, err := setupRestApi()
+	api, _, _, _, err := setupRestApi()
 	if err != nil {
 		t.Fatalf("cannot create api manager: %s\n", err.Error())
 	}
@@ -112,6 +122,31 @@ func TestRestPostSimpleRouteHandler(t *testing.T) {
 		t.Fatalf("cannot unmarshal response %s into json %s", string(w.Body.Bytes()), err.Error())
 	}
 	g.AssertJson(t, "addroute", data)
+	// check number of events received by output plugin
+	/*time.Sleep(1 * time.Second)
+	zerolog.SetGlobalLevel(zerolog.ErrorLevel)
+	ctx := context.Background()
+	ctx = log.Logger.WithContext(ctx)
+	buf, err := ioutil.ReadFile("testdata/simpleRoute.json")
+	if err != nil {
+		t.Fatalf("cannot read file: %s", err.Error())
+	}
+	var rt route.Config
+	err = json.Unmarshal(buf, &rt)
+	if err != nil {
+		t.Fatalf("cannot parse file: %s", err.Error())
+	}
+	sdr, err := pluginMgr.RegisterSender(ctx, rt.Sender.Plugin, rt.Sender.Name, stringify(rt.Sender.Config))
+	if err != nil {
+		t.Fatalf("failed to register sender: %s", err.Error())
+	}
+	debugSender, ok := sdr.(*debug.Sender)
+	if !ok {
+		t.Fatalf("bad type assertion debug sender")
+	}
+	if debugSender.Count() != 5 {
+		t.Fatalf("unexpected number of events in sender %d", debugSender.Count())
+	}*/
 }
 
 func TestRestPutSimpleRouteHandler(t *testing.T) {
@@ -122,7 +157,7 @@ func TestRestPutSimpleRouteHandler(t *testing.T) {
 		t.Fatalf("cannot read file: %s", err.Error())
 	}
 	r := httptest.NewRequest(http.MethodPut, "/ears/v1/routes/r123", simpleRouteReader)
-	api, err := setupRestApi()
+	api, _, _, _, err := setupRestApi()
 	if err != nil {
 		t.Fatalf("cannot create api manager: %s\n", err.Error())
 	}
@@ -144,7 +179,7 @@ func TestRestPostFilterMatchAllowRouteHandler(t *testing.T) {
 		t.Fatalf("cannot read file: %s", err.Error())
 	}
 	r := httptest.NewRequest(http.MethodPost, "/ears/v1/routes", simpleRouteReader)
-	api, err := setupRestApi()
+	api, _, _, _, err := setupRestApi()
 	if err != nil {
 		t.Fatalf("cannot create api manager: %s\n", err.Error())
 	}
@@ -158,6 +193,50 @@ func TestRestPostFilterMatchAllowRouteHandler(t *testing.T) {
 	g.AssertJson(t, "addfiltermatchallowroute", data)
 }
 
+func TestRestPostFilterMatchDenyRouteHandler(t *testing.T) {
+	Version = "v1.0.2"
+	w := httptest.NewRecorder()
+	simpleRouteReader, err := os.Open("testdata/simpleFilterMatchDenyRoute.json")
+	if err != nil {
+		t.Fatalf("cannot read file: %s", err.Error())
+	}
+	r := httptest.NewRequest(http.MethodPost, "/ears/v1/routes", simpleRouteReader)
+	api, _, _, _, err := setupRestApi()
+	if err != nil {
+		t.Fatalf("cannot create api manager: %s\n", err.Error())
+	}
+	api.muxRouter.ServeHTTP(w, r)
+	g := goldie.New(t)
+	var data interface{}
+	err = json.Unmarshal(w.Body.Bytes(), &data)
+	if err != nil {
+		t.Fatalf("cannot unmarshal response %s into json %s", string(w.Body.Bytes()), err.Error())
+	}
+	g.AssertJson(t, "addfiltermatchdenyroute", data)
+}
+
+func TestRestPostFilterChainMatchRouteHandler(t *testing.T) {
+	Version = "v1.0.2"
+	w := httptest.NewRecorder()
+	simpleRouteReader, err := os.Open("testdata/simpleFilterChainMatchRoute.json")
+	if err != nil {
+		t.Fatalf("cannot read file: %s", err.Error())
+	}
+	r := httptest.NewRequest(http.MethodPost, "/ears/v1/routes", simpleRouteReader)
+	api, _, _, _, err := setupRestApi()
+	if err != nil {
+		t.Fatalf("cannot create api manager: %s\n", err.Error())
+	}
+	api.muxRouter.ServeHTTP(w, r)
+	g := goldie.New(t)
+	var data interface{}
+	err = json.Unmarshal(w.Body.Bytes(), &data)
+	if err != nil {
+		t.Fatalf("cannot unmarshal response %s into json %s", string(w.Body.Bytes()), err.Error())
+	}
+	g.AssertJson(t, "addfilterchainmatchroute", data)
+}
+
 func TestRestRouteHandlerIdMismatch(t *testing.T) {
 	Version = "v1.0.2"
 	w := httptest.NewRecorder()
@@ -166,7 +245,7 @@ func TestRestRouteHandlerIdMismatch(t *testing.T) {
 		t.Fatalf("cannot read file: %s", err.Error())
 	}
 	r := httptest.NewRequest(http.MethodPut, "/ears/v1/routes/badid", simpleRouteReader)
-	api, err := setupRestApi()
+	api, _, _, _, err := setupRestApi()
 	if err != nil {
 		t.Fatalf("cannot create api manager: %s\n", err.Error())
 	}
@@ -184,7 +263,7 @@ func TestRestMissingRouteHandler(t *testing.T) {
 	Version = "v1.0.2"
 	w := httptest.NewRecorder()
 	r := httptest.NewRequest(http.MethodGet, "/ears/v1/routes/fakeid", nil)
-	api, err := setupRestApi()
+	api, _, _, _, err := setupRestApi()
 	if err != nil {
 		t.Fatalf("cannot create api manager: %s\n", err.Error())
 	}
@@ -204,7 +283,7 @@ func TestRestGetRouteHandler(t *testing.T) {
 	if err != nil {
 		t.Fatalf("cannot read file: %s", err.Error())
 	}
-	api, err := setupRestApi()
+	api, _, _, _, err := setupRestApi()
 	if err != nil {
 		t.Fatalf("cannot create api manager: %s\n", err.Error())
 	}
@@ -236,7 +315,7 @@ func TestRestGetMultipleRoutesHandler(t *testing.T) {
 	if err != nil {
 		t.Fatalf("cannot read file: %s", err.Error())
 	}*/
-	api, err := setupRestApi()
+	api, _, _, _, err := setupRestApi()
 	if err != nil {
 		t.Fatalf("cannot create api manager: %s\n", err.Error())
 	}
@@ -273,7 +352,7 @@ func TestRestDeleteRouteHandler(t *testing.T) {
 	if err != nil {
 		t.Fatalf("cannot read file: %s", err.Error())
 	}
-	api, err := setupRestApi()
+	api, _, _, _, err := setupRestApi()
 	if err != nil {
 		t.Fatalf("cannot create api manager: %s\n", err.Error())
 	}
@@ -311,7 +390,7 @@ func TestRestPostRouteHandlerBadName(t *testing.T) {
 		t.Fatalf("cannot read file: %s", err.Error())
 	}
 	r := httptest.NewRequest(http.MethodPost, "/ears/v1/routes", simpleRouteReader)
-	api, err := setupRestApi()
+	api, _, _, _, err := setupRestApi()
 	if err != nil {
 		t.Fatalf("cannot create api manager: %s\n", err.Error())
 	}
@@ -333,7 +412,7 @@ func TestRestPostRouteHandlerBadPluginName(t *testing.T) {
 		t.Fatalf("cannot read file: %s", err.Error())
 	}
 	r := httptest.NewRequest(http.MethodPost, "/ears/v1/routes", simpleRouteReader)
-	api, err := setupRestApi()
+	api, _, _, _, err := setupRestApi()
 	if err != nil {
 		t.Fatalf("cannot create api manager: %s\n", err.Error())
 	}
@@ -355,7 +434,7 @@ func TestRestPostRouteHandlerNoApp(t *testing.T) {
 		t.Fatalf("cannot read file: %s", err.Error())
 	}
 	r := httptest.NewRequest(http.MethodPost, "/ears/v1/routes", simpleRouteReader)
-	api, err := setupRestApi()
+	api, _, _, _, err := setupRestApi()
 	if err != nil {
 		t.Fatalf("cannot create api manager: %s\n", err.Error())
 	}
@@ -377,7 +456,7 @@ func TestRestPostRouteHandlerNoOrg(t *testing.T) {
 		t.Fatalf("cannot read file: %s", err.Error())
 	}
 	r := httptest.NewRequest(http.MethodPost, "/ears/v1/routes", simpleRouteReader)
-	api, err := setupRestApi()
+	api, _, _, _, err := setupRestApi()
 	if err != nil {
 		t.Fatalf("cannot create api manager: %s\n", err.Error())
 	}
@@ -399,7 +478,7 @@ func TestRestPostRouteHandlerNoSender(t *testing.T) {
 		t.Fatalf("cannot read file: %s", err.Error())
 	}
 	r := httptest.NewRequest(http.MethodPost, "/ears/v1/routes", simpleRouteReader)
-	api, err := setupRestApi()
+	api, _, _, _, err := setupRestApi()
 	if err != nil {
 		t.Fatalf("cannot create api manager: %s\n", err.Error())
 	}
@@ -421,7 +500,7 @@ func TestRestPostRouteHandlerNoReceiver(t *testing.T) {
 		t.Fatalf("cannot read file: %s", err.Error())
 	}
 	r := httptest.NewRequest(http.MethodPost, "/ears/v1/routes", simpleRouteReader)
-	api, err := setupRestApi()
+	api, _, _, _, err := setupRestApi()
 	if err != nil {
 		t.Fatalf("cannot create api manager: %s\n", err.Error())
 	}
@@ -443,7 +522,7 @@ func TestRestPostRouteHandlerNoUser(t *testing.T) {
 		t.Fatalf("cannot read file: %s", err.Error())
 	}
 	r := httptest.NewRequest(http.MethodPost, "/ears/v1/routes", simpleRouteReader)
-	api, err := setupRestApi()
+	api, _, _, _, err := setupRestApi()
 	if err != nil {
 		t.Fatalf("cannot create api manager: %s\n", err.Error())
 	}
