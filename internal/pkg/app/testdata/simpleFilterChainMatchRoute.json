@@ -1,0 +1,47 @@
+{
+  "id" : "f123",
+  "orgId" : "comcast",
+  "appId" : "xfi",
+  "userId" : "boris",
+  "name" : "simpleFilterRoute",
+  "receiver" : {
+    "plugin" : "debug",
+    "name" : "mydebug",
+    "config" :
+    {
+      "rounds" : 5,
+      "intervalMs" : 100,
+      "payload" : "foo bar baz",
+      "maxHistory": 100
+    }
+  },
+  "sender" : {
+    "plugin" : "debug",
+    "name" : "mydebug",
+    "config" : {
+      "destination" : "stdout",
+      "maxHistory": 100
+    }
+  },
+  "filterChain" : [
+    {
+      "plugin" : "match",
+      "name" : "matcha",
+      "config" : {
+        "mode" : "allow",
+        "matcher" : "regex",
+        "pattern" : "foo"
+      }
+    },
+    {
+      "plugin" : "match",
+      "name" : "matchb",
+      "config" : {
+        "mode" : "allow",
+        "matcher" : "regex",
+        "pattern" : "bar"
+      }
+    }
+  ],
+  "deliveryMode" : "whoCares"
+}
