@@ -12,25 +12,62 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package filters
+package split
 
 import (
 	"context"
-
+	"fmt"
 	"github.com/xmidt-org/ears/pkg/event"
+	"github.com/xmidt-org/ears/pkg/filter"
 )
 
 // a SplitFilter splits and event into two or more events
-type SplitFilter struct {
+/*type SplitFilter struct {
 	SplitPath string // path to split array in payload
+}*/
+
+func NewFilter(config interface{}) (*Filter, error) {
+
+	cfg, err := NewConfig(config)
+
+	if err != nil {
+		return nil, &filter.InvalidConfigError{
+			Err: err,
+		}
+	}
+
+	cfg = cfg.WithDefaults()
+
+	err = cfg.Validate()
+	if err != nil {
+		return nil, err
+	}
+
+	f := &Filter{
+		config: *cfg,
+	}
+
+	return f, nil
 }
 
 // Filter splits an event containing an array into multiple events
-func (mf *SplitFilter) Filter(ctx context.Context, evt event.Event) ([]event.Event, error) {
-	// always splits into two identical events
-	events := make([]event.Event, 0)
+func (f *Filter) Filter(ctx context.Context, evt event.Event) ([]event.Event, error) {
+	if f == nil {
+		return nil, &filter.InvalidConfigError{
+			Err: fmt.Errorf("<nil> pointer filter"),
+		}
+	}
 	//TODO: implement filter logic
 	//TODO: clone
+	events := []event.Event{}
+	// always splits into two identical events
 	events = append(events, evt, evt)
 	return events, nil
+}
+
+func (f *Filter) Config() Config {
+	if f == nil {
+		return Config{}
+	}
+	return f.config
 }

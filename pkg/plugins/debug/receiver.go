@@ -58,10 +58,13 @@ func (r *Receiver) Receive(ctx context.Context, next receiver.NextFn) error {
 		for count := *r.config.Rounds; count != 0; {
 			select {
 			case <-ctx.Done():
+				//fmt.Printf("RECEIVER DONE BY CTX\n")
 				return
 			case <-r.done:
+				//fmt.Printf("RECEIVER DONE BY ROUTE\n")
 				return
 			case <-time.After(time.Duration(*r.config.IntervalMs) * time.Millisecond):
+				//fmt.Printf("RECEIVER NEW EVENT\n")
 				e, err := event.NewEvent(r.config.Payload)
 				if err != nil {
 					return
@@ -145,8 +148,11 @@ func (r *Receiver) Count() int {
 func (r *Receiver) Trigger(ctx context.Context, e event.Event) error {
 	// Ensure that `next` can be slow and locking here will not
 	// prevent other requests from executing.
+	//BW TODO: where is the next slice here?
 	r.Lock()
 	next := r.next
+	//BW
+	//fmt.Printf("TRIGGER\n")
 	r.Unlock()
 
 	r.history.Add(e)

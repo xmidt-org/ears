@@ -156,8 +156,9 @@ func (m *manager) RegisterReceiver(
 		m.receiversFn[key] = map[string]pkgreceiver.NextFn{}
 
 		// TODO: Determine lifecycle
+		sctx := context.Background()
 		go func() {
-			r.Receive(ctx, func(ctx context.Context, e event.Event) error {
+			r.Receive(sctx, func(ctx context.Context, e event.Event) error {
 				return m.next(ctx, key, e)
 			})
 		}()
@@ -225,9 +226,11 @@ func (m *manager) next(ctx context.Context, receiverKey string, e pkgevent.Event
 		wg.Add(1)
 		go func(fn pkgreceiver.NextFn) {
 			err := fn(ctx, e)
+			//err = n(ctx, e)
 			if err != nil {
 				errCh <- err
 			}
+			wg.Done()
 		}(n)
 	}
 
@@ -242,7 +245,6 @@ func (m *manager) next(ctx context.Context, receiverKey string, e pkgevent.Event
 	}
 
 	return nil
-
 }
 
 func (m *manager) receive(ctx context.Context, r *receiver, nextFn pkgreceiver.NextFn) error {
@@ -486,7 +488,7 @@ func (m *manager) RegisterSender(
 
 	s, ok := m.senders[key]
 	if !ok {
-		s, err := ns.NewSender(config)
+		s, err = ns.NewSender(config)
 		if err != nil {
 			return nil, &RegistrationError{
 				Message: "could not create sender",

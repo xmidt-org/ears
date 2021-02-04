@@ -29,7 +29,7 @@ func NewFilter(config interface{}) (*Filter, error) {
 
 type Filter struct{}
 
-// Filter lets no event pass
+// Filter lets any event pass
 func (f *Filter) Filter(ctx context.Context, evt event.Event) ([]event.Event, error) {
-	return []event.Event{}, nil
+	return []event.Event{evt}, nil
 }
