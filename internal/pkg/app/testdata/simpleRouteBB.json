@@ -1,0 +1,28 @@
+{
+  "id": "rbb",
+  "orgId": "comcast",
+  "appId": "xfi",
+  "userId": "boris",
+  "name": "simpleRoute",
+  "receiver": {
+    "plugin": "debug",
+    "name": "mydebugB",
+    "config": {
+      "intervalMs": 100,
+      "maxHistory": 100,
+      "payload": {
+        "foo": "bar"
+      },
+      "rounds": 5
+    }
+  },
+  "sender": {
+    "plugin": "debug",
+    "name": "mydebugB",
+    "config": {
+      "destination": "stdout",
+      "maxHistory": 100
+    }
+  },
+  "deliveryMode": "whoCares"
+}
