@@ -13,5 +13,5 @@
 // limitations under the License.
 
 // Package template takes in a go template and will make all the sprig
-// functions availble
+// functions available
 package template
