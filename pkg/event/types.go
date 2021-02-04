@@ -17,12 +17,17 @@
 
 package event
 
+import "context"
+
 //go:generate rm -f testing_mock.go
 //go:generate moq -out testing_mock.go . Event NewEventerer
 
 type Event interface {
 	//Get the event payload
 	Payload() interface{}
+
+	//Get the event context
+	Context() context.Context
 
 	//Set the event payload
 	//Will return an error if the event is done
@@ -34,11 +39,12 @@ type Event interface {
 	//            Instead, we do the ack for them (see below)
 	Ack()
 
-	//Duplicate the event. (Do we deep-copy payload?)
-	//Dup fails and return an error if the event is done
-	Dup() (Event, error)
+	//Clone the event with a new context. (deep-copy payload?)
+	//Clone fails and return an error if the event is done
+	Clone(ctx context.Context) (Event, error)
 }
 
 type NewEventerer interface {
 	NewEvent(payload interface{}) (Event, error)
+	NewEventWithContext(ctx context.Context, payload interface{}) (Event, error)
 }

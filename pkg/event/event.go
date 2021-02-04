@@ -17,13 +17,17 @@
 
 package event
 
+import "context"
+
 type event struct {
 	payload interface{}
+	ctx     context.Context
 }
 
 func NewEvent(payload interface{}) (Event, error) {
 	return &event{
 		payload: payload,
+		ctx:     context.Background(),
 	}, nil
 }
 
@@ -39,6 +43,10 @@ func (e *event) SetPayload(payload interface{}) error {
 func (e *event) Ack() {
 }
 
-func (e *event) Dup() (Event, error) {
+func (e *event) Clone(ctx context.Context) (Event, error) {
 	return e, nil
+}
+
+func (e *event) Context() context.Context {
+	return e.ctx
 }
