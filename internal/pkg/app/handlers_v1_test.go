@@ -105,7 +105,8 @@ func TestRestVersionHandler(t *testing.T) {
 func TestRestPostSimpleRouteHandler(t *testing.T) {
 	Version = "v1.0.2"
 	w := httptest.NewRecorder()
-	simpleRouteReader, err := os.Open("testdata/simpleRoute.json")
+	routeFileName := "testdata/simpleRoute.json"
+	simpleRouteReader, err := os.Open(routeFileName)
 	if err != nil {
 		t.Fatalf("cannot read file: %s", err.Error())
 	}
@@ -127,7 +128,7 @@ func TestRestPostSimpleRouteHandler(t *testing.T) {
 	zerolog.SetGlobalLevel(zerolog.ErrorLevel)
 	ctx := context.Background()
 	ctx = log.Logger.WithContext(ctx)
-	buf, err := ioutil.ReadFile("testdata/simpleRoute.json")
+	buf, err := ioutil.ReadFile(routeFileName)
 	if err != nil {
 		t.Fatalf("cannot read file: %s", err.Error())
 	}
@@ -152,7 +153,8 @@ func TestRestPostSimpleRouteHandler(t *testing.T) {
 func TestRestPutSimpleRouteHandler(t *testing.T) {
 	Version = "v1.0.2"
 	w := httptest.NewRecorder()
-	simpleRouteReader, err := os.Open("testdata/simpleRoute.json")
+	name := "testdata/simpleRoute.json"
+	simpleRouteReader, err := os.Open(name)
 	if err != nil {
 		t.Fatalf("cannot read file: %s", err.Error())
 	}
@@ -174,7 +176,8 @@ func TestRestPutSimpleRouteHandler(t *testing.T) {
 func TestRestPostFilterMatchAllowRouteHandler(t *testing.T) {
 	Version = "v1.0.2"
 	w := httptest.NewRecorder()
-	simpleRouteReader, err := os.Open("testdata/simpleFilterMatchAllowRoute.json")
+	routeFileName := "testdata/simpleFilterMatchAllowRoute.json"
+	simpleRouteReader, err := os.Open(routeFileName)
 	if err != nil {
 		t.Fatalf("cannot read file: %s", err.Error())
 	}
@@ -196,7 +199,7 @@ func TestRestPostFilterMatchAllowRouteHandler(t *testing.T) {
 	zerolog.SetGlobalLevel(zerolog.ErrorLevel)
 	ctx := context.Background()
 	ctx = log.Logger.WithContext(ctx)
-	buf, err := ioutil.ReadFile("testdata/simpleFilterMatchAllowRoute.json")
+	buf, err := ioutil.ReadFile(routeFileName)
 	if err != nil {
 		t.Fatalf("cannot read file: %s", err.Error())
 	}
@@ -221,7 +224,8 @@ func TestRestPostFilterMatchAllowRouteHandler(t *testing.T) {
 func TestRestPostFilterMatchDenyRouteHandler(t *testing.T) {
 	Version = "v1.0.2"
 	w := httptest.NewRecorder()
-	simpleRouteReader, err := os.Open("testdata/simpleFilterMatchDenyRoute.json")
+	routeFileName := "testdata/simpleFilterMatchDenyRoute.json"
+	simpleRouteReader, err := os.Open(routeFileName)
 	if err != nil {
 		t.Fatalf("cannot read file: %s", err.Error())
 	}
@@ -243,7 +247,7 @@ func TestRestPostFilterMatchDenyRouteHandler(t *testing.T) {
 	zerolog.SetGlobalLevel(zerolog.ErrorLevel)
 	ctx := context.Background()
 	ctx = log.Logger.WithContext(ctx)
-	buf, err := ioutil.ReadFile("testdata/simpleFilterMatchDenyRoute.json")
+	buf, err := ioutil.ReadFile(routeFileName)
 	if err != nil {
 		t.Fatalf("cannot read file: %s", err.Error())
 	}
@@ -268,7 +272,8 @@ func TestRestPostFilterMatchDenyRouteHandler(t *testing.T) {
 func TestRestPostFilterChainMatchRouteHandler(t *testing.T) {
 	Version = "v1.0.2"
 	w := httptest.NewRecorder()
-	simpleRouteReader, err := os.Open("testdata/simpleFilterChainMatchRoute.json")
+	routeFileName := "testdata/simpleFilterChainMatchRoute.json"
+	simpleRouteReader, err := os.Open(routeFileName)
 	if err != nil {
 		t.Fatalf("cannot read file: %s", err.Error())
 	}
@@ -290,7 +295,7 @@ func TestRestPostFilterChainMatchRouteHandler(t *testing.T) {
 	zerolog.SetGlobalLevel(zerolog.ErrorLevel)
 	ctx := context.Background()
 	ctx = log.Logger.WithContext(ctx)
-	buf, err := ioutil.ReadFile("testdata/simpleFilterChainMatchRoute.json")
+	buf, err := ioutil.ReadFile(routeFileName)
 	if err != nil {
 		t.Fatalf("cannot read file: %s", err.Error())
 	}
@@ -315,7 +320,8 @@ func TestRestPostFilterChainMatchRouteHandler(t *testing.T) {
 func TestRestRouteHandlerIdMismatch(t *testing.T) {
 	Version = "v1.0.2"
 	w := httptest.NewRecorder()
-	simpleRouteReader, err := os.Open("testdata/simpleRoute.json")
+	routeFileName := "testdata/simpleRoute.json"
+	simpleRouteReader, err := os.Open(routeFileName)
 	if err != nil {
 		t.Fatalf("cannot read file: %s", err.Error())
 	}
@@ -354,7 +360,8 @@ func TestRestMissingRouteHandler(t *testing.T) {
 
 func TestRestGetRouteHandler(t *testing.T) {
 	Version = "v1.0.2"
-	simpleRouteReader, err := os.Open("testdata/simpleRoute.json")
+	routeFileName := "testdata/simpleRoute.json"
+	simpleRouteReader, err := os.Open(routeFileName)
 	if err != nil {
 		t.Fatalf("cannot read file: %s", err.Error())
 	}
@@ -382,7 +389,8 @@ func TestRestGetRouteHandler(t *testing.T) {
 
 func TestRestGetMultipleRoutesHandler(t *testing.T) {
 	Version = "v1.0.2"
-	simpleRouteReader, err := os.Open("testdata/simpleRoute.json")
+	routeFileName := "testdata/simpleRoute.json"
+	simpleRouteReader, err := os.Open(routeFileName)
 	if err != nil {
 		t.Fatalf("cannot read file: %s", err.Error())
 	}
@@ -419,11 +427,13 @@ func TestRestGetMultipleRoutesHandler(t *testing.T) {
 
 func TestRestDeleteRouteHandler(t *testing.T) {
 	Version = "v1.0.2"
-	simpleRouteReader, err := os.Open("testdata/simpleRoute.json")
+	routeFileName := "testdata/simpleRoute.json"
+	simpleRouteReader, err := os.Open(routeFileName)
 	if err != nil {
 		t.Fatalf("cannot read file: %s", err.Error())
 	}
-	simpleFilterRouteReader, err := os.Open("testdata/simpleFilterMatchAllowRoute.json")
+	routeFileName2 := "testdata/simpleFilterMatchAllowRoute.json"
+	simpleFilterRouteReader, err := os.Open(routeFileName2)
 	if err != nil {
 		t.Fatalf("cannot read file: %s", err.Error())
 	}
@@ -460,7 +470,8 @@ func TestRestDeleteRouteHandler(t *testing.T) {
 func TestRestPostRouteHandlerBadName(t *testing.T) {
 	Version = "v1.0.2"
 	w := httptest.NewRecorder()
-	simpleRouteReader, err := os.Open("testdata/simpleRouteBadName.json")
+	routeFileName := "testdata/simpleRouteBadName.json"
+	simpleRouteReader, err := os.Open(routeFileName)
 	if err != nil {
 		t.Fatalf("cannot read file: %s", err.Error())
 	}
@@ -482,7 +493,8 @@ func TestRestPostRouteHandlerBadName(t *testing.T) {
 func TestRestPostRouteHandlerBadPluginName(t *testing.T) {
 	Version = "v1.0.2"
 	w := httptest.NewRecorder()
-	simpleRouteReader, err := os.Open("testdata/simpleRouteBadPluginName.json")
+	routeFileName := "testdata/simpleRouteBadPluginName.json"
+	simpleRouteReader, err := os.Open(routeFileName)
 	if err != nil {
 		t.Fatalf("cannot read file: %s", err.Error())
 	}
@@ -504,7 +516,8 @@ func TestRestPostRouteHandlerBadPluginName(t *testing.T) {
 func TestRestPostRouteHandlerNoApp(t *testing.T) {
 	Version = "v1.0.2"
 	w := httptest.NewRecorder()
-	simpleRouteReader, err := os.Open("testdata/simpleRouteNoApp.json")
+	routeFileName := "testdata/simpleRouteNoApp.json"
+	simpleRouteReader, err := os.Open(routeFileName)
 	if err != nil {
 		t.Fatalf("cannot read file: %s", err.Error())
 	}
@@ -526,7 +539,8 @@ func TestRestPostRouteHandlerNoApp(t *testing.T) {
 func TestRestPostRouteHandlerNoOrg(t *testing.T) {
 	Version = "v1.0.2"
 	w := httptest.NewRecorder()
-	simpleRouteReader, err := os.Open("testdata/simpleRouteNoOrg.json")
+	routeFileName := "testdata/simpleRouteNoOrg.json"
+	simpleRouteReader, err := os.Open(routeFileName)
 	if err != nil {
 		t.Fatalf("cannot read file: %s", err.Error())
 	}
@@ -548,7 +562,8 @@ func TestRestPostRouteHandlerNoOrg(t *testing.T) {
 func TestRestPostRouteHandlerNoSender(t *testing.T) {
 	Version = "v1.0.2"
 	w := httptest.NewRecorder()
-	simpleRouteReader, err := os.Open("testdata/simpleRouteNoSender.json")
+	routeFileName := "testdata/simpleRouteNoSender.json"
+	simpleRouteReader, err := os.Open(routeFileName)
 	if err != nil {
 		t.Fatalf("cannot read file: %s", err.Error())
 	}
@@ -570,7 +585,8 @@ func TestRestPostRouteHandlerNoSender(t *testing.T) {
 func TestRestPostRouteHandlerNoReceiver(t *testing.T) {
 	Version = "v1.0.2"
 	w := httptest.NewRecorder()
-	simpleRouteReader, err := os.Open("testdata/simpleRouteNoReceiver.json")
+	routeFileName := "testdata/simpleRouteNoReceiver.json"
+	simpleRouteReader, err := os.Open(routeFileName)
 	if err != nil {
 		t.Fatalf("cannot read file: %s", err.Error())
 	}
@@ -592,7 +608,8 @@ func TestRestPostRouteHandlerNoReceiver(t *testing.T) {
 func TestRestPostRouteHandlerNoUser(t *testing.T) {
 	Version = "v1.0.2"
 	w := httptest.NewRecorder()
-	simpleRouteReader, err := os.Open("testdata/simpleRouteNoUser.json")
+	routeFileName := "testdata/simpleRouteNoUser.json"
+	simpleRouteReader, err := os.Open(routeFileName)
 	if err != nil {
 		t.Fatalf("cannot read file: %s", err.Error())
 	}
