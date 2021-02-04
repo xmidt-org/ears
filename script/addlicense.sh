@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Copyright 2020 Comcast Cable Communications Management, LLC
+# Copyright 2021 Comcast Cable Communications Management, LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -13,13 +13,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+
 ########################################################################
 # Usage:
 #   addlicense.sh           # runs check mode only
 #   addlicense.sh apply     # applies license to all *.go and *.sh files
 #
 ########################################################################
-
 scriptName=$(basename "$0")
 scriptDir=$( cd "$(dirname "${BASH_SOURCE}")" ; pwd -P )
 pushd $scriptDir/.. >> /dev/null
@@ -61,9 +61,10 @@ files=$(find ${codeDir} -type f -name "*.sh" -o -name "*.go" )
 if [[ $files == "" ]]; then
 	echo "  - No matching files found to process.  Exiting."
 	finish 1
+else 
+	fileCount=$(echo -e "$files" | wc -l | tr -d '[:space:]')
+	echo "  - ${fileCount} files found"
 fi
-echo -e "$files"
-echo
 
 
 echo "* Running addlicense command:"
@@ -76,8 +77,23 @@ else
 	echo "  - Running in check mode only"
 fi
 
-${cmd} -v \
+set +e
+set +o pipefail
+
+res=$(${cmd} -v \
 	-c 'Comcast Cable Communications Management, LLC' \
-	-l apache ${doCheck} ${files}
+	-l apache ${doCheck} ${files} 2>&1 )
+
+count=$(echo -e "$res" | grep modified | wc -l | tr -d '[:space:]')
+
+if [[ $count == 0 ]]; then
+	echo "  - No files modified"
+else
+  echo "  - ${count} file(s) updated"
+fi
+
+echo
+echo -e "$res"
+echo
 
 finish
