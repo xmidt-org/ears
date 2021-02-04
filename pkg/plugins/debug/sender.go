@@ -82,7 +82,7 @@ func NewSender(config interface{}) (sender.Sender, error) {
 
 func (s *Sender) Send(ctx context.Context, e event.Event) error {
 	s.history.Add(e)
-	fmt.Printf("SEND\n")
+	//fmt.Printf("SEND\n")
 
 	if s.destination != nil {
 		return s.destination.Write(e)

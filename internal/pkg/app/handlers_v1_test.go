@@ -356,6 +356,85 @@ func TestRestMultiRouteAABBAB(t *testing.T) {
 	}
 }
 
+func TestRestMultiRouteAAAB(t *testing.T) {
+	Version = "v1.0.2"
+	w := httptest.NewRecorder()
+	routeFileName := "testdata/simpleRouteAA.json"
+	simpleRouteReader, err := os.Open(routeFileName)
+	if err != nil {
+		t.Fatalf("cannot read file: %s", err.Error())
+	}
+	routeFileName2 := "testdata/simpleRouteAB.json"
+	simpleRouteReader2, err := os.Open(routeFileName2)
+	if err != nil {
+		t.Fatalf("cannot read file: %s", err.Error())
+	}
+	api, _, pluginMgr, _, err := setupRestApi()
+	if err != nil {
+		t.Fatalf("cannot create api manager: %s\n", err.Error())
+	}
+	r := httptest.NewRequest(http.MethodPost, "/ears/v1/routes", simpleRouteReader)
+	api.muxRouter.ServeHTTP(w, r)
+	r = httptest.NewRequest(http.MethodPost, "/ears/v1/routes", simpleRouteReader2)
+	api.muxRouter.ServeHTTP(w, r)
+	/*g := goldie.New(t)
+	var data interface{}
+	err = json.Unmarshal(w.Body.Bytes(), &data)
+	if err != nil {
+		t.Fatalf("cannot unmarshal response %s into json %s", string(w.Body.Bytes()), err.Error())
+	}
+	g.AssertJson(t, "addroute", data)*/
+	// check number of events received by output plugin
+	err = checkEventsSent(1, routeFileName, pluginMgr, 5)
+	if err != nil {
+		t.Fatalf("check events sent error: %s", err.Error())
+	}
+	err = checkEventsSent(0, routeFileName2, pluginMgr, 5)
+	if err != nil {
+		t.Fatalf("check events sent error: %s", err.Error())
+	}
+}
+
+func TestRestMultiRouteBBAB(t *testing.T) {
+	Version = "v1.0.2"
+	w := httptest.NewRecorder()
+	routeFileName := "testdata/simpleRouteBB.json"
+	simpleRouteReader, err := os.Open(routeFileName)
+	if err != nil {
+		t.Fatalf("cannot read file: %s", err.Error())
+	}
+	routeFileName2 := "testdata/simpleRouteAB.json"
+	simpleRouteReader2, err := os.Open(routeFileName2)
+	if err != nil {
+		t.Fatalf("cannot read file: %s", err.Error())
+	}
+	routeFileName3 := "testdata/simpleRouteAA.json"
+	api, _, pluginMgr, _, err := setupRestApi()
+	if err != nil {
+		t.Fatalf("cannot create api manager: %s\n", err.Error())
+	}
+	r := httptest.NewRequest(http.MethodPost, "/ears/v1/routes", simpleRouteReader)
+	api.muxRouter.ServeHTTP(w, r)
+	r = httptest.NewRequest(http.MethodPost, "/ears/v1/routes", simpleRouteReader2)
+	api.muxRouter.ServeHTTP(w, r)
+	/*g := goldie.New(t)
+	var data interface{}
+	err = json.Unmarshal(w.Body.Bytes(), &data)
+	if err != nil {
+		t.Fatalf("cannot unmarshal response %s into json %s", string(w.Body.Bytes()), err.Error())
+	}
+	g.AssertJson(t, "addroute", data)*/
+	// check number of events received by output plugin
+	err = checkEventsSent(1, routeFileName, pluginMgr, 10)
+	if err != nil {
+		t.Fatalf("check events sent error: %s", err.Error())
+	}
+	err = checkEventsSent(0, routeFileName3, pluginMgr, 0)
+	if err != nil {
+		t.Fatalf("check events sent error: %s", err.Error())
+	}
+}
+
 // various api tests
 
 func TestRestGetRouteHandler(t *testing.T) {
