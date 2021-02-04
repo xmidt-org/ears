@@ -179,7 +179,7 @@ func TestRestPostFilterMatchAllowRouteHandler(t *testing.T) {
 		t.Fatalf("cannot read file: %s", err.Error())
 	}
 	r := httptest.NewRequest(http.MethodPost, "/ears/v1/routes", simpleRouteReader)
-	api, _, _, _, err := setupRestApi()
+	api, _, pluginMgr, _, err := setupRestApi()
 	if err != nil {
 		t.Fatalf("cannot create api manager: %s\n", err.Error())
 	}
@@ -191,6 +191,31 @@ func TestRestPostFilterMatchAllowRouteHandler(t *testing.T) {
 		t.Fatalf("cannot unmarshal response %s into json %s", string(w.Body.Bytes()), err.Error())
 	}
 	g.AssertJson(t, "addfiltermatchallowroute", data)
+	// check number of events received by output plugin
+	time.Sleep(1 * time.Second)
+	zerolog.SetGlobalLevel(zerolog.ErrorLevel)
+	ctx := context.Background()
+	ctx = log.Logger.WithContext(ctx)
+	buf, err := ioutil.ReadFile("testdata/simpleFilterMatchAllowRoute.json")
+	if err != nil {
+		t.Fatalf("cannot read file: %s", err.Error())
+	}
+	var rt route.Config
+	err = json.Unmarshal(buf, &rt)
+	if err != nil {
+		t.Fatalf("cannot parse file: %s", err.Error())
+	}
+	sdr, err := pluginMgr.RegisterSender(ctx, rt.Sender.Plugin, rt.Sender.Name, stringify(rt.Sender.Config))
+	if err != nil {
+		t.Fatalf("failed to register sender: %s", err.Error())
+	}
+	debugSender, ok := sdr.Unwrap().(*debug.Sender)
+	if !ok {
+		t.Fatalf("bad type assertion debug sender")
+	}
+	if debugSender.Count() != 5 {
+		t.Fatalf("unexpected number of events in sender %d", debugSender.Count())
+	}
 }
 
 func TestRestPostFilterMatchDenyRouteHandler(t *testing.T) {
@@ -201,7 +226,7 @@ func TestRestPostFilterMatchDenyRouteHandler(t *testing.T) {
 		t.Fatalf("cannot read file: %s", err.Error())
 	}
 	r := httptest.NewRequest(http.MethodPost, "/ears/v1/routes", simpleRouteReader)
-	api, _, _, _, err := setupRestApi()
+	api, _, pluginMgr, _, err := setupRestApi()
 	if err != nil {
 		t.Fatalf("cannot create api manager: %s\n", err.Error())
 	}
@@ -213,6 +238,31 @@ func TestRestPostFilterMatchDenyRouteHandler(t *testing.T) {
 		t.Fatalf("cannot unmarshal response %s into json %s", string(w.Body.Bytes()), err.Error())
 	}
 	g.AssertJson(t, "addfiltermatchdenyroute", data)
+	// check number of events received by output plugin
+	time.Sleep(1 * time.Second)
+	zerolog.SetGlobalLevel(zerolog.ErrorLevel)
+	ctx := context.Background()
+	ctx = log.Logger.WithContext(ctx)
+	buf, err := ioutil.ReadFile("testdata/simpleFilterMatchDenyRoute.json")
+	if err != nil {
+		t.Fatalf("cannot read file: %s", err.Error())
+	}
+	var rt route.Config
+	err = json.Unmarshal(buf, &rt)
+	if err != nil {
+		t.Fatalf("cannot parse file: %s", err.Error())
+	}
+	sdr, err := pluginMgr.RegisterSender(ctx, rt.Sender.Plugin, rt.Sender.Name, stringify(rt.Sender.Config))
+	if err != nil {
+		t.Fatalf("failed to register sender: %s", err.Error())
+	}
+	debugSender, ok := sdr.Unwrap().(*debug.Sender)
+	if !ok {
+		t.Fatalf("bad type assertion debug sender")
+	}
+	if debugSender.Count() != 0 {
+		t.Fatalf("unexpected number of events in sender %d", debugSender.Count())
+	}
 }
 
 func TestRestPostFilterChainMatchRouteHandler(t *testing.T) {
@@ -223,7 +273,7 @@ func TestRestPostFilterChainMatchRouteHandler(t *testing.T) {
 		t.Fatalf("cannot read file: %s", err.Error())
 	}
 	r := httptest.NewRequest(http.MethodPost, "/ears/v1/routes", simpleRouteReader)
-	api, _, _, _, err := setupRestApi()
+	api, _, pluginMgr, _, err := setupRestApi()
 	if err != nil {
 		t.Fatalf("cannot create api manager: %s\n", err.Error())
 	}
@@ -235,6 +285,31 @@ func TestRestPostFilterChainMatchRouteHandler(t *testing.T) {
 		t.Fatalf("cannot unmarshal response %s into json %s", string(w.Body.Bytes()), err.Error())
 	}
 	g.AssertJson(t, "addfilterchainmatchroute", data)
+	// check number of events received by output plugin
+	time.Sleep(1 * time.Second)
+	zerolog.SetGlobalLevel(zerolog.ErrorLevel)
+	ctx := context.Background()
+	ctx = log.Logger.WithContext(ctx)
+	buf, err := ioutil.ReadFile("testdata/simpleFilterChainMatchRoute.json")
+	if err != nil {
+		t.Fatalf("cannot read file: %s", err.Error())
+	}
+	var rt route.Config
+	err = json.Unmarshal(buf, &rt)
+	if err != nil {
+		t.Fatalf("cannot parse file: %s", err.Error())
+	}
+	sdr, err := pluginMgr.RegisterSender(ctx, rt.Sender.Plugin, rt.Sender.Name, stringify(rt.Sender.Config))
+	if err != nil {
+		t.Fatalf("failed to register sender: %s", err.Error())
+	}
+	debugSender, ok := sdr.Unwrap().(*debug.Sender)
+	if !ok {
+		t.Fatalf("bad type assertion debug sender")
+	}
+	if debugSender.Count() != 5 {
+		t.Fatalf("unexpected number of events in sender %d", debugSender.Count())
+	}
 }
 
 func TestRestRouteHandlerIdMismatch(t *testing.T) {
