@@ -15,10 +15,10 @@
 package app
 
 import (
-	//"context"
+	"context"
 	"encoding/json"
-	//"github.com/rs/zerolog"
-	//"github.com/rs/zerolog/log"
+	"github.com/rs/zerolog"
+	"github.com/rs/zerolog/log"
 	goldie "github.com/sebdah/goldie/v2"
 	"github.com/xmidt-org/ears/internal/pkg/db"
 	"github.com/xmidt-org/ears/internal/pkg/plugin"
@@ -29,12 +29,12 @@ import (
 	"github.com/xmidt-org/ears/pkg/plugins/match"
 	"github.com/xmidt-org/ears/pkg/plugins/pass"
 	"github.com/xmidt-org/ears/pkg/route"
-	//"io/ioutil"
+	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"os"
 	"testing"
-	//"time"
+	"time"
 )
 
 func setupRestApi() (*APIManager, RoutingTableManager, plugin.Manager, route.RouteStorer, error) {
@@ -110,7 +110,7 @@ func TestRestPostSimpleRouteHandler(t *testing.T) {
 		t.Fatalf("cannot read file: %s", err.Error())
 	}
 	r := httptest.NewRequest(http.MethodPost, "/ears/v1/routes", simpleRouteReader)
-	api, _, _, _, err := setupRestApi()
+	api, _, pluginMgr, _, err := setupRestApi()
 	if err != nil {
 		t.Fatalf("cannot create api manager: %s\n", err.Error())
 	}
@@ -123,7 +123,7 @@ func TestRestPostSimpleRouteHandler(t *testing.T) {
 	}
 	g.AssertJson(t, "addroute", data)
 	// check number of events received by output plugin
-	/*time.Sleep(1 * time.Second)
+	time.Sleep(1 * time.Second)
 	zerolog.SetGlobalLevel(zerolog.ErrorLevel)
 	ctx := context.Background()
 	ctx = log.Logger.WithContext(ctx)
@@ -140,13 +140,13 @@ func TestRestPostSimpleRouteHandler(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to register sender: %s", err.Error())
 	}
-	debugSender, ok := sdr.(*debug.Sender)
+	debugSender, ok := sdr.Unwrap().(*debug.Sender)
 	if !ok {
 		t.Fatalf("bad type assertion debug sender")
 	}
 	if debugSender.Count() != 5 {
 		t.Fatalf("unexpected number of events in sender %d", debugSender.Count())
-	}*/
+	}
 }
 
 func TestRestPutSimpleRouteHandler(t *testing.T) {
