@@ -102,7 +102,7 @@ const receiverSchema = `
 										"minimum": -1
                 },
                 "payload": {
-                    "type": ["string", "object"]
+                    "type": ["string", "object", "array"]
                 },
                 "maxHistory": {
                     "type": "integer",
