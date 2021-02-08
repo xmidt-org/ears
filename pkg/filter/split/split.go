@@ -16,9 +16,11 @@ package split
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"github.com/xmidt-org/ears/pkg/event"
 	"github.com/xmidt-org/ears/pkg/filter"
+	"strings"
 )
 
 // a SplitFilter splits and event into two or more events
@@ -52,16 +54,62 @@ func NewFilter(config interface{}) (*Filter, error) {
 
 // Filter splits an event containing an array into multiple events
 func (f *Filter) Filter(ctx context.Context, evt event.Event) ([]event.Event, error) {
+	//TODO: add validation logic to filter
+	//TODO: maybe replace with jq filter
 	if f == nil {
 		return nil, &filter.InvalidConfigError{
 			Err: fmt.Errorf("<nil> pointer filter"),
 		}
 	}
-	//TODO: implement filter logic
-	//TODO: clone
 	events := []event.Event{}
-	// always splits into two identical events
-	events = append(events, evt, evt)
+	if f.config.SplitPath == "" {
+		events = append(events, evt)
+	} else if f.config.SplitPath == "." {
+		switch evt.Payload().(type) {
+		case []interface{}:
+			for _, p := range evt.Payload().([]interface{}) {
+				nevt, err := evt.Dup()
+				if err != nil {
+					return events, err
+				}
+				err = nevt.SetPayload(p)
+				if err != nil {
+					return events, err
+				}
+				events = append(events, nevt)
+			}
+		default:
+			return events, errors.New("split on non array type")
+		}
+	} else {
+		path := strings.Split(f.config.SplitPath, ".")
+		obj := evt.Payload()
+		for i, p := range path {
+			if i == len(path)-1 {
+				arr, ok := obj.([]interface{})
+				if !ok {
+					return events, errors.New("split on non array type")
+				}
+				for _, p := range arr {
+					nevt, err := evt.Dup()
+					if err != nil {
+						return events, err
+					}
+					err = nevt.SetPayload(p)
+					if err != nil {
+						return events, err
+					}
+					events = append(events, nevt)
+				}
+			} else {
+				var ok bool
+				obj, ok = obj.(map[string]interface{})[p]
+				if !ok {
+					return events, errors.New("invalid object in filter path")
+				}
+			}
+		}
+	}
 	return events, nil
 }
 

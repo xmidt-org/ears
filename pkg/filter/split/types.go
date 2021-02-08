@@ -17,7 +17,7 @@ package split
 // Config can be passed into NewFilter() in order to configure
 // the behavior of the sender.
 type Config struct {
-	SplitPath string `json:"pattern,omitempty"`
+	SplitPath string `json:"splitPath,omitempty"`
 }
 
 var DefaultConfig = Config{
