@@ -56,7 +56,6 @@ type (
 
 func TestRouteTable(t *testing.T) {
 	Version = "v1.0.2"
-	w := httptest.NewRecorder()
 	testTableFileName := "testdata/table.json"
 	buf, err := ioutil.ReadFile(testTableFileName)
 	if err != nil {
@@ -72,23 +71,43 @@ func TestRouteTable(t *testing.T) {
 		t.Fatalf("cannot create api manager: %s\n", err.Error())
 	}
 	for currentTestName, currentTest := range table {
+		t.Logf("test scenario: %s", currentTestName)
 		// setup routes
-		buf, _ := json.Marshal(currentTest)
-		fmt.Println(string(buf))
+		routeIds := make([]string, 0)
 		for _, routeFileName := range currentTest.RouteFiles {
-			simpleRouteReader, err := os.Open("testdata/" + routeFileName + ".json")
+			routeReader, err := os.Open("testdata/" + routeFileName + ".json")
 			if err != nil {
 				t.Fatalf("%s test: cannot read file: %s", currentTestName, err.Error())
 			}
-			r := httptest.NewRequest(http.MethodPost, "/ears/v1/routes", simpleRouteReader)
+			r := httptest.NewRequest(http.MethodPost, "/ears/v1/routes", routeReader)
+			w := httptest.NewRecorder()
 			api.muxRouter.ServeHTTP(w, r)
 			g := goldie.New(t)
-			var data interface{}
+			var data Response
 			err = json.Unmarshal(w.Body.Bytes(), &data)
 			if err != nil {
-				t.Fatalf("%s test: cannot unmarshal response: %s", currentTestName, err.Error())
+				t.Fatalf("%s test: cannot unmarshal response: %s %s", currentTestName, err.Error(), string(w.Body.Bytes()))
 			}
 			g.AssertJson(t, "tbl_"+currentTestName, data)
+			// collect route ID
+			if data.Item == nil {
+				t.Fatalf("%s test: no item in response", currentTestName)
+			}
+			buf, err := json.Marshal(data.Item)
+			if err != nil {
+				t.Fatalf("%s test: %s", currentTestName, err.Error())
+			}
+			var rt route.Config
+			err = json.Unmarshal(buf, &rt)
+			if err != nil {
+				fmt.Printf("%v\n", data.Item)
+				t.Fatalf("%s test: item is not a route: %s", currentTestName, err.Error())
+			}
+			if rt.Id == "" {
+				t.Fatalf("%s test: route has blank ID", currentTestName)
+			}
+			routeIds = append(routeIds, rt.Id)
+			t.Logf("added route with id: %s", rt.Id)
 		}
 		// sleep
 		time.Sleep(time.Duration(currentTest.WaitSeconds) * time.Second)
@@ -107,6 +126,16 @@ func TestRouteTable(t *testing.T) {
 				t.Fatalf("%s test: check events sent error: %s", currentTestName, err.Error())
 			}
 		}
+		// delete all routes
+		for _, rtId := range routeIds {
+			r := httptest.NewRequest(http.MethodDelete, "/ears/v1/routes/"+rtId, nil)
+			w := httptest.NewRecorder()
+			api.muxRouter.ServeHTTP(w, r)
+			//TODO: check successful deletion
+			t.Logf("deleted route with id: %s", rtId)
+		}
+		// sleep
+		time.Sleep(time.Duration(currentTest.WaitSeconds) * time.Second)
 	}
 }
 
