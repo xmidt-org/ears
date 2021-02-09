@@ -5,7 +5,7 @@
     "filterChain": [
       {
         "config": {
-          "splitPath": "."
+          "splitPath": "a.b.c"
         },
         "name": "mysplit",
         "plugin": "split"
@@ -18,14 +18,20 @@
       "config": {
         "intervalMs": 100,
         "maxHistory": 100,
-        "payload": [
-          {
-            "foo": "bar"
-          },
-          {
-            "foo": "bar"
+        "payload": {
+          "a": {
+            "b": {
+              "c": [
+                {
+                  "foo": "bar"
+                },
+                {
+                  "foo": "bar"
+                }
+              ]
+            }
           }
-        ],
+        },
         "rounds": 5
       },
       "name": "mydebug",
