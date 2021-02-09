@@ -11,14 +11,20 @@
     {
       "rounds" : 5,
       "intervalMs" : 100,
-      "payload" : [
-        {
-          "foo" : "bar"
-        },
-        {
-          "foo" : "bar"
+      "payload" : {
+        "a": {
+          "b": {
+            "c": [
+              {
+                "foo": "bar"
+              },
+              {
+                "foo": "bar"
+              }
+            ]
+          }
         }
-      ],
+      },
       "maxHistory": 100
     }
   },
@@ -35,7 +41,7 @@
       "plugin" : "split",
       "name" : "mysplit",
       "config" : {
-        "splitPath" : "."
+        "splitPath" : "a.b.c"
       }
     }
   ],
