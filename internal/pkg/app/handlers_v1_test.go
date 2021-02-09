@@ -332,6 +332,34 @@ func TestRestPostFilterSplitRouteHandler(t *testing.T) {
 	}
 }
 
+func TestRestPostFilterDeepSplitRouteHandler(t *testing.T) {
+	Version = "v1.0.2"
+	w := httptest.NewRecorder()
+	routeFileName := "testdata/simpleFilterDeepSplitRoute.json"
+	simpleRouteReader, err := os.Open(routeFileName)
+	if err != nil {
+		t.Fatalf("cannot read file: %s", err.Error())
+	}
+	r := httptest.NewRequest(http.MethodPost, "/ears/v1/routes", simpleRouteReader)
+	api, _, pluginMgr, _, err := setupRestApi()
+	if err != nil {
+		t.Fatalf("cannot create api manager: %s\n", err.Error())
+	}
+	api.muxRouter.ServeHTTP(w, r)
+	g := goldie.New(t)
+	var data interface{}
+	err = json.Unmarshal(w.Body.Bytes(), &data)
+	if err != nil {
+		t.Fatalf("cannot unmarshal response %s into json %s", string(w.Body.Bytes()), err.Error())
+	}
+	g.AssertJson(t, "addsimplefilterdeepsplitroute", data)
+	// check number of events received by output plugin
+	err = checkEventsSent(1, routeFileName, pluginMgr, 10, "testdata/event1.json", 0)
+	if err != nil {
+		t.Fatalf("check events sent error: %s", err.Error())
+	}
+}
+
 // multi route tests
 
 func TestRestMultiRouteAABB(t *testing.T) {

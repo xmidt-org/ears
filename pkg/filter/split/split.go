@@ -84,30 +84,27 @@ func (f *Filter) Filter(ctx context.Context, evt event.Event) ([]event.Event, er
 	} else {
 		path := strings.Split(f.config.SplitPath, ".")
 		obj := evt.Payload()
-		for i, p := range path {
-			if i == len(path)-1 {
-				arr, ok := obj.([]interface{})
-				if !ok {
-					return events, errors.New("split on non array type")
-				}
-				for _, p := range arr {
-					nevt, err := evt.Dup()
-					if err != nil {
-						return events, err
-					}
-					err = nevt.SetPayload(p)
-					if err != nil {
-						return events, err
-					}
-					events = append(events, nevt)
-				}
-			} else {
-				var ok bool
-				obj, ok = obj.(map[string]interface{})[p]
-				if !ok {
-					return events, errors.New("invalid object in filter path")
-				}
+		for _, p := range path {
+			var ok bool
+			obj, ok = obj.(map[string]interface{})[p]
+			if !ok {
+				return events, errors.New("invalid object in filter path")
 			}
+		}
+		arr, ok := obj.([]interface{})
+		if !ok {
+			return events, errors.New("split on non array type")
+		}
+		for _, p := range arr {
+			nevt, err := evt.Dup()
+			if err != nil {
+				return events, err
+			}
+			err = nevt.SetPayload(p)
+			if err != nil {
+				return events, err
+			}
+			events = append(events, nevt)
 		}
 	}
 	return events, nil
