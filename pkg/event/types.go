@@ -33,18 +33,37 @@ type Event interface {
 	//Will return an error if the event is done
 	SetPayload(payload interface{}) error
 
-	//Acknowledge that the event is done and further actions on
-	//the event are no longer possible.
-	//Proposal 2: We do not expose Ack to the plugin developers.
-	//            Instead, we do the ack for them (see below)
+	//Replace the current event context
+	//Will return an error if the event is done
+	SetContext(ctx context.Context) error
+
+	//Acknowledge that the event is handled successfully
+	//Further actions on the event are no longer possible
 	Ack()
 
-	//Clone the event with a new context. (deep-copy payload?)
-	//Clone fails and return an error if the event is done
+	//Acknowledge that there is an error handling the event
+	//Further actions on the event are no longer possible
+	Nack(err error)
+
+	//Create a child the event with payload deep-copied
+	//Clone fails and return an error if the event is already acknowledged
 	Clone(ctx context.Context) (Event, error)
 }
 
 type NewEventerer interface {
-	NewEvent(payload interface{}) (Event, error)
-	NewEventWithContext(ctx context.Context, payload interface{}) (Event, error)
+
+	//Create a new event given a context and a payload
+	NewEvent(ctx context.Context, payload interface{}) (Event, error)
+
+	//Create a new event given a context and a payload, and two completion functions,
+	//handledFn and errFn. An event constructed this way will be notified through
+	//the handledFn when an event is handled, or through the errFn when there is an
+	//error handling it.
+	//An event is considered handled when it and all its child events (derived from the
+	//Clone function) have called the Ack function.
+	//An event is considered to have an error if it or any of its child events (derived from
+	//the Clone function) has called the Nack function.
+	//An event can also error out if it does not receive all the acknowledgements before
+	//the context timeout/cancellation.
+	NewEventWithAck(ctx context.Context, payload interface{}, handledFn func(), errFn func(error)) (Event, error)
 }
