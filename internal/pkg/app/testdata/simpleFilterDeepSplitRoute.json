@@ -1,0 +1,49 @@
+{
+  "id" : "sfs123",
+  "orgId" : "comcast",
+  "appId" : "xfi",
+  "userId" : "boris",
+  "name" : "simpleFilterSplitRoute",
+  "receiver" : {
+    "plugin" : "debug",
+    "name" : "mydebug",
+    "config" :
+    {
+      "rounds" : 5,
+      "intervalMs" : 100,
+      "payload" : {
+        "a": {
+          "b": {
+            "c": [
+              {
+                "foo": "bar"
+              },
+              {
+                "foo": "bar"
+              }
+            ]
+          }
+        }
+      },
+      "maxHistory": 100
+    }
+  },
+  "sender" : {
+    "plugin" : "debug",
+    "name" : "mydebug",
+    "config" : {
+      "destination" : "stdout",
+      "maxHistory": 100
+    }
+  },
+  "filterChain" : [
+    {
+      "plugin" : "split",
+      "name" : "mysplit",
+      "config" : {
+        "splitPath" : "a.b.c"
+      }
+    }
+  ],
+  "deliveryMode" : "whoCares"
+}
