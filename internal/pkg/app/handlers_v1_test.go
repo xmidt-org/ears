@@ -40,6 +40,76 @@ import (
 	"time"
 )
 
+type (
+	RouteTest struct {
+		RouteFiles  []string         `json:"routeFiles,omitempty"`
+		WaitSeconds int              `json:"waitSeconds,omitempty"`
+		Events      []EventCheckTest `json:"events,omitempty"`
+	}
+	EventCheckTest struct {
+		SenderRouteFile          string `json:"senderRouteFiles,omitempty"`
+		ExpectedEventCount       int    `json:"expectedEventCount,omitempty"`
+		ExpectedEventIndex       int    `json:"expectedEventIndex,omitempty"`
+		ExpectedEventPayloadFile string `json:"expectedEventPayloadFile,omitempty"`
+	}
+)
+
+func TestRouteTable(t *testing.T) {
+	Version = "v1.0.2"
+	w := httptest.NewRecorder()
+	testTableFileName := "testdata/table.json"
+	buf, err := ioutil.ReadFile(testTableFileName)
+	if err != nil {
+		t.Fatalf("cannot read file: %s", err.Error())
+	}
+	table := make(map[string]RouteTest, 0)
+	err = json.Unmarshal(buf, &table)
+	if err != nil {
+		t.Fatalf("cannot parse test table: %s", err.Error())
+	}
+	api, _, pluginMgr, _, err := setupRestApi()
+	if err != nil {
+		t.Fatalf("cannot create api manager: %s\n", err.Error())
+	}
+	for currentTestName, currentTest := range table {
+		// setup routes
+		buf, _ := json.Marshal(currentTest)
+		fmt.Println(string(buf))
+		for _, routeFileName := range currentTest.RouteFiles {
+			simpleRouteReader, err := os.Open("testdata/" + routeFileName + ".json")
+			if err != nil {
+				t.Fatalf("cannot read file: %s", err.Error())
+			}
+			r := httptest.NewRequest(http.MethodPost, "/ears/v1/routes", simpleRouteReader)
+			api.muxRouter.ServeHTTP(w, r)
+			g := goldie.New(t)
+			var data interface{}
+			err = json.Unmarshal(w.Body.Bytes(), &data)
+			if err != nil {
+				t.Fatalf("cannot unmarshal response: %s", err.Error())
+			}
+			g.AssertJson(t, "tbl_"+currentTestName, data)
+		}
+		// sleep
+		time.Sleep(time.Duration(currentTest.WaitSeconds) * time.Second)
+		// check number of events and payloads if desired
+		for _, eventData := range currentTest.Events {
+			if eventData.SenderRouteFile == "" {
+				continue
+			}
+			routeFileName := "testdata/" + eventData.SenderRouteFile + ".json"
+			eventFileName := ""
+			if eventData.ExpectedEventPayloadFile != "" {
+				eventFileName = "testdata/" + eventData.ExpectedEventPayloadFile + ".json"
+			}
+			err = checkEventsSent(0, routeFileName, pluginMgr, eventData.ExpectedEventCount, eventFileName, eventData.ExpectedEventIndex)
+			if err != nil {
+				t.Fatalf("check events sent error: %s", err.Error())
+			}
+		}
+	}
+}
+
 func setupRestApi() (*APIManager, RoutingTableManager, plugin.Manager, route.RouteStorer, error) {
 	inMemStorageMgr := db.NewInMemoryRouteStorer(nil)
 	mgr, err := manager.New()
