@@ -27,45 +27,6 @@
         "plugin": "debug"
       },
       "userId": "boris"
-    },
-    {
-      "appId": "xfi",
-      "deliveryMode": "whoCares",
-      "filterChain": [
-        {
-          "config": {
-            "matcher": "regex",
-            "mode": "allow",
-            "pattern": "^.*$"
-          },
-          "name": "mymatch",
-          "plugin": "match"
-        }
-      ],
-      "id": "f123",
-      "name": "simpleRoute",
-      "orgId": "comcast",
-      "receiver": {
-        "config": {
-          "intervalMs": 1000,
-          "maxHistory": 100,
-          "payload": {
-            "foo": "bar"
-          },
-          "rounds": 1
-        },
-        "name": "mydebug",
-        "plugin": "debug"
-      },
-      "sender": {
-        "config": {
-          "destination": "stdout",
-          "maxHistory": 100
-        },
-        "name": "mydebug",
-        "plugin": "debug"
-      },
-      "userId": "boris"
     }
   ],
   "status": {

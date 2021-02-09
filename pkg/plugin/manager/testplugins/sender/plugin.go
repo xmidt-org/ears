@@ -67,3 +67,7 @@ func NewSender(config interface{}) (sender.Sender, error) {
 func (p *plugin) Send(ctx context.Context, e event.Event) error {
 	return nil
 }
+
+func (p *plugin) Unwrap() sender.Sender {
+	return p
+}

@@ -12,24 +12,26 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package pass
+package main
 
 import (
-	"context"
-
-	"github.com/xmidt-org/ears/pkg/event"
-	"github.com/xmidt-org/ears/pkg/filter"
+	"github.com/xmidt-org/ears/pkg/plugins/match"
 )
 
-var _ filter.Filterer = (*Filter)(nil)
-
-func NewFilter(config interface{}) (*Filter, error) {
-	return &Filter{}, nil
+func main() {
+	// required for `go build` to not fail
 }
 
-type Filter struct{}
+//go:generate ../../../../script/build-plugin.sh
 
-// Filter lets any event pass
-func (f *Filter) Filter(ctx context.Context, evt event.Event) ([]event.Event, error) {
-	return []event.Event{evt}, nil
-}
+var (
+	Name       = "split"
+	GitVersion = "v0.0.0"
+	GitCommit  = ""
+)
+
+var Plugin, PluginErr = match.NewPluginVersion(Name, GitVersion, GitCommit)
+
+// for golangci-lint
+var _ = Plugin
+var _ = PluginErr

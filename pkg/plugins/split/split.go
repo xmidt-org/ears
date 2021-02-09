@@ -12,24 +12,33 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package pass
+package split
 
 import (
-	"context"
-
-	"github.com/xmidt-org/ears/pkg/event"
 	"github.com/xmidt-org/ears/pkg/filter"
+	pkgsplit "github.com/xmidt-org/ears/pkg/filter/split"
+	pkgplugin "github.com/xmidt-org/ears/pkg/plugin"
 )
 
-var _ filter.Filterer = (*Filter)(nil)
+var (
+	Name    = "split"
+	Version = "v0.0.0"
+	Commit  = ""
+)
 
-func NewFilter(config interface{}) (*Filter, error) {
-	return &Filter{}, nil
+func NewPlugin() (*pkgplugin.Plugin, error) {
+	return NewPluginVersion(Name, Version, Commit)
 }
 
-type Filter struct{}
+func NewPluginVersion(name string, version string, commitID string) (*pkgplugin.Plugin, error) {
+	return pkgplugin.NewPlugin(
+		pkgplugin.WithName(name),
+		pkgplugin.WithVersion(version),
+		pkgplugin.WithCommitID(commitID),
+		pkgplugin.WithNewFilterer(NewFilterer),
+	)
+}
 
-// Filter lets any event pass
-func (f *Filter) Filter(ctx context.Context, evt event.Event) ([]event.Event, error) {
-	return []event.Event{evt}, nil
+func NewFilterer(config interface{}) (filter.Filterer, error) {
+	return pkgsplit.NewFilter(config)
 }

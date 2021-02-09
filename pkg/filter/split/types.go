@@ -12,24 +12,18 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package pass
+package split
 
-import (
-	"context"
-
-	"github.com/xmidt-org/ears/pkg/event"
-	"github.com/xmidt-org/ears/pkg/filter"
-)
-
-var _ filter.Filterer = (*Filter)(nil)
-
-func NewFilter(config interface{}) (*Filter, error) {
-	return &Filter{}, nil
+// Config can be passed into NewFilter() in order to configure
+// the behavior of the sender.
+type Config struct {
+	SplitPath string `json:"splitPath,omitempty"`
 }
 
-type Filter struct{}
+var DefaultConfig = Config{
+	SplitPath: "",
+}
 
-// Filter lets any event pass
-func (f *Filter) Filter(ctx context.Context, evt event.Event) ([]event.Event, error) {
-	return []event.Event{evt}, nil
+type Filter struct {
+	config Config
 }

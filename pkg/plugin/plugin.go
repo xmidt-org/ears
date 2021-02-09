@@ -260,7 +260,7 @@ func (p *Plugin) NewSender(config interface{}) (sender.Sender, error) {
 
 // == Filterer ===========================================================
 
-func (p *Plugin) FilterHash(config interface{}) (string, error) {
+func (p *Plugin) FiltererHash(config interface{}) (string, error) {
 	if p == nil || p.hashFilter == nil {
 		return "", &NilPluginError{}
 	}
