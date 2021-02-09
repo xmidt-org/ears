@@ -25,12 +25,17 @@ import (
 type TestWork struct {
 	ack      ack.SubTree
 	workTime time.Duration
+	doNack   bool
 }
 
 func testWorker(ch chan *TestWork) {
 	for work := range ch {
 		time.Sleep(work.workTime)
-		work.ack.Ack()
+		if work.doNack {
+			work.ack.Nack(errors.New("NackError"))
+		} else {
+			work.ack.Ack()
+		}
 	}
 }
 
@@ -52,6 +57,10 @@ func TestSingleAck(t *testing.T) {
 	//send a test work with an ack tree
 	workChan <- &TestWork{ack: ack, workTime: 10 * time.Millisecond}
 	ack.Wait()
+
+	if !ack.IsDone() {
+		t.Errorf("AckTree should be done")
+	}
 }
 
 func TestAckTimeout(t *testing.T) {
@@ -75,6 +84,43 @@ func TestAckTimeout(t *testing.T) {
 	//send a test work with an ack tree
 	workChan <- &TestWork{ack: a, workTime: 1 * time.Second}
 	a.Wait()
+
+	if !a.IsDone() {
+		t.Errorf("AckTree should be done")
+	}
+}
+
+type TestErr struct {
+}
+
+func (t *TestErr) Error() string {
+	return "test error"
+}
+
+func TestNack(t *testing.T) {
+	ctx := context.Background()
+
+	a := ack.NewAckTree(ctx,
+		func() {
+			t.Errorf("expecting timeout error. Completion function should not be called")
+		},
+		func(err error) {
+			var expected *ack.NackError
+			if !errors.As(err, &expected) {
+				t.Errorf("expecting NackError, but get %s\n", err.Error())
+			}
+			var expected2 *TestErr
+			if !errors.As(err, &expected2) {
+				t.Errorf("expecting TestErr, but get %s\n", err.Error())
+			}
+		})
+
+	a.Nack(&TestErr{})
+	a.Wait()
+
+	if !a.IsDone() {
+		t.Errorf("AckTree should be done")
+	}
 }
 
 func TestSubTree(t *testing.T) {
@@ -105,11 +151,11 @@ func TestSubTree(t *testing.T) {
 	a.Ack()
 	a.Wait()
 
-	var invalidErr *ack.InvalidActionError
+	var ackedErr *ack.AlreadyAckedError
 
-	//Test error case. Should not be able to create subtree anymorea
+	//Test error case. Should not be able to create subtree anymore
 	_, err := a.NewSubTree()
-	if err == nil || !errors.As(err, &invalidErr) {
+	if err == nil || !errors.As(err, &ackedErr) {
 		t.Fatalf("Expect INvalidActionError, but got %v\n", err)
 	}
 }
@@ -123,7 +169,7 @@ func level1Worker(t *testing.T, ch chan *TestWork, ch2 chan *TestWork) {
 			if err != nil {
 				t.Fatalf("Fail to create subtree %s\n", err.Error())
 			}
-			ch2 <- &TestWork{ack: subTree, workTime: 0 * time.Millisecond}
+			ch2 <- &TestWork{ack: subTree, workTime: 0 * time.Millisecond, doNack: work.doNack}
 		}
 		work.ack.Ack()
 	}
@@ -157,6 +203,46 @@ func Test2LevelSubTree(t *testing.T) {
 			t.Fatalf("Fail to create subtree %s\n", err.Error())
 		}
 		workChan <- &TestWork{ack: subTree, workTime: 1 * time.Millisecond}
+	}
+	ack.Ack()
+	ack.Wait()
+}
+
+func Test2LevelSubTreeWithNack(t *testing.T) {
+	ctx := context.Background()
+	ctx, _ = context.WithTimeout(ctx, time.Second)
+
+	workChan := make(chan *TestWork, 100)
+	workChan2 := make(chan *TestWork, 1000)
+	for i := 0; i < 5; i++ {
+		go level1Worker(t, workChan, workChan2)
+	}
+	for i := 0; i < 10; i++ {
+		go testWorker(workChan2)
+	}
+
+	ack := ack.NewAckTree(ctx,
+		func() {
+			t.Errorf("expecting Nack error. Completion function should not be called")
+		},
+		func(err error) {
+			var expected *ack.NackError
+			if !errors.As(err, &expected) {
+				t.Errorf("expecting nack error, but get %s\n", err.Error())
+			}
+		})
+
+	//send 100 test work with an ack tree
+	for i := 0; i < 100; i++ {
+		subTree, err := ack.NewSubTree()
+		if err != nil {
+			t.Fatalf("Fail to create subtree %s\n", err.Error())
+		}
+		doNack := false
+		if i == 55 {
+			doNack = true
+		}
+		workChan <- &TestWork{ack: subTree, workTime: 1 * time.Millisecond, doNack: doNack}
 	}
 	ack.Ack()
 	ack.Wait()

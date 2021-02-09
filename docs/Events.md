@@ -56,7 +56,7 @@ A receiver creates a root event from a payload and a context:
 NewEvent(ctx context.Context, payload interface{}) (Event, error)
 ```
 
-A root event created must have an associated context. A receiver is responsible for creating the context and for adding necessary context information (timeout, tracing, etc). A receiver will not be notified when the root event is handled. When a root event is instantiated this way, it means that the receiver is setup for fire and forget, so it does not care if an event is handled or not
+A root event must have an associated context. A receiver is responsible for creating the context and for adding necessary context information (timeout, tracing, etc). When a root event is instantiated this way, receiver will not be notified when the root event is handled. A receiver is setup for fire and forget, so it does not care if an event is handled or not
 
 A receiver creates a root event with acknowledgement:
 ```go
@@ -131,12 +131,6 @@ An example on how routing manager can do the fanout:
     }
 ```
 
-Please note that `Clone` can be expensive as it needs to deep-copy the payload using reflections (is that true?). For optimization, we can imagine that if a receiver only have one route (probably the majority case), we can have a shallow-copy version of the `Clone` function:
-```go
-    //Create a child the event with payload shallow-copied
-    //WithContext fails and return an error if the event is already acknowledged
-    WithContext(ctx context.Context) (Event, error)
-```
 
 ## Filters (maybe external developers)
 Filter can affect events in multiple ways.
@@ -151,6 +145,8 @@ func (f *Filter) Filter(evt event.Event) ([]event.Event, error) {
 Case 2: Event filtered
 ```go
 func (f *Filter) Filter(evt event.Event) ([]event.Event, error) {
+	//Acknowledge that the event is done
+	evt.Ack()
     return []event.Event{}, nil
 }
 ```
@@ -168,12 +164,8 @@ Case 4: Updating event with new context
 ```go
 func (f *Filter) Filter(evt event.Event) ([]event.Event, error) {
 	newCtx := updateTraceInfo(evt)
-	newEvt, err := evt.WithContext(newCtx)
-	if err != nil {
-	    //error handling	
-		return nil, err
-    }
-    return []event.Event{newEvt}, nil
+	evt.SetContext(newCtx)
+    return []event.Event{evt}, nil
 }
 ```
 
@@ -185,8 +177,7 @@ func (f *Filter) Filter(evt event.Event) ([]event.Event, error) {
     for _, payload := range newPayloads {
     	ctx := updateTraceInfo(evt.Context(), payload)
     	
-    	//notice that we are using WithContext here
-    	childEvt, err := evt.WithContext(ctx)
+    	childEvt, err := evt.Clone(ctx)
     	if err != nil {
     	    //error handling
     		return nil, err
@@ -195,6 +186,8 @@ func (f *Filter) Filter(evt event.Event) ([]event.Event, error) {
     	
         events = append(events, childEvt)	
     }
+    //Acknowledge that the parent event is done
+    evt.Ack()
     
     return events, nil
 }
@@ -204,7 +197,7 @@ func (f *Filter) Filter(evt event.Event) ([]event.Event, error) {
 Senders just need to send the event to downstream. It should not need to update the events (maybe?)
 
 ## Routing Manager Event Acknowledgement (internal developer)
-An event as an `Ack` function to acknowledge that an event is done and should not be used further. (Think of it as a destructor for an event). Once an event is <strong>Acked</strong>, subsequent `SetPayload`, `Clone`, and `WithContext` call will return an error.
+An event owner should use the `Ack` function to acknowledge that an event is done and should not be used further. (Think of it as a destructor for an event). Once an event is <strong>Acked</strong>, subsequent `SetPayload`, `Clone`, and `WithContext` call will return an error.
 
 Event acknowledgements are necessary so that we know can track if all events in an event tree are acknowledged so that the root event is considered handled.
 
@@ -214,36 +207,55 @@ There are two possible answers:
 1. Whoever (receiver, filter, sender, route manager) handling the event must call `evt.Ack()` when it no longer wants to pass that event downstream. Or in sender's case, the event is sent.
 2. Between the plugin boundaries, the routing manager implicitly figure out if events are still needed. For all the child events that are no longer need to be passed down the pipeline, routing manager calls the `evt.Ack()` for them.
 
+We agree that we will take the 1st approach
+
 ## Updated Event Interface
 
 ```go
 type Event interface {
     //Get the event payload
     Payload() interface{}
+
+    //Get the event context
+    Context() context.Context
     
-    //Set the event payload
+    //Replace the event payload
     //Will return an error if the event is done
     SetPayload(payload interface{}) error
     
-    //Acknowledge that the event is done and further actions on
-    //the event are no longer possible.
-    //Proposal 2: We do not expose Ack to the plugin developers.
-    //            Instead, we do the ack for them (see below)
+    //Replace the current event context
+    //Will return an error if the event is done
+    SetContext(ctx context.Context) error
+    
+    //Acknowledge that the event is handled successfully
+    //Further actions on the event are no longer possible
     Ack()
+    
+    //Acknowledge that there is an error handling the event
+    //Further actions on the event are no longer possible
+    Nack(err error)
 
     //Create a child the event with payload deep-copied
     //Clone fails and return an error if the event is already acknowledged
     Clone(ctx context.Context) (Event, error)
-
-    //Create a child the event with payload shallow-copied
-    //WithContext fails and return an error if the event is already acknowledged
-    WithContext(ctx context.Context) (Event, error)
 }
 
 type NewEventerer interface {
+
+    //Create a new event given a context and a payload
     NewEvent(ctx context.Context, payload interface{}) (Event, error)
+    
+    //Create a new event given a context and a payload, and two completion functions,
+    //handledFn and errFn. An event constructed this way will be notified through
+    //the handledFn when an event is handled, or through the errFn when there is an
+    //error handling it.
+    //An event is considered handled when it and all its child events (derived from the
+    //Clone function) have called the Ack function.
+    //An event is considered to have an error if it or any of its child events (derived from
+    //the Clone function) has called the Nack function.
+    //An event can also error out if it does not receive all the acknowledgements before
+    //the context timeout/cancellation.
     NewEventWithAcknowledgement(ctx context.Context, payload interface{}, handledFn func(), errFn func(error)) (Event, error)
+
 }
 ```
-
-## Problem with Event as an interface
