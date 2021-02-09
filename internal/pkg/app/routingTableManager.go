@@ -96,7 +96,7 @@ func (r *DefaultRoutingTableManager) AddRoute(ctx context.Context, routeConfig *
 	filterChain := &filter.Chain{}
 	if routeConfig.FilterChain != nil {
 		for _, f := range routeConfig.FilterChain {
-			filter, err := r.pluginMgr.RegisterFilter(ctx, f.Plugin, f.Name, f.Config)
+			filter, err := r.pluginMgr.RegisterFilter(ctx, f.Plugin, f.Name, stringify(f.Config))
 			filterChain.Add(filter)
 			if err != nil {
 				return err

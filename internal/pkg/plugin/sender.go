@@ -38,6 +38,10 @@ type sender struct {
 	sender pkgsender.Sender
 }
 
+func (s *sender) Unwrap() pkgsender.Sender {
+	return s.sender
+}
+
 func (s *sender) Send(ctx context.Context, e event.Event) error {
 	if s == nil {
 		return &pkgmanager.NilPluginError{}

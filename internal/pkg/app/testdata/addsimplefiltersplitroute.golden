@@ -1,0 +1,48 @@
+{
+  "item": {
+    "appId": "xfi",
+    "deliveryMode": "whoCares",
+    "filterChain": [
+      {
+        "config": {
+          "splitPath": "."
+        },
+        "name": "mysplit",
+        "plugin": "split"
+      }
+    ],
+    "id": "sfs123",
+    "name": "simpleFilterSplitRoute",
+    "orgId": "comcast",
+    "receiver": {
+      "config": {
+        "intervalMs": 100,
+        "maxHistory": 100,
+        "payload": [
+          {
+            "foo": "bar"
+          },
+          {
+            "foo": "bar"
+          }
+        ],
+        "rounds": 5
+      },
+      "name": "mydebug",
+      "plugin": "debug"
+    },
+    "sender": {
+      "config": {
+        "destination": "stdout",
+        "maxHistory": 100
+      },
+      "name": "mydebug",
+      "plugin": "debug"
+    },
+    "userId": "boris"
+  },
+  "status": {
+    "code": 200,
+    "message": "OK"
+  }
+}

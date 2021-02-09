@@ -12,25 +12,107 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package filters
+package split
 
 import (
 	"context"
-
+	"errors"
+	"fmt"
 	"github.com/xmidt-org/ears/pkg/event"
+	"github.com/xmidt-org/ears/pkg/filter"
+	"strings"
 )
 
 // a SplitFilter splits and event into two or more events
-type SplitFilter struct {
+/*type SplitFilter struct {
 	SplitPath string // path to split array in payload
+}*/
+
+func NewFilter(config interface{}) (*Filter, error) {
+
+	cfg, err := NewConfig(config)
+
+	if err != nil {
+		return nil, &filter.InvalidConfigError{
+			Err: err,
+		}
+	}
+
+	cfg = cfg.WithDefaults()
+
+	err = cfg.Validate()
+	if err != nil {
+		return nil, err
+	}
+
+	f := &Filter{
+		config: *cfg,
+	}
+
+	return f, nil
 }
 
 // Filter splits an event containing an array into multiple events
-func (mf *SplitFilter) Filter(ctx context.Context, evt event.Event) ([]event.Event, error) {
-	// always splits into two identical events
-	events := make([]event.Event, 0)
-	//TODO: implement filter logic
-	//TODO: clone
-	events = append(events, evt, evt)
+func (f *Filter) Filter(ctx context.Context, evt event.Event) ([]event.Event, error) {
+	//TODO: add validation logic to filter
+	//TODO: maybe replace with jq filter
+	if f == nil {
+		return nil, &filter.InvalidConfigError{
+			Err: fmt.Errorf("<nil> pointer filter"),
+		}
+	}
+	events := []event.Event{}
+	if f.config.SplitPath == "" {
+		events = append(events, evt)
+	} else if f.config.SplitPath == "." {
+		switch evt.Payload().(type) {
+		case []interface{}:
+			for _, p := range evt.Payload().([]interface{}) {
+				nevt, err := evt.Dup()
+				if err != nil {
+					return events, err
+				}
+				err = nevt.SetPayload(p)
+				if err != nil {
+					return events, err
+				}
+				events = append(events, nevt)
+			}
+		default:
+			return events, errors.New("split on non array type")
+		}
+	} else {
+		path := strings.Split(f.config.SplitPath, ".")
+		obj := evt.Payload()
+		for _, p := range path {
+			var ok bool
+			obj, ok = obj.(map[string]interface{})[p]
+			if !ok {
+				return events, errors.New("invalid object in filter path")
+			}
+		}
+		arr, ok := obj.([]interface{})
+		if !ok {
+			return events, errors.New("split on non array type")
+		}
+		for _, p := range arr {
+			nevt, err := evt.Dup()
+			if err != nil {
+				return events, err
+			}
+			err = nevt.SetPayload(p)
+			if err != nil {
+				return events, err
+			}
+			events = append(events, nevt)
+		}
+	}
 	return events, nil
+}
+
+func (f *Filter) Config() Config {
+	if f == nil {
+		return Config{}
+	}
+	return f.config
 }
