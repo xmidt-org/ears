@@ -78,7 +78,7 @@ func TestRouteTable(t *testing.T) {
 		for _, routeFileName := range currentTest.RouteFiles {
 			simpleRouteReader, err := os.Open("testdata/" + routeFileName + ".json")
 			if err != nil {
-				t.Fatalf("cannot read file: %s", err.Error())
+				t.Fatalf("%s test: cannot read file: %s", currentTestName, err.Error())
 			}
 			r := httptest.NewRequest(http.MethodPost, "/ears/v1/routes", simpleRouteReader)
 			api.muxRouter.ServeHTTP(w, r)
@@ -86,7 +86,7 @@ func TestRouteTable(t *testing.T) {
 			var data interface{}
 			err = json.Unmarshal(w.Body.Bytes(), &data)
 			if err != nil {
-				t.Fatalf("cannot unmarshal response: %s", err.Error())
+				t.Fatalf("%s test: cannot unmarshal response: %s", currentTestName, err.Error())
 			}
 			g.AssertJson(t, "tbl_"+currentTestName, data)
 		}
@@ -102,9 +102,9 @@ func TestRouteTable(t *testing.T) {
 			if eventData.ExpectedEventPayloadFile != "" {
 				eventFileName = "testdata/" + eventData.ExpectedEventPayloadFile + ".json"
 			}
-			err = checkEventsSent(0, routeFileName, pluginMgr, eventData.ExpectedEventCount, eventFileName, eventData.ExpectedEventIndex)
+			err = checkEventsSent(routeFileName, pluginMgr, eventData.ExpectedEventCount, eventFileName, eventData.ExpectedEventIndex)
 			if err != nil {
-				t.Fatalf("check events sent error: %s", err.Error())
+				t.Fatalf("%s test: check events sent error: %s", currentTestName, err.Error())
 			}
 		}
 	}
@@ -161,8 +161,7 @@ func setupRestApi() (*APIManager, RoutingTableManager, plugin.Manager, route.Rou
 
 }
 
-func checkEventsSent(waitSeconds int, routeFileName string, pluginMgr plugin.Manager, expectedNumberOfEvents int, eventFileName string, eventIndex int) error {
-	time.Sleep(time.Duration(waitSeconds) * time.Second)
+func checkEventsSent(routeFileName string, pluginMgr plugin.Manager, expectedNumberOfEvents int, eventFileName string, eventIndex int) error {
 	zerolog.SetGlobalLevel(zerolog.ErrorLevel)
 	ctx := context.Background()
 	ctx = log.Logger.WithContext(ctx)
@@ -261,7 +260,8 @@ func TestRestPostSimpleRouteHandler(t *testing.T) {
 	}
 	g.AssertJson(t, "addroute", data)
 	// check number of events received by output plugin
-	err = checkEventsSent(1, routeFileName, pluginMgr, 5, "testdata/event1.json", 0)
+	time.Sleep(time.Duration(1) * time.Second)
+	err = checkEventsSent(routeFileName, pluginMgr, 5, "testdata/event1.json", 0)
 	if err != nil {
 		t.Fatalf("check events sent error: %s", err.Error())
 	}
@@ -312,7 +312,8 @@ func TestRestPostFilterMatchAllowRouteHandler(t *testing.T) {
 	}
 	g.AssertJson(t, "addfiltermatchallowroute", data)
 	// check number of events received by output plugin
-	err = checkEventsSent(1, routeFileName, pluginMgr, 5, "testdata/event1.json", 0)
+	time.Sleep(time.Duration(1) * time.Second)
+	err = checkEventsSent(routeFileName, pluginMgr, 5, "testdata/event1.json", 0)
 	if err != nil {
 		t.Fatalf("check events sent error: %s", err.Error())
 	}
@@ -340,7 +341,8 @@ func TestRestPostFilterMatchDenyRouteHandler(t *testing.T) {
 	}
 	g.AssertJson(t, "addfiltermatchdenyroute", data)
 	// check number of events received by output plugin
-	err = checkEventsSent(1, routeFileName, pluginMgr, 0, "", 0)
+	time.Sleep(time.Duration(1) * time.Second)
+	err = checkEventsSent(routeFileName, pluginMgr, 0, "", 0)
 	if err != nil {
 		t.Fatalf("check events sent error: %s", err.Error())
 	}
@@ -368,7 +370,8 @@ func TestRestPostFilterChainMatchRouteHandler(t *testing.T) {
 	}
 	g.AssertJson(t, "addfilterchainmatchroute", data)
 	// check number of events received by output plugin
-	err = checkEventsSent(1, routeFileName, pluginMgr, 5, "testdata/event2.json", 0)
+	time.Sleep(time.Duration(1) * time.Second)
+	err = checkEventsSent(routeFileName, pluginMgr, 5, "testdata/event2.json", 0)
 	if err != nil {
 		t.Fatalf("check events sent error: %s", err.Error())
 	}
@@ -396,7 +399,8 @@ func TestRestPostFilterSplitRouteHandler(t *testing.T) {
 	}
 	g.AssertJson(t, "addsimplefiltersplitroute", data)
 	// check number of events received by output plugin
-	err = checkEventsSent(1, routeFileName, pluginMgr, 10, "testdata/event1.json", 0)
+	time.Sleep(time.Duration(1) * time.Second)
+	err = checkEventsSent(routeFileName, pluginMgr, 10, "testdata/event1.json", 0)
 	if err != nil {
 		t.Fatalf("check events sent error: %s", err.Error())
 	}
@@ -424,7 +428,8 @@ func TestRestPostFilterDeepSplitRouteHandler(t *testing.T) {
 	}
 	g.AssertJson(t, "addsimplefilterdeepsplitroute", data)
 	// check number of events received by output plugin
-	err = checkEventsSent(1, routeFileName, pluginMgr, 10, "testdata/event1.json", 0)
+	time.Sleep(time.Duration(1) * time.Second)
+	err = checkEventsSent(routeFileName, pluginMgr, 10, "testdata/event1.json", 0)
 	if err != nil {
 		t.Fatalf("check events sent error: %s", err.Error())
 	}
@@ -461,11 +466,12 @@ func TestRestMultiRouteAABB(t *testing.T) {
 	}
 	g.AssertJson(t, "addroute", data)*/
 	// check number of events received by output plugin
-	err = checkEventsSent(1, routeFileName, pluginMgr, 5, "testdata/event1.json", 0)
+	time.Sleep(time.Duration(1) * time.Second)
+	err = checkEventsSent(routeFileName, pluginMgr, 5, "testdata/event1.json", 0)
 	if err != nil {
 		t.Fatalf("check events sent error: %s", err.Error())
 	}
-	err = checkEventsSent(0, routeFileName2, pluginMgr, 5, "testdata/event1.json", 0)
+	err = checkEventsSent(routeFileName2, pluginMgr, 5, "testdata/event1.json", 0)
 	if err != nil {
 		t.Fatalf("check events sent error: %s", err.Error())
 	}
@@ -507,11 +513,12 @@ func TestRestMultiRouteAABBAB(t *testing.T) {
 	}
 	g.AssertJson(t, "addroute", data)*/
 	// check number of events received by output plugin
-	err = checkEventsSent(1, routeFileName, pluginMgr, 5, "testdata/event1.json", 0)
+	time.Sleep(time.Duration(1) * time.Second)
+	err = checkEventsSent(routeFileName, pluginMgr, 5, "testdata/event1.json", 0)
 	if err != nil {
 		t.Fatalf("check events sent error: %s", err.Error())
 	}
-	err = checkEventsSent(0, routeFileName2, pluginMgr, 10, "testdata/event1.json", 0)
+	err = checkEventsSent(routeFileName2, pluginMgr, 10, "testdata/event1.json", 0)
 	if err != nil {
 		t.Fatalf("check events sent error: %s", err.Error())
 	}
@@ -546,11 +553,12 @@ func TestRestMultiRouteAAAB(t *testing.T) {
 	}
 	g.AssertJson(t, "addroute", data)*/
 	// check number of events received by output plugin
-	err = checkEventsSent(1, routeFileName, pluginMgr, 5, "testdata/event1.json", 0)
+	time.Sleep(time.Duration(1) * time.Second)
+	err = checkEventsSent(routeFileName, pluginMgr, 5, "testdata/event1.json", 0)
 	if err != nil {
 		t.Fatalf("check events sent error: %s", err.Error())
 	}
-	err = checkEventsSent(0, routeFileName2, pluginMgr, 5, "testdata/event1.json", 0)
+	err = checkEventsSent(routeFileName2, pluginMgr, 5, "testdata/event1.json", 0)
 	if err != nil {
 		t.Fatalf("check events sent error: %s", err.Error())
 	}
@@ -586,11 +594,12 @@ func TestRestMultiRouteBBAB(t *testing.T) {
 	}
 	g.AssertJson(t, "addroute", data)*/
 	// check number of events received by output plugin
-	err = checkEventsSent(1, routeFileName, pluginMgr, 10, "testdata/event1.json", 0)
+	time.Sleep(time.Duration(1) * time.Second)
+	err = checkEventsSent(routeFileName, pluginMgr, 10, "testdata/event1.json", 0)
 	if err != nil {
 		t.Fatalf("check events sent error: %s", err.Error())
 	}
-	err = checkEventsSent(0, routeFileName3, pluginMgr, 0, "", 0)
+	err = checkEventsSent(routeFileName3, pluginMgr, 0, "", 0)
 	if err != nil {
 		t.Fatalf("check events sent error: %s", err.Error())
 	}
