@@ -6,8 +6,19 @@
   "item": {
     "appId": "xfi",
     "deliveryMode": "whoCares",
-    "id": "r123",
-    "name": "simpleRoute",
+    "filterChain": [
+      {
+        "config": {
+          "matcher": "regex",
+          "mode": "allow",
+          "pattern": "^.*$"
+        },
+        "name": "mymatch",
+        "plugin": "match"
+      }
+    ],
+    "id": "f123",
+    "name": "simpleFilterRoute",
     "orgId": "comcast",
     "receiver": {
       "config": {

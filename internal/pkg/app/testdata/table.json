@@ -12,5 +12,19 @@
         "expectedEventPayloadFile" : "event1"
       }
     ]
+  },
+  "matchFilterAllow" : {
+    "routeFiles" : [
+      "simpleFilterMatchAllowRoute"
+    ],
+    "waitSeconds" : 1,
+    "events" : [
+      {
+        "senderRouteFiles" : "simpleFilterMatchAllowRoute",
+        "expectedEventCount" : 5,
+        "expectedEventIndex" : 0,
+        "expectedEventPayloadFile" : "event1"
+      }
+    ]
   }
 }
