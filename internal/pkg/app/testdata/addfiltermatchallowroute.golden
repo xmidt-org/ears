@@ -9,7 +9,7 @@
           "mode": "allow",
           "pattern": "^.*$"
         },
-        "name": "mymatch",
+        "name": "simpleFilterMatchAllowRouteMatcher",
         "plugin": "match"
       }
     ],
@@ -25,7 +25,7 @@
         },
         "rounds": 5
       },
-      "name": "mydebug",
+      "name": "simpleFilterMatchAllowRouteReceiver",
       "plugin": "debug"
     },
     "sender": {

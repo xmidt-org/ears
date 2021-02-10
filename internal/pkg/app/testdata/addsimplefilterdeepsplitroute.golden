@@ -7,12 +7,12 @@
         "config": {
           "splitPath": "a.b.c"
         },
-        "name": "mysplit",
+        "name": "SimpleFilterDeepSplitRouteSenderSplitter",
         "plugin": "split"
       }
     ],
     "id": "sfs123",
-    "name": "simpleFilterSplitRoute",
+    "name": "simpleFilterDeepSplitRoute",
     "orgId": "comcast",
     "receiver": {
       "config": {
@@ -34,7 +34,7 @@
         },
         "rounds": 5
       },
-      "name": "mydebug",
+      "name": "SimpleFilterDeepSplitRouteReceiver",
       "plugin": "debug"
     },
     "sender": {
