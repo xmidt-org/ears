@@ -45,7 +45,7 @@ type (
 	RouteTest struct {
 		SequenceNumber int              `json:"seq,omitempty"`
 		RouteFiles     []string         `json:"routeFiles,omitempty"`
-		WaitSeconds    int              `json:"waitSeconds,omitempty"`
+		WaitMs         int              `json:"waitMs,omitempty"`
 		Events         []EventCheckTest `json:"events,omitempty"`
 	}
 	EventCheckTest struct {
@@ -154,7 +154,7 @@ func TestRouteTable(t *testing.T) {
 			t.Fatalf("%s test: route count issue: %s", currentTestName, err.Error())
 		}
 		// sleep
-		time.Sleep(time.Duration(currentTest.WaitSeconds) * time.Second)
+		time.Sleep(time.Duration(currentTest.WaitMs) * time.Millisecond)
 		// check number of events and payloads if desired
 		for _, eventData := range currentTest.Events {
 			if eventData.SenderRouteFile == "" {
@@ -183,7 +183,7 @@ func TestRouteTable(t *testing.T) {
 			t.Fatalf("%s test: zero route count issue: %s", currentTestName, err.Error())
 		}
 		// sleep
-		time.Sleep(time.Duration(currentTest.WaitSeconds) * time.Second)
+		time.Sleep(time.Duration(currentTest.WaitMs) * time.Millisecond)
 	}
 }
 
@@ -388,7 +388,7 @@ func TestRestPostSimpleRouteHandler(t *testing.T) {
 	}
 	g.AssertJson(t, "addroute", data)
 	// check number of events received by output plugin
-	time.Sleep(time.Duration(1) * time.Second)
+	time.Sleep(time.Duration(100) * time.Millisecond)
 	err = checkEventsSent(routeFileName, "", pluginMgr, 5, "testdata/event1.json", 0)
 	if err != nil {
 		t.Fatalf("check events sent error: %s", err.Error())
@@ -440,7 +440,7 @@ func TestRestPostFilterMatchAllowRouteHandler(t *testing.T) {
 	}
 	g.AssertJson(t, "addfiltermatchallowroute", data)
 	// check number of events received by output plugin
-	time.Sleep(time.Duration(1) * time.Second)
+	time.Sleep(time.Duration(100) * time.Millisecond)
 	err = checkEventsSent(routeFileName, "", pluginMgr, 5, "testdata/event1.json", 0)
 	if err != nil {
 		t.Fatalf("check events sent error: %s", err.Error())
@@ -469,7 +469,7 @@ func TestRestPostFilterMatchDenyRouteHandler(t *testing.T) {
 	}
 	g.AssertJson(t, "addfiltermatchdenyroute", data)
 	// check number of events received by output plugin
-	time.Sleep(time.Duration(1) * time.Second)
+	time.Sleep(time.Duration(100) * time.Millisecond)
 	err = checkEventsSent(routeFileName, "", pluginMgr, 0, "", 0)
 	if err != nil {
 		t.Fatalf("check events sent error: %s", err.Error())
@@ -498,7 +498,7 @@ func TestRestPostFilterChainMatchRouteHandler(t *testing.T) {
 	}
 	g.AssertJson(t, "addfilterchainmatchroute", data)
 	// check number of events received by output plugin
-	time.Sleep(time.Duration(1) * time.Second)
+	time.Sleep(time.Duration(100) * time.Millisecond)
 	err = checkEventsSent(routeFileName, "", pluginMgr, 5, "testdata/event2.json", 0)
 	if err != nil {
 		t.Fatalf("check events sent error: %s", err.Error())
@@ -527,7 +527,7 @@ func TestRestPostFilterSplitRouteHandler(t *testing.T) {
 	}
 	g.AssertJson(t, "addsimplefiltersplitroute", data)
 	// check number of events received by output plugin
-	time.Sleep(time.Duration(1) * time.Second)
+	time.Sleep(time.Duration(100) * time.Millisecond)
 	err = checkEventsSent(routeFileName, "", pluginMgr, 10, "testdata/event1.json", 0)
 	if err != nil {
 		t.Fatalf("check events sent error: %s", err.Error())
@@ -556,7 +556,7 @@ func TestRestPostFilterDeepSplitRouteHandler(t *testing.T) {
 	}
 	g.AssertJson(t, "addsimplefilterdeepsplitroute", data)
 	// check number of events received by output plugin
-	time.Sleep(time.Duration(1) * time.Second)
+	time.Sleep(time.Duration(100) * time.Millisecond)
 	err = checkEventsSent(routeFileName, "", pluginMgr, 10, "testdata/event1.json", 0)
 	if err != nil {
 		t.Fatalf("check events sent error: %s", err.Error())
@@ -594,7 +594,7 @@ func TestRestMultiRouteAABB(t *testing.T) {
 	}
 	g.AssertJson(t, "addroute", data)*/
 	// check number of events received by output plugin
-	time.Sleep(time.Duration(1) * time.Second)
+	time.Sleep(time.Duration(100) * time.Millisecond)
 	err = checkEventsSent(routeFileName, "", pluginMgr, 5, "testdata/event1.json", 0)
 	if err != nil {
 		t.Fatalf("check events sent error: %s", err.Error())
@@ -641,7 +641,7 @@ func TestRestMultiRouteAABBAB(t *testing.T) {
 	}
 	g.AssertJson(t, "addroute", data)*/
 	// check number of events received by output plugin
-	time.Sleep(time.Duration(1) * time.Second)
+	time.Sleep(time.Duration(100) * time.Millisecond)
 	err = checkEventsSent(routeFileName, "", pluginMgr, 5, "testdata/event1.json", 0)
 	if err != nil {
 		t.Fatalf("check events sent error: %s", err.Error())
@@ -681,7 +681,7 @@ func TestRestMultiRouteAAAB(t *testing.T) {
 	}
 	g.AssertJson(t, "addroute", data)*/
 	// check number of events received by output plugin
-	time.Sleep(time.Duration(1) * time.Second)
+	time.Sleep(time.Duration(100) * time.Millisecond)
 	err = checkEventsSent(routeFileName, "", pluginMgr, 5, "testdata/event1.json", 0)
 	if err != nil {
 		t.Fatalf("check events sent error: %s", err.Error())
@@ -722,7 +722,7 @@ func TestRestMultiRouteBBAB(t *testing.T) {
 	}
 	g.AssertJson(t, "addroute", data)*/
 	// check number of events received by output plugin
-	time.Sleep(time.Duration(1) * time.Second)
+	time.Sleep(time.Duration(100) * time.Millisecond)
 	err = checkEventsSent(routeFileName, "", pluginMgr, 10, "testdata/event1.json", 0)
 	if err != nil {
 		t.Fatalf("check events sent error: %s", err.Error())
