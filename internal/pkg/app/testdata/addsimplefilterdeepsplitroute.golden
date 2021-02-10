@@ -42,7 +42,7 @@
         "destination": "stdout",
         "maxHistory": 100
       },
-      "name": "mydebug",
+      "name": "SimpleFilterDeepSplitRouteSender",
       "plugin": "debug"
     },
     "userId": "boris"

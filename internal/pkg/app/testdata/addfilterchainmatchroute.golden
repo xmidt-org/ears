@@ -40,7 +40,7 @@
         "destination": "stdout",
         "maxHistory": 100
       },
-      "name": "mydebug",
+      "name": "simpleFilterChainMatchRouteSender",
       "plugin": "debug"
     },
     "userId": "boris"

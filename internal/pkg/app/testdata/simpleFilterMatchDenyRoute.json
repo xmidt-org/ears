@@ -6,7 +6,7 @@
   "name" : "simpleFilterRoute",
   "receiver" : {
     "plugin" : "debug",
-    "name" : "mydebug",
+    "name" : "simpleFilterMatchDenyRouteReceiver",
     "config" :
     {
       "rounds" : 5,
@@ -19,7 +19,7 @@
   },
   "sender" : {
     "plugin" : "debug",
-    "name" : "mydebug",
+    "name" : "simpleFilterMatchDenyRouteSender",
     "config" : {
       "destination" : "stdout",
       "maxHistory": 100
@@ -28,7 +28,7 @@
   "filterChain" : [
     {
       "plugin" : "match",
-      "name" : "mymatch",
+      "name" : "simpleFilterMatchDenyRouteMatcher",
       "config" : {
         "mode" : "deny",
         "matcher" : "regex",

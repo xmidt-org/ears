@@ -33,7 +33,7 @@
         "destination": "stdout",
         "maxHistory": 100
       },
-      "name": "mydebug",
+      "name": "simpleFilterMatchAllowRouteSender",
       "plugin": "debug"
     },
     "userId": "boris"

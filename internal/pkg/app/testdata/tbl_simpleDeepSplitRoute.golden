@@ -9,27 +9,36 @@
     "filterChain": [
       {
         "config": {
-          "matcher": "regex",
-          "mode": "allow",
-          "pattern": "^.*$"
+          "splitPath": "a.b.c"
         },
-        "name": "simpleFilterMatchAllowRouteMatcher",
-        "plugin": "match"
+        "name": "SimpleFilterDeepSplitRouteSenderSplitter",
+        "plugin": "split"
       }
     ],
-    "id": "f123",
-    "name": "simpleFilterRoute",
+    "id": "sfs123",
+    "name": "simpleFilterDeepSplitRoute",
     "orgId": "comcast",
     "receiver": {
       "config": {
         "intervalMs": 100,
         "maxHistory": 100,
         "payload": {
-          "foo": "bar"
+          "a": {
+            "b": {
+              "c": [
+                {
+                  "foo": "bar"
+                },
+                {
+                  "foo": "bar"
+                }
+              ]
+            }
+          }
         },
         "rounds": 5
       },
-      "name": "simpleFilterMatchAllowRouteReceiver",
+      "name": "SimpleFilterDeepSplitRouteReceiver",
       "plugin": "debug"
     },
     "sender": {
@@ -37,7 +46,7 @@
         "destination": "stdout",
         "maxHistory": 100
       },
-      "name": "simpleFilterMatchAllowRouteSender",
+      "name": "SimpleFilterDeepSplitRouteSender",
       "plugin": "debug"
     },
     "userId": "boris"

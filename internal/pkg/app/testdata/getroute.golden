@@ -22,7 +22,7 @@
         "destination": "stdout",
         "maxHistory": 100
       },
-      "name": "mydebug",
+      "name": "simpleRouteSender",
       "plugin": "debug"
     },
     "userId": "boris"
