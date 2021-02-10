@@ -10,7 +10,7 @@
             "mode": "allow",
             "pattern": "^.*$"
           },
-          "name": "mymatch",
+          "name": "simpleFilterMatchAllowRouteMatcher",
           "plugin": "match"
         }
       ],
@@ -26,7 +26,7 @@
           },
           "rounds": 5
         },
-        "name": "mydebug",
+        "name": "simpleFilterMatchAllowRouteReceiver",
         "plugin": "debug"
       },
       "sender": {
@@ -34,7 +34,7 @@
           "destination": "stdout",
           "maxHistory": 100
         },
-        "name": "mydebug",
+        "name": "simpleFilterMatchAllowRouteSender",
         "plugin": "debug"
       },
       "userId": "boris"

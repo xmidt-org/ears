@@ -1,0 +1,102 @@
+{
+  "simpleRouteA" : {
+    "routeFiles" : [
+      "simpleRouteA"
+    ],
+    "waitSeconds" : 1,
+    "events" : [
+      {
+        "senderRouteFiles" : "simpleRouteA",
+        "expectedEventCount" : 5,
+        "expectedEventIndex" : 0,
+        "expectedEventPayloadFile" : "event1"
+      }
+    ]
+  },
+  "simpleRouteB" : {
+    "routeFiles" : [
+      "simpleRouteB"
+    ],
+    "waitSeconds" : 1,
+    "events" : [
+      {
+        "senderRouteFiles" : "simpleRouteB",
+        "expectedEventCount" : 5,
+        "expectedEventIndex" : 0,
+        "expectedEventPayloadFile" : "event1"
+      }
+    ]
+  },
+  "simpleSplitRoute" : {
+    "routeFiles" : [
+      "simpleFilterSplitRoute"
+    ],
+    "waitSeconds" : 1,
+    "events" : [
+      {
+        "senderRouteFiles" : "simpleFilterSplitRoute",
+        "expectedEventCount" : 10,
+        "expectedEventIndex" : 0,
+        "expectedEventPayloadFile" : "event1"
+      }
+    ]
+  },
+  "simpleDeepSplitRoute" : {
+    "routeFiles" : [
+      "simpleFilterDeepSplitRoute"
+    ],
+    "waitSeconds" : 1,
+    "events" : [
+      {
+        "senderRouteFiles" : "simpleFilterDeepSplitRoute",
+        "expectedEventCount" : 10,
+        "expectedEventIndex" : 0,
+        "expectedEventPayloadFile" : "event1"
+      }
+    ]
+  },
+  "matchFilterAllow" : {
+    "routeFiles" : [
+      "simpleFilterMatchAllowRoute"
+    ],
+    "waitSeconds" : 1,
+    "events" : [
+      {
+        "senderRouteFiles" : "simpleFilterMatchAllowRoute",
+        "expectedEventCount" : 5,
+        "expectedEventIndex" : 0,
+        "expectedEventPayloadFile" : "event1"
+      }
+    ]
+  },
+  "matchFilterDeny" : {
+    "routeFiles" : [
+      "simpleFilterMatchDenyRoute"
+    ],
+    "waitSeconds" : 1,
+    "events" : [
+      {
+        "senderRouteFiles" : "simpleFilterMatchDenyRoute",
+        "expectedEventCount" : 0,
+        "expectedEventIndex" : 0,
+        "expectedEventPayloadFile" : ""
+      }
+    ]
+  },
+  "simpleFilterChainMatchRoute" : {
+    "routeFiles" : [
+      "simpleFilterChainMatchRoute"
+    ],
+    "waitSeconds" : 1,
+    "events" : [
+      {
+        "senderRouteFiles" : "simpleFilterChainMatchRoute",
+        "expectedEventCount" : 5,
+        "expectedEventIndex" : 0,
+        "expectedEventPayloadFile" : "event2"
+      }
+    ]
+  }
+}
+
+
