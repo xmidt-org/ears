@@ -147,7 +147,11 @@ func TestRouteTable(t *testing.T) {
 			}
 			routeIds = append(routeIds, rt.Id)
 			t.Logf("added route with id: %s", rt.Id)
-			//TODO: check number of routes in system
+		}
+		// check number of routes in system
+		err = checkNumRoutes(api, currentTestName, len(routeIds))
+		if err != nil {
+			t.Fatalf("%s test: route count issue: %s", currentTestName, err.Error())
 		}
 		// sleep
 		time.Sleep(time.Duration(currentTest.WaitSeconds) * time.Second)
@@ -171,13 +175,38 @@ func TestRouteTable(t *testing.T) {
 			r := httptest.NewRequest(http.MethodDelete, "/ears/v1/routes/"+rtId, nil)
 			w := httptest.NewRecorder()
 			api.muxRouter.ServeHTTP(w, r)
-			//TODO: check successful deletion (or at least 200 ok)
 			t.Logf("deleted route with id: %s", rtId)
 		}
-		//TODO: check number of routes in system
+		// check number of routes in system
+		err = checkNumRoutes(api, currentTestName, 0)
+		if err != nil {
+			t.Fatalf("%s test: zero route count issue: %s", currentTestName, err.Error())
+		}
 		// sleep
 		time.Sleep(time.Duration(currentTest.WaitSeconds) * time.Second)
 	}
+}
+
+func checkNumRoutes(api *APIManager, currentTestName string, numExpected int) error {
+	r := httptest.NewRequest(http.MethodGet, "/ears/v1/routes", nil)
+	w := httptest.NewRecorder()
+	api.muxRouter.ServeHTTP(w, r)
+	var data Response
+	var err = json.Unmarshal(w.Body.Bytes(), &data)
+	if err != nil {
+		return errors.New(fmt.Sprintf("%s test: cannot unmarshal response: %s %s", currentTestName, err.Error(), string(w.Body.Bytes())))
+	}
+	if data.Items == nil {
+		return errors.New(fmt.Sprintf("%s test: no items found", currentTestName))
+	}
+	itemsArray, ok := data.Items.([]interface{})
+	if !ok {
+		return errors.New(fmt.Sprintf("%s test: items not an array", currentTestName))
+	}
+	if len(itemsArray) != numExpected {
+		return errors.New(fmt.Sprintf("%s test: unexpected number of items %d (%d)", currentTestName, len(itemsArray), numExpected))
+	}
+	return nil
 }
 
 func setupRestApi() (*APIManager, RoutingTableManager, plugin.Manager, route.RouteStorer, error) {
