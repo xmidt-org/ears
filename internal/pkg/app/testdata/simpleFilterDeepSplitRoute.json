@@ -3,10 +3,10 @@
   "orgId" : "comcast",
   "appId" : "xfi",
   "userId" : "boris",
-  "name" : "simpleFilterSplitRoute",
+  "name" : "simpleFilterDeepSplitRoute",
   "receiver" : {
     "plugin" : "debug",
-    "name" : "mydebug",
+    "name" : "SimpleFilterDeepSplitRouteReceiver",
     "config" :
     {
       "rounds" : 5,
@@ -30,7 +30,7 @@
   },
   "sender" : {
     "plugin" : "debug",
-    "name" : "mydebug",
+    "name" : "SimpleFilterDeepSplitRouteSender",
     "config" : {
       "destination" : "stdout",
       "maxHistory": 100
@@ -39,7 +39,7 @@
   "filterChain" : [
     {
       "plugin" : "split",
-      "name" : "mysplit",
+      "name" : "SimpleFilterDeepSplitRouteSenderSplitter",
       "config" : {
         "splitPath" : "a.b.c"
       }

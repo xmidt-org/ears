@@ -1,12 +1,12 @@
 {
-  "id": "r123",
+  "id": "rs1",
   "orgId": "comcast",
   "appId": "xfi",
   "userId": "boris",
-  "name": "simpleRoute",
+  "name": "simpleRouteA",
   "receiver": {
     "plugin": "debug",
-    "name": "mydebug",
+    "name": "mydebugA",
     "config": {
       "intervalMs": 100,
       "maxHistory": 100,
@@ -18,7 +18,7 @@
   },
   "sender": {
     "plugin": "debug",
-    "name": "simpleRouteSender",
+    "name": "simpleRouteSenderA",
     "config": {
       "destination": "stdout",
       "maxHistory": 100

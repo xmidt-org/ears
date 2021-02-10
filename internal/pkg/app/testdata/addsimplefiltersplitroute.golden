@@ -36,7 +36,7 @@
         "destination": "stdout",
         "maxHistory": 100
       },
-      "name": "mydebug",
+      "name": "simpleFilterSplitRouteSender",
       "plugin": "debug"
     },
     "userId": "boris"

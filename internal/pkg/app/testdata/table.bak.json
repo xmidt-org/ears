@@ -1,0 +1,44 @@
+{
+  "simpleRoute" : {
+    "routeFiles" : [
+      "simpleRoute"
+    ],
+    "waitSeconds" : 1,
+    "events" : [
+      {
+        "senderRouteFiles" : "simpleRoute",
+        "expectedEventCount" : 5,
+        "expectedEventIndex" : 0,
+        "expectedEventPayloadFile" : "event1"
+      }
+    ]
+  },
+  "matchFilterAllow" : {
+    "routeFiles" : [
+      "simpleFilterMatchAllowRoute"
+    ],
+    "waitSeconds" : 1,
+    "events" : [
+      {
+        "senderRouteFiles" : "simpleFilterMatchAllowRoute",
+        "expectedEventCount" : 5,
+        "expectedEventIndex" : 0,
+        "expectedEventPayloadFile" : "event1"
+      }
+    ]
+  },
+  "matchFilterDeny" : {
+    "routeFiles" : [
+      "simpleFilterMatchDenyRoute"
+    ],
+    "waitSeconds" : 1,
+    "events" : [
+      {
+        "senderRouteFiles" : "simpleFilterMatchDenyRoute",
+        "expectedEventCount" : 0,
+        "expectedEventIndex" : 0,
+        "expectedEventPayloadFile" : ""
+      }
+    ]
+  }
+}

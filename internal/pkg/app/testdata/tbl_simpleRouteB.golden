@@ -1,9 +1,13 @@
 {
+  "status": {
+    "code": 200,
+    "message": "OK"
+  },
   "item": {
     "appId": "xfi",
     "deliveryMode": "whoCares",
-    "id": "r123",
-    "name": "simpleRoute",
+    "id": "rs2",
+    "name": "simpleRouteB",
     "orgId": "comcast",
     "receiver": {
       "config": {
@@ -14,7 +18,7 @@
         },
         "rounds": 5
       },
-      "name": "mydebug",
+      "name": "mydebugB",
       "plugin": "debug"
     },
     "sender": {
@@ -22,13 +26,9 @@
         "destination": "stdout",
         "maxHistory": 100
       },
-      "name": "simpleRouteSender",
+      "name": "simpleRouteSenderB",
       "plugin": "debug"
     },
     "userId": "boris"
-  },
-  "status": {
-    "code": 200,
-    "message": "OK"
   }
 }

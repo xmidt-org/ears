@@ -55,6 +55,8 @@ type (
 )
 
 func TestRouteTable(t *testing.T) {
+	// set the testNameFlag to test only a single test from the table
+	testNameFlag := ""
 	Version = "v1.0.2"
 	testTableFileName := "testdata/table.json"
 	buf, err := ioutil.ReadFile(testTableFileName)
@@ -71,6 +73,9 @@ func TestRouteTable(t *testing.T) {
 		t.Fatalf("cannot create api manager: %s\n", err.Error())
 	}
 	for currentTestName, currentTest := range table {
+		if testNameFlag != "" && testNameFlag != currentTestName {
+			continue
+		}
 		t.Logf("test scenario: %s", currentTestName)
 		// setup routes
 		routeIds := make([]string, 0)
@@ -108,6 +113,7 @@ func TestRouteTable(t *testing.T) {
 			}
 			routeIds = append(routeIds, rt.Id)
 			t.Logf("added route with id: %s", rt.Id)
+			//TODO: check number of routes in system
 		}
 		// sleep
 		time.Sleep(time.Duration(currentTest.WaitSeconds) * time.Second)
@@ -131,9 +137,10 @@ func TestRouteTable(t *testing.T) {
 			r := httptest.NewRequest(http.MethodDelete, "/ears/v1/routes/"+rtId, nil)
 			w := httptest.NewRecorder()
 			api.muxRouter.ServeHTTP(w, r)
-			//TODO: check successful deletion
+			//TODO: check successful deletion (or at least 200 ok)
 			t.Logf("deleted route with id: %s", rtId)
 		}
+		//TODO: check number of routes in system
 		// sleep
 		time.Sleep(time.Duration(currentTest.WaitSeconds) * time.Second)
 	}
@@ -188,6 +195,34 @@ func setupRestApi() (*APIManager, RoutingTableManager, plugin.Manager, route.Rou
 	}
 	return apiMgr, routingMgr, pluginMgr, inMemStorageMgr, nil
 
+}
+
+func resetDebugSender(routeFileName string, pluginMgr plugin.Manager) error {
+	zerolog.SetGlobalLevel(zerolog.ErrorLevel)
+	ctx := context.Background()
+	ctx = log.Logger.WithContext(ctx)
+	buf, err := ioutil.ReadFile(routeFileName)
+	if err != nil {
+		return err
+	}
+	var rt route.Config
+	err = json.Unmarshal(buf, &rt)
+	if err != nil {
+		return err
+	}
+	sdr, err := pluginMgr.RegisterSender(ctx, rt.Sender.Plugin, rt.Sender.Name, stringify(rt.Sender.Config))
+	if err != nil {
+		return err
+	}
+	debugSender, ok := sdr.Unwrap().(*debug.Sender)
+	if !ok {
+		return errors.New("bad type assertion debug sender")
+	}
+	debugSender.Reset()
+	if debugSender.Count() != 0 {
+		return errors.New(fmt.Sprintf("unexpected number of events in sender after reset %d (%d)", debugSender.Count(), 0))
+	}
+	return nil
 }
 
 func checkEventsSent(routeFileName string, pluginMgr plugin.Manager, expectedNumberOfEvents int, eventFileName string, eventIndex int) error {

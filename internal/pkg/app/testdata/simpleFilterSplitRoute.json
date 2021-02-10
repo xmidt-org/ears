@@ -6,7 +6,7 @@
   "name" : "simpleFilterSplitRoute",
   "receiver" : {
     "plugin" : "debug",
-    "name" : "mydebug",
+    "name" : "simpleFilterSplitRouteReceiver",
     "config" :
     {
       "rounds" : 5,
@@ -24,7 +24,7 @@
   },
   "sender" : {
     "plugin" : "debug",
-    "name" : "mydebug",
+    "name" : "simpleFilterSplitRouteSender",
     "config" : {
       "destination" : "stdout",
       "maxHistory": 100
@@ -33,7 +33,7 @@
   "filterChain" : [
     {
       "plugin" : "split",
-      "name" : "mysplit",
+      "name" : "simpleFilterSplitRouteSplitter",
       "config" : {
         "splitPath" : "."
       }
