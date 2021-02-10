@@ -1,5 +1,6 @@
 {
   "simpleRouteA" : {
+    "id" : 0,
     "routeFiles" : [
       "simpleRouteA"
     ],
@@ -14,6 +15,7 @@
     ]
   },
   "simpleRouteB" : {
+    "seq" : 1,
     "routeFiles" : [
       "simpleRouteB"
     ],
@@ -28,6 +30,7 @@
     ]
   },
   "simpleSplitRoute" : {
+    "seq" : 2,
     "routeFiles" : [
       "simpleFilterSplitRoute"
     ],
@@ -42,6 +45,7 @@
     ]
   },
   "simpleDeepSplitRoute" : {
+    "seq" : 3,
     "routeFiles" : [
       "simpleFilterDeepSplitRoute"
     ],
@@ -56,6 +60,7 @@
     ]
   },
   "matchFilterAllow" : {
+    "seq" : 4,
     "routeFiles" : [
       "simpleFilterMatchAllowRoute"
     ],
@@ -70,6 +75,7 @@
     ]
   },
   "matchFilterDeny" : {
+    "seq" : 5,
     "routeFiles" : [
       "simpleFilterMatchDenyRoute"
     ],
@@ -84,6 +90,7 @@
     ]
   },
   "simpleFilterChainMatchRoute" : {
+    "seq" : 6,
     "routeFiles" : [
       "simpleFilterChainMatchRoute"
     ],
@@ -98,6 +105,7 @@
     ]
   },
   "multiRouteAABB" : {
+    "seq" : 7,
     "routeFiles" : [
       "simpleRouteAA",
       "simpleRouteBB"
@@ -119,6 +127,7 @@
     ]
   },
   "multiRouteAABBAB" : {
+    "seq" : 8,
     "routeFiles" : [
       "simpleRouteAA",
       "simpleRouteAB",
