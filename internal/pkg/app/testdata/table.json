@@ -96,6 +96,49 @@
         "expectedEventPayloadFile" : "event2"
       }
     ]
+  },
+  "multiRouteAABB" : {
+    "routeFiles" : [
+      "simpleRouteAA",
+      "simpleRouteBB"
+    ],
+    "waitSeconds" : 1,
+    "events" : [
+      {
+        "senderRouteFiles" : "simpleRouteAA",
+        "expectedEventCount" : 5,
+        "expectedEventIndex" : 0,
+        "expectedEventPayloadFile" : "event1"
+      },
+      {
+        "senderRouteFiles" : "simpleRouteBB",
+        "expectedEventCount" : 5,
+        "expectedEventIndex" : 0,
+        "expectedEventPayloadFile" : "event1"
+      }
+    ]
+  },
+  "multiRouteAABBAB" : {
+    "routeFiles" : [
+      "simpleRouteAA",
+      "simpleRouteAB",
+      "simpleRouteBB"
+    ],
+    "waitSeconds" : 1,
+    "events" : [
+      {
+        "senderRouteFiles" : "simpleRouteAA",
+        "expectedEventCount" : 5,
+        "expectedEventIndex" : 0,
+        "expectedEventPayloadFile" : "event1"
+      },
+      {
+        "senderRouteFiles" : "simpleRouteBB",
+        "expectedEventCount" : 10,
+        "expectedEventIndex" : 0,
+        "expectedEventPayloadFile" : "event1"
+      }
+    ]
   }
 }
 
