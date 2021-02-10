@@ -91,6 +91,10 @@ func (s *Sender) Send(ctx context.Context, e event.Event) error {
 	return nil
 }
 
+func (s *Sender) Reset() {
+	s.history.count = 0
+}
+
 func (s *Sender) Unwrap() sender.Sender {
 	return s
 }

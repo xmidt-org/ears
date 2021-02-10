@@ -20,7 +20,9 @@ import (
 	"github.com/rs/zerolog/log"
 	"github.com/xmidt-org/ears/internal/pkg/plugin"
 	"github.com/xmidt-org/ears/pkg/filter"
+	"github.com/xmidt-org/ears/pkg/receiver"
 	"github.com/xmidt-org/ears/pkg/route"
+	"github.com/xmidt-org/ears/pkg/sender"
 	"sync"
 )
 
@@ -28,11 +30,18 @@ type DefaultRoutingTableManager struct {
 	sync.Mutex
 	pluginMgr    plugin.Manager
 	storageMgr   route.RouteStorer
-	liveRouteMap map[string]*route.Route // to hold in-memory references to live routes
+	liveRouteMap map[string]*LiveRouteWrapper // in-memory references to live routes
+}
+
+type LiveRouteWrapper struct {
+	Route       *route.Route
+	Sender      sender.Sender
+	Receiver    receiver.Receiver
+	FilterChain *filter.Chain
 }
 
 func NewRoutingTableManager(pluginMgr plugin.Manager, storageMgr route.RouteStorer) RoutingTableManager {
-	return &DefaultRoutingTableManager{pluginMgr: pluginMgr, storageMgr: storageMgr, liveRouteMap: make(map[string]*route.Route, 0)}
+	return &DefaultRoutingTableManager{pluginMgr: pluginMgr, storageMgr: storageMgr, liveRouteMap: make(map[string]*LiveRouteWrapper, 0)}
 }
 
 func (r *DefaultRoutingTableManager) RemoveRoute(ctx context.Context, routeId string) error {
@@ -48,9 +57,26 @@ func (r *DefaultRoutingTableManager) RemoveRoute(ctx context.Context, routeId st
 		r.Lock()
 		delete(r.liveRouteMap, routeId)
 		r.Unlock()
-		err = liveRoute.Stop(ctx)
+		err = liveRoute.Route.Stop(ctx)
 		if err != nil {
 			return err
+		}
+		// should we really unregister sender, receiver and filter chain here or should this be done by route.Stop()?
+		err = r.pluginMgr.UnregisterSender(ctx, liveRoute.Sender)
+		if err != nil {
+			return err
+		}
+		err = r.pluginMgr.UnregisterReceiver(ctx, liveRoute.Receiver)
+		if err != nil {
+			return err
+		}
+		if liveRoute.FilterChain != nil {
+			for _, filter := range liveRoute.FilterChain.Filterers() {
+				err = r.pluginMgr.UnregisterFilter(ctx, filter)
+				if err != nil {
+					return err
+				}
+			}
 		}
 	}
 	return nil
@@ -106,7 +132,7 @@ func (r *DefaultRoutingTableManager) AddRoute(ctx context.Context, routeConfig *
 	// create live route
 	liveRoute := &route.Route{}
 	r.Lock()
-	r.liveRouteMap[routeConfig.Id] = liveRoute
+	r.liveRouteMap[routeConfig.Id] = &LiveRouteWrapper{liveRoute, sender, receiver, filterChain}
 	r.Unlock()
 	go func() {
 		sctx := context.Background()

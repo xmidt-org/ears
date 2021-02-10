@@ -1,31 +1,38 @@
 {
+  "status": {
+    "code": 200,
+    "message": "OK"
+  },
   "item": {
     "appId": "xfi",
     "deliveryMode": "whoCares",
     "filterChain": [
       {
         "config": {
-          "matcher": "regex",
-          "mode": "allow",
-          "pattern": "^.*$"
+          "splitPath": "."
         },
-        "name": "simpleFilterMatchAllowRouteMatcher",
-        "plugin": "match"
+        "name": "simpleFilterSplitRouteSplitter",
+        "plugin": "split"
       }
     ],
-    "id": "f123",
-    "name": "simpleFilterRoute",
+    "id": "sfs123",
+    "name": "simpleFilterSplitRoute",
     "orgId": "comcast",
     "receiver": {
       "config": {
         "intervalMs": 100,
         "maxHistory": 100,
-        "payload": {
-          "foo": "bar"
-        },
+        "payload": [
+          {
+            "foo": "bar"
+          },
+          {
+            "foo": "bar"
+          }
+        ],
         "rounds": 5
       },
-      "name": "simpleFilterMatchAllowRouteReceiver",
+      "name": "simpleFilterSplitRouteReceiver",
       "plugin": "debug"
     },
     "sender": {
@@ -33,13 +40,9 @@
         "destination": "stdout",
         "maxHistory": 100
       },
-      "name": "simpleFilterMatchAllowRouteSender",
+      "name": "simpleFilterSplitRouteSender",
       "plugin": "debug"
     },
     "userId": "boris"
-  },
-  "status": {
-    "code": 200,
-    "message": "OK"
   }
 }

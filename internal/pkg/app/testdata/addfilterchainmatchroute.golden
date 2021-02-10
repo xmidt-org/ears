@@ -9,7 +9,7 @@
           "mode": "allow",
           "pattern": "foo"
         },
-        "name": "matcha",
+        "name": "simpleFilterChainMatchRouteMatcherA",
         "plugin": "match"
       },
       {
@@ -18,12 +18,12 @@
           "mode": "allow",
           "pattern": "bar"
         },
-        "name": "matchb",
+        "name": "simpleFilterChainMatchRouteMatcherB",
         "plugin": "match"
       }
     ],
     "id": "f123",
-    "name": "simpleFilterRoute",
+    "name": "simpleFilterChainMatchRoute",
     "orgId": "comcast",
     "receiver": {
       "config": {
@@ -32,7 +32,7 @@
         "payload": "foo bar baz",
         "rounds": 5
       },
-      "name": "mydebug",
+      "name": "simpleFilterChainMatchRouteReceiver",
       "plugin": "debug"
     },
     "sender": {
@@ -40,7 +40,7 @@
         "destination": "stdout",
         "maxHistory": 100
       },
-      "name": "mydebug",
+      "name": "simpleFilterChainMatchRouteSender",
       "plugin": "debug"
     },
     "userId": "boris"
