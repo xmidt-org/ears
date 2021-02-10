@@ -6,8 +6,8 @@
   "item": {
     "appId": "xfi",
     "deliveryMode": "whoCares",
-    "id": "rs1",
-    "name": "tbltstsimpleRouteAsimpleRouteA",
+    "id": "raa",
+    "name": "tbltstmultiRouteAABBsimpleRouteAA",
     "orgId": "comcast",
     "receiver": {
       "config": {
@@ -18,7 +18,7 @@
         },
         "rounds": 5
       },
-      "name": "tbltstsimpleRouteAmydebugA",
+      "name": "tbltstmultiRouteAABBmydebugReceiverA",
       "plugin": "debug"
     },
     "sender": {
@@ -26,7 +26,7 @@
         "destination": "stdout",
         "maxHistory": 100
       },
-      "name": "tbltstsimpleRouteAsimpleRouteSenderA",
+      "name": "tbltstmultiRouteAABBmydebugSenderA",
       "plugin": "debug"
     },
     "userId": "boris"
