@@ -43,9 +43,10 @@ import (
 
 type (
 	RouteTest struct {
-		RouteFiles  []string         `json:"routeFiles,omitempty"`
-		WaitSeconds int              `json:"waitSeconds,omitempty"`
-		Events      []EventCheckTest `json:"events,omitempty"`
+		SequenceNumber int              `json:"seq,omitempty"`
+		RouteFiles     []string         `json:"routeFiles,omitempty"`
+		WaitSeconds    int              `json:"waitSeconds,omitempty"`
+		Events         []EventCheckTest `json:"events,omitempty"`
 	}
 	EventCheckTest struct {
 		SenderRouteFile          string `json:"senderRouteFiles,omitempty"`
@@ -96,7 +97,7 @@ func TestRouteTable(t *testing.T) {
 			continue
 		}
 		testPrefix := "tbltst" + currentTestName
-		t.Logf("test scenario: %s", currentTestName)
+		t.Logf("SCENARIO: %s [%d]", currentTestName, currentTest.SequenceNumber)
 		// setup routes
 		routeIds := make([]string, 0)
 		for _, routeFileName := range currentTest.RouteFiles {
