@@ -7,7 +7,7 @@
         "config": {
           "splitPath": "."
         },
-        "name": "mysplit",
+        "name": "simpleFilterSplitRouteSplitter",
         "plugin": "split"
       }
     ],
@@ -28,7 +28,7 @@
         ],
         "rounds": 5
       },
-      "name": "mydebug",
+      "name": "simpleFilterSplitRouteReceiver",
       "plugin": "debug"
     },
     "sender": {
