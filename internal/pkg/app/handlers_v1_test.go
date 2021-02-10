@@ -15,6 +15,7 @@
 package app
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -80,11 +81,35 @@ func TestRouteTable(t *testing.T) {
 		// setup routes
 		routeIds := make([]string, 0)
 		for _, routeFileName := range currentTest.RouteFiles {
-			routeReader, err := os.Open("testdata/" + routeFileName + ".json")
+			// read and parse route
+			buf, err := ioutil.ReadFile("testdata/" + routeFileName + ".json")
 			if err != nil {
-				t.Fatalf("%s test: cannot read file: %s", currentTestName, err.Error())
+				t.Fatalf("%s test: cannot read route file: %s", currentTestName, err.Error())
 			}
-			r := httptest.NewRequest(http.MethodPost, "/ears/v1/routes", routeReader)
+			// scope route by prefixing all names (confirm with Trevor what unregister is meant to do)
+			var routeConfig route.Config
+			err = json.Unmarshal(buf, &routeConfig)
+			if err != nil {
+				t.Fatalf("%s test: cannot parse route: %s", currentTestName, err.Error())
+			}
+			testPrefix := "tbltst"
+			if routeConfig.Sender.Name == "" {
+				routeConfig.Sender.Name = testPrefix + routeConfig.Sender.Name
+			}
+			if routeConfig.Receiver.Name == "" {
+				routeConfig.Receiver.Name = testPrefix + routeConfig.Receiver.Name
+			}
+			if routeConfig.FilterChain != nil {
+				for _, f := range routeConfig.FilterChain {
+					f.Name = testPrefix + f.Name
+				}
+			}
+			buf, err = json.Marshal(routeConfig)
+			if err != nil {
+				t.Fatalf("%s test: cannot serialize route: %s", currentTestName, err.Error())
+			}
+			// add route
+			r := httptest.NewRequest(http.MethodPost, "/ears/v1/routes", bytes.NewReader(buf))
 			w := httptest.NewRecorder()
 			api.muxRouter.ServeHTTP(w, r)
 			g := goldie.New(t)
@@ -98,7 +123,7 @@ func TestRouteTable(t *testing.T) {
 			if data.Item == nil {
 				t.Fatalf("%s test: no item in response", currentTestName)
 			}
-			buf, err := json.Marshal(data.Item)
+			buf, err = json.Marshal(data.Item)
 			if err != nil {
 				t.Fatalf("%s test: %s", currentTestName, err.Error())
 			}
