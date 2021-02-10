@@ -10,7 +10,7 @@
     "config" :
     {
       "rounds" : 10,
-      "intervalMs" : 250,
+      "intervalMs" : 10,
       "payload" : {
         "foo" : "bar"
       },

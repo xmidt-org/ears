@@ -10,7 +10,7 @@
     "config" :
     {
       "rounds" : 5,
-      "intervalMs" : 100,
+      "intervalMs" : 10,
       "payload" : "foo bar baz",
       "maxHistory": 100
     }
