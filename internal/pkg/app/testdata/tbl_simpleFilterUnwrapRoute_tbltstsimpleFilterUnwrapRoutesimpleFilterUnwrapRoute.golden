@@ -1,0 +1,57 @@
+{
+  "status": {
+    "code": 200,
+    "message": "OK"
+  },
+  "item": {
+    "appId": "xfi",
+    "deliveryMode": "whoCares",
+    "filterChain": [
+      {
+        "config": {
+          "unwrapPath": "content"
+        },
+        "name": "simpleFilterUnwrapRouteUnwrapper",
+        "plugin": "unwrap"
+      }
+    ],
+    "id": "sfs123",
+    "name": "tbltstsimpleFilterUnwrapRoutesimpleFilterUnwrapRoute",
+    "orgId": "comcast",
+    "receiver": {
+      "config": {
+        "intervalMs": 10,
+        "maxHistory": 100,
+        "payload": {
+          "content": {
+            "accountId": "FF6AF0AD873B4FEA94DC31BCC991DB18",
+            "adapterId": "jarvis-lutron-iot-adapter",
+            "description": "operation",
+            "deviceId": "",
+            "eventId": "468adf80-dc9d-11e4-989a-41f236438965",
+            "name": "name",
+            "timestamp": 1428352877944,
+            "title": "title",
+            "type": "type",
+            "value": "name"
+          },
+          "sequence": 1428352877944,
+          "timestamp": 1428352877944,
+          "topic": "/iot/FF6AF0AD873B4FEA94DC31BCC991DB18/jarvis-lutron-iot-adapter/command/stateChange"
+        },
+        "rounds": 5
+      },
+      "name": "tbltstsimpleFilterUnwrapRoutesimpleFilterUnwrapRouteReceiver",
+      "plugin": "debug"
+    },
+    "sender": {
+      "config": {
+        "destination": "stdout",
+        "maxHistory": 100
+      },
+      "name": "tbltstsimpleFilterUnwrapRoutesimpleFilterUnwrapRouteSender",
+      "plugin": "debug"
+    },
+    "userId": "boris"
+  }
+}
