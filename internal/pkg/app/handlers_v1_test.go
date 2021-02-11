@@ -20,7 +20,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	goldie "github.com/sebdah/goldie/v2"
 	"github.com/xmidt-org/ears/internal/pkg/db"
@@ -261,7 +260,7 @@ func setupRestApi() (*APIManager, RoutingTableManager, plugin.Manager, route.Rou
 }
 
 func resetDebugSender(routeFileName string, pluginMgr plugin.Manager) error {
-	zerolog.SetGlobalLevel(zerolog.ErrorLevel)
+	//zerolog.SetGlobalLevel(zerolog.ErrorLevel)
 	ctx := context.Background()
 	ctx = log.Logger.WithContext(ctx)
 	buf, err := ioutil.ReadFile(routeFileName)
@@ -289,7 +288,7 @@ func resetDebugSender(routeFileName string, pluginMgr plugin.Manager) error {
 }
 
 func checkEventsSent(routeFileName string, testPrefix string, pluginMgr plugin.Manager, expectedNumberOfEvents int, eventFileName string, eventIndex int) error {
-	zerolog.SetGlobalLevel(zerolog.ErrorLevel)
+	//zerolog.SetGlobalLevel(zerolog.ErrorLevel)
 	ctx := context.Background()
 	ctx = log.Logger.WithContext(ctx)
 	buf, err := ioutil.ReadFile(routeFileName)
