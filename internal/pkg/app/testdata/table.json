@@ -148,6 +148,21 @@
         "expectedEventPayloadFile" : "event1"
       }
     ]
+  },
+  "simpleFilterUnwrapRoute" : {
+    "seq" : 9,
+    "routeFiles" : [
+      "simpleFilterUnwrapRoute"
+    ],
+    "waitMs" : 100,
+    "events" : [
+      {
+        "senderRouteFiles" : "simpleFilterUnwrapRoute",
+        "expectedEventCount" : 5,
+        "expectedEventIndex" : 0,
+        "expectedEventPayloadFile" : "event4"
+      }
+    ]
   }
 }
 
