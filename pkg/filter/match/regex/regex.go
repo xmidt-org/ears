@@ -15,7 +15,6 @@
 package regex
 
 import (
-	"context"
 	"encoding/json"
 	"regexp"
 
@@ -36,7 +35,7 @@ func NewMatcher(pattern string) (*Matcher, error) {
 	return &Matcher{r: r}, nil
 }
 
-func (m *Matcher) Match(ctx context.Context, event event.Event) bool {
+func (m *Matcher) Match(event event.Event) bool {
 	if m == nil || m.r == nil || event == nil {
 		return false
 	}
@@ -46,6 +45,8 @@ func (m *Matcher) Match(ctx context.Context, event event.Event) bool {
 		eventString = event.Payload().(string)
 	case []byte:
 		eventString = string(event.Payload().([]byte))
+	case nil:
+		return false
 	default:
 		buf, err := json.Marshal(event.Payload())
 		if err != nil {

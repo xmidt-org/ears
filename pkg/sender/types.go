@@ -15,8 +15,6 @@
 package sender
 
 import (
-	"context"
-
 	"github.com/xmidt-org/ears/pkg/event"
 )
 
@@ -42,6 +40,6 @@ type NewSenderer interface {
 // or Outputter[√] or Producer[x] or Publisher[√]
 type Sender interface {
 	// Send consumes and event and sends it to the target
-	Send(ctx context.Context, e event.Event) error
+	Send(e event.Event) error
 	Unwrap() Sender
 }

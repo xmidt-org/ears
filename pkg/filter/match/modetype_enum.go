@@ -37,6 +37,12 @@ func (i ModeType) String() string {
 	return _ModeType_name[_ModeType_index[i]:_ModeType_index[i+1]]
 }
 
+// New returns a pointer to a new addr filled with the ModeType value passed in.
+func (i ModeType) New() *ModeType {
+	clone := i
+	return &clone
+}
+
 var _ModeType_values = []ModeType{0, 1, 2}
 
 var _ModeType_name_to_values = map[string]ModeType{

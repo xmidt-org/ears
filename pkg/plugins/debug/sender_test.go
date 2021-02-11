@@ -87,10 +87,10 @@ func TestSender(t *testing.T) {
 			a.Expect(err).To(BeNil())
 
 			for i := 0; i < tc.numMessages; i++ {
-				e, err := event.NewEvent(tc.name)
+				e, err := event.NewEvent(ctx, tc.name)
 				a.Expect(err).To(BeNil())
 
-				err = s.Send(ctx, e)
+				err = s.Send(e)
 				a.Expect(err).To(BeNil())
 			}
 

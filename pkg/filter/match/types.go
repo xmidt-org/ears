@@ -15,14 +15,12 @@
 package match
 
 import (
-	"context"
-
 	"github.com/xmidt-org/ears/pkg/event"
 	"github.com/xorcare/pointer"
 )
 
 type Matcher interface {
-	Match(ctx context.Context, event event.Event) bool
+	Match(event event.Event) bool
 }
 
 //go:generate rm -f modetype_enum.go

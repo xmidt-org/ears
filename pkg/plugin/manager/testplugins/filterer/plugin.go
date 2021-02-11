@@ -15,8 +15,6 @@
 package main
 
 import (
-	"context"
-
 	"github.com/xmidt-org/ears/pkg/filter"
 	pkgplugin "github.com/xmidt-org/ears/pkg/plugin"
 
@@ -64,6 +62,6 @@ func NewFilterer(config interface{}) (filter.Filterer, error) {
 	return &plugin{}, nil
 }
 
-func (p *plugin) Filter(ctx context.Context, e event.Event) ([]event.Event, error) {
+func (p *plugin) Filter(e event.Event) ([]event.Event, error) {
 	return nil, nil
 }
