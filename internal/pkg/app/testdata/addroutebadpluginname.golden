@@ -7,7 +7,7 @@
     "orgId": "comcast",
     "receiver": {
       "config": {
-        "intervalMs": 250,
+        "intervalMs": 10,
         "maxHistory": 100,
         "payload": {
           "foo": "bar"

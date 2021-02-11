@@ -1,12 +1,12 @@
 {
-  "id": "rab",
+  "id": "rs2",
   "orgId": "comcast",
   "appId": "xfi",
   "userId": "boris",
-  "name": "simpleRouteAB",
+  "name": "simpleRouteB",
   "receiver": {
     "plugin": "debug",
-    "name": "mydebugReceiverA",
+    "name": "mydebugB",
     "config": {
       "intervalMs": 10,
       "maxHistory": 100,
@@ -18,7 +18,7 @@
   },
   "sender": {
     "plugin": "debug",
-    "name": "mydebugSenderB",
+    "name": "simpleRouteSenderB",
     "config": {
       "destination": "stdout",
       "maxHistory": 100

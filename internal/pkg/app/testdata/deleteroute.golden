@@ -10,7 +10,7 @@
             "mode": "allow",
             "pattern": "^.*$"
           },
-          "name": "mymatch",
+          "name": "simpleFilterMatchAllowRouteMatcher",
           "plugin": "match"
         }
       ],
@@ -19,14 +19,14 @@
       "orgId": "comcast",
       "receiver": {
         "config": {
-          "intervalMs": 100,
+          "intervalMs": 10,
           "maxHistory": 100,
           "payload": {
             "foo": "bar"
           },
           "rounds": 5
         },
-        "name": "mydebug",
+        "name": "simpleFilterMatchAllowRouteReceiver",
         "plugin": "debug"
       },
       "sender": {
@@ -34,7 +34,7 @@
           "destination": "stdout",
           "maxHistory": 100
         },
-        "name": "mydebug",
+        "name": "simpleFilterMatchAllowRouteSender",
         "plugin": "debug"
       },
       "userId": "boris"
