@@ -16,6 +16,7 @@ package plugin
 
 import (
 	"context"
+	"github.com/rs/zerolog"
 	"time"
 
 	pkgfilter "github.com/xmidt-org/ears/pkg/filter"
@@ -50,22 +51,45 @@ type Manager interface {
 	UnregisterSender(ctx context.Context, s pkgsender.Sender) error
 }
 
-type ManagerOption func(ManagerOptionProcessor) error
+type ManagerOption func(*manager) error
 
-type ManagerOptionProcessor interface {
-	WithPluginManager(p pkgmanager.Manager) error
-	WithNextFnDeadline(d time.Duration) error
-}
+//type ManagerOptionProcessor interface {
+//	WithPluginManager(p pkgmanager.Manager) error
+//	WithNextFnDeadline(d time.Duration) error
+//	WithLogger(l *zerolog.Logger) error
+//}
 
 func WithPluginManager(p pkgmanager.Manager) ManagerOption {
-	return func(o ManagerOptionProcessor) error {
-		return o.WithPluginManager(p)
+	//return func(o ManagerOptionProcessor) error {
+	//	return o.WithPluginManager(p)
+	//}
+	return func(o *manager) error {
+		if p == nil {
+			return &OptionError{
+				Message: "plugin manager cannot be nil",
+			}
+		}
+		return nil
+	}
+}
+
+func WithLogger(l *zerolog.Logger) ManagerOption {
+	//return func(o ManagerOptionProcessor) error {
+	//	return o.WithLogger(l)
+	//}
+	return func(m *manager) error {
+		m.logger = l
+		return nil
 	}
 }
 
 func WithNextFnDeadline(d time.Duration) ManagerOption {
-	return func(o ManagerOptionProcessor) error {
-		return o.WithNextFnDeadline(d)
+	//return func(o ManagerOptionProcessor) error {
+	//	return o.WithNextFnDeadline(d)
+	//}
+	return func(m *manager) error {
+		m.nextFnDeadline = d
+		return nil
 	}
 }
 

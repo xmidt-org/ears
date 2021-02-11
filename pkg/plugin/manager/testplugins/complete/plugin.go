@@ -86,7 +86,7 @@ func NewFilterer(config interface{}) (filter.Filterer, error) {
 	return &plugin{}, nil
 }
 
-func (p *plugin) Filter(ctx context.Context, e event.Event) ([]event.Event, error) {
+func (p *plugin) Filter(e event.Event) ([]event.Event, error) {
 	return nil, nil
 }
 
@@ -96,7 +96,7 @@ func NewSender(config interface{}) (sender.Sender, error) {
 	return &plugin{}, nil
 }
 
-func (p *plugin) Send(ctx context.Context, event event.Event) error {
+func (p *plugin) Send(event event.Event) error {
 	return nil
 }
 

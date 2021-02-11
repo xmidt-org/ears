@@ -92,7 +92,7 @@ func TestReceiver(t *testing.T) {
 
 			events := []event.Event{}
 
-			err = r.Receive(ctx, func(ctx context.Context, e event.Event) error {
+			err = r.Receive(ctx, func(e event.Event) error {
 				events = append(events, e)
 				return nil
 			})

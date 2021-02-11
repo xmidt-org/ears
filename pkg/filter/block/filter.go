@@ -15,8 +15,6 @@
 package block
 
 import (
-	"context"
-
 	"github.com/xmidt-org/ears/pkg/event"
 	"github.com/xmidt-org/ears/pkg/filter"
 )
@@ -30,6 +28,7 @@ func NewFilter(config interface{}) (*Filter, error) {
 type Filter struct{}
 
 // Filter lets no event pass
-func (f *Filter) Filter(ctx context.Context, evt event.Event) ([]event.Event, error) {
+func (f *Filter) Filter(evt event.Event) ([]event.Event, error) {
+	evt.Ack()
 	return []event.Event{}, nil
 }

@@ -17,6 +17,8 @@ package plugin
 import (
 	"context"
 	"fmt"
+	"github.com/rs/zerolog"
+	"github.com/xmidt-org/ears/internal/pkg/logs"
 	"sync"
 	"time"
 
@@ -48,6 +50,8 @@ type manager struct {
 	sendersWrapped map[string]*sender
 
 	nextFnDeadline time.Duration
+
+	logger *zerolog.Logger
 }
 
 // === Initialization ================================================
@@ -84,21 +88,26 @@ func NewManager(options ...ManagerOption) (Manager, error) {
 	return &m, nil
 }
 
-func (m *manager) WithPluginManager(p pkgmanager.Manager) error {
-	if p == nil {
-		return &OptionError{
-			Message: "plugin manager cannot be nil",
-		}
-	}
-
-	m.pm = p
-	return nil
-}
-
-func (m *manager) WithNextFnDeadline(d time.Duration) error {
-	m.nextFnDeadline = d
-	return nil
-}
+//func (m *manager) WithPluginManager(p pkgmanager.Manager) error {
+//	if p == nil {
+//		return &OptionError{
+//			Message: "plugin manager cannot be nil",
+//		}
+//	}
+//
+//	m.pm = p
+//	return nil
+//}
+//
+//func (m *manager) WithLogger(l *zerolog.Logger) error {
+//	m.logger = l
+//	return nil
+//}
+//
+//func (m *manager) WithNextFnDeadline(d time.Duration) error {
+//	m.nextFnDeadline = d
+//	return nil
+//}
 
 // === Receivers =====================================================
 
@@ -155,10 +164,8 @@ func (m *manager) RegisterReceiver(
 		m.receiversCount[key] = 0
 		m.receiversFn[key] = map[string]pkgreceiver.NextFn{}
 
-		// TODO: Determine lifecycle
-		sctx := context.Background()
 		go func() {
-			r.Receive(sctx, func(ctx context.Context, e event.Event) error {
+			r.Receive(ctx, func(e event.Event) error {
 				return m.next(ctx, key, e)
 			})
 		}()
@@ -225,10 +232,16 @@ func (m *manager) next(ctx context.Context, receiverKey string, e pkgevent.Event
 	for _, n := range nextFns {
 		wg.Add(1)
 		go func(fn pkgreceiver.NextFn) {
-			err := fn(ctx, e)
-			//err = n(ctx, e)
+			subCtx := logs.SubLoggerCtx(e.Context(), m.logger)
+			childEvt, err := e.Clone(subCtx)
 			if err != nil {
 				errCh <- err
+			} else {
+				err = fn(childEvt)
+				//err = n(ctx, e)
+				if err != nil {
+					errCh <- err
+				}
 			}
 			wg.Done()
 		}(n)

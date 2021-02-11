@@ -14,19 +14,19 @@ var _ Hasher = &HasherMock{}
 
 // HasherMock is a mock implementation of Hasher.
 //
-//     func TestSomethingThatUsesHasher(t *testing.T) {
+// 	func TestSomethingThatUsesHasher(t *testing.T) {
 //
-//         // make and configure a mocked Hasher
-//         mockedHasher := &HasherMock{
-//             PluginerHashFunc: func(config interface{}) (string, error) {
-// 	               panic("mock out the PluginerHash method")
-//             },
-//         }
+// 		// make and configure a mocked Hasher
+// 		mockedHasher := &HasherMock{
+// 			PluginerHashFunc: func(config interface{}) (string, error) {
+// 				panic("mock out the PluginerHash method")
+// 			},
+// 		}
 //
-//         // use mockedHasher in code that requires Hasher
-//         // and then make assertions.
+// 		// use mockedHasher in code that requires Hasher
+// 		// and then make assertions.
 //
-//     }
+// 	}
 type HasherMock struct {
 	// PluginerHashFunc mocks the PluginerHash method.
 	PluginerHashFunc func(config interface{}) (string, error)
@@ -79,22 +79,22 @@ var _ NewPluginerer = &NewPluginererMock{}
 
 // NewPluginererMock is a mock implementation of NewPluginerer.
 //
-//     func TestSomethingThatUsesNewPluginerer(t *testing.T) {
+// 	func TestSomethingThatUsesNewPluginerer(t *testing.T) {
 //
-//         // make and configure a mocked NewPluginerer
-//         mockedNewPluginerer := &NewPluginererMock{
-//             NewPluginerFunc: func(config interface{}) (Pluginer, error) {
-// 	               panic("mock out the NewPluginer method")
-//             },
-//             PluginerHashFunc: func(config interface{}) (string, error) {
-// 	               panic("mock out the PluginerHash method")
-//             },
-//         }
+// 		// make and configure a mocked NewPluginerer
+// 		mockedNewPluginerer := &NewPluginererMock{
+// 			NewPluginerFunc: func(config interface{}) (Pluginer, error) {
+// 				panic("mock out the NewPluginer method")
+// 			},
+// 			PluginerHashFunc: func(config interface{}) (string, error) {
+// 				panic("mock out the PluginerHash method")
+// 			},
+// 		}
 //
-//         // use mockedNewPluginerer in code that requires NewPluginerer
-//         // and then make assertions.
+// 		// use mockedNewPluginerer in code that requires NewPluginerer
+// 		// and then make assertions.
 //
-//     }
+// 	}
 type NewPluginererMock struct {
 	// NewPluginerFunc mocks the NewPluginer method.
 	NewPluginerFunc func(config interface{}) (Pluginer, error)
@@ -187,31 +187,31 @@ var _ Pluginer = &PluginerMock{}
 
 // PluginerMock is a mock implementation of Pluginer.
 //
-//     func TestSomethingThatUsesPluginer(t *testing.T) {
+// 	func TestSomethingThatUsesPluginer(t *testing.T) {
 //
-//         // make and configure a mocked Pluginer
-//         mockedPluginer := &PluginerMock{
-//             CommitIDFunc: func() string {
-// 	               panic("mock out the CommitID method")
-//             },
-//             ConfigFunc: func() string {
-// 	               panic("mock out the Config method")
-//             },
-//             NameFunc: func() string {
-// 	               panic("mock out the Name method")
-//             },
-//             SupportedTypesFunc: func() bit.Mask {
-// 	               panic("mock out the SupportedTypes method")
-//             },
-//             VersionFunc: func() string {
-// 	               panic("mock out the Version method")
-//             },
-//         }
+// 		// make and configure a mocked Pluginer
+// 		mockedPluginer := &PluginerMock{
+// 			CommitIDFunc: func() string {
+// 				panic("mock out the CommitID method")
+// 			},
+// 			ConfigFunc: func() string {
+// 				panic("mock out the Config method")
+// 			},
+// 			NameFunc: func() string {
+// 				panic("mock out the Name method")
+// 			},
+// 			SupportedTypesFunc: func() bit.Mask {
+// 				panic("mock out the SupportedTypes method")
+// 			},
+// 			VersionFunc: func() string {
+// 				panic("mock out the Version method")
+// 			},
+// 		}
 //
-//         // use mockedPluginer in code that requires Pluginer
-//         // and then make assertions.
+// 		// use mockedPluginer in code that requires Pluginer
+// 		// and then make assertions.
 //
-//     }
+// 	}
 type PluginerMock struct {
 	// CommitIDFunc mocks the CommitID method.
 	CommitIDFunc func() string

@@ -14,11 +14,12 @@
 # limitations under the License.
 
 
-tools=(addlicense go-enum)
+tools=(addlicense go-enum moq)
 
 toolCmds=(
 	"go get -u github.com/google/addlicense && go install github.com/google/addlicense"
 	"go get -u github.com/searKing/golang && go install github.com/searKing/golang/tools/cmd/go-enum"
+	"go get -u github.com/matryer/moq && go install github.com/matryer/moq"
 )
 
 count=0

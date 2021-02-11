@@ -65,7 +65,8 @@ func (r *Receiver) Receive(ctx context.Context, next receiver.NextFn) error {
 				return
 			case <-time.After(time.Duration(*r.config.IntervalMs) * time.Millisecond):
 				//fmt.Printf("RECEIVER NEW EVENT\n")
-				e, err := event.NewEvent(r.config.Payload)
+				ctx := context.Background()
+				e, err := event.NewEvent(ctx, r.config.Payload)
 				if err != nil {
 					return
 				}
@@ -75,7 +76,7 @@ func (r *Receiver) Receive(ctx context.Context, next receiver.NextFn) error {
 				//
 				// NOTES: Discussed that this behavior could be determined
 				//  by a configuration value
-				err = r.Trigger(ctx, e)
+				err = r.Trigger(e)
 				if err != nil {
 					return
 				}
@@ -145,7 +146,7 @@ func (r *Receiver) Count() int {
 	return r.history.Count()
 }
 
-func (r *Receiver) Trigger(ctx context.Context, e event.Event) error {
+func (r *Receiver) Trigger(e event.Event) error {
 	// Ensure that `next` can be slow and locking here will not
 	// prevent other requests from executing.
 	//BW TODO: where is the next slice here?
@@ -157,7 +158,7 @@ func (r *Receiver) Trigger(ctx context.Context, e event.Event) error {
 
 	r.history.Add(e)
 
-	return next(ctx, e)
+	return next(e)
 }
 
 func (r *Receiver) History() []event.Event {

@@ -16,7 +16,6 @@ package filter
 
 import (
 	"container/list"
-	"context"
 	"fmt"
 
 	"github.com/xmidt-org/ears/pkg/event"
@@ -48,7 +47,7 @@ func (c *Chain) Filterers() []Filterer {
 	return fs
 }
 
-func (c *Chain) Filter(ctx context.Context, e event.Event) ([]event.Event, error) {
+func (c *Chain) Filter(e event.Event) ([]event.Event, error) {
 
 	c.Lock()
 	defer c.Unlock()
@@ -69,13 +68,14 @@ func (c *Chain) Filter(ctx context.Context, e event.Event) ([]event.Event, error
 
 	events := []event.Event{}
 
+	ctx := e.Context()
 	for elem := queue.Front(); elem != nil; elem = elem.Next() {
 		select {
 		case <-ctx.Done():
 			return nil, ctx.Err()
 		default:
 			w := elem.Value.(work)
-			evts, err := w.f.Filter(ctx, w.e)
+			evts, err := w.f.Filter(w.e)
 			// TODO: return errors through metrics
 			if err != nil {
 				return nil, err
