@@ -1,4 +1,8 @@
 {
+  "status": {
+    "code": 200,
+    "message": "OK"
+  },
   "item": {
     "appId": "xfi",
     "deliveryMode": "whoCares",
@@ -12,7 +16,7 @@
       }
     ],
     "id": "sfs123",
-    "name": "simpleFilterDeepSplitRoute",
+    "name": "tbltstsimpleDeepSplitRoutesimpleFilterDeepSplitRoute",
     "orgId": "comcast",
     "receiver": {
       "config": {
@@ -34,7 +38,7 @@
         },
         "rounds": 5
       },
-      "name": "SimpleFilterDeepSplitRouteReceiver",
+      "name": "tbltstsimpleDeepSplitRouteSimpleFilterDeepSplitRouteReceiver",
       "plugin": "debug"
     },
     "sender": {
@@ -42,13 +46,9 @@
         "destination": "stdout",
         "maxHistory": 100
       },
-      "name": "SimpleFilterDeepSplitRouteSender",
+      "name": "tbltstsimpleDeepSplitRouteSimpleFilterDeepSplitRouteSender",
       "plugin": "debug"
     },
     "userId": "boris"
-  },
-  "status": {
-    "code": 200,
-    "message": "OK"
   }
 }
