@@ -80,11 +80,10 @@ func prefixRouteConfig(routeConfig *route.Config, prefix string) {
 
 func TestRouteTable(t *testing.T) {
 	// global test settings
-	testTableName := "table"
-	testTableFileName := "testdata/" + testTableName + ".json"
-	// if set to true we ensure that none of the plugins and filters are shared among test cases
 	Version = "v1.0.2"
+	testTableName := "table"
 	// load test table
+	testTableFileName := "testdata/" + testTableName + ".json"
 	buf, err := ioutil.ReadFile(testTableFileName)
 	if err != nil {
 		t.Fatalf("cannot read file: %s", err.Error())
@@ -300,6 +299,10 @@ func resetDebugSender(routeFileName string, pluginMgr plugin.Manager) error {
 	if debugSender.Count() != 0 {
 		return errors.New(fmt.Sprintf("unexpected number of events in sender after reset %d (%d)", debugSender.Count(), 0))
 	}
+	err = pluginMgr.UnregisterSender(ctx, sdr)
+	if err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -357,6 +360,10 @@ func checkEventsSent(routeFileName string, testPrefix string, pluginMgr plugin.M
 		if string(buf1) != string(buf2) {
 			return errors.New(fmt.Sprintf("event payload mismatch:\n%s\n%s\n", string(buf1), string(buf2)))
 		}
+	}
+	err = pluginMgr.UnregisterSender(ctx, sdr)
+	if err != nil {
+		return err
 	}
 	return nil
 }
