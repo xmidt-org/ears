@@ -6,19 +6,19 @@
   "item": {
     "appId": "xfi",
     "deliveryMode": "whoCares",
-    "id": "rs2",
-    "name": "simpleRouteB",
+    "id": "r104",
+    "name": "tbltstsimpleRouteBsimpleRouteB",
     "orgId": "comcast",
     "receiver": {
       "config": {
-        "intervalMs": 100,
+        "intervalMs": 10,
         "maxHistory": 100,
         "payload": {
           "foo": "bar"
         },
         "rounds": 5
       },
-      "name": "mydebugB",
+      "name": "tbltstsimpleRouteBmydebugB",
       "plugin": "debug"
     },
     "sender": {
@@ -26,7 +26,7 @@
         "destination": "stdout",
         "maxHistory": 100
       },
-      "name": "simpleRouteSenderB",
+      "name": "tbltstsimpleRouteBsimpleRouteSenderB",
       "plugin": "debug"
     },
     "userId": "boris"

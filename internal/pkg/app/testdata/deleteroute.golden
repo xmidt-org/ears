@@ -14,12 +14,12 @@
           "plugin": "match"
         }
       ],
-      "id": "f123",
+      "id": "f102",
       "name": "simpleFilterRoute",
       "orgId": "comcast",
       "receiver": {
         "config": {
-          "intervalMs": 100,
+          "intervalMs": 10,
           "maxHistory": 100,
           "payload": {
             "foo": "bar"

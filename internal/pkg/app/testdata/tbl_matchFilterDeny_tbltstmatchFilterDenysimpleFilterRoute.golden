@@ -17,19 +17,19 @@
         "plugin": "match"
       }
     ],
-    "id": "f123",
-    "name": "simpleFilterRoute",
+    "id": "f103",
+    "name": "tbltstmatchFilterDenysimpleFilterRoute",
     "orgId": "comcast",
     "receiver": {
       "config": {
-        "intervalMs": 100,
+        "intervalMs": 10,
         "maxHistory": 100,
         "payload": {
           "foo": "bar"
         },
         "rounds": 5
       },
-      "name": "simpleFilterMatchDenyRouteReceiver",
+      "name": "tbltstmatchFilterDenysimpleFilterMatchDenyRouteReceiver",
       "plugin": "debug"
     },
     "sender": {
@@ -37,7 +37,7 @@
         "destination": "stdout",
         "maxHistory": 100
       },
-      "name": "simpleFilterMatchDenyRouteSender",
+      "name": "tbltstmatchFilterDenysimpleFilterMatchDenyRouteSender",
       "plugin": "debug"
     },
     "userId": "boris"

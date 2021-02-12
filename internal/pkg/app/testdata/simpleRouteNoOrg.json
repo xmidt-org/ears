@@ -1,5 +1,5 @@
 {
-  "id" : "r123",
+  "id" : "x104",
   "appId" : "xfi",
   "userId" : "boris",
   "name" : "simpleRoute",
@@ -9,7 +9,7 @@
     "config" :
     {
       "rounds" : 10,
-      "intervalMs" : 250,
+      "intervalMs" : 10,
       "payload" : {
         "foo" : "bar"
       },

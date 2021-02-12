@@ -15,12 +15,12 @@
         "plugin": "split"
       }
     ],
-    "id": "sfs123",
-    "name": "simpleFilterDeepSplitRoute",
+    "id": "f101",
+    "name": "tbltstsimpleDeepSplitRoutesimpleFilterDeepSplitRoute",
     "orgId": "comcast",
     "receiver": {
       "config": {
-        "intervalMs": 100,
+        "intervalMs": 10,
         "maxHistory": 100,
         "payload": {
           "a": {
@@ -38,7 +38,7 @@
         },
         "rounds": 5
       },
-      "name": "SimpleFilterDeepSplitRouteReceiver",
+      "name": "tbltstsimpleDeepSplitRouteSimpleFilterDeepSplitRouteReceiver",
       "plugin": "debug"
     },
     "sender": {
@@ -46,7 +46,7 @@
         "destination": "stdout",
         "maxHistory": 100
       },
-      "name": "SimpleFilterDeepSplitRouteSender",
+      "name": "tbltstsimpleDeepSplitRouteSimpleFilterDeepSplitRouteSender",
       "plugin": "debug"
     },
     "userId": "boris"
