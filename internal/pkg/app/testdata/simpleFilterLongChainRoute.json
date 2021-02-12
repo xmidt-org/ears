@@ -1,0 +1,83 @@
+{
+  "id" : "f101",
+  "orgId" : "comcast",
+  "appId" : "xfi",
+  "userId" : "boris",
+  "name" : "simpleFilterLongChainRoute",
+  "receiver" : {
+    "plugin" : "debug",
+    "name" : "simpleFilterLongChainRouteReceiver",
+    "config" :
+    {
+      "rounds" : 5,
+      "intervalMs" : 10,
+      "payload" : {
+        "a": {
+          "b": {
+            "c": [
+              {
+                "foo": "bar"
+              },
+              {
+                "foo": "bar"
+              }
+            ]
+          }
+        }
+      },
+      "maxHistory": 100
+    }
+  },
+  "sender" : {
+    "plugin" : "debug",
+    "name" : "simpleFilterLongChainRouteSender",
+    "config" : {
+      "destination" : "stdout",
+      "maxHistory": 100
+    }
+  },
+  "filterChain" : [
+    {
+      "plugin" : "unwrap",
+      "name" : "simpleFilterLongChainRouteUnwrapper",
+      "config" : {
+        "unwrapPath" : "a.b.c"
+      }
+    },
+    {
+      "plugin" : "split",
+      "name" : "simpleFilterLongChainRouteSplitter",
+      "config" : {
+        "splitPath" : "."
+      }
+    },
+    {
+      "plugin" : "match",
+      "name" : "simpleFilterLongChainRouteMatchAllow1",
+      "config" : {
+        "mode" : "allow",
+        "matcher" : "regex",
+        "pattern" : "^.*$"
+      }
+    },
+    {
+      "plugin" : "match",
+      "name" : "simpleFilterLongChainRouteMatchAllow2",
+      "config" : {
+        "mode" : "allow",
+        "matcher" : "regex",
+        "pattern" : "^.*$"
+      }
+    },
+    {
+      "plugin" : "match",
+      "name" : "simpleFilterLongChainRouteMatchAllow3",
+      "config" : {
+        "mode" : "allow",
+        "matcher" : "regex",
+        "pattern" : "^.*$"
+      }
+    }
+  ],
+  "deliveryMode" : "whoCares"
+}

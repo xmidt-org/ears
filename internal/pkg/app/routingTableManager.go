@@ -161,3 +161,18 @@ func (r *DefaultRoutingTableManager) GetAllRoutes(ctx context.Context) ([]route.
 	}
 	return routes, nil
 }
+
+func (r *DefaultRoutingTableManager) GetAllSenders(ctx context.Context) (map[string]sender.Sender, error) {
+	senders := r.pluginMgr.Senders()
+	return senders, nil
+}
+
+func (r *DefaultRoutingTableManager) GetAllReceivers(ctx context.Context) (map[string]receiver.Receiver, error) {
+	receivers := r.pluginMgr.Receivers()
+	return receivers, nil
+}
+
+func (r *DefaultRoutingTableManager) GetAllFilters(ctx context.Context) (map[string]filter.Filterer, error) {
+	filterers := r.pluginMgr.Filters()
+	return filterers, nil
+}
