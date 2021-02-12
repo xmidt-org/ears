@@ -1,0 +1,88 @@
+{
+  "status": {
+    "code": 200,
+    "message": "OK"
+  },
+  "item": {
+    "appId": "xfi",
+    "deliveryMode": "whoCares",
+    "filterChain": [
+      {
+        "config": {
+          "unwrapPath": "a.b.c"
+        },
+        "name": "simpleFilterLongChainRouteUnwrapper",
+        "plugin": "unwrap"
+      },
+      {
+        "config": {
+          "splitPath": "."
+        },
+        "name": "simpleFilterLongChainRouteSplitter",
+        "plugin": "split"
+      },
+      {
+        "config": {
+          "matcher": "regex",
+          "mode": "allow",
+          "pattern": "^.*$"
+        },
+        "name": "simpleFilterLongChainRouteMatchAllowA",
+        "plugin": "match"
+      },
+      {
+        "config": {
+          "matcher": "regex",
+          "mode": "allow",
+          "pattern": "^.*$"
+        },
+        "name": "simpleFilterLongChainRouteMatchAllowB",
+        "plugin": "match"
+      },
+      {
+        "config": {
+          "matcher": "regex",
+          "mode": "allow",
+          "pattern": "^.*$"
+        },
+        "name": "simpleFilterLongChainRouteMatchAllowC",
+        "plugin": "match"
+      }
+    ],
+    "id": "f101",
+    "name": "tbltstsimpleFilterLongChainRoutesimpleFilterLongChainRoute",
+    "orgId": "comcast",
+    "receiver": {
+      "config": {
+        "intervalMs": 10,
+        "maxHistory": 100,
+        "payload": {
+          "a": {
+            "b": {
+              "c": [
+                {
+                  "foo": "bar"
+                },
+                {
+                  "foo": "bar"
+                }
+              ]
+            }
+          }
+        },
+        "rounds": 5
+      },
+      "name": "tbltstsimpleFilterLongChainRoutesimpleFilterLongChainRouteReceiver",
+      "plugin": "debug"
+    },
+    "sender": {
+      "config": {
+        "destination": "stdout",
+        "maxHistory": 100
+      },
+      "name": "tbltstsimpleFilterLongChainRoutesimpleFilterLongChainRouteSender",
+      "plugin": "debug"
+    },
+    "userId": "boris"
+  }
+}
