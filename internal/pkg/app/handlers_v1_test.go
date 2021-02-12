@@ -96,94 +96,96 @@ func TestRouteTable(t *testing.T) {
 		if testNameFlag != "" && testNameFlag != currentTestName {
 			continue
 		}
-		testPrefix := "tbltst" + currentTestName
-		t.Logf("SCENARIO: %s [%d]", currentTestName, currentTest.SequenceNumber)
-		// setup routes
-		routeIds := make([]string, 0)
-		for _, routeFileName := range currentTest.RouteFiles {
-			// read and parse route
-			buf, err := ioutil.ReadFile("testdata/" + routeFileName + ".json")
+		t.Run(currentTestName, func(t *testing.T) {
+			testPrefix := "tbltst" + currentTestName
+			t.Logf("SCENARIO: %s [%d]", currentTestName, currentTest.SequenceNumber)
+			// setup routes
+			routeIds := make([]string, 0)
+			for _, routeFileName := range currentTest.RouteFiles {
+				// read and parse route
+				buf, err := ioutil.ReadFile("testdata/" + routeFileName + ".json")
+				if err != nil {
+					t.Fatalf("%s test: cannot read route file: %s", currentTestName, err.Error())
+				}
+				// scope route by prefixing all names (confirm with Trevor what unregister is meant to do)
+				var routeConfig route.Config
+				err = json.Unmarshal(buf, &routeConfig)
+				if err != nil {
+					t.Fatalf("%s test: cannot parse route: %s", currentTestName, err.Error())
+				}
+				prefixRouteConfig(&routeConfig, testPrefix)
+				buf, err = json.MarshalIndent(routeConfig, "", "\t")
+				if err != nil {
+					t.Fatalf("%s test: cannot serialize route: %s", currentTestName, err.Error())
+				}
+				// add route
+				r := httptest.NewRequest(http.MethodPost, "/ears/v1/routes", bytes.NewReader(buf))
+				w := httptest.NewRecorder()
+				api.muxRouter.ServeHTTP(w, r)
+				g := goldie.New(t)
+				var data Response
+				err = json.Unmarshal(w.Body.Bytes(), &data)
+				if err != nil {
+					t.Fatalf("%s test: cannot unmarshal response: %s %s", currentTestName, err.Error(), string(w.Body.Bytes()))
+				}
+				g.AssertJson(t, "tbl_"+currentTestName+"_"+routeConfig.Name, data)
+				// collect route ID
+				if data.Item == nil {
+					t.Fatalf("%s test: no item in response", currentTestName)
+				}
+				buf, err = json.Marshal(data.Item)
+				if err != nil {
+					t.Fatalf("%s test: %s", currentTestName, err.Error())
+				}
+				var rt route.Config
+				err = json.Unmarshal(buf, &rt)
+				if err != nil {
+					fmt.Printf("%v\n", data.Item)
+					t.Fatalf("%s test: item is not a route: %s", currentTestName, err.Error())
+				}
+				if rt.Id == "" {
+					t.Fatalf("%s test: route has blank ID", currentTestName)
+				}
+				routeIds = append(routeIds, rt.Id)
+				t.Logf("added route with id: %s", rt.Id)
+			}
+			// check number of routes in system
+			err = checkNumRoutes(api, currentTestName, len(routeIds))
 			if err != nil {
-				t.Fatalf("%s test: cannot read route file: %s", currentTestName, err.Error())
+				t.Fatalf("%s test: route count issue: %s", currentTestName, err.Error())
 			}
-			// scope route by prefixing all names (confirm with Trevor what unregister is meant to do)
-			var routeConfig route.Config
-			err = json.Unmarshal(buf, &routeConfig)
+			// sleep
+			time.Sleep(time.Duration(currentTest.WaitMs) * time.Millisecond)
+			// check number of events and payloads if desired
+			for _, eventData := range currentTest.Events {
+				if eventData.SenderRouteFile == "" {
+					continue
+				}
+				routeFileName := "testdata/" + eventData.SenderRouteFile + ".json"
+				eventFileName := ""
+				if eventData.ExpectedEventPayloadFile != "" {
+					eventFileName = "testdata/" + eventData.ExpectedEventPayloadFile + ".json"
+				}
+				err = checkEventsSent(routeFileName, testPrefix, pluginMgr, eventData.ExpectedEventCount, eventFileName, eventData.ExpectedEventIndex)
+				if err != nil {
+					t.Fatalf("%s test: check events sent error: %s", currentTestName, err.Error())
+				}
+			}
+			// delete all routes
+			for _, rtId := range routeIds {
+				r := httptest.NewRequest(http.MethodDelete, "/ears/v1/routes/"+rtId, nil)
+				w := httptest.NewRecorder()
+				api.muxRouter.ServeHTTP(w, r)
+				t.Logf("deleted route with id: %s", rtId)
+			}
+			// check number of routes in system
+			err = checkNumRoutes(api, currentTestName, 0)
 			if err != nil {
-				t.Fatalf("%s test: cannot parse route: %s", currentTestName, err.Error())
+				t.Fatalf("%s test: zero route count issue: %s", currentTestName, err.Error())
 			}
-			prefixRouteConfig(&routeConfig, testPrefix)
-			buf, err = json.MarshalIndent(routeConfig, "", "\t")
-			if err != nil {
-				t.Fatalf("%s test: cannot serialize route: %s", currentTestName, err.Error())
-			}
-			// add route
-			r := httptest.NewRequest(http.MethodPost, "/ears/v1/routes", bytes.NewReader(buf))
-			w := httptest.NewRecorder()
-			api.muxRouter.ServeHTTP(w, r)
-			g := goldie.New(t)
-			var data Response
-			err = json.Unmarshal(w.Body.Bytes(), &data)
-			if err != nil {
-				t.Fatalf("%s test: cannot unmarshal response: %s %s", currentTestName, err.Error(), string(w.Body.Bytes()))
-			}
-			g.AssertJson(t, "tbl_"+currentTestName+"_"+routeConfig.Name, data)
-			// collect route ID
-			if data.Item == nil {
-				t.Fatalf("%s test: no item in response", currentTestName)
-			}
-			buf, err = json.Marshal(data.Item)
-			if err != nil {
-				t.Fatalf("%s test: %s", currentTestName, err.Error())
-			}
-			var rt route.Config
-			err = json.Unmarshal(buf, &rt)
-			if err != nil {
-				fmt.Printf("%v\n", data.Item)
-				t.Fatalf("%s test: item is not a route: %s", currentTestName, err.Error())
-			}
-			if rt.Id == "" {
-				t.Fatalf("%s test: route has blank ID", currentTestName)
-			}
-			routeIds = append(routeIds, rt.Id)
-			t.Logf("added route with id: %s", rt.Id)
-		}
-		// check number of routes in system
-		err = checkNumRoutes(api, currentTestName, len(routeIds))
-		if err != nil {
-			t.Fatalf("%s test: route count issue: %s", currentTestName, err.Error())
-		}
-		// sleep
-		time.Sleep(time.Duration(currentTest.WaitMs) * time.Millisecond)
-		// check number of events and payloads if desired
-		for _, eventData := range currentTest.Events {
-			if eventData.SenderRouteFile == "" {
-				continue
-			}
-			routeFileName := "testdata/" + eventData.SenderRouteFile + ".json"
-			eventFileName := ""
-			if eventData.ExpectedEventPayloadFile != "" {
-				eventFileName = "testdata/" + eventData.ExpectedEventPayloadFile + ".json"
-			}
-			err = checkEventsSent(routeFileName, testPrefix, pluginMgr, eventData.ExpectedEventCount, eventFileName, eventData.ExpectedEventIndex)
-			if err != nil {
-				t.Fatalf("%s test: check events sent error: %s", currentTestName, err.Error())
-			}
-		}
-		// delete all routes
-		for _, rtId := range routeIds {
-			r := httptest.NewRequest(http.MethodDelete, "/ears/v1/routes/"+rtId, nil)
-			w := httptest.NewRecorder()
-			api.muxRouter.ServeHTTP(w, r)
-			t.Logf("deleted route with id: %s", rtId)
-		}
-		// check number of routes in system
-		err = checkNumRoutes(api, currentTestName, 0)
-		if err != nil {
-			t.Fatalf("%s test: zero route count issue: %s", currentTestName, err.Error())
-		}
-		// sleep
-		time.Sleep(time.Duration(currentTest.WaitMs) * time.Millisecond)
+			// sleep
+			time.Sleep(time.Duration(currentTest.WaitMs) * time.Millisecond)
+		})
 	}
 }
 
