@@ -16,6 +16,7 @@ package debug
 
 import (
 	"context"
+	"sync"
 
 	"fmt"
 	"time"
@@ -53,6 +54,8 @@ func (r *Receiver) Receive(ctx context.Context, next receiver.NextFn) error {
 			r.Unlock()
 		}()
 
+		eventsDone := &sync.WaitGroup{}
+
 		// NOTE:  If rounds < 0, this messaging will continue
 		// until the context is cancelled.
 		for count := *r.config.Rounds; count != 0; {
@@ -66,10 +69,19 @@ func (r *Receiver) Receive(ctx context.Context, next receiver.NextFn) error {
 			case <-time.After(time.Duration(*r.config.IntervalMs) * time.Millisecond):
 				//fmt.Printf("RECEIVER NEW EVENT\n")
 				ctx := context.Background()
-				e, err := event.NewEvent(ctx, r.config.Payload)
+				e, err := event.NewEventWithAck(ctx, r.config.Payload,
+					func() {
+						fmt.Println("Debug success")
+						eventsDone.Done()
+					}, func(err error) {
+						fmt.Println("Debug error", err.Error())
+						eventsDone.Done()
+					})
 				if err != nil {
 					return
 				}
+
+				eventsDone.Add(1)
 
 				// TODO:  Determine context propagation lifecycle
 				//   * https://github.com/xmidt-org/ears/issues/51
@@ -86,6 +98,7 @@ func (r *Receiver) Receive(ctx context.Context, next receiver.NextFn) error {
 				}
 			}
 		}
+		eventsDone.Wait()
 	}()
 
 	<-r.done

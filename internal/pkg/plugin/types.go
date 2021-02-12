@@ -53,30 +53,19 @@ type Manager interface {
 
 type ManagerOption func(*manager) error
 
-//type ManagerOptionProcessor interface {
-//	WithPluginManager(p pkgmanager.Manager) error
-//	WithNextFnDeadline(d time.Duration) error
-//	WithLogger(l *zerolog.Logger) error
-//}
-
 func WithPluginManager(p pkgmanager.Manager) ManagerOption {
-	//return func(o ManagerOptionProcessor) error {
-	//	return o.WithPluginManager(p)
-	//}
-	return func(o *manager) error {
+	return func(m *manager) error {
 		if p == nil {
 			return &OptionError{
 				Message: "plugin manager cannot be nil",
 			}
 		}
+		m.pm = p
 		return nil
 	}
 }
 
 func WithLogger(l *zerolog.Logger) ManagerOption {
-	//return func(o ManagerOptionProcessor) error {
-	//	return o.WithLogger(l)
-	//}
 	return func(m *manager) error {
 		m.logger = l
 		return nil
@@ -84,9 +73,6 @@ func WithLogger(l *zerolog.Logger) ManagerOption {
 }
 
 func WithNextFnDeadline(d time.Duration) ManagerOption {
-	//return func(o ManagerOptionProcessor) error {
-	//	return o.WithNextFnDeadline(d)
-	//}
 	return func(m *manager) error {
 		m.nextFnDeadline = d
 		return nil

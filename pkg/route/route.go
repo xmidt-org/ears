@@ -95,8 +95,9 @@ func fanOut(ctx context.Context, events []event.Event, next receiver.NextFn) err
 	g, ctx := errgroup.WithContext(ctx)
 
 	for _, e := range events {
+		localCopy := e
 		g.Go(func() error {
-			return next(e)
+			return next(localCopy)
 		})
 	}
 

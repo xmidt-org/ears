@@ -215,7 +215,7 @@ func setupRestApi() (*APIManager, RoutingTableManager, plugin.Manager, route.Rou
 	if err != nil {
 		return nil, nil, nil, nil, err
 	}
-	pluginMgr, err := plugin.NewManager(plugin.WithPluginManager(mgr))
+	pluginMgr, err := plugin.NewManager(plugin.WithPluginManager(mgr), plugin.WithLogger(&log.Logger))
 	if err != nil {
 		return nil, nil, nil, nil, err
 	}

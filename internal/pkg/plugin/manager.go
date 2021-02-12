@@ -88,27 +88,6 @@ func NewManager(options ...ManagerOption) (Manager, error) {
 	return &m, nil
 }
 
-//func (m *manager) WithPluginManager(p pkgmanager.Manager) error {
-//	if p == nil {
-//		return &OptionError{
-//			Message: "plugin manager cannot be nil",
-//		}
-//	}
-//
-//	m.pm = p
-//	return nil
-//}
-//
-//func (m *manager) WithLogger(l *zerolog.Logger) error {
-//	m.logger = l
-//	return nil
-//}
-//
-//func (m *manager) WithNextFnDeadline(d time.Duration) error {
-//	m.nextFnDeadline = d
-//	return nil
-//}
-
 // === Receivers =====================================================
 
 func (m *manager) Receiverers() map[string]pkgreceiver.NewReceiverer {
@@ -249,6 +228,7 @@ func (m *manager) next(ctx context.Context, receiverKey string, e pkgevent.Event
 
 	wg.Wait()
 	close(errCh)
+	e.Ack()
 
 	// Does it make sense to return an error if any of the filters fail?
 	// TODO:
