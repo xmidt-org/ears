@@ -407,7 +407,7 @@ func TestRestPutSimpleRouteHandler(t *testing.T) {
 	if err != nil {
 		t.Fatalf("cannot read file: %s", err.Error())
 	}
-	r := httptest.NewRequest(http.MethodPut, "/ears/v1/routes/r123", simpleRouteReader)
+	r := httptest.NewRequest(http.MethodPut, "/ears/v1/routes/r100", simpleRouteReader)
 	api, _, _, _, err := setupRestApi()
 	if err != nil {
 		t.Fatalf("cannot create api manager: %s\n", err.Error())
@@ -754,7 +754,7 @@ func TestRestGetRouteHandler(t *testing.T) {
 	r := httptest.NewRequest(http.MethodPost, "/ears/v1/routes", simpleRouteReader)
 	api.muxRouter.ServeHTTP(w, r)
 	w = httptest.NewRecorder()
-	r = httptest.NewRequest(http.MethodGet, "/ears/v1/routes/r123", nil)
+	r = httptest.NewRequest(http.MethodGet, "/ears/v1/routes/r100", nil)
 	api.muxRouter.ServeHTTP(w, r)
 	g := goldie.New(t)
 	var data map[string]interface{}
