@@ -163,6 +163,21 @@
         "expectedEventPayloadFile" : "event4"
       }
     ]
+  },
+  "simpleFilterLongChainRoute" : {
+    "seq" : 6,
+    "routeFiles" : [
+      "simpleFilterLongChainRoute"
+    ],
+    "waitMs" : 100,
+    "events" : [
+      {
+        "senderRouteFiles" : "simpleFilterLongChainRoute",
+        "expectedEventCount" : 10,
+        "expectedEventIndex" : 0,
+        "expectedEventPayloadFile" : "event1"
+      }
+    ]
   }
 }
 
