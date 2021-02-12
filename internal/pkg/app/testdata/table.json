@@ -1,153 +1,187 @@
 {
-  "simpleRouteA" : {
-    "id" : 0,
-    "routeFiles" : [
-      "simpleRouteA"
-    ],
-    "waitMs" : 100,
-    "events" : [
-      {
-        "senderRouteFiles" : "simpleRouteA",
-        "expectedEventCount" : 5,
-        "expectedEventIndex" : 0,
-        "expectedEventPayloadFile" : "event1"
-      }
-    ]
-  },
-  "simpleRouteB" : {
-    "seq" : 1,
-    "routeFiles" : [
-      "simpleRouteB"
-    ],
-    "waitMs" : 100,
-    "events" : [
-      {
-        "senderRouteFiles" : "simpleRouteB",
-        "expectedEventCount" : 5,
-        "expectedEventIndex" : 0,
-        "expectedEventPayloadFile" : "event1"
-      }
-    ]
-  },
-  "simpleSplitRoute" : {
-    "seq" : 2,
-    "routeFiles" : [
-      "simpleFilterSplitRoute"
-    ],
-    "waitMs" : 100,
-    "events" : [
-      {
-        "senderRouteFiles" : "simpleFilterSplitRoute",
-        "expectedEventCount" : 10,
-        "expectedEventIndex" : 0,
-        "expectedEventPayloadFile" : "event1"
-      }
-    ]
-  },
-  "simpleDeepSplitRoute" : {
-    "seq" : 3,
-    "routeFiles" : [
-      "simpleFilterDeepSplitRoute"
-    ],
-    "waitMs" : 100,
-    "events" : [
-      {
-        "senderRouteFiles" : "simpleFilterDeepSplitRoute",
-        "expectedEventCount" : 10,
-        "expectedEventIndex" : 0,
-        "expectedEventPayloadFile" : "event1"
-      }
-    ]
-  },
-  "matchFilterAllow" : {
-    "seq" : 4,
-    "routeFiles" : [
-      "simpleFilterMatchAllowRoute"
-    ],
-    "waitMs" : 100,
-    "events" : [
-      {
-        "senderRouteFiles" : "simpleFilterMatchAllowRoute",
-        "expectedEventCount" : 5,
-        "expectedEventIndex" : 0,
-        "expectedEventPayloadFile" : "event1"
-      }
-    ]
-  },
-  "matchFilterDeny" : {
-    "seq" : 5,
-    "routeFiles" : [
-      "simpleFilterMatchDenyRoute"
-    ],
-    "waitMs" : 100,
-    "events" : [
-      {
-        "senderRouteFiles" : "simpleFilterMatchDenyRoute",
-        "expectedEventCount" : 0,
-        "expectedEventIndex" : 0,
-        "expectedEventPayloadFile" : ""
-      }
-    ]
-  },
-  "simpleFilterChainMatchRoute" : {
-    "seq" : 6,
-    "routeFiles" : [
-      "simpleFilterChainMatchRoute"
-    ],
-    "waitMs" : 100,
-    "events" : [
-      {
-        "senderRouteFiles" : "simpleFilterChainMatchRoute",
-        "expectedEventCount" : 5,
-        "expectedEventIndex" : 0,
-        "expectedEventPayloadFile" : "event2"
-      }
-    ]
-  },
-  "multiRouteAABB" : {
-    "seq" : 7,
-    "routeFiles" : [
-      "simpleRouteAA",
-      "simpleRouteBB"
-    ],
-    "waitMs" : 100,
-    "events" : [
-      {
-        "senderRouteFiles" : "simpleRouteAA",
-        "expectedEventCount" : 5,
-        "expectedEventIndex" : 0,
-        "expectedEventPayloadFile" : "event1"
-      },
-      {
-        "senderRouteFiles" : "simpleRouteBB",
-        "expectedEventCount" : 5,
-        "expectedEventIndex" : 0,
-        "expectedEventPayloadFile" : "event1"
-      }
-    ]
-  },
-  "multiRouteAABBAB" : {
-    "seq" : 8,
-    "routeFiles" : [
-      "simpleRouteAA",
-      "simpleRouteAB",
-      "simpleRouteBB"
-    ],
-    "waitMs" : 100,
-    "events" : [
-      {
-        "senderRouteFiles" : "simpleRouteAA",
-        "expectedEventCount" : 5,
-        "expectedEventIndex" : 0,
-        "expectedEventPayloadFile" : "event1"
-      },
-      {
-        "senderRouteFiles" : "simpleRouteBB",
-        "expectedEventCount" : 10,
-        "expectedEventIndex" : 0,
-        "expectedEventPayloadFile" : "event1"
-      }
-    ]
+  "sharePluginsAcrossTests": false,
+  "testToRunAllIfBlank": "",
+  "table": {
+    "simpleRouteA": {
+      "id": 0,
+      "routeFiles": [
+        "simpleRouteA"
+      ],
+      "waitMs": 100,
+      "events": [
+        {
+          "senderRouteFiles": "simpleRouteA",
+          "expectedEventCount": 5,
+          "expectedEventIndex": 0,
+          "expectedEventPayloadFile": "event1"
+        }
+      ]
+    },
+    "simpleRouteB": {
+      "seq": 1,
+      "routeFiles": [
+        "simpleRouteB"
+      ],
+      "waitMs": 100,
+      "events": [
+        {
+          "senderRouteFiles": "simpleRouteB",
+          "expectedEventCount": 5,
+          "expectedEventIndex": 0,
+          "expectedEventPayloadFile": "event1"
+        }
+      ]
+    },
+    "simpleSplitRoute": {
+      "seq": 2,
+      "routeFiles": [
+        "simpleFilterSplitRoute"
+      ],
+      "waitMs": 100,
+      "events": [
+        {
+          "senderRouteFiles": "simpleFilterSplitRoute",
+          "expectedEventCount": 10,
+          "expectedEventIndex": 0,
+          "expectedEventPayloadFile": "event1"
+        }
+      ]
+    },
+    "simpleDeepSplitRoute": {
+      "seq": 3,
+      "routeFiles": [
+        "simpleFilterDeepSplitRoute"
+      ],
+      "waitMs": 100,
+      "events": [
+        {
+          "senderRouteFiles": "simpleFilterDeepSplitRoute",
+          "expectedEventCount": 10,
+          "expectedEventIndex": 0,
+          "expectedEventPayloadFile": "event1"
+        }
+      ]
+    },
+    "matchFilterAllow": {
+      "seq": 4,
+      "routeFiles": [
+        "simpleFilterMatchAllowRoute"
+      ],
+      "waitMs": 100,
+      "events": [
+        {
+          "senderRouteFiles": "simpleFilterMatchAllowRoute",
+          "expectedEventCount": 5,
+          "expectedEventIndex": 0,
+          "expectedEventPayloadFile": "event1"
+        }
+      ]
+    },
+    "matchFilterDeny": {
+      "seq": 5,
+      "routeFiles": [
+        "simpleFilterMatchDenyRoute"
+      ],
+      "waitMs": 100,
+      "events": [
+        {
+          "senderRouteFiles": "simpleFilterMatchDenyRoute",
+          "expectedEventCount": 0,
+          "expectedEventIndex": 0,
+          "expectedEventPayloadFile": ""
+        }
+      ]
+    },
+    "simpleFilterChainMatchRoute": {
+      "seq": 6,
+      "routeFiles": [
+        "simpleFilterChainMatchRoute"
+      ],
+      "waitMs": 100,
+      "events": [
+        {
+          "senderRouteFiles": "simpleFilterChainMatchRoute",
+          "expectedEventCount": 5,
+          "expectedEventIndex": 0,
+          "expectedEventPayloadFile": "event2"
+        }
+      ]
+    },
+    "multiRouteAABB": {
+      "seq": 7,
+      "routeFiles": [
+        "simpleRouteAA",
+        "simpleRouteBB"
+      ],
+      "waitMs": 100,
+      "events": [
+        {
+          "senderRouteFiles": "simpleRouteAA",
+          "expectedEventCount": 5,
+          "expectedEventIndex": 0,
+          "expectedEventPayloadFile": "event1"
+        },
+        {
+          "senderRouteFiles": "simpleRouteBB",
+          "expectedEventCount": 5,
+          "expectedEventIndex": 0,
+          "expectedEventPayloadFile": "event1"
+        }
+      ]
+    },
+    "multiRouteAABBAB": {
+      "seq": 8,
+      "routeFiles": [
+        "simpleRouteAA",
+        "simpleRouteAB",
+        "simpleRouteBB"
+      ],
+      "waitMs": 100,
+      "events": [
+        {
+          "senderRouteFiles": "simpleRouteAA",
+          "expectedEventCount": 5,
+          "expectedEventIndex": 0,
+          "expectedEventPayloadFile": "event1"
+        },
+        {
+          "senderRouteFiles": "simpleRouteBB",
+          "expectedEventCount": 10,
+          "expectedEventIndex": 0,
+          "expectedEventPayloadFile": "event1"
+        }
+      ]
+    },
+    "simpleFilterUnwrapRoute": {
+      "seq": 9,
+      "routeFiles": [
+        "simpleFilterUnwrapRoute"
+      ],
+      "waitMs": 100,
+      "events": [
+        {
+          "senderRouteFiles": "simpleFilterUnwrapRoute",
+          "expectedEventCount": 5,
+          "expectedEventIndex": 0,
+          "expectedEventPayloadFile": "event4"
+        }
+      ]
+    },
+    "simpleFilterLongChainRoute": {
+      "seq": 6,
+      "routeFiles": [
+        "simpleFilterLongChainRoute"
+      ],
+      "waitMs": 100,
+      "events": [
+        {
+          "senderRouteFiles": "simpleFilterLongChainRoute",
+          "expectedEventCount": 10,
+          "expectedEventIndex": 0,
+          "expectedEventPayloadFile": "event1"
+        }
+      ]
+    }
   }
 }
 

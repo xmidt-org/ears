@@ -15,7 +15,7 @@
 package main
 
 import (
-	"github.com/xmidt-org/ears/pkg/plugins/match"
+	"github.com/xmidt-org/ears/pkg/plugins/split"
 )
 
 func main() {
@@ -30,7 +30,7 @@ var (
 	GitCommit  = ""
 )
 
-var Plugin, PluginErr = match.NewPluginVersion(Name, GitVersion, GitCommit)
+var Plugin, PluginErr = split.NewPluginVersion(Name, GitVersion, GitCommit)
 
 // for golangci-lint
 var _ = Plugin

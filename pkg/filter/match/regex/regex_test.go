@@ -46,7 +46,6 @@ func TestRegexPatternError(t *testing.T) {
 }
 
 func TestRegexMatchError(t *testing.T) {
-
 	ctx := context.Background()
 
 	evt := func(payload interface{}) event.Event {
@@ -62,7 +61,6 @@ func TestRegexMatchError(t *testing.T) {
 			name:  "<nil> event",
 			event: nil,
 		},
-
 		{
 			name:  "<nil> payload",
 			event: evt(nil),
