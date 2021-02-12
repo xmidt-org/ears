@@ -83,7 +83,7 @@ func (s *Sender) Send(e event.Event) error {
 	defer e.Ack()
 
 	s.history.Add(e)
-	//fmt.Printf("SEND\n")
+	fmt.Printf("SEND %p\n", e)
 
 	if s.destination != nil {
 		return s.destination.Write(e)

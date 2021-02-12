@@ -77,6 +77,7 @@ func (f *Filter) Filter(evt event.Event) ([]event.Event, error) {
 				}
 				events = append(events, nevt)
 			}
+			evt.Ack()
 		default:
 			return events, errors.New("split on non array type")
 		}
@@ -105,8 +106,8 @@ func (f *Filter) Filter(evt event.Event) ([]event.Event, error) {
 			}
 			events = append(events, nevt)
 		}
+		evt.Ack()
 	}
-	evt.Ack()
 	return events, nil
 }
 
