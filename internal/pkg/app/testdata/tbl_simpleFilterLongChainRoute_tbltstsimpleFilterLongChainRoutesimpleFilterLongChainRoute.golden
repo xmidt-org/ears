@@ -27,7 +27,7 @@
           "mode": "allow",
           "pattern": "^.*$"
         },
-        "name": "simpleFilterLongChainRouteMatchAllowA",
+        "name": "simpleFilterLongChainRouteMatchAllow1",
         "plugin": "match"
       },
       {
@@ -36,7 +36,7 @@
           "mode": "allow",
           "pattern": "^.*$"
         },
-        "name": "simpleFilterLongChainRouteMatchAllowB",
+        "name": "simpleFilterLongChainRouteMatchAllow2",
         "plugin": "match"
       },
       {
@@ -45,7 +45,7 @@
           "mode": "allow",
           "pattern": "^.*$"
         },
-        "name": "simpleFilterLongChainRouteMatchAllowC",
+        "name": "simpleFilterLongChainRouteMatchAllow3",
         "plugin": "match"
       }
     ],

@@ -53,7 +53,7 @@
     },
     {
       "plugin" : "match",
-      "name" : "simpleFilterLongChainRouteMatchAllowA",
+      "name" : "simpleFilterLongChainRouteMatchAllow1",
       "config" : {
         "mode" : "allow",
         "matcher" : "regex",
@@ -62,7 +62,7 @@
     },
     {
       "plugin" : "match",
-      "name" : "simpleFilterLongChainRouteMatchAllowB",
+      "name" : "simpleFilterLongChainRouteMatchAllow2",
       "config" : {
         "mode" : "allow",
         "matcher" : "regex",
@@ -71,7 +71,7 @@
     },
     {
       "plugin" : "match",
-      "name" : "simpleFilterLongChainRouteMatchAllowC",
+      "name" : "simpleFilterLongChainRouteMatchAllow3",
       "config" : {
         "mode" : "allow",
         "matcher" : "regex",

@@ -71,7 +71,7 @@ func (pc *PluginConfig) Validate(ctx context.Context) error {
 	if pc.Plugin == "" {
 		return errors.New("missing plugin type configuration")
 	}
-	validName := regexp.MustCompile(`^[a-zA-Z]*$`)
+	validName := regexp.MustCompile(`^[a-zA-Z][a-zA-Z0-9]*$`)
 	if !validName.MatchString(pc.Name) {
 		return errors.New("invalid plugin name " + pc.Name)
 	}
@@ -100,7 +100,7 @@ func (rc *Config) Validate(ctx context.Context) error {
 	if rc.Id == "" {
 		return errors.New("missing ID for plugin configuration")
 	}
-	validName := regexp.MustCompile(`^[a-zA-Z]*$`)
+	validName := regexp.MustCompile(`^[a-zA-Z][a-zA-Z0-9]*$`)
 	if !validName.MatchString(rc.Name) {
 		return errors.New("invalid route name " + rc.Name)
 	}
