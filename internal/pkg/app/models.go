@@ -16,6 +16,9 @@ package app
 
 import (
 	"context"
+	"github.com/xmidt-org/ears/pkg/filter"
+	"github.com/xmidt-org/ears/pkg/receiver"
+	"github.com/xmidt-org/ears/pkg/sender"
 
 	"github.com/xmidt-org/ears/pkg/route"
 )
@@ -38,5 +41,11 @@ type (
 		GetRoute(ctx context.Context, routeId string) (*route.Config, error)
 		// GetAllRoutes gets all live routes from persistence layer
 		GetAllRoutes(ctx context.Context) ([]route.Config, error)
+		// GetAllSenders gets all senders currently present in the system
+		GetAllSenders(ctx context.Context) (map[string]sender.Sender, error)
+		// GetAllReceivers gets all receivers currently present in the system
+		GetAllReceivers(ctx context.Context) (map[string]receiver.Receiver, error)
+		// GetAllFilters gets all filters currently present in the system
+		GetAllFilters(ctx context.Context) (map[string]filter.Filterer, error)
 	}
 )
