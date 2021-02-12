@@ -42,6 +42,11 @@ import (
 )
 
 type (
+	RouteTestTable struct {
+		Table                   map[string]*RouteTest `json:"table,omitempty"`
+		SharePluginsAcrossTests bool                  `json:"sharePluginsAcrossTests,omitempty"` // name the effect no the cause
+		TestToRunAllIfBlank     string                `json:"testToRunAllIfBlank,omitempty"`     // the self documenting variable name
+	}
 	RouteTest struct {
 		SequenceNumber int              `json:"seq,omitempty"`
 		RouteFiles     []string         `json:"routeFiles,omitempty"`
@@ -74,16 +79,17 @@ func prefixRouteConfig(routeConfig *route.Config, prefix string) {
 }
 
 func TestRouteTable(t *testing.T) {
-	// set the testNameFlag to test only a single test from the table (how to pass in command line parameters?)
-	//testNameFlag := "multiRouteAABB"
-	testNameFlag := ""
+	// global test settings
+	testTableName := "table"
+	testTableFileName := "testdata/" + testTableName + ".json"
+	// if set to true we ensure that none of the plugins and filters are shared among test cases
 	Version = "v1.0.2"
-	testTableFileName := "testdata/table.json"
+	// load test table
 	buf, err := ioutil.ReadFile(testTableFileName)
 	if err != nil {
 		t.Fatalf("cannot read file: %s", err.Error())
 	}
-	table := make(map[string]RouteTest, 0)
+	var table RouteTestTable
 	err = json.Unmarshal(buf, &table)
 	if err != nil {
 		t.Fatalf("cannot parse test table: %s", err.Error())
@@ -92,12 +98,15 @@ func TestRouteTable(t *testing.T) {
 	if err != nil {
 		t.Fatalf("cannot create api manager: %s\n", err.Error())
 	}
-	for currentTestName, currentTest := range table {
-		if testNameFlag != "" && testNameFlag != currentTestName {
+	for currentTestName, currentTest := range table.Table {
+		if table.TestToRunAllIfBlank != "" && table.TestToRunAllIfBlank != currentTestName {
 			continue
 		}
 		t.Run(currentTestName, func(t *testing.T) {
-			testPrefix := "tbltst" + currentTestName
+			testPrefix := ""
+			if !table.SharePluginsAcrossTests {
+				testPrefix = "tbltst" + currentTestName
+			}
 			t.Logf("SCENARIO: %s [%d]", currentTestName, currentTest.SequenceNumber)
 			// setup routes
 			routeIds := make([]string, 0)

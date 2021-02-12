@@ -1,0 +1,36 @@
+{
+  "sharePluginsAcrossTests" : true,
+  "testToRunAllIfBlank" : "",
+  "table" : {
+    "test1": {
+      "id": 0,
+      "routeFiles": [
+        "simpleRouteAB"
+      ],
+      "waitMs": 100,
+      "events": [
+        {
+          "senderRouteFiles": "simpleRouteAB",
+          "expectedEventCount": 5,
+          "expectedEventIndex": 0,
+          "expectedEventPayloadFile": "event1"
+        }
+      ]
+    },
+    "test2": {
+      "id": 1,
+      "routeFiles": [
+        "simpleRouteBB"
+      ],
+      "waitMs": 100,
+      "events": [
+        {
+          "senderRouteFiles": "simpleRouteBB",
+          "expectedEventCount": 5,
+          "expectedEventIndex": 0,
+          "expectedEventPayloadFile": "event1"
+        }
+      ]
+    }
+  }
+}
