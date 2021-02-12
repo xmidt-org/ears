@@ -1,5 +1,5 @@
 {
-  "id" : "sfs123",
+  "id" : "f101",
   "orgId" : "comcast",
   "appId" : "xfi",
   "userId" : "boris",
@@ -10,7 +10,7 @@
     "config" :
     {
       "rounds" : 5,
-      "intervalMs" : 100,
+      "intervalMs" : 10,
       "payload" : {
         "a": {
           "b": {

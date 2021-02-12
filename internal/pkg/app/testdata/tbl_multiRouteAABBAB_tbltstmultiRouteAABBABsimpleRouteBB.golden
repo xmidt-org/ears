@@ -1,9 +1,13 @@
 {
+  "status": {
+    "code": 200,
+    "message": "OK"
+  },
   "item": {
     "appId": "xfi",
     "deliveryMode": "whoCares",
-    "id": "x101",
-    "name": "simpleRoute",
+    "id": "x102",
+    "name": "tbltstmultiRouteAABBABsimpleRouteBB",
     "orgId": "comcast",
     "receiver": {
       "config": {
@@ -12,9 +16,9 @@
         "payload": {
           "foo": "bar"
         },
-        "rounds": 10
+        "rounds": 5
       },
-      "name": "mydebug",
+      "name": "tbltstmultiRouteAABBABmydebugReceiverB",
       "plugin": "debug"
     },
     "sender": {
@@ -22,13 +26,9 @@
         "destination": "stdout",
         "maxHistory": 100
       },
-      "name": "mydebug",
+      "name": "tbltstmultiRouteAABBABmydebugSenderB",
       "plugin": "debug"
     },
     "userId": "boris"
-  },
-  "status": {
-    "code": 200,
-    "message": "OK"
   }
 }

@@ -12,26 +12,18 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package main
+package unwrap
 
-import (
-	"github.com/xmidt-org/ears/pkg/plugins/split"
-)
-
-func main() {
-	// required for `go build` to not fail
+// Config can be passed into NewFilter() in order to configure
+// the behavior of the sender.
+type Config struct {
+	UnwrapPath string `json:"unwrapPath,omitempty"`
 }
 
-//go:generate ../../../../script/build-plugin.sh
+var DefaultConfig = Config{
+	UnwrapPath: "",
+}
 
-var (
-	Name       = "split"
-	GitVersion = "v0.0.0"
-	GitCommit  = ""
-)
-
-var Plugin, PluginErr = split.NewPluginVersion(Name, GitVersion, GitCommit)
-
-// for golangci-lint
-var _ = Plugin
-var _ = PluginErr
+type Filter struct {
+	config Config
+}

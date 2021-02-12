@@ -42,6 +42,9 @@ func NewAPIManager(routingMgr RoutingTableManager) (*APIManager, error) {
 	api.muxRouter.HandleFunc("/ears/v1/routes/{routeId}", api.removeRouteHandler).Methods(http.MethodDelete)
 	api.muxRouter.HandleFunc("/ears/v1/routes/{routeId}", api.getRouteHandler).Methods(http.MethodGet)
 	api.muxRouter.HandleFunc("/ears/v1/routes", api.getAllRoutesHandler).Methods(http.MethodGet)
+	api.muxRouter.HandleFunc("/ears/v1/senders", api.getAllSendersHandler).Methods(http.MethodGet)
+	api.muxRouter.HandleFunc("/ears/v1/receivers", api.getAllReceiversHandler).Methods(http.MethodGet)
+	api.muxRouter.HandleFunc("/ears/v1/filters", api.getAllFiltersHandler).Methods(http.MethodGet)
 	return api, nil
 }
 
@@ -138,5 +141,44 @@ func (a *APIManager) getAllRoutesHandler(w http.ResponseWriter, r *http.Request)
 		return
 	}
 	resp := ItemsResponse(allRouteConfigs)
+	resp.Respond(ctx, w)
+}
+
+func (a *APIManager) getAllSendersHandler(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	allSenders, err := a.routingTableMgr.GetAllSenders(ctx)
+	if err != nil {
+		log.Ctx(ctx).Error().Str("op", "getAllSendersHandler").Msg(err.Error())
+		resp := ErrorResponse(err)
+		resp.Respond(ctx, w)
+		return
+	}
+	resp := ItemsResponse(allSenders)
+	resp.Respond(ctx, w)
+}
+
+func (a *APIManager) getAllReceiversHandler(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	allReceivers, err := a.routingTableMgr.GetAllReceivers(ctx)
+	if err != nil {
+		log.Ctx(ctx).Error().Str("op", "getAllReceiversHandler").Msg(err.Error())
+		resp := ErrorResponse(err)
+		resp.Respond(ctx, w)
+		return
+	}
+	resp := ItemsResponse(allReceivers)
+	resp.Respond(ctx, w)
+}
+
+func (a *APIManager) getAllFiltersHandler(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	allFilters, err := a.routingTableMgr.GetAllFilters(ctx)
+	if err != nil {
+		log.Ctx(ctx).Error().Str("op", "getAllFiltersHandler").Msg(err.Error())
+		resp := ErrorResponse(err)
+		resp.Respond(ctx, w)
+		return
+	}
+	resp := ItemsResponse(allFilters)
 	resp.Respond(ctx, w)
 }
