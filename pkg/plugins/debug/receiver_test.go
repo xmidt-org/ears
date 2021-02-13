@@ -16,6 +16,7 @@ package debug_test
 
 import (
 	"context"
+	"fmt"
 
 	"testing"
 	"time"
@@ -94,8 +95,11 @@ func TestReceiver(t *testing.T) {
 
 			err = r.Receive(ctx, func(e event.Event) error {
 				events = append(events, e)
+				e.Ack()
 				return nil
 			})
+
+			fmt.Println(t.Name(), "here 3")
 
 			a.Expect(err).To(BeNil())
 			a.Expect(events).To(HaveLen(*tc.config.Rounds))
