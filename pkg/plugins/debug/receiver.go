@@ -101,7 +101,11 @@ func (r *Receiver) Receive(ctx context.Context, next receiver.NextFn) error {
 		eventsDone.Wait()
 	}()
 
-	<-r.done
+	//both cases should unblock
+	select {
+	case <-ctx.Done():
+	case <-r.done:
+	}
 
 	return ctx.Err()
 }
