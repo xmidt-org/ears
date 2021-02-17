@@ -168,7 +168,7 @@
       ]
     },
     "simpleFilterLongChainRoute": {
-      "seq": 6,
+      "seq": 10,
       "routeFiles": [
         "simpleFilterLongChainRoute"
       ],
@@ -179,6 +179,21 @@
           "expectedEventCount": 10,
           "expectedEventIndex": 0,
           "expectedEventPayloadFile": "event1"
+        }
+      ]
+    },
+    "simpleFilterMatchPatternAllowRoute": {
+      "seq": 11,
+      "routeFiles": [
+        "simpleFilterMatchPatternAllowRoute"
+      ],
+      "waitMs": 100,
+      "events": [
+        {
+          "senderRouteFiles": "simpleFilterMatchPatternAllowRoute",
+          "expectedEventCount": 5,
+          "expectedEventIndex": 0,
+          "expectedEventPayloadFile": "event5"
         }
       ]
     }

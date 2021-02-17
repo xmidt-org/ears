@@ -16,7 +16,6 @@ package match
 
 import (
 	"github.com/xmidt-org/ears/pkg/event"
-	"github.com/xorcare/pointer"
 )
 
 type Matcher interface {
@@ -40,6 +39,7 @@ type MatcherType int
 const (
 	MatcherUnknown MatcherType = iota // unknown
 	MatcherRegex                      // regex
+	MatcherPattern                    // pattern
 )
 
 // Config can be passed into NewFilter() in order to configure
@@ -47,17 +47,16 @@ const (
 type Config struct {
 	Mode    ModeType    `json:"mode,omitempty"`
 	Matcher MatcherType `json:"matcher,omitempty"`
-	Pattern *string     `json:"pattern,omitempty"`
+	Pattern interface{} `json:"pattern,omitempty"`
 }
 
 var DefaultConfig = Config{
 	Mode:    ModeAllow,
 	Matcher: MatcherRegex,
-	Pattern: pointer.String(`^.*$`),
+	Pattern: `^.*$`,
 }
 
 type Filter struct {
 	matcher Matcher
-
-	config Config
+	config  Config
 }
