@@ -39,6 +39,12 @@ func (i DestinationType) String() string {
 	return _DestinationType_name[_DestinationType_index[i]:_DestinationType_index[i+1]]
 }
 
+// New returns a pointer to a new addr filled with the DestinationType value passed in.
+func (i DestinationType) New() *DestinationType {
+	clone := i
+	return &clone
+}
+
 var _DestinationType_values = []DestinationType{0, 1, 2, 3, 4}
 
 var _DestinationType_name_to_values = map[string]DestinationType{
@@ -55,7 +61,7 @@ func ParseDestinationTypeString(s string) (DestinationType, error) {
 	if val, ok := _DestinationType_name_to_values[s]; ok {
 		return val, nil
 	}
-	return 0, fmt.Errorf("%[1]s does not belong to DestinationType values", s)
+	return 0, fmt.Errorf("%s does not belong to DestinationType values", s)
 }
 
 // DestinationTypeValues returns all values of the enum
@@ -118,7 +124,7 @@ func (i DestinationType) MarshalJSON() ([]byte, error) {
 func (i *DestinationType) UnmarshalJSON(data []byte) error {
 	var s string
 	if err := json.Unmarshal(data, &s); err != nil {
-		return fmt.Errorf("%[1]s should be a string, got DestinationType", data)
+		return fmt.Errorf("DestinationType should be a string, got %s", data)
 	}
 
 	var err error

@@ -46,11 +46,12 @@ func TestRegexPatternError(t *testing.T) {
 }
 
 func TestRegexMatchError(t *testing.T) {
+	ctx := context.Background()
 
-	/*evt := func(payload interface{}) event.Event {
-		e, _ := event.NewEvent(payload)
+	evt := func(payload interface{}) event.Event {
+		e, _ := event.NewEvent(ctx, payload)
 		return e
-	}*/
+	}
 
 	testCases := []struct {
 		name  string
@@ -60,14 +61,11 @@ func TestRegexMatchError(t *testing.T) {
 			name:  "<nil> event",
 			event: nil,
 		},
-		//BW removed test because it fails
-		/*{
+		{
 			name:  "<nil> payload",
 			event: evt(nil),
-		},*/
+		},
 	}
-
-	ctx := context.Background()
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -76,7 +74,7 @@ func TestRegexMatchError(t *testing.T) {
 			a.Expect(m).ToNot(BeNil())
 			a.Expect(err).To(BeNil())
 
-			a.Expect(m.Match(ctx, tc.event)).To(BeFalse())
+			a.Expect(m.Match(tc.event)).To(BeFalse())
 
 		})
 
@@ -132,18 +130,18 @@ func TestMatcherRegex(t *testing.T) {
 			for _, in := range tc.succeed {
 				t.Run(in, func(t *testing.T) {
 					a := NewWithT(t)
-					e, err := event.NewEvent(in)
+					e, err := event.NewEvent(ctx, in)
 					a.Expect(err).To(BeNil())
-					a.Expect(m.Match(ctx, e)).To(BeTrue(), "succeed input: "+in)
+					a.Expect(m.Match(e)).To(BeTrue(), "succeed input: "+in)
 				})
 			}
 
 			for _, in := range tc.fail {
 				t.Run(in, func(t *testing.T) {
 					a := NewWithT(t)
-					e, err := event.NewEvent(in)
+					e, err := event.NewEvent(ctx, in)
 					a.Expect(err).To(BeNil())
-					a.Expect(m.Match(ctx, e)).To(BeFalse(), "fail input: "+in)
+					a.Expect(m.Match(e)).To(BeFalse(), "fail input: "+in)
 				})
 			}
 

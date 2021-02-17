@@ -16,6 +16,7 @@ package pluginmanagerfx
 
 import (
 	"fmt"
+	"github.com/rs/zerolog"
 	p "github.com/xmidt-org/ears/internal/pkg/plugin"
 	"github.com/xmidt-org/ears/pkg/plugin/manager"
 	"github.com/xmidt-org/ears/pkg/plugins/block"
@@ -37,6 +38,8 @@ var Module = fx.Options(
 
 type PluginIn struct {
 	fx.In
+
+	Logger *zerolog.Logger
 }
 
 type PluginOut struct {
@@ -96,7 +99,7 @@ func ProvidePluginManager(in PluginIn) (PluginOut, error) {
 		}
 	}
 
-	m, err := p.NewManager(p.WithPluginManager(mgr))
+	m, err := p.NewManager(p.WithPluginManager(mgr), p.WithLogger(in.Logger))
 	if err != nil {
 		return out, fmt.Errorf("could not provide plugin manager: %w", err)
 	}

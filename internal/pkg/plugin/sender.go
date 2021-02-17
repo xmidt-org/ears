@@ -42,7 +42,7 @@ func (s *sender) Unwrap() pkgsender.Sender {
 	return s.sender
 }
 
-func (s *sender) Send(ctx context.Context, e event.Event) error {
+func (s *sender) Send(e event.Event) error {
 	if s == nil {
 		return &pkgmanager.NilPluginError{}
 	}
@@ -56,7 +56,7 @@ func (s *sender) Send(ctx context.Context, e event.Event) error {
 		s.Unlock()
 	}
 
-	return s.sender.Send(ctx, e)
+	return s.sender.Send(e)
 }
 
 func (s *sender) Unregister(ctx context.Context) error {

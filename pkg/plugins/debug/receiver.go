@@ -16,6 +16,7 @@ package debug
 
 import (
 	"context"
+	"sync"
 
 	"fmt"
 	"time"
@@ -53,6 +54,8 @@ func (r *Receiver) Receive(ctx context.Context, next receiver.NextFn) error {
 			r.Unlock()
 		}()
 
+		eventsDone := &sync.WaitGroup{}
+
 		// NOTE:  If rounds < 0, this messaging will continue
 		// until the context is cancelled.
 		for count := *r.config.Rounds; count != 0; {
@@ -65,17 +68,27 @@ func (r *Receiver) Receive(ctx context.Context, next receiver.NextFn) error {
 				return
 			case <-time.After(time.Duration(*r.config.IntervalMs) * time.Millisecond):
 				//fmt.Printf("RECEIVER NEW EVENT\n")
-				e, err := event.NewEvent(r.config.Payload)
+				ctx := context.Background()
+				e, err := event.NewEventWithAck(ctx, r.config.Payload,
+					func() {
+						fmt.Println("Debug success")
+						eventsDone.Done()
+					}, func(err error) {
+						fmt.Println("Debug error", err.Error())
+						eventsDone.Done()
+					})
 				if err != nil {
 					return
 				}
+
+				eventsDone.Add(1)
 
 				// TODO:  Determine context propagation lifecycle
 				//   * https://github.com/xmidt-org/ears/issues/51
 				//
 				// NOTES: Discussed that this behavior could be determined
 				//  by a configuration value
-				err = r.Trigger(ctx, e)
+				err = r.Trigger(e)
 				if err != nil {
 					return
 				}
@@ -85,9 +98,14 @@ func (r *Receiver) Receive(ctx context.Context, next receiver.NextFn) error {
 				}
 			}
 		}
+		eventsDone.Wait()
 	}()
 
-	<-r.done
+	//both cases should unblock
+	select {
+	case <-ctx.Done():
+	case <-r.done:
+	}
 
 	return ctx.Err()
 }
@@ -145,7 +163,7 @@ func (r *Receiver) Count() int {
 	return r.history.Count()
 }
 
-func (r *Receiver) Trigger(ctx context.Context, e event.Event) error {
+func (r *Receiver) Trigger(e event.Event) error {
 	// Ensure that `next` can be slow and locking here will not
 	// prevent other requests from executing.
 	//BW TODO: where is the next slice here?
@@ -157,7 +175,7 @@ func (r *Receiver) Trigger(ctx context.Context, e event.Event) error {
 
 	r.history.Add(e)
 
-	return next(ctx, e)
+	return next(e)
 }
 
 func (r *Receiver) History() []event.Event {

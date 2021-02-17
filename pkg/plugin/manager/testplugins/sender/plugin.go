@@ -15,8 +15,6 @@
 package main
 
 import (
-	"context"
-
 	pkgplugin "github.com/xmidt-org/ears/pkg/plugin"
 
 	"github.com/xmidt-org/ears/pkg/event"
@@ -64,7 +62,7 @@ func NewSender(config interface{}) (sender.Sender, error) {
 	return &plugin{}, nil
 }
 
-func (p *plugin) Send(ctx context.Context, e event.Event) error {
+func (p *plugin) Send(e event.Event) error {
 	return nil
 }
 

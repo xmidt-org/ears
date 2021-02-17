@@ -36,6 +36,12 @@ func (i MatcherType) String() string {
 	return _MatcherType_name[_MatcherType_index[i]:_MatcherType_index[i+1]]
 }
 
+// New returns a pointer to a new addr filled with the MatcherType value passed in.
+func (i MatcherType) New() *MatcherType {
+	clone := i
+	return &clone
+}
+
 var _MatcherType_values = []MatcherType{0, 1}
 
 var _MatcherType_name_to_values = map[string]MatcherType{

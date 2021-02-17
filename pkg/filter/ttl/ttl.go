@@ -15,8 +15,6 @@
 package filters
 
 import (
-	"context"
-
 	"github.com/xmidt-org/ears/pkg/event"
 )
 
@@ -27,7 +25,7 @@ type TTLFilter struct {
 }
 
 // Filter filters event if it hhas expired
-func (mf *TTLFilter) Filter(ctx context.Context, evt event.Event) ([]event.Event, error) {
+func (mf *TTLFilter) Filter(evt event.Event) ([]event.Event, error) {
 	// never filters
 	events := []event.Event{}
 	//TODO: implement filter logic

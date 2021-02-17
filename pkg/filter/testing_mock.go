@@ -4,7 +4,6 @@
 package filter
 
 import (
-	"context"
 	"github.com/xmidt-org/ears/pkg/event"
 	"sync"
 )
@@ -15,19 +14,19 @@ var _ Hasher = &HasherMock{}
 
 // HasherMock is a mock implementation of Hasher.
 //
-//     func TestSomethingThatUsesHasher(t *testing.T) {
+// 	func TestSomethingThatUsesHasher(t *testing.T) {
 //
-//         // make and configure a mocked Hasher
-//         mockedHasher := &HasherMock{
-//             FiltererHashFunc: func(config interface{}) (string, error) {
-// 	               panic("mock out the FiltererHash method")
-//             },
-//         }
+// 		// make and configure a mocked Hasher
+// 		mockedHasher := &HasherMock{
+// 			FiltererHashFunc: func(config interface{}) (string, error) {
+// 				panic("mock out the FiltererHash method")
+// 			},
+// 		}
 //
-//         // use mockedHasher in code that requires Hasher
-//         // and then make assertions.
+// 		// use mockedHasher in code that requires Hasher
+// 		// and then make assertions.
 //
-//     }
+// 	}
 type HasherMock struct {
 	// FiltererHashFunc mocks the FiltererHash method.
 	FiltererHashFunc func(config interface{}) (string, error)
@@ -80,22 +79,22 @@ var _ NewFilterer = &NewFiltererMock{}
 
 // NewFiltererMock is a mock implementation of NewFilterer.
 //
-//     func TestSomethingThatUsesNewFilterer(t *testing.T) {
+// 	func TestSomethingThatUsesNewFilterer(t *testing.T) {
 //
-//         // make and configure a mocked NewFilterer
-//         mockedNewFilterer := &NewFiltererMock{
-//             FiltererHashFunc: func(config interface{}) (string, error) {
-// 	               panic("mock out the FiltererHash method")
-//             },
-//             NewFiltererFunc: func(config interface{}) (Filterer, error) {
-// 	               panic("mock out the NewFilterer method")
-//             },
-//         }
+// 		// make and configure a mocked NewFilterer
+// 		mockedNewFilterer := &NewFiltererMock{
+// 			FiltererHashFunc: func(config interface{}) (string, error) {
+// 				panic("mock out the FiltererHash method")
+// 			},
+// 			NewFiltererFunc: func(config interface{}) (Filterer, error) {
+// 				panic("mock out the NewFilterer method")
+// 			},
+// 		}
 //
-//         // use mockedNewFilterer in code that requires NewFilterer
-//         // and then make assertions.
+// 		// use mockedNewFilterer in code that requires NewFilterer
+// 		// and then make assertions.
 //
-//     }
+// 	}
 type NewFiltererMock struct {
 	// FiltererHashFunc mocks the FiltererHash method.
 	FiltererHashFunc func(config interface{}) (string, error)
@@ -188,29 +187,27 @@ var _ Filterer = &FiltererMock{}
 
 // FiltererMock is a mock implementation of Filterer.
 //
-//     func TestSomethingThatUsesFilterer(t *testing.T) {
+// 	func TestSomethingThatUsesFilterer(t *testing.T) {
 //
-//         // make and configure a mocked Filterer
-//         mockedFilterer := &FiltererMock{
-//             FilterFunc: func(ctx context.Context, e event.Event) ([]event.Event, error) {
-// 	               panic("mock out the Filter method")
-//             },
-//         }
+// 		// make and configure a mocked Filterer
+// 		mockedFilterer := &FiltererMock{
+// 			FilterFunc: func(e event.Event) ([]event.Event, error) {
+// 				panic("mock out the Filter method")
+// 			},
+// 		}
 //
-//         // use mockedFilterer in code that requires Filterer
-//         // and then make assertions.
+// 		// use mockedFilterer in code that requires Filterer
+// 		// and then make assertions.
 //
-//     }
+// 	}
 type FiltererMock struct {
 	// FilterFunc mocks the Filter method.
-	FilterFunc func(ctx context.Context, e event.Event) ([]event.Event, error)
+	FilterFunc func(e event.Event) ([]event.Event, error)
 
 	// calls tracks calls to the methods.
 	calls struct {
 		// Filter holds details about calls to the Filter method.
 		Filter []struct {
-			// Ctx is the ctx argument value.
-			Ctx context.Context
 			// E is the e argument value.
 			E event.Event
 		}
@@ -219,36 +216,176 @@ type FiltererMock struct {
 }
 
 // Filter calls FilterFunc.
-func (mock *FiltererMock) Filter(ctx context.Context, e event.Event) ([]event.Event, error) {
+func (mock *FiltererMock) Filter(e event.Event) ([]event.Event, error) {
 	if mock.FilterFunc == nil {
 		panic("FiltererMock.FilterFunc: method is nil but Filterer.Filter was just called")
 	}
 	callInfo := struct {
-		Ctx context.Context
-		E   event.Event
+		E event.Event
 	}{
-		Ctx: ctx,
-		E:   e,
+		E: e,
 	}
 	mock.lockFilter.Lock()
 	mock.calls.Filter = append(mock.calls.Filter, callInfo)
 	mock.lockFilter.Unlock()
-	return mock.FilterFunc(ctx, e)
+	return mock.FilterFunc(e)
 }
 
 // FilterCalls gets all the calls that were made to Filter.
 // Check the length with:
 //     len(mockedFilterer.FilterCalls())
 func (mock *FiltererMock) FilterCalls() []struct {
-	Ctx context.Context
-	E   event.Event
+	E event.Event
 } {
 	var calls []struct {
-		Ctx context.Context
-		E   event.Event
+		E event.Event
 	}
 	mock.lockFilter.RLock()
 	calls = mock.calls.Filter
 	mock.lockFilter.RUnlock()
+	return calls
+}
+
+// Ensure, that ChainerMock does implement Chainer.
+// If this is not the case, regenerate this file with moq.
+var _ Chainer = &ChainerMock{}
+
+// ChainerMock is a mock implementation of Chainer.
+//
+// 	func TestSomethingThatUsesChainer(t *testing.T) {
+//
+// 		// make and configure a mocked Chainer
+// 		mockedChainer := &ChainerMock{
+// 			AddFunc: func(f Filterer) error {
+// 				panic("mock out the Add method")
+// 			},
+// 			FilterFunc: func(e event.Event) ([]event.Event, error) {
+// 				panic("mock out the Filter method")
+// 			},
+// 			FilterersFunc: func() []Filterer {
+// 				panic("mock out the Filterers method")
+// 			},
+// 		}
+//
+// 		// use mockedChainer in code that requires Chainer
+// 		// and then make assertions.
+//
+// 	}
+type ChainerMock struct {
+	// AddFunc mocks the Add method.
+	AddFunc func(f Filterer) error
+
+	// FilterFunc mocks the Filter method.
+	FilterFunc func(e event.Event) ([]event.Event, error)
+
+	// FilterersFunc mocks the Filterers method.
+	FilterersFunc func() []Filterer
+
+	// calls tracks calls to the methods.
+	calls struct {
+		// Add holds details about calls to the Add method.
+		Add []struct {
+			// F is the f argument value.
+			F Filterer
+		}
+		// Filter holds details about calls to the Filter method.
+		Filter []struct {
+			// E is the e argument value.
+			E event.Event
+		}
+		// Filterers holds details about calls to the Filterers method.
+		Filterers []struct {
+		}
+	}
+	lockAdd       sync.RWMutex
+	lockFilter    sync.RWMutex
+	lockFilterers sync.RWMutex
+}
+
+// Add calls AddFunc.
+func (mock *ChainerMock) Add(f Filterer) error {
+	if mock.AddFunc == nil {
+		panic("ChainerMock.AddFunc: method is nil but Chainer.Add was just called")
+	}
+	callInfo := struct {
+		F Filterer
+	}{
+		F: f,
+	}
+	mock.lockAdd.Lock()
+	mock.calls.Add = append(mock.calls.Add, callInfo)
+	mock.lockAdd.Unlock()
+	return mock.AddFunc(f)
+}
+
+// AddCalls gets all the calls that were made to Add.
+// Check the length with:
+//     len(mockedChainer.AddCalls())
+func (mock *ChainerMock) AddCalls() []struct {
+	F Filterer
+} {
+	var calls []struct {
+		F Filterer
+	}
+	mock.lockAdd.RLock()
+	calls = mock.calls.Add
+	mock.lockAdd.RUnlock()
+	return calls
+}
+
+// Filter calls FilterFunc.
+func (mock *ChainerMock) Filter(e event.Event) ([]event.Event, error) {
+	if mock.FilterFunc == nil {
+		panic("ChainerMock.FilterFunc: method is nil but Chainer.Filter was just called")
+	}
+	callInfo := struct {
+		E event.Event
+	}{
+		E: e,
+	}
+	mock.lockFilter.Lock()
+	mock.calls.Filter = append(mock.calls.Filter, callInfo)
+	mock.lockFilter.Unlock()
+	return mock.FilterFunc(e)
+}
+
+// FilterCalls gets all the calls that were made to Filter.
+// Check the length with:
+//     len(mockedChainer.FilterCalls())
+func (mock *ChainerMock) FilterCalls() []struct {
+	E event.Event
+} {
+	var calls []struct {
+		E event.Event
+	}
+	mock.lockFilter.RLock()
+	calls = mock.calls.Filter
+	mock.lockFilter.RUnlock()
+	return calls
+}
+
+// Filterers calls FilterersFunc.
+func (mock *ChainerMock) Filterers() []Filterer {
+	if mock.FilterersFunc == nil {
+		panic("ChainerMock.FilterersFunc: method is nil but Chainer.Filterers was just called")
+	}
+	callInfo := struct {
+	}{}
+	mock.lockFilterers.Lock()
+	mock.calls.Filterers = append(mock.calls.Filterers, callInfo)
+	mock.lockFilterers.Unlock()
+	return mock.FilterersFunc()
+}
+
+// FilterersCalls gets all the calls that were made to Filterers.
+// Check the length with:
+//     len(mockedChainer.FilterersCalls())
+func (mock *ChainerMock) FilterersCalls() []struct {
+} {
+	var calls []struct {
+	}
+	mock.lockFilterers.RLock()
+	calls = mock.calls.Filterers
+	mock.lockFilterers.RUnlock()
 	return calls
 }

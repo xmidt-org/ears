@@ -18,6 +18,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
+	"github.com/xmidt-org/ears/internal/pkg/logs"
 	"github.com/xmidt-org/ears/pkg/panics"
 	"net/http"
 )
@@ -35,7 +36,7 @@ func NewMiddleware(logger *zerolog.Logger) []func(next http.Handler) http.Handle
 func initRequestMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
-		subCtx := SubLoggerCtx(ctx, middlewareLogger)
+		subCtx := logs.SubLoggerCtx(ctx, middlewareLogger)
 
 		defer func() {
 			p := recover()
@@ -52,11 +53,11 @@ func initRequestMiddleware(next http.Handler) http.Handler {
 		if traceId == "" {
 			traceId = uuid.New().String()
 		}
-		StrToLogCtx(subCtx, LogTraceId, traceId)
+		logs.StrToLogCtx(subCtx, LogTraceId, traceId)
 
 		appId := r.Header.Get(HeaderTenantId)
 		if appId != "" {
-			StrToLogCtx(subCtx, LogTenantId, appId)
+			logs.StrToLogCtx(subCtx, LogTenantId, appId)
 		}
 		log.Ctx(subCtx).Debug().Msg("initializeRequestMiddleware")
 
