@@ -7,6 +7,7 @@ require (
 	github.com/Masterminds/semver v1.5.0 // indirect
 	github.com/Masterminds/sprig v2.22.0+incompatible
 	github.com/ThreeDotsLabs/watermill v1.1.1
+	github.com/abice/go-enum v0.2.5 // indirect
 	github.com/aws/aws-sdk-go v1.36.29
 	github.com/ghodss/yaml v1.0.0
 	github.com/go-ozzo/ozzo-validation/v4 v4.3.0
@@ -17,10 +18,14 @@ require (
 	github.com/google/uuid v1.1.5
 	github.com/gopherjs/gopherjs v0.0.0-20181103185306-d547d1d9531e // indirect
 	github.com/gorilla/mux v1.8.0
+	github.com/jackc/pgx/v4 v4.10.1 // indirect
 	github.com/jfeliu007/goplantuml v1.5.2 // indirect
+	github.com/jmoiron/sqlx v1.3.1 // indirect
 	github.com/kr/text v0.2.0 // indirect
+	github.com/lestrrat-go/strftime v1.0.4 // indirect
+	github.com/luna-duclos/instrumentedsql/opentracing v0.0.0-20201103091713-40d03108b6f4 // indirect
 	github.com/magiconair/properties v1.8.4 // indirect
-	github.com/matryer/moq v0.2.0 // indirect
+	github.com/matryer/moq v0.2.1 // indirect
 	github.com/mitchellh/mapstructure v1.4.1 // indirect
 	github.com/mohae/deepcopy v0.0.0-20170929034955-c48cc78d4826
 	github.com/niemeyer/pretty v0.0.0-20200227124842-a10e7caefd8e // indirect
@@ -29,7 +34,7 @@ require (
 	github.com/pelletier/go-toml v1.8.1 // indirect
 	github.com/pkg/errors v0.9.1
 	github.com/rs/zerolog v1.20.0
-	github.com/searKing/golang v0.0.127 // indirect
+	github.com/searKing/golang v1.0.116 // indirect
 	github.com/searKing/golang/tools/cmd/go-enum v0.0.0-20210209072348-c35c331a64dc // indirect
 	github.com/sebdah/goldie/v2 v2.5.3
 	github.com/sergi/go-diff v1.1.0 // indirect
@@ -44,6 +49,7 @@ require (
 	github.com/xeipuuv/gojsonpointer v0.0.0-20190905194746-02993c407bfb // indirect
 	github.com/xeipuuv/gojsonschema v1.2.0
 	github.com/xorcare/pointer v1.1.0
+	go.uber.org/automaxprocs v1.3.0 // indirect
 	go.uber.org/fx v1.13.1
 	go.uber.org/multierr v1.6.0 // indirect
 	golang.org/x/crypto v0.0.0-20201221181555-eec23a3978ad // indirect
@@ -51,9 +57,9 @@ require (
 	golang.org/x/mod v0.4.1 // indirect
 	golang.org/x/net v0.0.0-20201224014010-6772e930b67b // indirect
 	golang.org/x/sync v0.0.0-20201207232520-09787c993a3a
-	golang.org/x/sys v0.0.0-20210119212857-b64e53b001e4 // indirect
+	golang.org/x/sys v0.0.0-20210217105451-b926d437f341 // indirect
 	golang.org/x/text v0.3.5 // indirect
-	golang.org/x/tools v0.0.0-20210114065538-d78b04bdf963 // indirect
+	golang.org/x/tools v0.1.0 // indirect
 	google.golang.org/protobuf v1.25.0 // indirect
 	gopkg.in/check.v1 v1.0.0-20200902074654-038fdea0a05b // indirect
 	gopkg.in/ini.v1 v1.62.0 // indirect
