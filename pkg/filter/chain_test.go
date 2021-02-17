@@ -127,10 +127,10 @@ func TestChaining(t *testing.T) {
 			} {
 				result := []event.Event{}
 				for _, p := range payloads {
-					evt, err := event.NewEvent(p)
+					evt, err := event.NewEvent(ctx, p)
 					a.Expect(err).To(BeNil())
 
-					r, err := c.Filter(ctx, evt)
+					r, err := c.Filter(evt)
 					a.Expect(err).To(BeNil())
 
 					if len(r) > 0 {
@@ -147,7 +147,8 @@ func TestChaining(t *testing.T) {
 
 func newBlockFilterer() filter.Filterer {
 	return &filter.FiltererMock{
-		FilterFunc: func(ctx context.Context, e event.Event) ([]event.Event, error) {
+		FilterFunc: func(e event.Event) ([]event.Event, error) {
+			e.Ack()
 			return []event.Event{}, nil
 		},
 	}
@@ -155,7 +156,7 @@ func newBlockFilterer() filter.Filterer {
 
 func newPassFilterer() filter.Filterer {
 	return &filter.FiltererMock{
-		FilterFunc: func(ctx context.Context, e event.Event) ([]event.Event, error) {
+		FilterFunc: func(e event.Event) ([]event.Event, error) {
 			return []event.Event{e}, nil
 		},
 	}
@@ -163,8 +164,17 @@ func newPassFilterer() filter.Filterer {
 
 func newDoubleFilterer() filter.Filterer {
 	return &filter.FiltererMock{
-		FilterFunc: func(ctx context.Context, e event.Event) ([]event.Event, error) {
-			return []event.Event{e, e}, nil
+		FilterFunc: func(e event.Event) ([]event.Event, error) {
+			e1, err := e.Clone(e.Context())
+			if err != nil {
+				return nil, err
+			}
+			e2, err := e.Clone(e.Context())
+			if err != nil {
+				return nil, err
+			}
+			e.Ack()
+			return []event.Event{e1, e2}, nil
 		},
 	}
 }

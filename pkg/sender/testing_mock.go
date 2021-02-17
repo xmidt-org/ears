@@ -4,7 +4,6 @@
 package sender
 
 import (
-	"context"
 	"github.com/xmidt-org/ears/pkg/event"
 	"sync"
 )
@@ -15,19 +14,19 @@ var _ Hasher = &HasherMock{}
 
 // HasherMock is a mock implementation of Hasher.
 //
-//     func TestSomethingThatUsesHasher(t *testing.T) {
+// 	func TestSomethingThatUsesHasher(t *testing.T) {
 //
-//         // make and configure a mocked Hasher
-//         mockedHasher := &HasherMock{
-//             SenderHashFunc: func(config interface{}) (string, error) {
-// 	               panic("mock out the SenderHash method")
-//             },
-//         }
+// 		// make and configure a mocked Hasher
+// 		mockedHasher := &HasherMock{
+// 			SenderHashFunc: func(config interface{}) (string, error) {
+// 				panic("mock out the SenderHash method")
+// 			},
+// 		}
 //
-//         // use mockedHasher in code that requires Hasher
-//         // and then make assertions.
+// 		// use mockedHasher in code that requires Hasher
+// 		// and then make assertions.
 //
-//     }
+// 	}
 type HasherMock struct {
 	// SenderHashFunc mocks the SenderHash method.
 	SenderHashFunc func(config interface{}) (string, error)
@@ -80,22 +79,22 @@ var _ NewSenderer = &NewSendererMock{}
 
 // NewSendererMock is a mock implementation of NewSenderer.
 //
-//     func TestSomethingThatUsesNewSenderer(t *testing.T) {
+// 	func TestSomethingThatUsesNewSenderer(t *testing.T) {
 //
-//         // make and configure a mocked NewSenderer
-//         mockedNewSenderer := &NewSendererMock{
-//             NewSenderFunc: func(config interface{}) (Sender, error) {
-// 	               panic("mock out the NewSender method")
-//             },
-//             SenderHashFunc: func(config interface{}) (string, error) {
-// 	               panic("mock out the SenderHash method")
-//             },
-//         }
+// 		// make and configure a mocked NewSenderer
+// 		mockedNewSenderer := &NewSendererMock{
+// 			NewSenderFunc: func(config interface{}) (Sender, error) {
+// 				panic("mock out the NewSender method")
+// 			},
+// 			SenderHashFunc: func(config interface{}) (string, error) {
+// 				panic("mock out the SenderHash method")
+// 			},
+// 		}
 //
-//         // use mockedNewSenderer in code that requires NewSenderer
-//         // and then make assertions.
+// 		// use mockedNewSenderer in code that requires NewSenderer
+// 		// and then make assertions.
 //
-//     }
+// 	}
 type NewSendererMock struct {
 	// NewSenderFunc mocks the NewSender method.
 	NewSenderFunc func(config interface{}) (Sender, error)
@@ -188,71 +187,97 @@ var _ Sender = &SenderMock{}
 
 // SenderMock is a mock implementation of Sender.
 //
-//     func TestSomethingThatUsesSender(t *testing.T) {
+// 	func TestSomethingThatUsesSender(t *testing.T) {
 //
-//         // make and configure a mocked Sender
-//         mockedSender := &SenderMock{
-//             SendFunc: func(ctx context.Context, e event.Event) error {
-// 	               panic("mock out the Send method")
-//             },
-//         }
+// 		// make and configure a mocked Sender
+// 		mockedSender := &SenderMock{
+// 			SendFunc: func(e event.Event) error {
+// 				panic("mock out the Send method")
+// 			},
+// 			UnwrapFunc: func() Sender {
+// 				panic("mock out the Unwrap method")
+// 			},
+// 		}
 //
-//         // use mockedSender in code that requires Sender
-//         // and then make assertions.
+// 		// use mockedSender in code that requires Sender
+// 		// and then make assertions.
 //
-//     }
+// 	}
 type SenderMock struct {
 	// SendFunc mocks the Send method.
-	SendFunc func(ctx context.Context, e event.Event) error
+	SendFunc func(e event.Event) error
+
+	// UnwrapFunc mocks the Unwrap method.
+	UnwrapFunc func() Sender
 
 	// calls tracks calls to the methods.
 	calls struct {
 		// Send holds details about calls to the Send method.
 		Send []struct {
-			// Ctx is the ctx argument value.
-			Ctx context.Context
 			// E is the e argument value.
 			E event.Event
 		}
+		// Unwrap holds details about calls to the Unwrap method.
+		Unwrap []struct {
+		}
 	}
-	lockSend sync.RWMutex
+	lockSend   sync.RWMutex
+	lockUnwrap sync.RWMutex
 }
 
 // Send calls SendFunc.
-func (mock *SenderMock) Send(ctx context.Context, e event.Event) error {
+func (mock *SenderMock) Send(e event.Event) error {
 	if mock.SendFunc == nil {
 		panic("SenderMock.SendFunc: method is nil but Sender.Send was just called")
 	}
 	callInfo := struct {
-		Ctx context.Context
-		E   event.Event
+		E event.Event
 	}{
-		Ctx: ctx,
-		E:   e,
+		E: e,
 	}
 	mock.lockSend.Lock()
 	mock.calls.Send = append(mock.calls.Send, callInfo)
 	mock.lockSend.Unlock()
-	return mock.SendFunc(ctx, e)
-}
-
-func (mock *SenderMock) Unwrap() Sender {
-	return mock
+	return mock.SendFunc(e)
 }
 
 // SendCalls gets all the calls that were made to Send.
 // Check the length with:
 //     len(mockedSender.SendCalls())
 func (mock *SenderMock) SendCalls() []struct {
-	Ctx context.Context
-	E   event.Event
+	E event.Event
 } {
 	var calls []struct {
-		Ctx context.Context
-		E   event.Event
+		E event.Event
 	}
 	mock.lockSend.RLock()
 	calls = mock.calls.Send
 	mock.lockSend.RUnlock()
+	return calls
+}
+
+// Unwrap calls UnwrapFunc.
+func (mock *SenderMock) Unwrap() Sender {
+	if mock.UnwrapFunc == nil {
+		panic("SenderMock.UnwrapFunc: method is nil but Sender.Unwrap was just called")
+	}
+	callInfo := struct {
+	}{}
+	mock.lockUnwrap.Lock()
+	mock.calls.Unwrap = append(mock.calls.Unwrap, callInfo)
+	mock.lockUnwrap.Unlock()
+	return mock.UnwrapFunc()
+}
+
+// UnwrapCalls gets all the calls that were made to Unwrap.
+// Check the length with:
+//     len(mockedSender.UnwrapCalls())
+func (mock *SenderMock) UnwrapCalls() []struct {
+} {
+	var calls []struct {
+	}
+	mock.lockUnwrap.RLock()
+	calls = mock.calls.Unwrap
+	mock.lockUnwrap.RUnlock()
 	return calls
 }

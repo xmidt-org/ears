@@ -14,19 +14,19 @@ var _ Hasher = &HasherMock{}
 
 // HasherMock is a mock implementation of Hasher.
 //
-//     func TestSomethingThatUsesHasher(t *testing.T) {
+// 	func TestSomethingThatUsesHasher(t *testing.T) {
 //
-//         // make and configure a mocked Hasher
-//         mockedHasher := &HasherMock{
-//             ReceiverHashFunc: func(config interface{}) (string, error) {
-// 	               panic("mock out the ReceiverHash method")
-//             },
-//         }
+// 		// make and configure a mocked Hasher
+// 		mockedHasher := &HasherMock{
+// 			ReceiverHashFunc: func(config interface{}) (string, error) {
+// 				panic("mock out the ReceiverHash method")
+// 			},
+// 		}
 //
-//         // use mockedHasher in code that requires Hasher
-//         // and then make assertions.
+// 		// use mockedHasher in code that requires Hasher
+// 		// and then make assertions.
 //
-//     }
+// 	}
 type HasherMock struct {
 	// ReceiverHashFunc mocks the ReceiverHash method.
 	ReceiverHashFunc func(config interface{}) (string, error)
@@ -79,22 +79,22 @@ var _ NewReceiverer = &NewReceivererMock{}
 
 // NewReceivererMock is a mock implementation of NewReceiverer.
 //
-//     func TestSomethingThatUsesNewReceiverer(t *testing.T) {
+// 	func TestSomethingThatUsesNewReceiverer(t *testing.T) {
 //
-//         // make and configure a mocked NewReceiverer
-//         mockedNewReceiverer := &NewReceivererMock{
-//             NewReceiverFunc: func(config interface{}) (Receiver, error) {
-// 	               panic("mock out the NewReceiver method")
-//             },
-//             ReceiverHashFunc: func(config interface{}) (string, error) {
-// 	               panic("mock out the ReceiverHash method")
-//             },
-//         }
+// 		// make and configure a mocked NewReceiverer
+// 		mockedNewReceiverer := &NewReceivererMock{
+// 			NewReceiverFunc: func(config interface{}) (Receiver, error) {
+// 				panic("mock out the NewReceiver method")
+// 			},
+// 			ReceiverHashFunc: func(config interface{}) (string, error) {
+// 				panic("mock out the ReceiverHash method")
+// 			},
+// 		}
 //
-//         // use mockedNewReceiverer in code that requires NewReceiverer
-//         // and then make assertions.
+// 		// use mockedNewReceiverer in code that requires NewReceiverer
+// 		// and then make assertions.
 //
-//     }
+// 	}
 type NewReceivererMock struct {
 	// NewReceiverFunc mocks the NewReceiver method.
 	NewReceiverFunc func(config interface{}) (Receiver, error)
@@ -187,22 +187,22 @@ var _ Receiver = &ReceiverMock{}
 
 // ReceiverMock is a mock implementation of Receiver.
 //
-//     func TestSomethingThatUsesReceiver(t *testing.T) {
+// 	func TestSomethingThatUsesReceiver(t *testing.T) {
 //
-//         // make and configure a mocked Receiver
-//         mockedReceiver := &ReceiverMock{
-//             ReceiveFunc: func(ctx context.Context, next NextFn) error {
-// 	               panic("mock out the Receive method")
-//             },
-//             StopReceivingFunc: func(ctx context.Context) error {
-// 	               panic("mock out the StopReceiving method")
-//             },
-//         }
+// 		// make and configure a mocked Receiver
+// 		mockedReceiver := &ReceiverMock{
+// 			ReceiveFunc: func(ctx context.Context, next NextFn) error {
+// 				panic("mock out the Receive method")
+// 			},
+// 			StopReceivingFunc: func(ctx context.Context) error {
+// 				panic("mock out the StopReceiving method")
+// 			},
+// 		}
 //
-//         // use mockedReceiver in code that requires Receiver
-//         // and then make assertions.
+// 		// use mockedReceiver in code that requires Receiver
+// 		// and then make assertions.
 //
-//     }
+// 	}
 type ReceiverMock struct {
 	// ReceiveFunc mocks the Receive method.
 	ReceiveFunc func(ctx context.Context, next NextFn) error

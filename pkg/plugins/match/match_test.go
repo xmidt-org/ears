@@ -126,10 +126,10 @@ func TestFilterRegex(t *testing.T) {
 				for _, in := range succeed {
 					t.Run(mode.String()+"/"+in, func(t *testing.T) {
 						a := NewWithT(t)
-						e, err := event.NewEvent(in)
+						e, err := event.NewEvent(ctx, in)
 						a.Expect(err).To(BeNil())
 
-						evts, err := f.Filter(ctx, e)
+						evts, err := f.Filter(e)
 						a.Expect(err).To(BeNil())
 						a.Expect(evts).To(HaveLen(1), fmt.Sprintf(
 							"mode: %s, succeed input: %s", mode.String(), in,
@@ -142,10 +142,10 @@ func TestFilterRegex(t *testing.T) {
 					t.Run(mode.String()+"/"+in, func(t *testing.T) {
 						a := NewWithT(t)
 
-						e, err := event.NewEvent(in)
+						e, err := event.NewEvent(ctx, in)
 						a.Expect(err).To(BeNil())
 
-						evts, err := f.Filter(ctx, e)
+						evts, err := f.Filter(e)
 						a.Expect(err).To(BeNil())
 						a.Expect(evts).To(HaveLen(0), fmt.Sprintf(
 							"mode: %s, fail input: %s", mode.String(), in,
@@ -302,7 +302,7 @@ func TestNilFilter(t *testing.T) {
 
 	a := NewWithT(t)
 
-	_, err := f.Filter(context.Background(), nil)
+	_, err := f.Filter(nil)
 	a.Expect(err).ToNot(BeNil())
 
 	a.Expect(f.Config()).To(Equal(match.Config{}))
