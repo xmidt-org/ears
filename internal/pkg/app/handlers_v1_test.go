@@ -97,16 +97,18 @@ func TestRouteTable(t *testing.T) {
 	if err != nil {
 		t.Fatalf("cannot create api manager: %s\n", err.Error())
 	}
+	cnt := 0
 	for currentTestName, currentTest := range table.Table {
 		if table.TestToRunAllIfBlank != "" && table.TestToRunAllIfBlank != currentTestName {
 			continue
 		}
+		cnt++
 		t.Run(currentTestName, func(t *testing.T) {
 			testPrefix := ""
 			if !table.SharePluginsAcrossTests {
 				testPrefix = "tbltst" + currentTestName
 			}
-			t.Logf("SCENARIO: %s [%d]", currentTestName, currentTest.SequenceNumber)
+			t.Logf("SCENARIO: %s [id=%d] [cnt=%d]", currentTestName, currentTest.SequenceNumber, cnt)
 			// setup routes
 			routeIds := make([]string, 0)
 			for _, routeFileName := range currentTest.RouteFiles {
