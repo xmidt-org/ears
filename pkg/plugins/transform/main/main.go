@@ -1,6 +1,3 @@
-package main// Copyright 2020 Comcast Cable Communications Management, LLC
-import "github.com/xmidt-org/ears/pkg/plugins/transform"
-
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -17,7 +14,7 @@ import "github.com/xmidt-org/ears/pkg/plugins/transform"
 package main
 
 import (
-"github.com/xmidt-org/ears/pkg/plugins/transform"
+	"github.com/xmidt-org/ears/pkg/plugins/transform"
 )
 
 func main() {
@@ -37,4 +34,3 @@ var Plugin, PluginErr = transform.NewPluginVersion(Name, GitVersion, GitCommit)
 // for golangci-lint
 var _ = Plugin
 var _ = PluginErr
-
