@@ -15,10 +15,8 @@
 package app
 
 import (
-	"context"
 	"fmt"
 	"github.com/rs/zerolog"
-	"github.com/rs/zerolog/log"
 	"os"
 	"sync"
 )
@@ -44,17 +42,4 @@ func ProvideLogger(config Config) (*zerolog.Logger, error) {
 	zerolog.LevelFieldName = "log.level"
 	appLogger = &logger
 	return appLogger, nil
-}
-
-func SubLoggerCtx(ctx context.Context, parent *zerolog.Logger) context.Context {
-	subCtx := parent.WithContext(ctx)
-	logger := log.Ctx(subCtx).With().Logger()
-	return logger.WithContext(subCtx)
-}
-
-func StrToLogCtx(ctx context.Context, key string, value string) {
-	l := zerolog.Ctx(ctx)
-	l.UpdateContext(func(c zerolog.Context) zerolog.Context {
-		return c.Str(key, value)
-	})
 }

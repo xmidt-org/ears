@@ -15,8 +15,8 @@
 package match
 
 import (
-	"context"
 	"fmt"
+	"github.com/xmidt-org/ears/pkg/filter/match/pattern"
 
 	"github.com/xmidt-org/ears/pkg/event"
 	"github.com/xmidt-org/ears/pkg/filter"
@@ -47,13 +47,19 @@ func NewFilter(config interface{}) (*Filter, error) {
 
 	switch cfg.Matcher {
 	case MatcherRegex:
-		matcher, err = regex.NewMatcher(*cfg.Pattern)
+		matcher, err = regex.NewMatcher(cfg.Pattern)
 		if err != nil {
 			return nil, &filter.InvalidConfigError{
 				Err: err,
 			}
 		}
-
+	case MatcherPattern:
+		matcher, err = pattern.NewMatcher(cfg.Pattern)
+		if err != nil {
+			return nil, &filter.InvalidConfigError{
+				Err: err,
+			}
+		}
 	default:
 		return nil, &filter.InvalidConfigError{
 			Err: fmt.Errorf("unsupported matcher type: %s", cfg.Matcher.String()),
@@ -68,7 +74,7 @@ func NewFilter(config interface{}) (*Filter, error) {
 	return f, nil
 }
 
-func (f *Filter) Filter(ctx context.Context, evt event.Event) ([]event.Event, error) {
+func (f *Filter) Filter(evt event.Event) ([]event.Event, error) {
 	if f == nil {
 		return nil, &filter.InvalidConfigError{
 			Err: fmt.Errorf("<nil> pointer filter"),
@@ -77,7 +83,7 @@ func (f *Filter) Filter(ctx context.Context, evt event.Event) ([]event.Event, er
 
 	// passes if event matches
 	events := []event.Event{}
-	pass := f.matcher.Match(ctx, evt)
+	pass := f.matcher.Match(evt)
 
 	if f.config.Mode == ModeDeny {
 		pass = !pass

@@ -16,6 +16,7 @@ package ack
 
 import (
 	"context"
+	"github.com/xmidt-org/ears/pkg/errs"
 	"sync"
 )
 
@@ -26,8 +27,15 @@ type SubTree interface {
 	// after all NewSubTree(s) are created
 	Ack()
 
+	// Send an negative acknowledgement to indicate that there is an error completing a work on this SubTree.
+	// Nack error will be wrapping in a NackError and sent to the error function.
+	Nack(err error)
+
 	// Create a New SubTree for additional acknowledgements
 	NewSubTree() (SubTree, error)
+
+	// Whether or not this node is acked or nacked (not necessarily the whole tree)
+	IsAcked() bool
 }
 
 type Tree interface {
@@ -35,6 +43,9 @@ type Tree interface {
 
 	// Block until either the completion function or the error function is called
 	Wait()
+
+	// Whether or not the tree is completed
+	IsDone() bool
 }
 
 // Construct a new ack Tree. The constructor takes in a context, a completion function, and an error function as its
@@ -45,7 +56,7 @@ type Tree interface {
 func NewAckTree(ctx context.Context, fn func(), errFn func(error)) Tree {
 	ack := &ackTree{
 		parent:         nil,
-		closure:        fn,
+		completedFn:    fn,
 		errFn:          errFn,
 		numAckExpected: 1,
 		count:          0,
@@ -58,25 +69,35 @@ func NewAckTree(ctx context.Context, fn func(), errFn func(error)) Tree {
 	return ack
 }
 
-type InvalidActionError struct {
-	errMsg string
+type AlreadyAckedError struct {
 }
 
-func (e *InvalidActionError) Error() string {
-	return e.errMsg
+func (e *AlreadyAckedError) Error() string {
+	return errs.String("AlreadyAckedError", nil, nil)
 }
 
 type TimeoutError struct {
-	errMsg string
 }
 
 func (e *TimeoutError) Error() string {
-	return e.errMsg
+	return errs.String("TimeoutError", nil, nil)
+}
+
+type NackError struct {
+	err error
+}
+
+func (e *NackError) Error() string {
+	return errs.String("NackError", nil, e.err)
+}
+
+func (e *NackError) Unwrap() error {
+	return e.err
 }
 
 type ackTree struct {
 	parent         *ackTree
-	closure        func()
+	completedFn    func()
 	errFn          func(error)
 	numAckExpected int
 	count          int
@@ -87,7 +108,11 @@ type ackTree struct {
 }
 
 func (ack *ackTree) Ack() {
-	ack.ack(true)
+	ack.ack(true, nil)
+}
+
+func (ack *ackTree) Nack(err error) {
+	ack.ack(true, &NackError{err})
 }
 
 func (ack *ackTree) NewSubTree() (SubTree, error) {
@@ -96,13 +121,14 @@ func (ack *ackTree) NewSubTree() (SubTree, error) {
 
 	if ack.selfAcked {
 		//cannot create more SubTree if you already acked yourself
-		return nil, &InvalidActionError{"Already acked. Cannot create more subchain"}
+		return nil, &AlreadyAckedError{}
 	}
 
 	ack.numAckExpected++
 	return &ackTree{
 		parent:         ack,
-		closure:        nil,
+		completedFn:    nil,
+		errFn:          nil,
 		numAckExpected: 1,
 		count:          0,
 		lock:           &sync.Mutex{},
@@ -115,7 +141,7 @@ func (ack *ackTree) Wait() {
 	ack.wg.Wait()
 }
 
-func (ack *ackTree) ack(selfAck bool) {
+func (ack *ackTree) ack(selfAck bool, err error) {
 	ack.lock.Lock()
 	defer ack.lock.Unlock()
 
@@ -124,16 +150,28 @@ func (ack *ackTree) ack(selfAck bool) {
 		return
 	}
 
+	if err != nil {
+		//there is an error, propagate up to parent
+		if ack.parent == nil && ack.errFn != nil {
+			go ack.errFn(err)
+			ack.markComplete()
+		} else {
+			ack.parent.ack(false, err)
+		}
+		return
+	}
+
 	ack.count++
 	if selfAck {
 		ack.selfAcked = true
 	}
 	if ack.count == ack.numAckExpected {
-		if ack.parent == nil && ack.closure != nil {
-			ack.closure()
+		if ack.parent == nil && ack.completedFn != nil {
+			go ack.completedFn()
 			ack.markComplete()
 		} else {
-			ack.parent.ack(false)
+			ack.parent.ack(false, nil)
+			ack.completed = true
 		}
 	}
 }
@@ -152,7 +190,21 @@ func (ack *ackTree) startContextListener(ctx context.Context) {
 			//this ack Tree is already done
 			return
 		}
-		ack.errFn(&TimeoutError{"Timeout reached"})
+		go ack.errFn(&TimeoutError{})
 		ack.markComplete()
 	}()
+}
+
+func (ack *ackTree) IsDone() bool {
+	ack.lock.Lock()
+	defer ack.lock.Unlock()
+
+	return ack.completed
+}
+
+func (ack *ackTree) IsAcked() bool {
+	ack.lock.Lock()
+	defer ack.lock.Unlock()
+
+	return ack.selfAcked
 }

@@ -25,7 +25,7 @@ func main() {
 //go:generate ../../../../script/build-plugin.sh
 
 var (
-	Name       = "split"
+	Name       = "unwrap"
 	GitVersion = "v0.0.0"
 	GitCommit  = ""
 )

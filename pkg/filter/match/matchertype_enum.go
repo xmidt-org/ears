@@ -15,11 +15,12 @@ func _() {
 	var x [1]struct{}
 	_ = x[MatcherUnknown-0]
 	_ = x[MatcherRegex-1]
+	_ = x[MatcherPattern-2]
 }
 
-const _MatcherType_name = "unknownregex"
+const _MatcherType_name = "unknownregexpattern"
 
-var _MatcherType_index = [...]uint8{0, 7, 12}
+var _MatcherType_index = [...]uint8{0, 7, 12, 19}
 
 func _() {
 	var _nil_MatcherType_value = func() (val MatcherType) { return }()
@@ -36,11 +37,18 @@ func (i MatcherType) String() string {
 	return _MatcherType_name[_MatcherType_index[i]:_MatcherType_index[i+1]]
 }
 
-var _MatcherType_values = []MatcherType{0, 1}
+// New returns a pointer to a new addr filled with the MatcherType value passed in.
+func (i MatcherType) New() *MatcherType {
+	clone := i
+	return &clone
+}
+
+var _MatcherType_values = []MatcherType{0, 1, 2}
 
 var _MatcherType_name_to_values = map[string]MatcherType{
-	_MatcherType_name[0:7]:  0,
-	_MatcherType_name[7:12]: 1,
+	_MatcherType_name[0:7]:   0,
+	_MatcherType_name[7:12]:  1,
+	_MatcherType_name[12:19]: 2,
 }
 
 // ParseMatcherTypeString retrieves an enum value from the enum constants string name.

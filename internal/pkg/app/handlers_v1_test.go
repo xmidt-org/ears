@@ -31,6 +31,7 @@ import (
 	"github.com/xmidt-org/ears/pkg/plugins/match"
 	"github.com/xmidt-org/ears/pkg/plugins/pass"
 	"github.com/xmidt-org/ears/pkg/plugins/split"
+	"github.com/xmidt-org/ears/pkg/plugins/transform"
 	"github.com/xmidt-org/ears/pkg/plugins/unwrap"
 	"github.com/xmidt-org/ears/pkg/route"
 	"io/ioutil"
@@ -42,6 +43,11 @@ import (
 )
 
 type (
+	RouteTestTable struct {
+		Table                   map[string]*RouteTest `json:"table,omitempty"`
+		SharePluginsAcrossTests bool                  `json:"sharePluginsAcrossTests,omitempty"` // name the effect no the cause
+		TestToRunAllIfBlank     string                `json:"testToRunAllIfBlank,omitempty"`     // the self documenting variable name
+	}
 	RouteTest struct {
 		SequenceNumber int              `json:"seq,omitempty"`
 		RouteFiles     []string         `json:"routeFiles,omitempty"`
@@ -74,16 +80,16 @@ func prefixRouteConfig(routeConfig *route.Config, prefix string) {
 }
 
 func TestRouteTable(t *testing.T) {
-	// set the testNameFlag to test only a single test from the table (how to pass in command line parameters?)
-	//testNameFlag := "multiRouteAABB"
-	testNameFlag := ""
+	// global test settings
 	Version = "v1.0.2"
-	testTableFileName := "testdata/table.json"
+	testTableName := "table"
+	// load test table
+	testTableFileName := "testdata/" + testTableName + ".json"
 	buf, err := ioutil.ReadFile(testTableFileName)
 	if err != nil {
 		t.Fatalf("cannot read file: %s", err.Error())
 	}
-	table := make(map[string]RouteTest, 0)
+	var table RouteTestTable
 	err = json.Unmarshal(buf, &table)
 	if err != nil {
 		t.Fatalf("cannot parse test table: %s", err.Error())
@@ -92,13 +98,18 @@ func TestRouteTable(t *testing.T) {
 	if err != nil {
 		t.Fatalf("cannot create api manager: %s\n", err.Error())
 	}
-	for currentTestName, currentTest := range table {
-		if testNameFlag != "" && testNameFlag != currentTestName {
+	cnt := 0
+	for currentTestName, currentTest := range table.Table {
+		if table.TestToRunAllIfBlank != "" && table.TestToRunAllIfBlank != currentTestName {
 			continue
 		}
+		cnt++
 		t.Run(currentTestName, func(t *testing.T) {
-			testPrefix := "tbltst" + currentTestName
-			t.Logf("SCENARIO: %s [%d]", currentTestName, currentTest.SequenceNumber)
+			testPrefix := ""
+			if !table.SharePluginsAcrossTests {
+				testPrefix = "tbltst" + currentTestName
+			}
+			t.Logf("SCENARIO: %s [id=%d] [cnt=%d]", currentTestName, currentTest.SequenceNumber, cnt)
 			// setup routes
 			routeIds := make([]string, 0)
 			for _, routeFileName := range currentTest.RouteFiles {
@@ -217,7 +228,7 @@ func setupRestApi() (*APIManager, RoutingTableManager, plugin.Manager, route.Rou
 	if err != nil {
 		return nil, nil, nil, nil, err
 	}
-	pluginMgr, err := plugin.NewManager(plugin.WithPluginManager(mgr))
+	pluginMgr, err := plugin.NewManager(plugin.WithPluginManager(mgr), plugin.WithLogger(&log.Logger))
 	if err != nil {
 		return nil, nil, nil, nil, err
 	}
@@ -249,6 +260,10 @@ func setupRestApi() (*APIManager, RoutingTableManager, plugin.Manager, route.Rou
 		{
 			name:   "unwrap",
 			plugin: toArr(unwrap.NewPluginVersion("unwrap", "", ""))[0].(pkgplugin.Pluginer),
+		},
+		{
+			name:   "transform",
+			plugin: toArr(transform.NewPluginVersion("transform", "", ""))[0].(pkgplugin.Pluginer),
 		},
 	}
 	for _, plug := range defaultPlugins {
@@ -290,6 +305,10 @@ func resetDebugSender(routeFileName string, pluginMgr plugin.Manager) error {
 	debugSender.Reset()
 	if debugSender.Count() != 0 {
 		return errors.New(fmt.Sprintf("unexpected number of events in sender after reset %d (%d)", debugSender.Count(), 0))
+	}
+	err = pluginMgr.UnregisterSender(ctx, sdr)
+	if err != nil {
+		return err
 	}
 	return nil
 }
@@ -348,6 +367,10 @@ func checkEventsSent(routeFileName string, testPrefix string, pluginMgr plugin.M
 		if string(buf1) != string(buf2) {
 			return errors.New(fmt.Sprintf("event payload mismatch:\n%s\n%s\n", string(buf1), string(buf2)))
 		}
+	}
+	err = pluginMgr.UnregisterSender(ctx, sdr)
+	if err != nil {
+		return err
 	}
 	return nil
 }

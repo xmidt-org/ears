@@ -17,13 +17,32 @@
 
 package event
 
+import (
+	"context"
+	"github.com/xmidt-org/ears/internal/pkg/ack"
+
+	"github.com/mohae/deepcopy"
+)
+
 type event struct {
 	payload interface{}
+	ctx     context.Context
+	ack     ack.SubTree
 }
 
-func NewEvent(payload interface{}) (Event, error) {
+func NewEvent(ctx context.Context, payload interface{}) (Event, error) {
 	return &event{
 		payload: payload,
+		ctx:     ctx,
+		ack:     nil,
+	}, nil
+}
+
+func NewEventWithAck(ctx context.Context, payload interface{}, handledFn func(), errFn func(error)) (Event, error) {
+	return &event{
+		payload: payload,
+		ctx:     ctx,
+		ack:     ack.NewAckTree(ctx, handledFn, errFn),
 	}, nil
 }
 
@@ -32,13 +51,57 @@ func (e *event) Payload() interface{} {
 }
 
 func (e *event) SetPayload(payload interface{}) error {
+	if e.ack != nil && e.ack.IsAcked() {
+		return &ack.AlreadyAckedError{}
+	}
 	e.payload = payload
 	return nil
 }
 
-func (e *event) Ack() {
+func (e *event) Context() context.Context {
+	return e.ctx
 }
 
-func (e *event) Dup() (Event, error) {
-	return e, nil
+func (e *event) SetContext(ctx context.Context) error {
+	if e.ack != nil && e.ack.IsAcked() {
+		return &ack.AlreadyAckedError{}
+	}
+	e.ctx = ctx
+	return nil
+}
+
+func (e *event) Ack() {
+	if e.ack != nil {
+		e.ack.Ack()
+	}
+}
+
+func (e *event) Nack(err error) {
+	if e.ack != nil {
+		e.ack.Nack(err)
+	}
+}
+
+func (e *event) Clone(ctx context.Context) (Event, error) {
+	var subTree ack.SubTree
+
+	if e.ack != nil {
+		var err error
+		subTree, err = e.ack.NewSubTree()
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	//Very fast according to the following benchmark:
+	//https://xuri.me/2018/06/17/deep-copy-object-with-reflecting-or-gob-in-go.html
+	//Unclear if all types are supported:
+	//https://github.com/mohae/deepcopy/blob/master/deepcopy.go#L45-L46
+	newCopy := deepcopy.Copy(e.payload)
+
+	return &event{
+		payload: newCopy,
+		ctx:     ctx,
+		ack:     subTree,
+	}, nil
 }

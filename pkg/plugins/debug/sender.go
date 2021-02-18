@@ -15,7 +15,6 @@
 package debug
 
 import (
-	"context"
 	"fmt"
 
 	"github.com/goccy/go-yaml"
@@ -80,9 +79,11 @@ func NewSender(config interface{}) (sender.Sender, error) {
 
 }
 
-func (s *Sender) Send(ctx context.Context, e event.Event) error {
+func (s *Sender) Send(e event.Event) error {
+	defer e.Ack()
+
 	s.history.Add(e)
-	//fmt.Printf("SEND\n")
+	fmt.Printf("SEND %p\n", e)
 
 	if s.destination != nil {
 		return s.destination.Write(e)
