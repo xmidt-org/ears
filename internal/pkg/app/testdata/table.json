@@ -226,6 +226,21 @@
           "expectedEventPayloadFile": "event5"
         }
       ]
+    },
+    "simpleFilterTransformRoute": {
+      "seq": 14,
+      "routeFiles": [
+        "simpleFilterTransformRoute"
+      ],
+      "waitMs": 100,
+      "events": [
+        {
+          "senderRouteFiles": "simpleFilterTransformRoute",
+          "expectedEventCount": 5,
+          "expectedEventIndex": 0,
+          "expectedEventPayloadFile": "event6"
+        }
+      ]
     }
   }
 }

@@ -31,6 +31,7 @@ import (
 	"github.com/xmidt-org/ears/pkg/plugins/match"
 	"github.com/xmidt-org/ears/pkg/plugins/pass"
 	"github.com/xmidt-org/ears/pkg/plugins/split"
+	"github.com/xmidt-org/ears/pkg/plugins/transform"
 	"github.com/xmidt-org/ears/pkg/plugins/unwrap"
 	"github.com/xmidt-org/ears/pkg/route"
 	"io/ioutil"
@@ -259,6 +260,10 @@ func setupRestApi() (*APIManager, RoutingTableManager, plugin.Manager, route.Rou
 		{
 			name:   "unwrap",
 			plugin: toArr(unwrap.NewPluginVersion("unwrap", "", ""))[0].(pkgplugin.Pluginer),
+		},
+		{
+			name:   "transform",
+			plugin: toArr(transform.NewPluginVersion("transform", "", ""))[0].(pkgplugin.Pluginer),
 		},
 	}
 	for _, plug := range defaultPlugins {

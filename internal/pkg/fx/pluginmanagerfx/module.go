@@ -24,6 +24,7 @@ import (
 	"github.com/xmidt-org/ears/pkg/plugins/match"
 	"github.com/xmidt-org/ears/pkg/plugins/pass"
 	"github.com/xmidt-org/ears/pkg/plugins/split"
+	"github.com/xmidt-org/ears/pkg/plugins/transform"
 	"github.com/xmidt-org/ears/pkg/plugins/unwrap"
 
 	pkgplugin "github.com/xmidt-org/ears/pkg/plugin"
@@ -67,17 +68,14 @@ func ProvidePluginManager(in PluginIn) (PluginOut, error) {
 			name:   "debug",
 			plugin: toArr(debug.NewPluginVersion("debug", "", ""))[0].(pkgplugin.Pluginer),
 		},
-
 		{
 			name:   "match",
 			plugin: toArr(match.NewPluginVersion("match", "", ""))[0].(pkgplugin.Pluginer),
 		},
-
 		{
 			name:   "pass",
 			plugin: toArr(pass.NewPluginVersion("pass", "", ""))[0].(pkgplugin.Pluginer),
 		},
-
 		{
 			name:   "block",
 			plugin: toArr(block.NewPluginVersion("block", "", ""))[0].(pkgplugin.Pluginer),
@@ -89,6 +87,10 @@ func ProvidePluginManager(in PluginIn) (PluginOut, error) {
 		{
 			name:   "unwrap",
 			plugin: toArr(unwrap.NewPluginVersion("unwrap", "", ""))[0].(pkgplugin.Pluginer),
+		},
+		{
+			name:   "transform",
+			plugin: toArr(transform.NewPluginVersion("transform", "", ""))[0].(pkgplugin.Pluginer),
 		},
 	}
 
