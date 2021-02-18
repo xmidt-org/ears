@@ -15,8 +15,8 @@
 package regex
 
 import (
-	"context"
 	"encoding/json"
+	"errors"
 	"regexp"
 
 	"github.com/xmidt-org/ears/pkg/event"
@@ -27,8 +27,16 @@ type Matcher struct {
 }
 
 // TODO: Possibly add POSIX option to pattern
-func NewMatcher(pattern string) (*Matcher, error) {
-	r, err := regexp.Compile(pattern)
+func NewMatcher(pattern interface{}) (*Matcher, error) {
+	p, ok := pattern.(string)
+	if !ok {
+		pp, ok := pattern.(*string)
+		if !ok {
+			return nil, errors.New("regex pattern is not a string")
+		}
+		p = *pp
+	}
+	r, err := regexp.Compile(p)
 	if err != nil {
 		return nil, err
 	}
@@ -36,7 +44,7 @@ func NewMatcher(pattern string) (*Matcher, error) {
 	return &Matcher{r: r}, nil
 }
 
-func (m *Matcher) Match(ctx context.Context, event event.Event) bool {
+func (m *Matcher) Match(event event.Event) bool {
 	if m == nil || m.r == nil || event == nil {
 		return false
 	}
@@ -46,6 +54,8 @@ func (m *Matcher) Match(ctx context.Context, event event.Event) bool {
 		eventString = event.Payload().(string)
 	case []byte:
 		eventString = string(event.Payload().([]byte))
+	case nil:
+		return false
 	default:
 		buf, err := json.Marshal(event.Payload())
 		if err != nil {

@@ -4,6 +4,7 @@
 package event
 
 import (
+	"context"
 	"sync"
 )
 
@@ -13,37 +14,55 @@ var _ Event = &EventMock{}
 
 // EventMock is a mock implementation of Event.
 //
-//     func TestSomethingThatUsesEvent(t *testing.T) {
+// 	func TestSomethingThatUsesEvent(t *testing.T) {
 //
-//         // make and configure a mocked Event
-//         mockedEvent := &EventMock{
-//             AckFunc: func()  {
-// 	               panic("mock out the Ack method")
-//             },
-//             DupFunc: func() (Event, error) {
-// 	               panic("mock out the Dup method")
-//             },
-//             PayloadFunc: func() interface{} {
-// 	               panic("mock out the Payload method")
-//             },
-//             SetPayloadFunc: func(payload interface{}) error {
-// 	               panic("mock out the SetPayload method")
-//             },
-//         }
+// 		// make and configure a mocked Event
+// 		mockedEvent := &EventMock{
+// 			AckFunc: func()  {
+// 				panic("mock out the Ack method")
+// 			},
+// 			CloneFunc: func(ctx context.Context) (Event, error) {
+// 				panic("mock out the Clone method")
+// 			},
+// 			ContextFunc: func() context.Context {
+// 				panic("mock out the Context method")
+// 			},
+// 			NackFunc: func(err error)  {
+// 				panic("mock out the Nack method")
+// 			},
+// 			PayloadFunc: func() interface{} {
+// 				panic("mock out the Payload method")
+// 			},
+// 			SetContextFunc: func(ctx context.Context) error {
+// 				panic("mock out the SetContext method")
+// 			},
+// 			SetPayloadFunc: func(payload interface{}) error {
+// 				panic("mock out the SetPayload method")
+// 			},
+// 		}
 //
-//         // use mockedEvent in code that requires Event
-//         // and then make assertions.
+// 		// use mockedEvent in code that requires Event
+// 		// and then make assertions.
 //
-//     }
+// 	}
 type EventMock struct {
 	// AckFunc mocks the Ack method.
 	AckFunc func()
 
-	// DupFunc mocks the Dup method.
-	DupFunc func() (Event, error)
+	// CloneFunc mocks the Clone method.
+	CloneFunc func(ctx context.Context) (Event, error)
+
+	// ContextFunc mocks the Context method.
+	ContextFunc func() context.Context
+
+	// NackFunc mocks the Nack method.
+	NackFunc func(err error)
 
 	// PayloadFunc mocks the Payload method.
 	PayloadFunc func() interface{}
+
+	// SetContextFunc mocks the SetContext method.
+	SetContextFunc func(ctx context.Context) error
 
 	// SetPayloadFunc mocks the SetPayload method.
 	SetPayloadFunc func(payload interface{}) error
@@ -53,11 +72,26 @@ type EventMock struct {
 		// Ack holds details about calls to the Ack method.
 		Ack []struct {
 		}
-		// Dup holds details about calls to the Dup method.
-		Dup []struct {
+		// Clone holds details about calls to the Clone method.
+		Clone []struct {
+			// Ctx is the ctx argument value.
+			Ctx context.Context
+		}
+		// Context holds details about calls to the Context method.
+		Context []struct {
+		}
+		// Nack holds details about calls to the Nack method.
+		Nack []struct {
+			// Err is the err argument value.
+			Err error
 		}
 		// Payload holds details about calls to the Payload method.
 		Payload []struct {
+		}
+		// SetContext holds details about calls to the SetContext method.
+		SetContext []struct {
+			// Ctx is the ctx argument value.
+			Ctx context.Context
 		}
 		// SetPayload holds details about calls to the SetPayload method.
 		SetPayload []struct {
@@ -66,8 +100,11 @@ type EventMock struct {
 		}
 	}
 	lockAck        sync.RWMutex
-	lockDup        sync.RWMutex
+	lockClone      sync.RWMutex
+	lockContext    sync.RWMutex
+	lockNack       sync.RWMutex
 	lockPayload    sync.RWMutex
+	lockSetContext sync.RWMutex
 	lockSetPayload sync.RWMutex
 }
 
@@ -97,29 +134,91 @@ func (mock *EventMock) AckCalls() []struct {
 	return calls
 }
 
-// Dup calls DupFunc.
-func (mock *EventMock) Dup() (Event, error) {
-	if mock.DupFunc == nil {
-		panic("EventMock.DupFunc: method is nil but Event.Dup was just called")
+// Clone calls CloneFunc.
+func (mock *EventMock) Clone(ctx context.Context) (Event, error) {
+	if mock.CloneFunc == nil {
+		panic("EventMock.CloneFunc: method is nil but Event.Clone was just called")
+	}
+	callInfo := struct {
+		Ctx context.Context
+	}{
+		Ctx: ctx,
+	}
+	mock.lockClone.Lock()
+	mock.calls.Clone = append(mock.calls.Clone, callInfo)
+	mock.lockClone.Unlock()
+	return mock.CloneFunc(ctx)
+}
+
+// CloneCalls gets all the calls that were made to Clone.
+// Check the length with:
+//     len(mockedEvent.CloneCalls())
+func (mock *EventMock) CloneCalls() []struct {
+	Ctx context.Context
+} {
+	var calls []struct {
+		Ctx context.Context
+	}
+	mock.lockClone.RLock()
+	calls = mock.calls.Clone
+	mock.lockClone.RUnlock()
+	return calls
+}
+
+// Context calls ContextFunc.
+func (mock *EventMock) Context() context.Context {
+	if mock.ContextFunc == nil {
+		panic("EventMock.ContextFunc: method is nil but Event.Context was just called")
 	}
 	callInfo := struct {
 	}{}
-	mock.lockDup.Lock()
-	mock.calls.Dup = append(mock.calls.Dup, callInfo)
-	mock.lockDup.Unlock()
-	return mock.DupFunc()
+	mock.lockContext.Lock()
+	mock.calls.Context = append(mock.calls.Context, callInfo)
+	mock.lockContext.Unlock()
+	return mock.ContextFunc()
 }
 
-// DupCalls gets all the calls that were made to Dup.
+// ContextCalls gets all the calls that were made to Context.
 // Check the length with:
-//     len(mockedEvent.DupCalls())
-func (mock *EventMock) DupCalls() []struct {
+//     len(mockedEvent.ContextCalls())
+func (mock *EventMock) ContextCalls() []struct {
 } {
 	var calls []struct {
 	}
-	mock.lockDup.RLock()
-	calls = mock.calls.Dup
-	mock.lockDup.RUnlock()
+	mock.lockContext.RLock()
+	calls = mock.calls.Context
+	mock.lockContext.RUnlock()
+	return calls
+}
+
+// Nack calls NackFunc.
+func (mock *EventMock) Nack(err error) {
+	if mock.NackFunc == nil {
+		panic("EventMock.NackFunc: method is nil but Event.Nack was just called")
+	}
+	callInfo := struct {
+		Err error
+	}{
+		Err: err,
+	}
+	mock.lockNack.Lock()
+	mock.calls.Nack = append(mock.calls.Nack, callInfo)
+	mock.lockNack.Unlock()
+	mock.NackFunc(err)
+}
+
+// NackCalls gets all the calls that were made to Nack.
+// Check the length with:
+//     len(mockedEvent.NackCalls())
+func (mock *EventMock) NackCalls() []struct {
+	Err error
+} {
+	var calls []struct {
+		Err error
+	}
+	mock.lockNack.RLock()
+	calls = mock.calls.Nack
+	mock.lockNack.RUnlock()
 	return calls
 }
 
@@ -146,6 +245,37 @@ func (mock *EventMock) PayloadCalls() []struct {
 	mock.lockPayload.RLock()
 	calls = mock.calls.Payload
 	mock.lockPayload.RUnlock()
+	return calls
+}
+
+// SetContext calls SetContextFunc.
+func (mock *EventMock) SetContext(ctx context.Context) error {
+	if mock.SetContextFunc == nil {
+		panic("EventMock.SetContextFunc: method is nil but Event.SetContext was just called")
+	}
+	callInfo := struct {
+		Ctx context.Context
+	}{
+		Ctx: ctx,
+	}
+	mock.lockSetContext.Lock()
+	mock.calls.SetContext = append(mock.calls.SetContext, callInfo)
+	mock.lockSetContext.Unlock()
+	return mock.SetContextFunc(ctx)
+}
+
+// SetContextCalls gets all the calls that were made to SetContext.
+// Check the length with:
+//     len(mockedEvent.SetContextCalls())
+func (mock *EventMock) SetContextCalls() []struct {
+	Ctx context.Context
+} {
+	var calls []struct {
+		Ctx context.Context
+	}
+	mock.lockSetContext.RLock()
+	calls = mock.calls.SetContext
+	mock.lockSetContext.RUnlock()
 	return calls
 }
 
@@ -186,61 +316,128 @@ var _ NewEventerer = &NewEventererMock{}
 
 // NewEventererMock is a mock implementation of NewEventerer.
 //
-//     func TestSomethingThatUsesNewEventerer(t *testing.T) {
+// 	func TestSomethingThatUsesNewEventerer(t *testing.T) {
 //
-//         // make and configure a mocked NewEventerer
-//         mockedNewEventerer := &NewEventererMock{
-//             NewEventFunc: func(payload interface{}) (Event, error) {
-// 	               panic("mock out the NewEvent method")
-//             },
-//         }
+// 		// make and configure a mocked NewEventerer
+// 		mockedNewEventerer := &NewEventererMock{
+// 			NewEventFunc: func(ctx context.Context, payload interface{}) (Event, error) {
+// 				panic("mock out the NewEvent method")
+// 			},
+// 			NewEventWithAckFunc: func(ctx context.Context, payload interface{}, handledFn func(), errFn func(error)) (Event, error) {
+// 				panic("mock out the NewEventWithAck method")
+// 			},
+// 		}
 //
-//         // use mockedNewEventerer in code that requires NewEventerer
-//         // and then make assertions.
+// 		// use mockedNewEventerer in code that requires NewEventerer
+// 		// and then make assertions.
 //
-//     }
+// 	}
 type NewEventererMock struct {
 	// NewEventFunc mocks the NewEvent method.
-	NewEventFunc func(payload interface{}) (Event, error)
+	NewEventFunc func(ctx context.Context, payload interface{}) (Event, error)
+
+	// NewEventWithAckFunc mocks the NewEventWithAck method.
+	NewEventWithAckFunc func(ctx context.Context, payload interface{}, handledFn func(), errFn func(error)) (Event, error)
 
 	// calls tracks calls to the methods.
 	calls struct {
 		// NewEvent holds details about calls to the NewEvent method.
 		NewEvent []struct {
+			// Ctx is the ctx argument value.
+			Ctx context.Context
 			// Payload is the payload argument value.
 			Payload interface{}
 		}
+		// NewEventWithAck holds details about calls to the NewEventWithAck method.
+		NewEventWithAck []struct {
+			// Ctx is the ctx argument value.
+			Ctx context.Context
+			// Payload is the payload argument value.
+			Payload interface{}
+			// HandledFn is the handledFn argument value.
+			HandledFn func()
+			// ErrFn is the errFn argument value.
+			ErrFn func(error)
+		}
 	}
-	lockNewEvent sync.RWMutex
+	lockNewEvent        sync.RWMutex
+	lockNewEventWithAck sync.RWMutex
 }
 
 // NewEvent calls NewEventFunc.
-func (mock *NewEventererMock) NewEvent(payload interface{}) (Event, error) {
+func (mock *NewEventererMock) NewEvent(ctx context.Context, payload interface{}) (Event, error) {
 	if mock.NewEventFunc == nil {
 		panic("NewEventererMock.NewEventFunc: method is nil but NewEventerer.NewEvent was just called")
 	}
 	callInfo := struct {
+		Ctx     context.Context
 		Payload interface{}
 	}{
+		Ctx:     ctx,
 		Payload: payload,
 	}
 	mock.lockNewEvent.Lock()
 	mock.calls.NewEvent = append(mock.calls.NewEvent, callInfo)
 	mock.lockNewEvent.Unlock()
-	return mock.NewEventFunc(payload)
+	return mock.NewEventFunc(ctx, payload)
 }
 
 // NewEventCalls gets all the calls that were made to NewEvent.
 // Check the length with:
 //     len(mockedNewEventerer.NewEventCalls())
 func (mock *NewEventererMock) NewEventCalls() []struct {
+	Ctx     context.Context
 	Payload interface{}
 } {
 	var calls []struct {
+		Ctx     context.Context
 		Payload interface{}
 	}
 	mock.lockNewEvent.RLock()
 	calls = mock.calls.NewEvent
 	mock.lockNewEvent.RUnlock()
+	return calls
+}
+
+// NewEventWithAck calls NewEventWithAckFunc.
+func (mock *NewEventererMock) NewEventWithAck(ctx context.Context, payload interface{}, handledFn func(), errFn func(error)) (Event, error) {
+	if mock.NewEventWithAckFunc == nil {
+		panic("NewEventererMock.NewEventWithAckFunc: method is nil but NewEventerer.NewEventWithAck was just called")
+	}
+	callInfo := struct {
+		Ctx       context.Context
+		Payload   interface{}
+		HandledFn func()
+		ErrFn     func(error)
+	}{
+		Ctx:       ctx,
+		Payload:   payload,
+		HandledFn: handledFn,
+		ErrFn:     errFn,
+	}
+	mock.lockNewEventWithAck.Lock()
+	mock.calls.NewEventWithAck = append(mock.calls.NewEventWithAck, callInfo)
+	mock.lockNewEventWithAck.Unlock()
+	return mock.NewEventWithAckFunc(ctx, payload, handledFn, errFn)
+}
+
+// NewEventWithAckCalls gets all the calls that were made to NewEventWithAck.
+// Check the length with:
+//     len(mockedNewEventerer.NewEventWithAckCalls())
+func (mock *NewEventererMock) NewEventWithAckCalls() []struct {
+	Ctx       context.Context
+	Payload   interface{}
+	HandledFn func()
+	ErrFn     func(error)
+} {
+	var calls []struct {
+		Ctx       context.Context
+		Payload   interface{}
+		HandledFn func()
+		ErrFn     func(error)
+	}
+	mock.lockNewEventWithAck.RLock()
+	calls = mock.calls.NewEventWithAck
+	mock.lockNewEventWithAck.RUnlock()
 	return calls
 }

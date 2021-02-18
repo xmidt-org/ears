@@ -397,7 +397,7 @@ func TestReceiverLifecycle(t *testing.T) {
 	rMap = m.Receivers()
 	a.Expect(len(rMap)).To(Equal(2))
 
-	next := func(ctx context.Context, e pkgevent.Event) error {
+	next := func(e pkgevent.Event) error {
 		return nil
 	}
 
@@ -465,7 +465,7 @@ func newPluginManager(t *testing.T) pkgmanager.Manager {
 
 // === FILTERER ==========================================================
 
-type filterFn func(ctx context.Context, e pkgevent.Event) ([]pkgevent.Event, error)
+type filterFn func(e pkgevent.Event) ([]pkgevent.Event, error)
 type newFiltererPluginMock struct {
 	sync.Mutex
 
@@ -491,7 +491,7 @@ func (m *newFiltererPluginMock) SetFilter(fn filterFn) {
 func newFiltererPlugin(t *testing.T) pkgplugin.Pluginer {
 	mock := newFiltererPluginMock{
 		events: []pkgevent.Event{},
-		filterFn: func(ctx context.Context, e pkgevent.Event) ([]pkgevent.Event, error) {
+		filterFn: func(e pkgevent.Event) ([]pkgevent.Event, error) {
 			return []pkgevent.Event{e}, nil
 		},
 	}
@@ -502,13 +502,13 @@ func newFiltererPlugin(t *testing.T) pkgplugin.Pluginer {
 
 	mock.NewFiltererFunc = func(config interface{}) (pkgfilter.Filterer, error) {
 		return &pkgfilter.FiltererMock{
-			FilterFunc: func(ctx context.Context, e pkgevent.Event) ([]pkgevent.Event, error) {
+			FilterFunc: func(e pkgevent.Event) ([]pkgevent.Event, error) {
 				fmt.Printf("FILTER EVENT: %+v\n", e)
 
 				mock.Lock()
 				defer mock.Unlock()
 				mock.events = append(mock.events, e)
-				return mock.filterFn(ctx, e)
+				return mock.filterFn(e)
 			},
 		}, nil
 	}
@@ -542,7 +542,8 @@ func newSenderPlugin(t *testing.T) pkgplugin.Pluginer {
 
 	mock.NewSenderFunc = func(config interface{}) (pkgsender.Sender, error) {
 		return &pkgsender.SenderMock{
-			SendFunc: func(ctx context.Context, e pkgevent.Event) error {
+			SendFunc: func(e pkgevent.Event) error {
+				defer e.Ack()
 				fmt.Printf("EVENT SENT: %+v\n", e)
 				mock.Lock()
 				defer mock.Unlock()
@@ -574,7 +575,7 @@ func (m *newReceivererPluginMock) SupportedTypes() bit.Mask {
 }
 
 func (m *newReceivererPluginMock) ReceiveEvent(ctx context.Context, e pkgevent.Event) error {
-	return m.nextFn(ctx, e)
+	return m.nextFn(e)
 }
 
 func newReceiverPlugin(t *testing.T) pkgplugin.Pluginer {

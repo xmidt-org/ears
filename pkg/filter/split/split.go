@@ -15,7 +15,6 @@
 package split
 
 import (
-	"context"
 	"errors"
 	"fmt"
 	"github.com/xmidt-org/ears/pkg/event"
@@ -53,7 +52,7 @@ func NewFilter(config interface{}) (*Filter, error) {
 }
 
 // Filter splits an event containing an array into multiple events
-func (f *Filter) Filter(ctx context.Context, evt event.Event) ([]event.Event, error) {
+func (f *Filter) Filter(evt event.Event) ([]event.Event, error) {
 	//TODO: add validation logic to filter
 	//TODO: maybe replace with jq filter
 	if f == nil {
@@ -68,7 +67,7 @@ func (f *Filter) Filter(ctx context.Context, evt event.Event) ([]event.Event, er
 		switch evt.Payload().(type) {
 		case []interface{}:
 			for _, p := range evt.Payload().([]interface{}) {
-				nevt, err := evt.Dup()
+				nevt, err := evt.Clone(evt.Context())
 				if err != nil {
 					return events, err
 				}
@@ -78,6 +77,7 @@ func (f *Filter) Filter(ctx context.Context, evt event.Event) ([]event.Event, er
 				}
 				events = append(events, nevt)
 			}
+			evt.Ack()
 		default:
 			return events, errors.New("split on non array type")
 		}
@@ -96,7 +96,7 @@ func (f *Filter) Filter(ctx context.Context, evt event.Event) ([]event.Event, er
 			return events, errors.New("split on non array type")
 		}
 		for _, p := range arr {
-			nevt, err := evt.Dup()
+			nevt, err := evt.Clone(evt.Context())
 			if err != nil {
 				return events, err
 			}
@@ -106,6 +106,7 @@ func (f *Filter) Filter(ctx context.Context, evt event.Event) ([]event.Event, er
 			}
 			events = append(events, nevt)
 		}
+		evt.Ack()
 	}
 	return events, nil
 }

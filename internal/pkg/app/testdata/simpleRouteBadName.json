@@ -3,7 +3,7 @@
   "orgId" : "comcast",
   "appId" : "xfi",
   "userId" : "boris",
-  "name" : "simpleRoute8",
+  "name" : "simple_route",
   "receiver" : {
     "plugin" : "debug",
     "name" : "mydebug",

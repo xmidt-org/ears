@@ -38,7 +38,7 @@ type filter struct {
 	filterer pkgfilter.Filterer
 }
 
-func (f *filter) Filter(ctx context.Context, e event.Event) ([]event.Event, error) {
+func (f *filter) Filter(e event.Event) ([]event.Event, error) {
 	if f.filterer == nil {
 		return nil, &pkgmanager.NilPluginError{}
 	}
@@ -52,7 +52,7 @@ func (f *filter) Filter(ctx context.Context, e event.Event) ([]event.Event, erro
 		f.Unlock()
 	}
 
-	return f.filterer.Filter(ctx, e)
+	return f.filterer.Filter(e)
 }
 
 func (f *filter) Unregister(ctx context.Context) error {

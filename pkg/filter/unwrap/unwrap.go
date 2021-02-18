@@ -15,7 +15,6 @@
 package unwrap
 
 import (
-	"context"
 	"errors"
 	"fmt"
 	"github.com/xmidt-org/ears/pkg/event"
@@ -53,7 +52,7 @@ func NewFilter(config interface{}) (*Filter, error) {
 }
 
 // Filter splits an event containing an array into multiple events
-func (f *Filter) Filter(ctx context.Context, evt event.Event) ([]event.Event, error) {
+func (f *Filter) Filter(evt event.Event) ([]event.Event, error) {
 	//TODO: add validation logic to filter
 	//TODO: maybe replace with jq filter
 	if f == nil {
@@ -76,15 +75,15 @@ func (f *Filter) Filter(ctx context.Context, evt event.Event) ([]event.Event, er
 				return events, errors.New("invalid object in filter path")
 			}
 		}
-		nevt, err := evt.Dup()
+		//nevt, err := evt.Dup()
+		//if err != nil {
+		//	return events, err
+		//}
+		err := evt.SetPayload(obj)
 		if err != nil {
 			return events, err
 		}
-		err = nevt.SetPayload(obj)
-		if err != nil {
-			return events, err
-		}
-		events = append(events, nevt)
+		events = append(events, evt)
 	}
 	return events, nil
 }

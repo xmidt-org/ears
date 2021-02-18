@@ -48,13 +48,13 @@ func (rte *Route) Run(ctx context.Context, r receiver.Receiver, f filter.Filtere
 	if f == nil {
 		next = s.Send
 	} else {
-		next = func(ctx context.Context, e event.Event) error {
-			events, err := f.Filter(ctx, e)
+		next = func(e event.Event) error {
+			events, err := f.Filter(e)
 			if err != nil {
 				return err
 			}
 
-			err = fanOut(ctx, events, s.Send)
+			err = fanOut(e.Context(), events, s.Send)
 			if err != nil {
 				return err
 			}
@@ -90,11 +90,14 @@ func fanOut(ctx context.Context, events []event.Event, next receiver.NextFn) err
 		return nil
 	}
 
+	//TODO QUESTION
+	//I don't think this group wait is necessary
 	g, ctx := errgroup.WithContext(ctx)
 
 	for _, e := range events {
+		localCopy := e
 		g.Go(func() error {
-			return next(ctx, e)
+			return next(localCopy)
 		})
 	}
 
