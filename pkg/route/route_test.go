@@ -54,18 +54,20 @@ func TestErrorCases(t *testing.T) {
 		},
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), defaultTestTimeout)
-	defer cancel()
+	//ctx, cancel := context.WithTimeout(context.Background(), defaultTestTimeout)
+	//defer cancel()
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			a := NewWithT(t)
 
-			err := (&route.Route{}).Run(ctx, tc.r, tc.f, tc.s)
+			err := (&route.Route{}).Run(tc.r, tc.f, tc.s)
 			a.Expect(err).ToNot(BeNil())
 			a.Expect(errTypeToString(err)).To(Equal(errTypeToString(tc.err)))
-
 		})
+		if tc.r != nil {
+			tc.r.StopReceiving(context.Background())
+		}
 	}
 }
 
@@ -93,18 +95,21 @@ func TestRoutes(t *testing.T) {
 		},
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), defaultTestTimeout)
-	defer cancel()
+	//ctx, cancel := context.WithTimeout(context.Background(), defaultTestTimeout)
+	//defer cancel()
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			a := NewWithT(t)
 
-			err := (&route.Route{}).Run(ctx, tc.r, tc.f, tc.s)
+			err := (&route.Route{}).Run(tc.r, tc.f, tc.s)
 			a.Expect(err).ToNot(BeNil())
 			a.Expect(errTypeToString(err)).To(Equal(errTypeToString(tc.err)))
 
 		})
+		if tc.r != nil {
+			tc.r.StopReceiving(context.Background())
+		}
 	}
 }
 

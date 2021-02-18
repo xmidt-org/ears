@@ -424,7 +424,7 @@ func TestReceiverLifecycle(t *testing.T) {
 	for i, r := range []pkgreceiver.Receiver{r1, r2} {
 		wg.Add(1)
 		go func(r pkgreceiver.Receiver, i int) {
-			r.Receive(ctx, next)
+			r.Receive(next)
 			wg.Done()
 		}(r, i)
 	}
@@ -584,17 +584,13 @@ func newReceiverPlugin(t *testing.T) pkgplugin.Pluginer {
 	}
 
 	receiverMock := pkgreceiver.ReceiverMock{}
-	receiverMock.ReceiveFunc = func(ctx context.Context, next receiver.NextFn) error {
+	receiverMock.ReceiveFunc = func(next receiver.NextFn) error {
 		plugMock.Lock()
 
 		plugMock.nextFn = next
 		plugMock.Unlock()
 
-		select {
-		case <-ctx.Done():
-			return ctx.Err()
-		case <-plugMock.done:
-		}
+		<-plugMock.done
 
 		return nil
 	}

@@ -144,8 +144,8 @@ func (m *manager) RegisterReceiver(
 		m.receiversFn[key] = map[string]pkgreceiver.NextFn{}
 
 		go func() {
-			r.Receive(ctx, func(e event.Event) error {
-				return m.next(ctx, key, e)
+			r.Receive(func(e event.Event) error {
+				return m.next(key, e)
 			})
 		}()
 	}
@@ -191,10 +191,7 @@ func (m *manager) Receivers() map[string]pkgreceiver.Receiver {
 // a receiver (unique by name + config hash).  These must be independent,
 // so no error can actually be returned to the receiver if a problem occurs.
 // This must leverage the Ack() interface
-func (m *manager) next(ctx context.Context, receiverKey string, e pkgevent.Event) error {
-
-	ctx, cancel := context.WithTimeout(ctx, m.nextFnDeadline)
-	defer cancel()
+func (m *manager) next(receiverKey string, e pkgevent.Event) error {
 
 	m.Lock()
 	nextFns := m.receiversFn[receiverKey]
@@ -240,7 +237,7 @@ func (m *manager) next(ctx context.Context, receiverKey string, e pkgevent.Event
 	return nil
 }
 
-func (m *manager) receive(ctx context.Context, r *receiver, nextFn pkgreceiver.NextFn) error {
+func (m *manager) receive(r *receiver, nextFn pkgreceiver.NextFn) error {
 	r.Lock()
 	r.done = make(chan struct{})
 	r.Unlock()
@@ -249,11 +246,7 @@ func (m *manager) receive(ctx context.Context, r *receiver, nextFn pkgreceiver.N
 	m.receiversFn[m.mapkey(r.name, r.hash)][r.id] = nextFn
 	m.Unlock()
 
-	select {
-	case <-ctx.Done():
-		return ctx.Err()
-	case <-r.done:
-	}
+	<-r.done
 
 	return nil
 }

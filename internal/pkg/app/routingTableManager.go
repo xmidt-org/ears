@@ -114,6 +114,10 @@ func (r *DefaultRoutingTableManager) AddRoute(ctx context.Context, routeConfig *
 		return err
 	}
 	// set up receiver
+	//TODO need investigation
+	//It seems that receiver starts ingesting before the route is setup. Might need to figure out
+	//if we need to stop receiver if there is an error between here to the point where the route
+	//is fully up.
 	receiver, err := r.pluginMgr.RegisterReceiver(ctx, routeConfig.Receiver.Plugin, routeConfig.Receiver.Name, stringify(routeConfig.Receiver.Config))
 	if err != nil {
 		return err
@@ -135,10 +139,12 @@ func (r *DefaultRoutingTableManager) AddRoute(ctx context.Context, routeConfig *
 	r.liveRouteMap[routeConfig.Id] = &LiveRouteWrapper{liveRoute, sender, receiver, filterChain}
 	r.Unlock()
 	go func() {
-		sctx := context.Background()
-		//TODO: use application context here? see issue #51
-		err = liveRoute.Run(sctx, receiver, filterChain, sender) // run is blocking
+		err = liveRoute.Run(receiver, filterChain, sender) // run is blocking
 		if err != nil {
+			//TODO need investigation
+			//this probably won't work anymore as the request context may be
+			//long gone by the time we are logging this. Also, if this actually
+			//work, we might need to investigate if there is a risk of memory leak
 			log.Ctx(ctx).Error().Str("op", "AddRoute").Msg(err.Error())
 		}
 	}()

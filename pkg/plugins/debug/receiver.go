@@ -27,7 +27,7 @@ import (
 	"github.com/xmidt-org/ears/pkg/receiver"
 )
 
-func (r *Receiver) Receive(ctx context.Context, next receiver.NextFn) error {
+func (r *Receiver) Receive(next receiver.NextFn) error {
 	if r == nil {
 		return &pkgplugin.Error{
 			Err: fmt.Errorf("Receive called on <nil> pointer"),
@@ -49,7 +49,7 @@ func (r *Receiver) Receive(ctx context.Context, next receiver.NextFn) error {
 		defer func() {
 			r.Lock()
 			if r.done != nil {
-				close(r.done)
+				r.done <- struct{}{}
 			}
 			r.Unlock()
 		}()
@@ -60,9 +60,6 @@ func (r *Receiver) Receive(ctx context.Context, next receiver.NextFn) error {
 		// until the context is cancelled.
 		for count := *r.config.Rounds; count != 0; {
 			select {
-			case <-ctx.Done():
-				//fmt.Printf("RECEIVER DONE BY CTX\n")
-				return
 			case <-r.done:
 				//fmt.Printf("RECEIVER DONE BY ROUTE\n")
 				return
@@ -71,10 +68,9 @@ func (r *Receiver) Receive(ctx context.Context, next receiver.NextFn) error {
 				ctx := context.Background()
 				e, err := event.NewEventWithAck(ctx, r.config.Payload,
 					func() {
-						fmt.Println("Debug success")
 						eventsDone.Done()
 					}, func(err error) {
-						fmt.Println("Debug error", err.Error())
+						//fmt.Println("Debug error", err.Error())
 						eventsDone.Done()
 					})
 				if err != nil {
@@ -83,11 +79,6 @@ func (r *Receiver) Receive(ctx context.Context, next receiver.NextFn) error {
 
 				eventsDone.Add(1)
 
-				// TODO:  Determine context propagation lifecycle
-				//   * https://github.com/xmidt-org/ears/issues/51
-				//
-				// NOTES: Discussed that this behavior could be determined
-				//  by a configuration value
 				err = r.Trigger(e)
 				if err != nil {
 					return
@@ -101,13 +92,8 @@ func (r *Receiver) Receive(ctx context.Context, next receiver.NextFn) error {
 		eventsDone.Wait()
 	}()
 
-	//both cases should unblock
-	select {
-	case <-ctx.Done():
-	case <-r.done:
-	}
-
-	return ctx.Err()
+	<-r.done
+	return nil
 }
 
 func (r *Receiver) StopReceiving(ctx context.Context) error {

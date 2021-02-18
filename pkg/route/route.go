@@ -25,7 +25,7 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
-func (rte *Route) Run(ctx context.Context, r receiver.Receiver, f filter.Filterer, s sender.Sender) error {
+func (rte *Route) Run(r receiver.Receiver, f filter.Filterer, s sender.Sender) error {
 	if r == nil {
 		return &InvalidRouteError{
 			Err: fmt.Errorf("receiver cannot be nil"),
@@ -65,7 +65,7 @@ func (rte *Route) Run(ctx context.Context, r receiver.Receiver, f filter.Filtere
 	}
 
 	// TODO:  Deal with errors properly
-	return rte.r.Receive(ctx, next)
+	return rte.r.Receive(next)
 
 }
 
