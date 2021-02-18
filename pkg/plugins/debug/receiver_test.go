@@ -16,8 +16,6 @@ package debug_test
 
 import (
 	"context"
-	"fmt"
-
 	"testing"
 	"time"
 
@@ -30,8 +28,6 @@ import (
 )
 
 func TestReceiver(t *testing.T) {
-
-	totalTimeout := 5 * time.Second
 	caseTimeout := 2 * time.Second
 
 	testCases := []struct {
@@ -71,18 +67,12 @@ func TestReceiver(t *testing.T) {
 		},
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), totalTimeout)
-	defer cancel()
-
 	a := NewWithT(t)
 	p, err := debug.NewPlugin()
 	a.Expect(err).To(BeNil())
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			ctx, cancel := context.WithTimeout(ctx, caseTimeout)
-			defer cancel()
-
 			a := NewWithT(t)
 
 			// Make sure we fill in all values
@@ -93,13 +83,11 @@ func TestReceiver(t *testing.T) {
 
 			events := []event.Event{}
 
-			err = r.Receive(ctx, func(e event.Event) error {
+			err = r.Receive(func(e event.Event) error {
 				events = append(events, e)
 				e.Ack()
 				return nil
 			})
-
-			fmt.Println(t.Name(), "here 3")
 
 			a.Expect(err).To(BeNil())
 			a.Expect(events).To(HaveLen(*tc.config.Rounds))
@@ -119,7 +107,7 @@ func TestReceiver(t *testing.T) {
 				a.Expect(ok).To(BeTrue())
 				a.Expect(p).To(Equal(tc.config.Payload))
 			}
-
+			r.StopReceiving(context.Background())
 		})
 
 	}

@@ -16,12 +16,9 @@ package debug_test
 
 import (
 	"context"
-
-	"testing"
-	"time"
-
 	. "github.com/onsi/gomega"
 	"github.com/xmidt-org/ears/pkg/plugins/debug"
+	"testing"
 )
 
 func TestSendReceive(t *testing.T) {
@@ -32,12 +29,10 @@ func TestSendReceive(t *testing.T) {
 	r, err := p.NewReceiver("")
 	a.Expect(err).To(BeNil())
 
-	ctx, cancel := context.WithTimeout(context.Background(), 12*time.Second)
-	defer cancel()
-
 	s, err := p.NewSender("")
 	a.Expect(err).To(BeNil())
 
-	err = r.Receive(ctx, s.Send)
+	err = r.Receive(s.Send)
 	a.Expect(err).To(BeNil())
+	r.StopReceiving(context.Background())
 }

@@ -191,7 +191,7 @@ var _ Receiver = &ReceiverMock{}
 //
 // 		// make and configure a mocked Receiver
 // 		mockedReceiver := &ReceiverMock{
-// 			ReceiveFunc: func(ctx context.Context, next NextFn) error {
+// 			ReceiveFunc: func(next NextFn) error {
 // 				panic("mock out the Receive method")
 // 			},
 // 			StopReceivingFunc: func(ctx context.Context) error {
@@ -205,7 +205,7 @@ var _ Receiver = &ReceiverMock{}
 // 	}
 type ReceiverMock struct {
 	// ReceiveFunc mocks the Receive method.
-	ReceiveFunc func(ctx context.Context, next NextFn) error
+	ReceiveFunc func(next NextFn) error
 
 	// StopReceivingFunc mocks the StopReceiving method.
 	StopReceivingFunc func(ctx context.Context) error
@@ -214,8 +214,6 @@ type ReceiverMock struct {
 	calls struct {
 		// Receive holds details about calls to the Receive method.
 		Receive []struct {
-			// Ctx is the ctx argument value.
-			Ctx context.Context
 			// Next is the next argument value.
 			Next NextFn
 		}
@@ -230,32 +228,28 @@ type ReceiverMock struct {
 }
 
 // Receive calls ReceiveFunc.
-func (mock *ReceiverMock) Receive(ctx context.Context, next NextFn) error {
+func (mock *ReceiverMock) Receive(next NextFn) error {
 	if mock.ReceiveFunc == nil {
 		panic("ReceiverMock.ReceiveFunc: method is nil but Receiver.Receive was just called")
 	}
 	callInfo := struct {
-		Ctx  context.Context
 		Next NextFn
 	}{
-		Ctx:  ctx,
 		Next: next,
 	}
 	mock.lockReceive.Lock()
 	mock.calls.Receive = append(mock.calls.Receive, callInfo)
 	mock.lockReceive.Unlock()
-	return mock.ReceiveFunc(ctx, next)
+	return mock.ReceiveFunc(next)
 }
 
 // ReceiveCalls gets all the calls that were made to Receive.
 // Check the length with:
 //     len(mockedReceiver.ReceiveCalls())
 func (mock *ReceiverMock) ReceiveCalls() []struct {
-	Ctx  context.Context
 	Next NextFn
 } {
 	var calls []struct {
-		Ctx  context.Context
 		Next NextFn
 	}
 	mock.lockReceive.RLock()
