@@ -18,6 +18,7 @@ import (
 	"context"
 	"errors"
 	"github.com/go-redis/redis"
+	"github.com/rs/zerolog/log"
 	"os"
 	"strings"
 	"time"
@@ -42,20 +43,17 @@ type (
 //TODO: review notification payload (json)
 //TODO: introduce global table hash
 //TODO: consider app id and org id
+//TODO: reload all when hash failure
 
-func NewRedisTableSyncer(ctx context.Context, env string, endpoint string) TableSyncer {
-	rep := "gears-redis-qa-001.6bteey.0001.usw2.cache.amazonaws.com:6379"
-	if env != "" {
-		rep = strings.Replace(rep, "-qa-", "-"+env+"-", -1)
-	}
-	if endpoint != "" {
-		rep = endpoint
+func NewRedisTableSyncer(ctx context.Context, endpoint string) TableSyncer {
+	if endpoint == "" {
+		endpoint = EARS_DEFAULT_REDIS_ENDPOINT
 	}
 	s := new(RedisTableSyncer)
-	//ctx.Log.Info("op", "NewRedisCompLibSyncer", "action", "start_service", "endpoint", rep)
-	s.redisEndpoint = rep
+	log.Ctx(ctx).Info().Str("op", "NewRedisTableSyncer").Msg("connect to redis at " + endpoint)
+	s.redisEndpoint = endpoint
 	s.client = redis.NewClient(&redis.Options{
-		Addr:     rep,
+		Addr:     endpoint,
 		Password: "",
 		DB:       0,
 	})
@@ -84,10 +82,10 @@ func (s *RedisTableSyncer) PublishSyncRequest(ctx context.Context, routeId strin
 			for {
 				msg, err := pubsub.ReceiveMessage()
 				if err != nil {
-					//ctx.Log.Error("op", "PublishSyncRequest", "action", "receive_ack_message", "channel", FSC_COMPLIB_ACK_CHANNEL, "msg", msg.Payload, "error", err.Error())
+					log.Ctx(ctx).Error().Str("op", "PublishSyncRequest").Msg(err.Error())
 					break
 				} else {
-					//ctx.Log.Info("op", "PublishSyncRequest", "action", "receive_ack_message", "channel", FSC_COMPLIB_ACK_CHANNEL, "msg", msg.Payload)
+					log.Ctx(ctx).Info().Str("op", "PublishSyncRequest").Msg("receive ack on channel " + EARS_REDIS_ACK_CHANNEL)
 				}
 				received[msg.Payload] = true
 				// wait until we received an ack from each subscriber (except the one originating the request)
@@ -99,12 +97,10 @@ func (s *RedisTableSyncer) PublishSyncRequest(ctx context.Context, routeId strin
 		}()
 		select {
 		case <-done:
-			//ctx.Log.Info("op", "PublishSyncRequest", "action", "done_collecting_acks", "num_received", len(received), "num_expected", (numSubscribers - 1))
+			log.Ctx(ctx).Info().Str("op", "PublishSyncRequest").Msg("done collecting acks")
 		case <-time.After(30 * time.Second):
-			//ctx.Log.Error("op", "PublishSyncRequest", "action", "done_collecting_acks", "num_received", len(received), "num_expected", (numSubscribers - 1))
+			log.Ctx(ctx).Info().Str("op", "PublishSyncRequest").Msg("timeout while collecting acks")
 		}
-		// inform flow editor
-		//debugSessionMgr.set(ctx, COMPONENT_LIBRARY_TS, time.Now().Unix())
 		s.PublishMutationMessage(ctx, routeId, add)
 	}()
 	// ... then request all flow apis to sync
@@ -118,10 +114,10 @@ func (s *RedisTableSyncer) PublishSyncRequest(ctx context.Context, routeId strin
 	msg += "," + routeId + "," + hostname
 	err := s.client.Publish(EARS_REDIS_SYNC_CHANNEL, msg).Err()
 	if err != nil {
-		//ctx.Log.Error("op", "PublishSyncRequest", "action", "publish_sync_request_message", "channel", FSC_COMPLIB_SYNC_CHANNEL, "msg", msg, "err", err.Error())
+		log.Ctx(ctx).Error().Str("op", "PublishSyncRequest").Msg(err.Error())
 		return err
 	} else {
-		//ctx.Log.Info("op", "PublishSyncRequest", "action", "publish_sync_request_message", "channel", FSC_COMPLIB_SYNC_CHANNEL, "msg", msg)
+		log.Ctx(ctx).Info().Str("op", "PublishSyncRequest").Msg("publish on channel " + EARS_REDIS_SYNC_CHANNEL)
 	}
 	return nil
 }
@@ -138,46 +134,35 @@ func (s *RedisTableSyncer) ListenForSyncRequests(ctx context.Context) {
 		defer lrc.Close()
 		pubsub := lrc.Subscribe(EARS_REDIS_SYNC_CHANNEL)
 		defer pubsub.Close()
-		//ctx.Log.Info("op", "ListenForSyncRequests", "action", "start")
 		for {
 			msg, err := pubsub.ReceiveMessage()
 			if err != nil {
-				//ctx.Log.Error("op", "ListenForSyncRequests", "action", "receive_sync_message", "channel", FSC_COMPLIB_SYNC_CHANNEL, "error", err.Error())
+				log.Ctx(ctx).Error().Str("op", "ListenForSyncRequests").Msg(err.Error())
 				time.Sleep(EARS_REDIS_RETRY_INTERVAL_SECONDS)
 			} else {
-				//ctx.Log.Info("op", "ListenForSyncRequests", "action", "receive_sync_message", "channel", FSC_COMPLIB_SYNC_CHANNEL, "msg", msg.Payload)
+				log.Ctx(ctx).Info().Str("op", "ListenForSyncRequests").Msg("received message on channel " + EARS_REDIS_SYNC_CHANNEL)
 				// parse message
 				elems := strings.Split(msg.Payload, ",")
 				if len(elems) != 3 {
-					//ctx.Log.Error("op", "ListenForSyncRequests", "action", "receive_sync_message", "channel", FSC_COMPLIB_SYNC_CHANNEL, "msg", msg.Payload, "error", "bad message structure")
+					log.Ctx(ctx).Error().Str("op", "ListenForSyncRequests").Msg("bad message structure: " + msg.Payload)
 				}
 				// sync only whats needed
 				hostname, _ := os.Hostname()
 				if elems[2] != hostname {
 					if elems[0] == EARS_REDIS_ADD_ROUTE_CMD {
-						//ctx.Log.Info("op", "ListenForSyncRequests", "action", "sync_added_component", "channel", FSC_COMPLIB_SYNC_CHANNEL, "msg", msg.Payload)
+						log.Ctx(ctx).Info().Str("op", "ListenForSyncRequests").Msg("received message to add route " + elems[1])
 						err = s.SyncRouteAdded(ctx, elems[1])
-						//ctx.Log.Info("op", "ListenForSyncRequests", "action", "sync_added_component_done", "channel", FSC_COMPLIB_SYNC_CHANNEL, "msg", msg.Payload)
 					} else if elems[0] == EARS_REDIS_REMOVE_ROUTE_CMD {
-						//ctx.Log.Info("op", "ListenForSyncRequests", "action", "sync_removed_component", "channel", FSC_COMPLIB_SYNC_CHANNEL, "msg", msg.Payload)
+						log.Ctx(ctx).Info().Str("op", "ListenForSyncRequests").Msg("received message to remove route " + elems[1])
 						err = s.SyncRouteRemoved(ctx, elems[1])
-						//ctx.Log.Info("op", "ListenForSyncRequests", "action", "sync_removed_component_done", "channel", FSC_COMPLIB_SYNC_CHANNEL, "msg", msg.Payload)
 					} else {
 						err = errors.New("bad command " + elems[0])
 					}
 					if err != nil {
-						//ctx.Log.Error("op", "ListenForSyncRequests", "action", "sync_with_s3", "err", err.Error())
-					} else {
-						//ctx.Log.Info("op", "ListenForSyncRequests", "action", "sync_with_s3")
+						log.Ctx(ctx).Error().Str("op", "ListenForSyncRequests").Msg(err.Error())
 					}
-				} else {
-					//ctx.Log.Info("op", "ListenForSyncRequests", "action", "no_sync_required")
 				}
 			}
-			/*err = s.SyncAllRoutes(ctx)
-			if err != nil {
-				ctx.Log.Error("action", "comp_lib_sync", "op", "reload_comp_lib_mgr", "err", err.Error())
-			}*/
 			s.PublishAckMessage(ctx)
 		}
 	}()
@@ -189,9 +174,9 @@ func (s *RedisTableSyncer) PublishAckMessage(ctx context.Context) error {
 	hostname, _ := os.Hostname()
 	err := s.client.Publish(EARS_REDIS_ACK_CHANNEL, hostname).Err()
 	if err != nil {
-		//ctx.Log.Error("op", "PublishAckMessage", "action", "publish_ack_message", "channel", FSC_COMPLIB_ACK_CHANNEL, "msg", hostname, "error", err.Error())
+		log.Ctx(ctx).Error().Str("op", "PublishAckMessage").Msg(err.Error())
 	} else {
-		//ctx.Log.Info("op", "PublishAckMessage", "action", "publish_ack_message", "channel", FSC_COMPLIB_ACK_CHANNEL, "msg", hostname)
+		log.Ctx(ctx).Info().Str("op", "PublishAckMessage").Msg("published ack message")
 	}
 	return err
 }
@@ -200,14 +185,13 @@ func (s *RedisTableSyncer) PublishAckMessage(ctx context.Context) error {
 
 func (s *RedisTableSyncer) PublishPings(ctx context.Context) {
 	hostname, _ := os.Hostname()
-	//ctx.Log.Info("op", "PublishPings", "action", "start")
 	go func() {
 		for {
 			err := s.client.Publish(EARS_REDIS_PING_CHANNEL, hostname).Err()
 			if err != nil {
-				//ctx.Log.Error("op", "PublishPings", "action", "publish_ping_message", "channel", FSC_COMPLIB_PING_CHANNEL, "msg", hostname, "error", err.Error())
+				log.Ctx(ctx).Error().Str("op", "PublishPings").Msg(err.Error())
 			} else {
-				//ctx.Log.Info("op", "PublishPings", "action", "publish_ping_message", "channel", FSC_COMPLIB_PING_CHANNEL, "msg", hostname)
+				log.Ctx(ctx).Info().Str("op", "PublishPings").Msg("published ping message for " + hostname)
 			}
 			time.Sleep(30 * time.Second)
 		}
@@ -217,7 +201,6 @@ func (s *RedisTableSyncer) PublishPings(ctx context.Context) {
 // ListenForPingMessages listens for heart beat messages
 
 func (s *RedisTableSyncer) ListenForPingMessages(ctx context.Context) {
-	//ctx.Log.Info("op", "ListenForPingMessages", "action", "start")
 	go func() {
 		lrc := redis.NewClient(&redis.Options{
 			Addr:     s.redisEndpoint,
@@ -230,7 +213,7 @@ func (s *RedisTableSyncer) ListenForPingMessages(ctx context.Context) {
 		for {
 			msg, err := pubsub.ReceiveMessage()
 			if err != nil {
-				//ctx.Log.Error("op", "ListenForPingMessages", "action", "receive_ping_message", "channel", FSC_COMPLIB_PING_CHANNEL, "error", err.Error())
+				log.Ctx(ctx).Error().Str("op", "ListenForPingMessages").Msg(err.Error())
 				time.Sleep(EARS_REDIS_RETRY_INTERVAL_SECONDS)
 			} else {
 				nowsec := time.Now().Unix()
@@ -243,7 +226,7 @@ func (s *RedisTableSyncer) ListenForPingMessages(ctx context.Context) {
 						delete(s.subscribers, sid)
 					}
 				}
-				//ctx.Log.Info("op", "ListenForPingMessages", "action", "receive_ping_message", "channel", FSC_COMPLIB_PING_CHANNEL, "msg", msg.Payload, "current_subscriber_count", len(s.subscribers))
+				log.Ctx(ctx).Info().Str("op", "ListenForPingMessages").Msg("processed ping message")
 			}
 		}
 	}()
@@ -266,7 +249,7 @@ func (s *RedisTableSyncer) PublishMutationMessage(ctx context.Context, routeId s
 		msg = EARS_REDIS_REMOVE_ROUTE_CMD
 	}
 	msg += "," + routeId + "," + hostname
-	//ctx.Log.Info("op", "PublishNewVersionAvailableMessage", "action", "publish_new_version_available", "channel", FSC_COMPLIB_NEW_VERSION_AVAILABLE_CHANNEL, "msg", msg)
+	log.Ctx(ctx).Info().Str("op", "ListenForPingMessages").Msg("published mutation message")
 	return s.client.Publish(EARS_REDIS_MUTATION_CHANNEL, msg).Err()
 }
 
