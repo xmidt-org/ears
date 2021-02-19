@@ -44,6 +44,8 @@ const (
 	EARS_REDIS_REMOVE_ROUTE_CMD = "rem"
 
 	EARS_REDIS_RETRY_INTERVAL_SECONDS = 10 * time.Second
+
+	EARS_DEFAULT_REDIS_ENDPOINT = "gears-redis-qa-001.6bteey.0001.usw2.cache.amazonaws.com:6379"
 )
 
 type TableSyncer interface {
