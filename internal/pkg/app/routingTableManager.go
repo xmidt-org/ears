@@ -42,14 +42,14 @@ type LiveRouteWrapper struct {
 
 func (lrw *LiveRouteWrapper) Unregister(ctx context.Context, r *DefaultRoutingTableManager) error {
 	var e, err error
-	if lrw.Sender != nil {
-		err = r.pluginMgr.UnregisterSender(ctx, lrw.Sender)
+	if lrw.Receiver != nil {
+		err = r.pluginMgr.UnregisterReceiver(ctx, lrw.Receiver)
 		if err != nil {
 			e = err
 		}
 	}
-	if lrw.Receiver != nil {
-		err = r.pluginMgr.UnregisterReceiver(ctx, lrw.Receiver)
+	if lrw.Sender != nil {
+		err = r.pluginMgr.UnregisterSender(ctx, lrw.Sender)
 		if err != nil {
 			e = err
 		}
