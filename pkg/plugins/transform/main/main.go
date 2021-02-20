@@ -1,4 +1,3 @@
-// Copyright 2020 Comcast Cable Communications Management, LLC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -15,7 +14,7 @@
 package main
 
 import (
-	"github.com/xmidt-org/ears/pkg/plugins/unwrap"
+	"github.com/xmidt-org/ears/pkg/plugins/transform"
 )
 
 func main() {
@@ -25,12 +24,12 @@ func main() {
 //go:generate ../../../../script/build-plugin.sh
 
 var (
-	Name       = "unwrap"
+	Name       = "transform"
 	GitVersion = "v0.0.0"
 	GitCommit  = ""
 )
 
-var Plugin, PluginErr = unwrap.NewPluginVersion(Name, GitVersion, GitCommit)
+var Plugin, PluginErr = transform.NewPluginVersion(Name, GitVersion, GitCommit)
 
 // for golangci-lint
 var _ = Plugin

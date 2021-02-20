@@ -16,6 +16,7 @@ package match
 
 import (
 	"fmt"
+	"github.com/xmidt-org/ears/pkg/filter/match/pattern"
 
 	"github.com/xmidt-org/ears/pkg/event"
 	"github.com/xmidt-org/ears/pkg/filter"
@@ -46,13 +47,19 @@ func NewFilter(config interface{}) (*Filter, error) {
 
 	switch cfg.Matcher {
 	case MatcherRegex:
-		matcher, err = regex.NewMatcher(*cfg.Pattern)
+		matcher, err = regex.NewMatcher(cfg.Pattern)
 		if err != nil {
 			return nil, &filter.InvalidConfigError{
 				Err: err,
 			}
 		}
-
+	case MatcherPattern:
+		matcher, err = pattern.NewMatcher(cfg.Pattern)
+		if err != nil {
+			return nil, &filter.InvalidConfigError{
+				Err: err,
+			}
+		}
 	default:
 		return nil, &filter.InvalidConfigError{
 			Err: fmt.Errorf("unsupported matcher type: %s", cfg.Matcher.String()),
