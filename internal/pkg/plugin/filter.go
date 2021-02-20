@@ -38,16 +38,18 @@ type filter struct {
 	filterer pkgfilter.Filterer
 }
 
-func (f *filter) Filter(e event.Event) ([]event.Event, error) {
+func (f *filter) Filter(e event.Event) []event.Event {
 	if f.filterer == nil {
-		return nil, &pkgmanager.NilPluginError{}
+		e.Nack(&pkgmanager.NilPluginError{})
+		return nil
 	}
 
 	{
 		f.Lock()
 		if !f.active {
 			f.Unlock()
-			return nil, &pkgmanager.NotRegisteredError{}
+			e.Nack(&pkgmanager.NotRegisteredError{})
+			return nil
 		}
 		f.Unlock()
 	}

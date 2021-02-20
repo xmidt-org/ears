@@ -55,9 +55,7 @@ func (r *Receiver) Receive(next receiver.NextFn) error {
 		}()
 
 		eventsDone := &sync.WaitGroup{}
-
-		// NOTE:  If rounds < 0, this messaging will continue
-		// until the context is cancelled.
+		eventsDone.Add(*r.config.Rounds)
 		for count := *r.config.Rounds; count != 0; {
 			select {
 			case <-r.done:
@@ -77,12 +75,7 @@ func (r *Receiver) Receive(next receiver.NextFn) error {
 					return
 				}
 
-				eventsDone.Add(1)
-
-				err = r.Trigger(e)
-				if err != nil {
-					return
-				}
+				r.Trigger(e)
 
 				if count > 0 {
 					count--
@@ -149,7 +142,7 @@ func (r *Receiver) Count() int {
 	return r.history.Count()
 }
 
-func (r *Receiver) Trigger(e event.Event) error {
+func (r *Receiver) Trigger(e event.Event) {
 	// Ensure that `next` can be slow and locking here will not
 	// prevent other requests from executing.
 	//BW TODO: where is the next slice here?
@@ -161,7 +154,7 @@ func (r *Receiver) Trigger(e event.Event) error {
 
 	r.history.Add(e)
 
-	return next(e)
+	next(e)
 }
 
 func (r *Receiver) History() []event.Event {

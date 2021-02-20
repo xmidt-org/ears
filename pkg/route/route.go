@@ -22,7 +22,6 @@ import (
 	"github.com/xmidt-org/ears/pkg/filter"
 	"github.com/xmidt-org/ears/pkg/receiver"
 	"github.com/xmidt-org/ears/pkg/sender"
-	"golang.org/x/sync/errgroup"
 )
 
 func (rte *Route) Run(r receiver.Receiver, f filter.Filterer, s sender.Sender) error {
@@ -48,19 +47,12 @@ func (rte *Route) Run(r receiver.Receiver, f filter.Filterer, s sender.Sender) e
 	if f == nil {
 		next = s.Send
 	} else {
-		next = func(e event.Event) error {
-			events, err := f.Filter(e)
+		next = func(e event.Event) {
+			events := f.Filter(e)
+			err := fanOut(events, s.Send)
 			if err != nil {
-				return err
+				e.Nack(err)
 			}
-
-			err = fanOut(e.Context(), events, s.Send)
-			if err != nil {
-				return err
-			}
-
-			return nil
-
 		}
 	}
 
@@ -79,7 +71,7 @@ func (rte *Route) Stop(ctx context.Context) error {
 	return rte.r.StopReceiving(ctx)
 }
 
-func fanOut(ctx context.Context, events []event.Event, next receiver.NextFn) error {
+func fanOut(events []event.Event, next receiver.NextFn) error {
 	if next == nil {
 		return &InvalidRouteError{
 			Err: fmt.Errorf("next cannot be nil"),
@@ -90,17 +82,10 @@ func fanOut(ctx context.Context, events []event.Event, next receiver.NextFn) err
 		return nil
 	}
 
-	//TODO QUESTION
-	//I don't think this group wait is necessary
-	g, ctx := errgroup.WithContext(ctx)
-
 	for _, e := range events {
-		localCopy := e
-		g.Go(func() error {
-			return next(localCopy)
-		})
+		go func(evt event.Event) {
+			next(evt)
+		}(e)
 	}
-
-	return g.Wait()
-
+	return nil
 }
