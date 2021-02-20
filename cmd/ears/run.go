@@ -21,7 +21,6 @@ import (
 	"github.com/xmidt-org/ears/internal/pkg/app"
 	"github.com/xmidt-org/ears/internal/pkg/fx/pluginmanagerfx"
 	"github.com/xmidt-org/ears/internal/pkg/fx/routestorerfx"
-	"github.com/xmidt-org/ears/internal/pkg/rtsync"
 	"github.com/xmidt-org/ears/pkg/cli"
 	"github.com/xmidt-org/ears/pkg/panics"
 	"go.uber.org/fx"
@@ -57,7 +56,7 @@ var runCmd = &cobra.Command{
 				app.NewAPIManager,
 				app.NewMiddleware,
 				app.NewMux,
-				rtsync.NewRedisTableSyncer,
+				app.NewRedisTableSyncer,
 			),
 			fx.Logger(logger),
 			fx.Invoke(app.SetupAPIServer),

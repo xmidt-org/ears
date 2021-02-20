@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package rtsync
+package app
 
 import (
 	"context"
@@ -20,9 +20,6 @@ import (
 	"fmt"
 	"github.com/go-redis/redis"
 	"github.com/rs/zerolog/log"
-	"github.com/xmidt-org/ears/internal/pkg/app"
-	"github.com/xmidt-org/ears/internal/pkg/plugin"
-	"github.com/xmidt-org/ears/pkg/route"
 	"os"
 	"strings"
 	"sync"
@@ -35,9 +32,7 @@ type (
 		client          *redis.Client
 		redisEndpoint   string
 		subscribers     map[string]int64
-		storageMgr      route.RouteStorer
-		pluginMgr       plugin.Manager
-		routingTableMgr app.RoutingTableManager
+		routingTableMgr RoutingTableManager
 	}
 )
 
@@ -54,12 +49,10 @@ type (
 //TODO: consider app id and org id
 //TODO: reload all when hash failure
 
-func NewRedisTableSyncer(pluginMgr plugin.Manager, storageMgr route.RouteStorer, routingTableMgr app.RoutingTableManager) RoutingTableSyncer {
+func NewRedisTableSyncer(routingTableMgr RoutingTableManager) RoutingTableSyncer {
 	endpoint := EARS_DEFAULT_REDIS_ENDPOINT
 	s := new(RedisTableSyncer)
 	s.redisEndpoint = endpoint
-	s.storageMgr = storageMgr
-	s.pluginMgr = pluginMgr
 	s.routingTableMgr = routingTableMgr
 	s.client = redis.NewClient(&redis.Options{
 		Addr:     endpoint,

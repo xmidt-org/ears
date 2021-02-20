@@ -31,6 +31,7 @@ type DefaultRoutingTableManager struct {
 	sync.Mutex
 	pluginMgr    plugin.Manager
 	storageMgr   route.RouteStorer
+	rtSyncer     RoutingTableSyncer
 	liveRouteMap map[string]*LiveRouteWrapper // in-memory references to live routes
 }
 
@@ -52,8 +53,8 @@ func stringify(data interface{}) string {
 	return string(buf)
 }
 
-func NewRoutingTableManager(pluginMgr plugin.Manager, storageMgr route.RouteStorer) RoutingTableManager {
-	return &DefaultRoutingTableManager{pluginMgr: pluginMgr, storageMgr: storageMgr, liveRouteMap: make(map[string]*LiveRouteWrapper, 0)}
+func NewRoutingTableManager(pluginMgr plugin.Manager, storageMgr route.RouteStorer, rtSyncer RoutingTableSyncer) RoutingTableManager {
+	return &DefaultRoutingTableManager{pluginMgr: pluginMgr, storageMgr: storageMgr, rtSyncer: rtSyncer, liveRouteMap: make(map[string]*LiveRouteWrapper, 0)}
 }
 
 func (lrw *LiveRouteWrapper) Unregister(ctx context.Context, r *DefaultRoutingTableManager) error {
@@ -152,6 +153,11 @@ func (r *DefaultRoutingTableManager) RemoveRoute(ctx context.Context, routeId st
 	if err != nil {
 		return err
 	}
+	//TODO: only do this if syncing is configured properly
+	err = r.rtSyncer.PublishSyncRequest(ctx, routeId, true)
+	if err != nil {
+		log.Ctx(ctx).Error().Str("op", "RemoveRoute").Msg(err.Error())
+	}
 	return r.unregisterAndStopRoute(ctx, routeId)
 }
 
@@ -169,6 +175,11 @@ func (r *DefaultRoutingTableManager) AddRoute(ctx context.Context, routeConfig *
 	err = r.storageMgr.SetRoute(ctx, *routeConfig)
 	if err != nil {
 		return err
+	}
+	//TODO: only do this if syncing is configured properly
+	err = r.rtSyncer.PublishSyncRequest(ctx, routeConfig.Id, true)
+	if err != nil {
+		log.Ctx(ctx).Error().Str("op", "AddRoute").Msg(err.Error())
 	}
 	return r.registerAndRunRoute(ctx, routeConfig)
 }
