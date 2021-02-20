@@ -48,7 +48,7 @@ const (
 	EARS_DEFAULT_REDIS_ENDPOINT = "gears-redis-qa-001.6bteey.0001.usw2.cache.amazonaws.com:6379"
 )
 
-type TableSyncer interface {
+type RoutingTableSyncer interface {
 	PublishSyncRequest(ctx context.Context, routeId string, add bool) error
 	ListenForSyncRequests(ctx context.Context)
 	PublishAckMessage(ctx context.Context) error
@@ -56,7 +56,6 @@ type TableSyncer interface {
 	ListenForPingMessages(ctx context.Context)
 	GetInstanceCount(ctx context.Context) int
 	PublishMutationMessage(ctx context.Context, routeId string, add bool) error
-	SyncRouteAdded(ctx context.Context, routeId string) error
 	SyncRouteRemoved(ctx context.Context, routeId string) error
 	SyncAllRoutes(ctx context.Context) error
 }

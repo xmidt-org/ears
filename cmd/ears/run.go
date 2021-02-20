@@ -21,6 +21,7 @@ import (
 	"github.com/xmidt-org/ears/internal/pkg/app"
 	"github.com/xmidt-org/ears/internal/pkg/fx/pluginmanagerfx"
 	"github.com/xmidt-org/ears/internal/pkg/fx/routestorerfx"
+	"github.com/xmidt-org/ears/internal/pkg/rtsync"
 	"github.com/xmidt-org/ears/pkg/cli"
 	"github.com/xmidt-org/ears/pkg/panics"
 	"go.uber.org/fx"
@@ -56,6 +57,7 @@ var runCmd = &cobra.Command{
 				app.NewAPIManager,
 				app.NewMiddleware,
 				app.NewMux,
+				rtsync.NewRedisTableSyncer,
 			),
 			fx.Logger(logger),
 			fx.Invoke(app.SetupAPIServer),
@@ -97,6 +99,11 @@ func init() {
 				Name: "storageDynamoTable", Shorthand: "", Type: cli.ArgTypeString,
 				Default: "gears.dev.ears", LookupKey: "ears.storage.table",
 				Description: "dynamodb table name",
+			},
+			cli.Argument{
+				Name: "redisEndpoint", Shorthand: "", Type: cli.ArgTypeString,
+				Default: "gears-redis-qa-001.6bteey.0001.usw2.cache.amazonaws.com:6379", LookupKey: "ears.synchronization.endpoint",
+				Description: "redis endpoint for routing table synchronization",
 			},
 		},
 	)
