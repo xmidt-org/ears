@@ -19,15 +19,39 @@ import (
 	"github.com/xmidt-org/ears/pkg/filter"
 	"github.com/xmidt-org/ears/pkg/receiver"
 	"github.com/xmidt-org/ears/pkg/sender"
+	"time"
 
 	"github.com/xmidt-org/ears/pkg/route"
 )
 
-/*type (
-	// A RoutingEntry represents an entry in the EARS routing table
-	RoutingTableEntry struct {
-	}
-)*/
+const (
+
+	// used by one instance of ears to ask others to sync routing table
+
+	EARS_REDIS_SYNC_CHANNEL = "ears_sync"
+
+	// used by one instance of ears to tell all others that it just finished syncing its routing table
+
+	EARS_REDIS_ACK_CHANNEL = "ears_ack"
+
+	// used by all ears instances to do regular pings so we have awareness of how many instances are alive (could be done with redis api instead)
+
+	EARS_REDIS_PING_CHANNEL = "ears_ping"
+
+	// used by ears instance to tell other interested parties about updates (this can probably be removed)
+
+	EARS_REDIS_MUTATION_CHANNEL = "ears_mutation"
+
+	// operations
+
+	EARS_REDIS_ADD_ROUTE_CMD = "add"
+
+	EARS_REDIS_REMOVE_ROUTE_CMD = "rem"
+
+	EARS_REDIS_RETRY_INTERVAL_SECONDS = 10 * time.Second
+
+	EARS_DEFAULT_REDIS_ENDPOINT = "gears-redis-qa-001.6bteey.0001.usw2.cache.amazonaws.com:6379"
+)
 
 type (
 
@@ -53,5 +77,15 @@ type (
 		SyncRouteRemoved(ctx context.Context, routeId string) error
 		// SyncAllRoutes
 		SyncAllRoutes(ctx context.Context) error
+	}
+
+	RoutingTableSyncer interface {
+		PublishSyncRequest(ctx context.Context, routeId string, add bool) error
+		ListenForSyncRequests(ctx context.Context)
+		PublishAckMessage(ctx context.Context) error
+		PublishPings(ctx context.Context)
+		ListenForPingMessages(ctx context.Context)
+		GetInstanceCount(ctx context.Context) int
+		PublishMutationMessage(ctx context.Context, routeId string, add bool) error
 	}
 )
