@@ -43,7 +43,7 @@ type (
 
 //TODO: add tests
 //TODO: remove ping logic
-//TODO: integrate with table manager
+//DONE: integrate with table manager
 //TODO: load entire table on launch
 //DONE: logging
 //TODO: integrate with uberfx
@@ -166,7 +166,7 @@ func (s *RedisTableSyncer) ListenForSyncRequests(ctx context.Context) {
 						err = s.routingTableMgr.SyncRouteAdded(ctx, elems[1])
 					} else if elems[0] == EARS_REDIS_REMOVE_ROUTE_CMD {
 						log.Ctx(ctx).Info().Str("op", "ListenForSyncRequests").Msg("received message to remove route " + elems[1])
-						err = s.SyncRouteRemoved(ctx, elems[1])
+						err = s.routingTableMgr.SyncRouteRemoved(ctx, elems[1])
 					} else {
 						err = errors.New("bad command " + elems[0])
 					}
@@ -263,18 +263,4 @@ func (s *RedisTableSyncer) PublishMutationMessage(ctx context.Context, routeId s
 	msg += "," + routeId + "," + hostname
 	log.Ctx(ctx).Info().Str("op", "ListenForPingMessages").Msg("published mutation message")
 	return s.client.Publish(EARS_REDIS_MUTATION_CHANNEL, msg).Err()
-}
-
-// SyncRouteRemoved
-
-func (s *RedisTableSyncer) SyncRouteRemoved(ctx context.Context, routeId string) error {
-	//TODO
-	return errors.New("not implemented")
-}
-
-// SyncAllRoutes
-
-func (s *RedisTableSyncer) SyncAllRoutes(ctx context.Context) error {
-	//TODO
-	return errors.New("not implemented")
 }

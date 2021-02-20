@@ -7,3 +7,7 @@ ears:
 
   storage:
     type: inmemory
+
+  synchronization:
+    type: redis
+    endpoint: gears-redis-qa-001.6bteey.0001.usw2.cache.amazonaws.com:6379

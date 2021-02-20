@@ -56,6 +56,4 @@ type RoutingTableSyncer interface {
 	ListenForPingMessages(ctx context.Context)
 	GetInstanceCount(ctx context.Context) int
 	PublishMutationMessage(ctx context.Context, routeId string, add bool) error
-	SyncRouteRemoved(ctx context.Context, routeId string) error
-	SyncAllRoutes(ctx context.Context) error
 }
