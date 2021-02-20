@@ -16,6 +16,7 @@ package regex
 
 import (
 	"encoding/json"
+	"errors"
 	"regexp"
 
 	"github.com/xmidt-org/ears/pkg/event"
@@ -26,8 +27,16 @@ type Matcher struct {
 }
 
 // TODO: Possibly add POSIX option to pattern
-func NewMatcher(pattern string) (*Matcher, error) {
-	r, err := regexp.Compile(pattern)
+func NewMatcher(pattern interface{}) (*Matcher, error) {
+	p, ok := pattern.(string)
+	if !ok {
+		pp, ok := pattern.(*string)
+		if !ok {
+			return nil, errors.New("regex pattern is not a string")
+		}
+		p = *pp
+	}
+	r, err := regexp.Compile(p)
 	if err != nil {
 		return nil, err
 	}
