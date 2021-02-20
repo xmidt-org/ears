@@ -83,10 +83,9 @@ func TestReceiver(t *testing.T) {
 
 			events := []event.Event{}
 
-			err = r.Receive(func(e event.Event) error {
+			err = r.Receive(func(e event.Event) {
 				events = append(events, e)
 				e.Ack()
-				return nil
 			})
 
 			a.Expect(err).To(BeNil())

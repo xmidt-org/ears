@@ -144,8 +144,8 @@ func (m *manager) RegisterReceiver(
 		m.receiversFn[key] = map[string]pkgreceiver.NextFn{}
 
 		go func() {
-			r.Receive(func(e event.Event) error {
-				return m.next(key, e)
+			r.Receive(func(e event.Event) {
+				m.next(key, e)
 			})
 		}()
 	}
@@ -195,45 +195,21 @@ func (m *manager) next(receiverKey string, e pkgevent.Event) error {
 
 	m.Lock()
 	nextFns := m.receiversFn[receiverKey]
+
+	for _, n := range nextFns {
+		subCtx := logs.SubLoggerCtx(e.Context(), m.logger)
+		childEvt, err := e.Clone(subCtx)
+		if err != nil {
+			e.Nack(err)
+		} else {
+			go func(fn pkgreceiver.NextFn, evt event.Event) {
+				fn(evt)
+			}(n, childEvt)
+		}
+	}
 	m.Unlock()
 
-	errCh := make(chan error, len(nextFns))
-
-	// TODO: Issues to resove here
-	//   * https://github.com/xmidt-org/ears/issues/40 - Fan Out
-	//   * https://github.com/xmidt-org/ears/issues/52 - Event cloning
-	//   * https://github.com/xmidt-org/ears/issues/51 - Context propagation
-	//
-	var wg sync.WaitGroup
-	for _, n := range nextFns {
-		wg.Add(1)
-		go func(fn pkgreceiver.NextFn) {
-			subCtx := logs.SubLoggerCtx(e.Context(), m.logger)
-			childEvt, err := e.Clone(subCtx)
-			if err != nil {
-				errCh <- err
-			} else {
-				err = fn(childEvt)
-				//err = n(ctx, e)
-				if err != nil {
-					errCh <- err
-				}
-			}
-			wg.Done()
-		}(n)
-	}
-
-	wg.Wait()
-	close(errCh)
 	e.Ack()
-
-	// Does it make sense to return an error if any of the filters fail?
-	// TODO:
-	//   * https://github.com/xmidt-org/ears/issues/11 - Metrics
-	if len(errCh) > 0 {
-		return <-errCh
-	}
-
 	return nil
 }
 

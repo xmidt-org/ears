@@ -79,17 +79,18 @@ func NewSender(config interface{}) (sender.Sender, error) {
 
 }
 
-func (s *Sender) Send(e event.Event) error {
-	defer e.Ack()
-
+func (s *Sender) Send(e event.Event) {
 	s.history.Add(e)
 	//fmt.Printf("SEND %p\n", e)
 
 	if s.destination != nil {
-		return s.destination.Write(e)
+		err := s.destination.Write(e)
+		if err != nil {
+			e.Nack(err)
+			return
+		}
 	}
-
-	return nil
+	e.Ack()
 }
 
 func (s *Sender) Reset() {

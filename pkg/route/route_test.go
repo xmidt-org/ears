@@ -47,15 +47,16 @@ func TestErrorCases(t *testing.T) {
 		},
 		{
 			name: "nil sender",
-			r:    &receiver.ReceiverMock{},
-			f:    &filter.FiltererMock{},
-			s:    nil,
-			err:  &route.InvalidRouteError{},
+			r: &receiver.ReceiverMock{
+				StopReceivingFunc: func(ctx context.Context) error {
+					return nil
+				},
+			},
+			f:   &filter.FiltererMock{},
+			s:   nil,
+			err: &route.InvalidRouteError{},
 		},
 	}
-
-	//ctx, cancel := context.WithTimeout(context.Background(), defaultTestTimeout)
-	//defer cancel()
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -88,15 +89,16 @@ func TestRoutes(t *testing.T) {
 		},
 		{
 			name: "nil sender",
-			r:    &receiver.ReceiverMock{},
-			f:    &filter.FiltererMock{},
-			s:    nil,
-			err:  &route.InvalidRouteError{},
+			r: &receiver.ReceiverMock{
+				StopReceivingFunc: func(ctx context.Context) error {
+					return nil
+				},
+			},
+			f:   &filter.FiltererMock{},
+			s:   nil,
+			err: &route.InvalidRouteError{},
 		},
 	}
-
-	//ctx, cancel := context.WithTimeout(context.Background(), defaultTestTimeout)
-	//defer cancel()
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
