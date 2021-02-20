@@ -47,5 +47,9 @@ type (
 		GetAllReceivers(ctx context.Context) (map[string]receiver.Receiver, error)
 		// GetAllFilters gets all filters currently present in the system
 		GetAllFilters(ctx context.Context) (map[string]filter.Filterer, error)
+		// SyncRouteAdded
+		SyncRouteAdded(ctx context.Context, routeId string) error
+		// SyncRouteRemoved
+		SyncRouteRemoved(ctx context.Context, routeId string) error
 	}
 )

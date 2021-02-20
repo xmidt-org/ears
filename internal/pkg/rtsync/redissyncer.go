@@ -17,18 +17,27 @@ package rtsync
 import (
 	"context"
 	"errors"
+	"fmt"
 	"github.com/go-redis/redis"
 	"github.com/rs/zerolog/log"
+	"github.com/xmidt-org/ears/internal/pkg/app"
+	"github.com/xmidt-org/ears/internal/pkg/plugin"
+	"github.com/xmidt-org/ears/pkg/route"
 	"os"
 	"strings"
+	"sync"
 	"time"
 )
 
 type (
 	RedisTableSyncer struct {
-		client        *redis.Client
-		redisEndpoint string
-		subscribers   map[string]int64
+		sync.Mutex
+		client          *redis.Client
+		redisEndpoint   string
+		subscribers     map[string]int64
+		storageMgr      route.RouteStorer
+		pluginMgr       plugin.Manager
+		routingTableMgr app.RoutingTableManager
 	}
 )
 
@@ -36,28 +45,31 @@ type (
 //TODO: remove ping logic
 //TODO: integrate with table manager
 //TODO: load entire table on launch
-//TODO: logging
+//DONE: logging
 //TODO: integrate with uberfx
-//TODO: extract configs (redis endpoint,
+//TODO: extract configs (redis endpoint etc.)
 //TODO: start loading from dynamodb
 //TODO: review notification payload (json)
 //TODO: introduce global table hash
 //TODO: consider app id and org id
 //TODO: reload all when hash failure
 
-func NewRedisTableSyncer(ctx context.Context, endpoint string) TableSyncer {
-	if endpoint == "" {
-		endpoint = EARS_DEFAULT_REDIS_ENDPOINT
-	}
+func NewRedisTableSyncer(pluginMgr plugin.Manager, storageMgr route.RouteStorer, routingTableMgr app.RoutingTableManager) RoutingTableSyncer {
+	endpoint := EARS_DEFAULT_REDIS_ENDPOINT
 	s := new(RedisTableSyncer)
-	log.Ctx(ctx).Info().Str("op", "NewRedisTableSyncer").Msg("connect to redis at " + endpoint)
 	s.redisEndpoint = endpoint
+	s.storageMgr = storageMgr
+	s.pluginMgr = pluginMgr
+	s.routingTableMgr = routingTableMgr
 	s.client = redis.NewClient(&redis.Options{
 		Addr:     endpoint,
 		Password: "",
 		DB:       0,
 	})
 	s.subscribers = make(map[string]int64)
+	fmt.Printf("LAUNCHING REDIS SYNCER")
+	//TODO: start ping loop
+	//TODO: start listen loop
 	return s
 }
 
@@ -151,7 +163,7 @@ func (s *RedisTableSyncer) ListenForSyncRequests(ctx context.Context) {
 				if elems[2] != hostname {
 					if elems[0] == EARS_REDIS_ADD_ROUTE_CMD {
 						log.Ctx(ctx).Info().Str("op", "ListenForSyncRequests").Msg("received message to add route " + elems[1])
-						err = s.SyncRouteAdded(ctx, elems[1])
+						err = s.routingTableMgr.SyncRouteAdded(ctx, elems[1])
 					} else if elems[0] == EARS_REDIS_REMOVE_ROUTE_CMD {
 						log.Ctx(ctx).Info().Str("op", "ListenForSyncRequests").Msg("received message to remove route " + elems[1])
 						err = s.SyncRouteRemoved(ctx, elems[1])
@@ -251,13 +263,6 @@ func (s *RedisTableSyncer) PublishMutationMessage(ctx context.Context, routeId s
 	msg += "," + routeId + "," + hostname
 	log.Ctx(ctx).Info().Str("op", "ListenForPingMessages").Msg("published mutation message")
 	return s.client.Publish(EARS_REDIS_MUTATION_CHANNEL, msg).Err()
-}
-
-// SyncRouteAdded
-
-func (s *RedisTableSyncer) SyncRouteAdded(ctx context.Context, routeId string) error {
-	//TODO
-	return errors.New("not implemented")
 }
 
 // SyncRouteRemoved

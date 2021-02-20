@@ -17,6 +17,7 @@ package app
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"github.com/rs/zerolog/log"
 	"github.com/xmidt-org/ears/internal/pkg/plugin"
 	"github.com/xmidt-org/ears/pkg/filter"
@@ -175,4 +176,51 @@ func (r *DefaultRoutingTableManager) GetAllReceivers(ctx context.Context) (map[s
 func (r *DefaultRoutingTableManager) GetAllFilters(ctx context.Context) (map[string]filter.Filterer, error) {
 	filterers := r.pluginMgr.Filters()
 	return filterers, nil
+}
+
+func (r *DefaultRoutingTableManager) SyncRouteAdded(ctx context.Context, routeId string) error {
+	routeConfig, err := r.storageMgr.GetRoute(ctx, routeId)
+	if err != nil {
+		return err
+	}
+	// set up sender
+	sender, err := r.pluginMgr.RegisterSender(ctx, routeConfig.Sender.Plugin, routeConfig.Sender.Name, stringify(routeConfig.Sender.Config))
+	if err != nil {
+		return err
+	}
+	// set up receiver
+	receiver, err := r.pluginMgr.RegisterReceiver(ctx, routeConfig.Receiver.Plugin, routeConfig.Receiver.Name, stringify(routeConfig.Receiver.Config))
+	if err != nil {
+		return err
+	}
+	// set up filter chain
+	filterChain := &filter.Chain{}
+	if routeConfig.FilterChain != nil {
+		for _, f := range routeConfig.FilterChain {
+			filter, err := r.pluginMgr.RegisterFilter(ctx, f.Plugin, f.Name, stringify(f.Config))
+			filterChain.Add(filter)
+			if err != nil {
+				return err
+			}
+		}
+	}
+	// create live route
+	liveRoute := &route.Route{}
+	r.Lock()
+	r.liveRouteMap[routeConfig.Id] = &LiveRouteWrapper{liveRoute, sender, receiver, filterChain}
+	r.Unlock()
+	go func() {
+		sctx := context.Background()
+		//TODO: use application context here? see issue #51
+		err = liveRoute.Run(sctx, receiver, filterChain, sender) // run is blocking
+		if err != nil {
+			log.Ctx(ctx).Error().Str("op", "AddRoute").Msg(err.Error())
+		}
+	}()
+	return nil
+}
+
+func (r *DefaultRoutingTableManager) SyncRouteRemoved(ctx context.Context, routeId string) error {
+	//TODO
+	return errors.New("not implemented")
 }
