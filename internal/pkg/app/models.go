@@ -51,5 +51,7 @@ type (
 		SyncRouteAdded(ctx context.Context, routeId string) error
 		// SyncRouteRemoved
 		SyncRouteRemoved(ctx context.Context, routeId string) error
+		// SyncAllRoutes
+		SyncAllRoutes(ctx context.Context) error
 	}
 )

@@ -41,6 +41,21 @@ type LiveRouteWrapper struct {
 	FilterChain *filter.Chain
 }
 
+func stringify(data interface{}) string {
+	if data == nil {
+		return ""
+	}
+	buf, err := json.Marshal(data)
+	if err != nil {
+		return ""
+	}
+	return string(buf)
+}
+
+func NewRoutingTableManager(pluginMgr plugin.Manager, storageMgr route.RouteStorer) RoutingTableManager {
+	return &DefaultRoutingTableManager{pluginMgr: pluginMgr, storageMgr: storageMgr, liveRouteMap: make(map[string]*LiveRouteWrapper, 0)}
+}
+
 func (lrw *LiveRouteWrapper) Unregister(ctx context.Context, r *DefaultRoutingTableManager) error {
 	var e, err error
 	if lrw.Receiver != nil {
@@ -66,15 +81,8 @@ func (lrw *LiveRouteWrapper) Unregister(ctx context.Context, r *DefaultRoutingTa
 	return e
 }
 
-func NewRoutingTableManager(pluginMgr plugin.Manager, storageMgr route.RouteStorer) RoutingTableManager {
-	return &DefaultRoutingTableManager{pluginMgr: pluginMgr, storageMgr: storageMgr, liveRouteMap: make(map[string]*LiveRouteWrapper, 0)}
-}
-
-func (r *DefaultRoutingTableManager) RemoveRoute(ctx context.Context, routeId string) error {
-	err := r.storageMgr.DeleteRoute(ctx, routeId)
-	if err != nil {
-		return err
-	}
+func (r *DefaultRoutingTableManager) unregisterAndStopRoute(ctx context.Context, routeId string) error {
+	var err error
 	liveRoute, ok := r.liveRouteMap[routeId]
 	if !ok {
 		// no error to make this idempotent
@@ -85,7 +93,8 @@ func (r *DefaultRoutingTableManager) RemoveRoute(ctx context.Context, routeId st
 		r.Unlock()
 		err = liveRoute.Route.Stop(ctx)
 		if err != nil {
-			return err
+			log.Ctx(ctx).Error().Str("op", "SyncRouteRemoved").Msg(err.Error())
+			//return err
 		}
 		err = liveRoute.Unregister(ctx, r)
 		if err != nil {
@@ -95,32 +104,8 @@ func (r *DefaultRoutingTableManager) RemoveRoute(ctx context.Context, routeId st
 	return nil
 }
 
-func stringify(data interface{}) string {
-	if data == nil {
-		return ""
-	}
-	buf, err := json.Marshal(data)
-	if err != nil {
-		return ""
-	}
-	return string(buf)
-}
-
-func (r *DefaultRoutingTableManager) AddRoute(ctx context.Context, routeConfig *route.Config) error {
-	ctx = context.Background()
-	// use hashed ID if none is provided - this ID will be returned by the AddRoute REST API
-	if routeConfig.Id == "" {
-		routeConfig.Id = routeConfig.Hash(ctx)
-	}
-	err := routeConfig.Validate(ctx)
-	if err != nil {
-		return err
-	}
-	// currently storage layer handles created and updated timestamps
-	err = r.storageMgr.SetRoute(ctx, *routeConfig)
-	if err != nil {
-		return err
-	}
+func (r *DefaultRoutingTableManager) registerAndRunRoute(ctx context.Context, routeConfig *route.Config) error {
+	var err error
 	var lrw LiveRouteWrapper
 	// set up filter chain
 	lrw.FilterChain = &filter.Chain{}
@@ -162,6 +147,32 @@ func (r *DefaultRoutingTableManager) AddRoute(ctx context.Context, routeConfig *
 	return nil
 }
 
+func (r *DefaultRoutingTableManager) RemoveRoute(ctx context.Context, routeId string) error {
+	err := r.storageMgr.DeleteRoute(ctx, routeId)
+	if err != nil {
+		return err
+	}
+	return r.unregisterAndStopRoute(ctx, routeId)
+}
+
+func (r *DefaultRoutingTableManager) AddRoute(ctx context.Context, routeConfig *route.Config) error {
+	ctx = context.Background()
+	// use hashed ID if none is provided - this ID will be returned by the AddRoute REST API
+	if routeConfig.Id == "" {
+		routeConfig.Id = routeConfig.Hash(ctx)
+	}
+	err := routeConfig.Validate(ctx)
+	if err != nil {
+		return err
+	}
+	// currently storage layer handles created and updated timestamps
+	err = r.storageMgr.SetRoute(ctx, *routeConfig)
+	if err != nil {
+		return err
+	}
+	return r.registerAndRunRoute(ctx, routeConfig)
+}
+
 func (r *DefaultRoutingTableManager) GetRoute(ctx context.Context, routeId string) (*route.Config, error) {
 	route, err := r.storageMgr.GetRoute(ctx, routeId)
 	if err != nil {
@@ -199,44 +210,29 @@ func (r *DefaultRoutingTableManager) SyncRouteAdded(ctx context.Context, routeId
 	if err != nil {
 		return err
 	}
-	// set up sender
-	sender, err := r.pluginMgr.RegisterSender(ctx, routeConfig.Sender.Plugin, routeConfig.Sender.Name, stringify(routeConfig.Sender.Config))
-	if err != nil {
-		return err
-	}
-	// set up receiver
-	receiver, err := r.pluginMgr.RegisterReceiver(ctx, routeConfig.Receiver.Plugin, routeConfig.Receiver.Name, stringify(routeConfig.Receiver.Config))
-	if err != nil {
-		return err
-	}
-	// set up filter chain
-	filterChain := &filter.Chain{}
-	if routeConfig.FilterChain != nil {
-		for _, f := range routeConfig.FilterChain {
-			filter, err := r.pluginMgr.RegisterFilter(ctx, f.Plugin, f.Name, stringify(f.Config))
-			filterChain.Add(filter)
-			if err != nil {
-				return err
-			}
-		}
-	}
-	// create live route
-	liveRoute := &route.Route{}
-	r.Lock()
-	r.liveRouteMap[routeConfig.Id] = &LiveRouteWrapper{liveRoute, sender, receiver, filterChain}
-	r.Unlock()
-	go func() {
-		sctx := context.Background()
-		//TODO: use application context here? see issue #51
-		err = liveRoute.Run(sctx, receiver, filterChain, sender) // run is blocking
-		if err != nil {
-			log.Ctx(ctx).Error().Str("op", "AddRoute").Msg(err.Error())
-		}
-	}()
-	return nil
+	return r.registerAndRunRoute(ctx, &routeConfig)
 }
 
 func (r *DefaultRoutingTableManager) SyncRouteRemoved(ctx context.Context, routeId string) error {
-	//TODO
-	return errors.New("not implemented")
+	return r.unregisterAndStopRoute(ctx, routeId)
+}
+
+func (r *DefaultRoutingTableManager) SyncAllRoutes(ctx context.Context) error {
+	if len(r.liveRouteMap) > 0 {
+		//TODO: or should we unregister all running routes here?
+		return errors.New("live route map must be empty for sync all")
+	}
+	routeConfigs, err := r.storageMgr.GetAllRoutes(ctx)
+	if err != nil {
+		return err
+	}
+	//TODO: should this be locked in any way?
+	for _, routeConfig := range routeConfigs {
+		err = r.registerAndRunRoute(ctx, &routeConfig)
+		if err != nil {
+			//TODO: discuss if best effort is the right strategy here
+			log.Ctx(ctx).Error().Str("op", "SyncAllRoutes").Msg(err.Error())
+		}
+	}
+	return nil
 }
