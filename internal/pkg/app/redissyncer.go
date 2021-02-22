@@ -19,6 +19,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/go-redis/redis"
+	"github.com/google/uuid"
 	"github.com/rs/zerolog"
 	"github.com/xmidt-org/ears/internal/pkg/logs"
 	"os"
@@ -32,11 +33,15 @@ type (
 		sync.Mutex
 		client          *redis.Client
 		redisEndpoint   string
-		subscribers     map[string]int64
 		routingTableMgr RoutingTableManager
 		logger          *zerolog.Logger
+		instanceId      string
 	}
 )
+
+//DISCUSS: instance id
+//DISCUSS: mocks
+//DISCUSS: package structure
 
 //TODO: add tests
 //DONE: remove ping logic
@@ -50,6 +55,9 @@ type (
 //TODO: introduce global table hash
 //TODO: consider app id and org id
 //TODO: reload all when hash failure
+//TODO: do not rely on hostname (alone)
+//TODO: do we need to deal with multiple concurrent pub-ack handshakes?
+//TODO: need local shared storage
 
 func NewRedisTableSyncer(routingTableMgr RoutingTableManager, logger *zerolog.Logger) RoutingTableSyncer {
 	endpoint := EARS_DEFAULT_REDIS_ENDPOINT
@@ -62,7 +70,8 @@ func NewRedisTableSyncer(routingTableMgr RoutingTableManager, logger *zerolog.Lo
 		Password: "",
 		DB:       0,
 	})
-	s.subscribers = make(map[string]int64)
+	hostname, _ := os.Hostname()
+	s.instanceId = hostname + "_" + uuid.New().String()
 	s.ListenForSyncRequests()
 	logger.Info().Msg("Launching Redis Syncer")
 	return s
@@ -114,15 +123,16 @@ func (s *RedisTableSyncer) PublishSyncRequest(ctx context.Context, routeId strin
 		}
 		s.PublishMutationMessage(ctx, routeId, add)
 	}()
+	// wait for listener to be ready
+	time.Sleep(10 * time.Millisecond)
 	// ... then request all flow apis to sync
-	hostname, _ := os.Hostname()
 	msg := ""
 	if add {
 		msg = EARS_REDIS_ADD_ROUTE_CMD
 	} else {
 		msg = EARS_REDIS_REMOVE_ROUTE_CMD
 	}
-	msg += "," + routeId + "," + hostname
+	msg += "," + routeId + "," + s.instanceId
 	err := s.client.Publish(EARS_REDIS_SYNC_CHANNEL, msg).Err()
 	if err != nil {
 		s.logger.Error().Str("op", "PublishSyncRequest").Msg(err.Error())
@@ -160,23 +170,22 @@ func (s *RedisTableSyncer) ListenForSyncRequests() {
 					s.logger.Error().Str("op", "ListenForSyncRequests").Msg("bad message structure: " + msg.Payload)
 				}
 				// sync only whats needed
-				hostname, _ := os.Hostname()
-				if elems[2] != hostname {
+				if elems[2] != s.instanceId {
 					if elems[0] == EARS_REDIS_ADD_ROUTE_CMD {
-						s.logger.Info().Str("op", "ListenForSyncRequests").Str("hostname", hostname).Msg("received message to add route " + elems[1])
+						s.logger.Info().Str("op", "ListenForSyncRequests").Str("instanceId", s.instanceId).Msg("received message to add route " + elems[1])
 						err = s.routingTableMgr.SyncRouteAdded(ctx, elems[1])
 					} else if elems[0] == EARS_REDIS_REMOVE_ROUTE_CMD {
-						s.logger.Info().Str("op", "ListenForSyncRequests").Str("hostname", hostname).Msg("received message to remove route " + elems[1])
+						s.logger.Info().Str("op", "ListenForSyncRequests").Str("instanceId", s.instanceId).Msg("received message to remove route " + elems[1])
 						err = s.routingTableMgr.SyncRouteRemoved(ctx, elems[1])
 					} else {
 						err = errors.New("bad command " + elems[0])
 					}
 					if err != nil {
-						s.logger.Error().Str("op", "ListenForSyncRequests").Str("hostname", hostname).Msg(err.Error())
+						s.logger.Error().Str("op", "ListenForSyncRequests").Str("instanceId", s.instanceId).Msg(err.Error())
 					}
 					s.PublishAckMessage(ctx)
 				} else {
-					s.logger.Info().Str("op", "ListenForSyncRequests").Str("hostname", hostname).Msg("no need to sync myself")
+					s.logger.Info().Str("op", "ListenForSyncRequests").Str("instanceId", s.instanceId).Msg("no need to sync myself")
 				}
 			}
 		}
@@ -186,8 +195,7 @@ func (s *RedisTableSyncer) ListenForSyncRequests() {
 // PublishAckMessage confirm successful syncing of routing table
 
 func (s *RedisTableSyncer) PublishAckMessage(ctx context.Context) error {
-	hostname, _ := os.Hostname()
-	err := s.client.Publish(EARS_REDIS_ACK_CHANNEL, hostname).Err()
+	err := s.client.Publish(EARS_REDIS_ACK_CHANNEL, s.instanceId).Err()
 	if err != nil {
 		s.logger.Error().Str("op", "PublishAckMessage").Msg(err.Error())
 	} else {
@@ -217,14 +225,13 @@ func (s *RedisTableSyncer) GetInstanceCount(ctx context.Context) int {
 
 func (s *RedisTableSyncer) PublishMutationMessage(ctx context.Context, routeId string, add bool) error {
 	//TODO: may not need this
-	hostname, _ := os.Hostname()
 	msg := ""
 	if add {
 		msg = EARS_REDIS_ADD_ROUTE_CMD
 	} else {
 		msg = EARS_REDIS_REMOVE_ROUTE_CMD
 	}
-	msg += "," + routeId + "," + hostname
+	msg += "," + routeId + "," + s.instanceId
 	s.logger.Info().Str("op", "ListenForPingMessages").Msg("published mutation message")
 	return s.client.Publish(EARS_REDIS_MUTATION_CHANNEL, msg).Err()
 }
