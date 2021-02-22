@@ -53,8 +53,10 @@ func stringify(data interface{}) string {
 	return string(buf)
 }
 
-func NewRoutingTableManager(pluginMgr plugin.Manager, storageMgr route.RouteStorer, rtSyncer RoutingTableSyncer) RoutingTableManager {
-	return &DefaultRoutingTableManager{pluginMgr: pluginMgr, storageMgr: storageMgr, rtSyncer: rtSyncer, liveRouteMap: make(map[string]*LiveRouteWrapper, 0)}
+func NewRoutingTableManager(pluginMgr plugin.Manager, storageMgr route.RouteStorer) RoutingTableManager {
+	rtm := &DefaultRoutingTableManager{pluginMgr: pluginMgr, storageMgr: storageMgr, liveRouteMap: make(map[string]*LiveRouteWrapper, 0)}
+	rtm.rtSyncer = NewRedisTableSyncer(rtm)
+	return rtm
 }
 
 func (lrw *LiveRouteWrapper) Unregister(ctx context.Context, r *DefaultRoutingTableManager) error {

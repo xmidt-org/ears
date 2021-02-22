@@ -56,7 +56,6 @@ var runCmd = &cobra.Command{
 				app.NewAPIManager,
 				app.NewMiddleware,
 				app.NewMux,
-				app.NewRedisTableSyncer,
 			),
 			fx.Logger(logger),
 			fx.Invoke(app.SetupAPIServer),
