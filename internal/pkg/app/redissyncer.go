@@ -50,36 +50,42 @@ type (
 //DONE: logging
 //TODO: integrate with uberfx
 //TODO: extract configs (redis endpoint etc.)
-//TODO: start loading from dynamodb
 //TODO: review notification payload (json)
 //TODO: introduce global table hash
 //TODO: consider app id and org id
 //TODO: reload all when hash failure
-//TODO: do not rely on hostname (alone)
+//DONE: do not rely on hostname (alone)
 //TODO: do we need to deal with multiple concurrent pub-ack handshakes?
-//TODO: need local shared storage
+//TODO: need local shared storage (boltdb)
+//TODO: ability to turn syncing on and off
 
 func NewRedisTableSyncer(routingTableMgr RoutingTableManager, logger *zerolog.Logger) RoutingTableSyncer {
-	endpoint := EARS_DEFAULT_REDIS_ENDPOINT
 	s := new(RedisTableSyncer)
 	s.logger = logger
-	s.redisEndpoint = endpoint
+	s.redisEndpoint = "" //EARS_DEFAULT_REDIS_ENDPOINT
 	s.routingTableMgr = routingTableMgr
-	s.client = redis.NewClient(&redis.Options{
-		Addr:     endpoint,
-		Password: "",
-		DB:       0,
-	})
 	hostname, _ := os.Hostname()
 	s.instanceId = hostname + "_" + uuid.New().String()
-	s.ListenForSyncRequests()
-	logger.Info().Msg("Launching Redis Syncer")
+	if s.redisEndpoint == "" {
+		logger.Info().Msg("Redis Syncer Not Configured")
+	} else {
+		s.client = redis.NewClient(&redis.Options{
+			Addr:     s.redisEndpoint,
+			Password: "",
+			DB:       0,
+		})
+		s.ListenForSyncRequests()
+		logger.Info().Msg("Launching Redis Syncer")
+	}
 	return s
 }
 
 // PublishSyncRequest asks others to sync their routing tables
 
 func (s *RedisTableSyncer) PublishSyncRequest(ctx context.Context, routeId string, add bool) error {
+	if s.redisEndpoint == "" {
+		return nil
+	}
 	// listen for ACKs first ...
 	go func() {
 		numSubscribers := s.GetInstanceCount(ctx)
