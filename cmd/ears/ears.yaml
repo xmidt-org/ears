@@ -6,7 +6,7 @@ ears:
     port: 3000
 
   storage:
-    type: inmemory
+    type: boltdb
 
   synchronization:
     type: redis
