@@ -27,16 +27,21 @@ type BoltDbStorer struct {
 	db       *bolt.DB
 }
 
-type Config struct {
-	fileName string
+type Config interface {
+	GetString(key string) string
+	GetInt(key string) int
+	GetBool(key string) bool
 }
+
+//TODO: configuration
+//TODO: clean shutdown of bolt db
 
 func NewBoltDbStorer(config Config) (*BoltDbStorer, error) {
 	bdb := &BoltDbStorer{
 		fileName: "bolt.dat",
 	}
 	var err error
-	bdb.db, err = bolt.Open("test.db", 0600, nil)
+	bdb.db, err = bolt.Open(bdb.fileName, 0600, nil)
 	if err != nil {
 		return nil, fmt.Errorf("could not open db, %v", err)
 	}
@@ -54,6 +59,7 @@ func NewBoltDbStorer(config Config) (*BoltDbStorer, error) {
 	if err != nil {
 		return nil, fmt.Errorf("could not set up buckets, %v", err)
 	}
+	fmt.Printf("Started Bolt DB")
 	return bdb, nil
 }
 
