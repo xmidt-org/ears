@@ -19,7 +19,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/go-redis/redis"
-	"github.com/rs/zerolog/log"
+	"github.com/rs/zerolog"
 	"os"
 	"strings"
 	"sync"
@@ -33,6 +33,7 @@ type (
 		redisEndpoint   string
 		subscribers     map[string]int64
 		routingTableMgr RoutingTableManager
+		logger          *zerolog.Logger
 	}
 )
 
@@ -49,9 +50,10 @@ type (
 //TODO: consider app id and org id
 //TODO: reload all when hash failure
 
-func NewRedisTableSyncer(routingTableMgr RoutingTableManager) RoutingTableSyncer {
+func NewRedisTableSyncer(routingTableMgr RoutingTableManager, logger *zerolog.Logger) RoutingTableSyncer {
 	endpoint := EARS_DEFAULT_REDIS_ENDPOINT
 	s := new(RedisTableSyncer)
+	s.logger = logger
 	s.redisEndpoint = endpoint
 	s.routingTableMgr = routingTableMgr
 	s.client = redis.NewClient(&redis.Options{
@@ -60,6 +62,8 @@ func NewRedisTableSyncer(routingTableMgr RoutingTableManager) RoutingTableSyncer
 		DB:       0,
 	})
 	s.subscribers = make(map[string]int64)
+	s.ListenForPingMessages()
+	s.PublishPings()
 	fmt.Printf("LAUNCHING REDIS SYNCER")
 	//TODO: start ping loop
 	//TODO: start listen loop
@@ -87,10 +91,10 @@ func (s *RedisTableSyncer) PublishSyncRequest(ctx context.Context, routeId strin
 			for {
 				msg, err := pubsub.ReceiveMessage()
 				if err != nil {
-					log.Ctx(ctx).Error().Str("op", "PublishSyncRequest").Msg(err.Error())
+					s.logger.Error().Str("op", "PublishSyncRequest").Msg(err.Error())
 					break
 				} else {
-					log.Ctx(ctx).Info().Str("op", "PublishSyncRequest").Msg("receive ack on channel " + EARS_REDIS_ACK_CHANNEL)
+					s.logger.Info().Str("op", "PublishSyncRequest").Msg("receive ack on channel " + EARS_REDIS_ACK_CHANNEL)
 				}
 				received[msg.Payload] = true
 				// wait until we received an ack from each subscriber (except the one originating the request)
@@ -102,9 +106,9 @@ func (s *RedisTableSyncer) PublishSyncRequest(ctx context.Context, routeId strin
 		}()
 		select {
 		case <-done:
-			log.Ctx(ctx).Info().Str("op", "PublishSyncRequest").Msg("done collecting acks")
+			s.logger.Info().Str("op", "PublishSyncRequest").Msg("done collecting acks")
 		case <-time.After(30 * time.Second):
-			log.Ctx(ctx).Info().Str("op", "PublishSyncRequest").Msg("timeout while collecting acks")
+			s.logger.Info().Str("op", "PublishSyncRequest").Msg("timeout while collecting acks")
 		}
 		s.PublishMutationMessage(ctx, routeId, add)
 	}()
@@ -119,10 +123,10 @@ func (s *RedisTableSyncer) PublishSyncRequest(ctx context.Context, routeId strin
 	msg += "," + routeId + "," + hostname
 	err := s.client.Publish(EARS_REDIS_SYNC_CHANNEL, msg).Err()
 	if err != nil {
-		log.Ctx(ctx).Error().Str("op", "PublishSyncRequest").Msg(err.Error())
+		s.logger.Error().Str("op", "PublishSyncRequest").Msg(err.Error())
 		return err
 	} else {
-		log.Ctx(ctx).Info().Str("op", "PublishSyncRequest").Msg("publish on channel " + EARS_REDIS_SYNC_CHANNEL)
+		s.logger.Info().Str("op", "PublishSyncRequest").Msg("publish on channel " + EARS_REDIS_SYNC_CHANNEL)
 	}
 	return nil
 }
@@ -142,29 +146,29 @@ func (s *RedisTableSyncer) ListenForSyncRequests(ctx context.Context) {
 		for {
 			msg, err := pubsub.ReceiveMessage()
 			if err != nil {
-				log.Ctx(ctx).Error().Str("op", "ListenForSyncRequests").Msg(err.Error())
+				s.logger.Error().Str("op", "ListenForSyncRequests").Msg(err.Error())
 				time.Sleep(EARS_REDIS_RETRY_INTERVAL_SECONDS)
 			} else {
-				log.Ctx(ctx).Info().Str("op", "ListenForSyncRequests").Msg("received message on channel " + EARS_REDIS_SYNC_CHANNEL)
+				s.logger.Info().Str("op", "ListenForSyncRequests").Msg("received message on channel " + EARS_REDIS_SYNC_CHANNEL)
 				// parse message
 				elems := strings.Split(msg.Payload, ",")
 				if len(elems) != 3 {
-					log.Ctx(ctx).Error().Str("op", "ListenForSyncRequests").Msg("bad message structure: " + msg.Payload)
+					s.logger.Error().Str("op", "ListenForSyncRequests").Msg("bad message structure: " + msg.Payload)
 				}
 				// sync only whats needed
 				hostname, _ := os.Hostname()
 				if elems[2] != hostname {
 					if elems[0] == EARS_REDIS_ADD_ROUTE_CMD {
-						log.Ctx(ctx).Info().Str("op", "ListenForSyncRequests").Msg("received message to add route " + elems[1])
+						s.logger.Info().Str("op", "ListenForSyncRequests").Msg("received message to add route " + elems[1])
 						err = s.routingTableMgr.SyncRouteAdded(ctx, elems[1])
 					} else if elems[0] == EARS_REDIS_REMOVE_ROUTE_CMD {
-						log.Ctx(ctx).Info().Str("op", "ListenForSyncRequests").Msg("received message to remove route " + elems[1])
+						s.logger.Info().Str("op", "ListenForSyncRequests").Msg("received message to remove route " + elems[1])
 						err = s.routingTableMgr.SyncRouteRemoved(ctx, elems[1])
 					} else {
 						err = errors.New("bad command " + elems[0])
 					}
 					if err != nil {
-						log.Ctx(ctx).Error().Str("op", "ListenForSyncRequests").Msg(err.Error())
+						s.logger.Error().Str("op", "ListenForSyncRequests").Msg(err.Error())
 					}
 				}
 			}
@@ -179,24 +183,25 @@ func (s *RedisTableSyncer) PublishAckMessage(ctx context.Context) error {
 	hostname, _ := os.Hostname()
 	err := s.client.Publish(EARS_REDIS_ACK_CHANNEL, hostname).Err()
 	if err != nil {
-		log.Ctx(ctx).Error().Str("op", "PublishAckMessage").Msg(err.Error())
+		s.logger.Error().Str("op", "PublishAckMessage").Msg(err.Error())
 	} else {
-		log.Ctx(ctx).Info().Str("op", "PublishAckMessage").Msg("published ack message")
+		s.logger.Info().Str("op", "PublishAckMessage").Msg("published ack message")
 	}
 	return err
 }
 
 // PublishPings publish heart beat messages
 
-func (s *RedisTableSyncer) PublishPings(ctx context.Context) {
+func (s *RedisTableSyncer) PublishPings() {
+	//TODO: where to "go"
 	hostname, _ := os.Hostname()
 	go func() {
 		for {
 			err := s.client.Publish(EARS_REDIS_PING_CHANNEL, hostname).Err()
 			if err != nil {
-				log.Ctx(ctx).Error().Str("op", "PublishPings").Msg(err.Error())
+				s.logger.Error().Str("op", "PublishPings").Msg(err.Error())
 			} else {
-				log.Ctx(ctx).Info().Str("op", "PublishPings").Msg("published ping message for " + hostname)
+				s.logger.Info().Str("op", "PublishPings").Msg("published ping message for " + hostname)
 			}
 			time.Sleep(30 * time.Second)
 		}
@@ -205,7 +210,8 @@ func (s *RedisTableSyncer) PublishPings(ctx context.Context) {
 
 // ListenForPingMessages listens for heart beat messages
 
-func (s *RedisTableSyncer) ListenForPingMessages(ctx context.Context) {
+func (s *RedisTableSyncer) ListenForPingMessages() {
+	//TODO: where to "go"
 	go func() {
 		lrc := redis.NewClient(&redis.Options{
 			Addr:     s.redisEndpoint,
@@ -218,7 +224,7 @@ func (s *RedisTableSyncer) ListenForPingMessages(ctx context.Context) {
 		for {
 			msg, err := pubsub.ReceiveMessage()
 			if err != nil {
-				log.Ctx(ctx).Error().Str("op", "ListenForPingMessages").Msg(err.Error())
+				s.logger.Error().Str("op", "ListenForPingMessages").Msg(err.Error())
 				time.Sleep(EARS_REDIS_RETRY_INTERVAL_SECONDS)
 			} else {
 				nowsec := time.Now().Unix()
@@ -231,7 +237,7 @@ func (s *RedisTableSyncer) ListenForPingMessages(ctx context.Context) {
 						delete(s.subscribers, sid)
 					}
 				}
-				log.Ctx(ctx).Info().Str("op", "ListenForPingMessages").Msg("processed ping message")
+				s.logger.Info().Str("op", "ListenForPingMessages").Msg("processed ping message")
 			}
 		}
 	}()
@@ -254,6 +260,6 @@ func (s *RedisTableSyncer) PublishMutationMessage(ctx context.Context, routeId s
 		msg = EARS_REDIS_REMOVE_ROUTE_CMD
 	}
 	msg += "," + routeId + "," + hostname
-	log.Ctx(ctx).Info().Str("op", "ListenForPingMessages").Msg("published mutation message")
+	s.logger.Info().Str("op", "ListenForPingMessages").Msg("published mutation message")
 	return s.client.Publish(EARS_REDIS_MUTATION_CHANNEL, msg).Err()
 }
