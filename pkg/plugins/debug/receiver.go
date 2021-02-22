@@ -64,13 +64,13 @@ func (r *Receiver) Receive(next receiver.NextFn) error {
 			case <-time.After(time.Duration(*r.config.IntervalMs) * time.Millisecond):
 				//fmt.Printf("RECEIVER NEW EVENT\n")
 				ctx := context.Background()
-				e, err := event.NewEventWithAck(ctx, r.config.Payload,
+				e, err := event.New(ctx, r.config.Payload, event.WithAck(
 					func() {
 						eventsDone.Done()
 					}, func(err error) {
 						//fmt.Println("Debug error", err.Error())
 						eventsDone.Done()
-					})
+					}))
 				if err != nil {
 					return
 				}

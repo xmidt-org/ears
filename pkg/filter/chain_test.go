@@ -127,11 +127,11 @@ func TestChaining(t *testing.T) {
 			} {
 				result := []event.Event{}
 				for _, p := range payloads {
-					evt, err := event.NewEventWithAck(ctx, p, func() {
+					evt, err := event.New(ctx, p, event.WithAck(func() {
 						//ok
 					}, func(err error) {
 						t.Error(err)
-					})
+					}))
 					a.Expect(err).To(BeNil())
 
 					r := c.Filter(evt)

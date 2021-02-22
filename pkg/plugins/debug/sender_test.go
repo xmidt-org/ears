@@ -87,11 +87,11 @@ func TestSender(t *testing.T) {
 			a.Expect(err).To(BeNil())
 
 			for i := 0; i < tc.numMessages; i++ {
-				e, err := event.NewEventWithAck(ctx, tc.name, func() {
+				e, err := event.New(ctx, tc.name, event.WithAck(func() {
 					//ok
 				}, func(err error) {
 					t.Error(err)
-				})
+				}))
 				a.Expect(err).To(BeNil())
 				s.Send(e)
 			}
