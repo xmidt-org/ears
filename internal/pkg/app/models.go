@@ -34,10 +34,6 @@ const (
 
 	EARS_REDIS_ACK_CHANNEL = "ears_ack"
 
-	// used by all ears instances to do regular pings so we have awareness of how many instances are alive (could be done with redis api instead)
-
-	EARS_REDIS_PING_CHANNEL = "ears_ping"
-
 	// used by ears instance to tell other interested parties about updates (this can probably be removed)
 
 	EARS_REDIS_MUTATION_CHANNEL = "ears_mutation"
