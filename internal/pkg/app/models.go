@@ -80,11 +80,9 @@ type (
 	}
 
 	RoutingTableSyncer interface {
+		ListenForSyncRequests()
 		PublishSyncRequest(ctx context.Context, routeId string, add bool) error
-		ListenForSyncRequests(ctx context.Context)
 		PublishAckMessage(ctx context.Context) error
-		PublishPings()
-		ListenForPingMessages()
 		GetInstanceCount(ctx context.Context) int
 		PublishMutationMessage(ctx context.Context, routeId string, add bool) error
 	}
