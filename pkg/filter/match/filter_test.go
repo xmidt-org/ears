@@ -120,11 +120,7 @@ func TestFilterRegex(t *testing.T) {
 				for _, in := range succeed {
 					t.Run(mode.String()+"/"+in, func(t *testing.T) {
 						a := NewWithT(t)
-						e, err := event.New(ctx, in, event.WithAck(func() {
-							//ok
-						}, func(err error) {
-							t.Error(err)
-						}))
+						e, err := event.New(ctx, in, event.FailOnNack(t))
 						a.Expect(err).To(BeNil())
 
 						evts := f.Filter(e)
@@ -139,11 +135,7 @@ func TestFilterRegex(t *testing.T) {
 					t.Run(mode.String()+"/"+in, func(t *testing.T) {
 						a := NewWithT(t)
 
-						e, err := event.New(ctx, in, event.WithAck(func() {
-							//ok
-						}, func(err error) {
-							t.Error(err)
-						}))
+						e, err := event.New(ctx, in, event.FailOnNack(t))
 						a.Expect(err).To(BeNil())
 
 						evts := f.Filter(e)
@@ -301,11 +293,7 @@ func TestNilFilter(t *testing.T) {
 
 	a := NewWithT(t)
 
-	e, err := event.New(context.Background(), nil, event.WithAck(func() {
-		t.Error("expecting error")
-	}, func(err error) {
-		//ok
-	}))
+	e, err := event.New(context.Background(), nil, event.FailOnAck(t))
 	a.Expect(err).To(BeNil())
 
 	evts := f.Filter(e)
