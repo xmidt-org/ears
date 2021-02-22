@@ -272,7 +272,7 @@ func setupRestApi() (*APIManager, RoutingTableManager, plugin.Manager, route.Rou
 			return nil, nil, nil, nil, err
 		}
 	}
-	routingMgr := NewRoutingTableManager(pluginMgr, inMemStorageMgr)
+	routingMgr := NewRoutingTableManager(pluginMgr, inMemStorageMgr, &log.Logger)
 	apiMgr, err := NewAPIManager(routingMgr)
 	if err != nil {
 		return nil, nil, nil, nil, err

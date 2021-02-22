@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"github.com/go-redis/redis"
 	"github.com/rs/zerolog"
+	"github.com/xmidt-org/ears/internal/pkg/logs"
 	"os"
 	"strings"
 	"sync"
@@ -62,11 +63,10 @@ func NewRedisTableSyncer(routingTableMgr RoutingTableManager, logger *zerolog.Lo
 		DB:       0,
 	})
 	s.subscribers = make(map[string]int64)
-	s.ListenForPingMessages()
-	s.PublishPings()
-	fmt.Printf("LAUNCHING REDIS SYNCER")
-	//TODO: start ping loop
-	//TODO: start listen loop
+	//s.ListenForPingMessages()
+	//s.PublishPings()
+	s.ListenForSyncRequests()
+	logger.Info().Msg("Launching Redis Syncer")
 	return s
 }
 
@@ -133,8 +133,10 @@ func (s *RedisTableSyncer) PublishSyncRequest(ctx context.Context, routeId strin
 
 // ListenForSyncRequests listens for sync request
 
-func (s *RedisTableSyncer) ListenForSyncRequests(ctx context.Context) {
+func (s *RedisTableSyncer) ListenForSyncRequests() {
 	go func() {
+		ctx := context.Background()
+		ctx = logs.SubLoggerCtx(ctx, s.logger)
 		lrc := redis.NewClient(&redis.Options{
 			Addr:     s.redisEndpoint,
 			Password: "",
@@ -170,6 +172,8 @@ func (s *RedisTableSyncer) ListenForSyncRequests(ctx context.Context) {
 					if err != nil {
 						s.logger.Error().Str("op", "ListenForSyncRequests").Msg(err.Error())
 					}
+				} else {
+					s.logger.Info().Str("op", "ListenForSyncRequests").Msg("no need to sync myself " + elems[2])
 				}
 			}
 			s.PublishAckMessage(ctx)
@@ -192,8 +196,7 @@ func (s *RedisTableSyncer) PublishAckMessage(ctx context.Context) error {
 
 // PublishPings publish heart beat messages
 
-func (s *RedisTableSyncer) PublishPings() {
-	//TODO: where to "go"
+/*func (s *RedisTableSyncer) PublishPings() {
 	hostname, _ := os.Hostname()
 	go func() {
 		for {
@@ -206,12 +209,11 @@ func (s *RedisTableSyncer) PublishPings() {
 			time.Sleep(30 * time.Second)
 		}
 	}()
-}
+}*/
 
 // ListenForPingMessages listens for heart beat messages
 
-func (s *RedisTableSyncer) ListenForPingMessages() {
-	//TODO: where to "go"
+/*func (s *RedisTableSyncer) ListenForPingMessages() {
 	go func() {
 		lrc := redis.NewClient(&redis.Options{
 			Addr:     s.redisEndpoint,
@@ -241,17 +243,29 @@ func (s *RedisTableSyncer) ListenForPingMessages() {
 			}
 		}
 	}()
-}
+}*/
 
 // GetSubscriberCount gets number of live ears instances
 
 func (s *RedisTableSyncer) GetInstanceCount(ctx context.Context) int {
-	return len(s.subscribers)
+	channelMap, err := s.client.PubSubNumSub(EARS_REDIS_SYNC_CHANNEL).Result()
+	if err != nil {
+		s.logger.Error().Str("op", "GetInstanceCount").Msg(err.Error())
+		return 0
+	}
+	numSubscribers, ok := channelMap[EARS_REDIS_SYNC_CHANNEL]
+	if !ok {
+		s.logger.Error().Str("op", "GetInstanceCount").Msg("could not get subscriber count for " + EARS_REDIS_SYNC_CHANNEL)
+		return 0
+	}
+	s.logger.Debug().Str("op", "GetInstanceCount").Msg(fmt.Sprintf("num subscribers for channel %s is %d", EARS_REDIS_SYNC_CHANNEL, numSubscribers))
+	return int(numSubscribers)
 }
 
 // PublishMutationMessage lets other interested parties know that updates are available
 
 func (s *RedisTableSyncer) PublishMutationMessage(ctx context.Context, routeId string, add bool) error {
+	//TODO: may not need this
 	hostname, _ := os.Hostname()
 	msg := ""
 	if add {
