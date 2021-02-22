@@ -30,20 +30,44 @@ type event struct {
 	ack     ack.SubTree
 }
 
-func NewEvent(ctx context.Context, payload interface{}) (Event, error) {
-	return &event{
+type EventOption func(*event) error
+
+//Create a new event given a context, a payload, and other event optsion
+func New(ctx context.Context, payload interface{}, options ...EventOption) (Event, error) {
+	e := &event{
 		payload: payload,
 		ctx:     ctx,
 		ack:     nil,
-	}, nil
+	}
+	for _, option := range options {
+		err := option(e)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return e, nil
 }
 
-func NewEventWithAck(ctx context.Context, payload interface{}, handledFn func(), errFn func(error)) (Event, error) {
-	return &event{
-		payload: payload,
-		ctx:     ctx,
-		ack:     ack.NewAckTree(ctx, handledFn, errFn),
-	}, nil
+//event acknowledge option with two completion functions,
+//handledFn and errFn. An event with acknowledgement option will be notified through
+//the handledFn when an event is handled, or through the errFn when there is an
+//error handling it.
+//An event is considered handled when it and all its child events (derived from the
+//Clone function) have called the Ack function.
+//An event is considered to have an error if it or any of its child events (derived from
+//the Clone function) has called the Nack function.
+//An event can also error out if it does not receive all the acknowledgements before
+//the context timeout/cancellation.
+func WithAck(handledFn func(), errFn func(error)) EventOption {
+	return func(e *event) error {
+		if handledFn == nil || errFn == nil {
+			return &NoAckHandlersError{}
+		}
+
+		e.ack = ack.NewAckTree(e.ctx, handledFn, errFn)
+		return nil
+	}
 }
 
 func (e *event) Payload() interface{} {
