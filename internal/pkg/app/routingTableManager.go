@@ -18,7 +18,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"github.com/rs/zerolog/log"
+	"github.com/rs/zerolog"
 	"github.com/xmidt-org/ears/internal/pkg/plugin"
 	"github.com/xmidt-org/ears/pkg/filter"
 	"github.com/xmidt-org/ears/pkg/receiver"
@@ -33,6 +33,7 @@ type DefaultRoutingTableManager struct {
 	storageMgr   route.RouteStorer
 	rtSyncer     RoutingTableSyncer
 	liveRouteMap map[string]*LiveRouteWrapper // in-memory references to live routes
+	logger       *zerolog.Logger
 }
 
 type LiveRouteWrapper struct {
@@ -53,9 +54,9 @@ func stringify(data interface{}) string {
 	return string(buf)
 }
 
-func NewRoutingTableManager(pluginMgr plugin.Manager, storageMgr route.RouteStorer) RoutingTableManager {
-	rtm := &DefaultRoutingTableManager{pluginMgr: pluginMgr, storageMgr: storageMgr, liveRouteMap: make(map[string]*LiveRouteWrapper, 0)}
-	rtm.rtSyncer = NewRedisTableSyncer(rtm)
+func NewRoutingTableManager(pluginMgr plugin.Manager, storageMgr route.RouteStorer, logger *zerolog.Logger) RoutingTableManager {
+	rtm := &DefaultRoutingTableManager{pluginMgr: pluginMgr, storageMgr: storageMgr, liveRouteMap: make(map[string]*LiveRouteWrapper, 0), logger: logger}
+	rtm.rtSyncer = NewRedisTableSyncer(rtm, logger)
 	return rtm
 }
 
@@ -96,7 +97,7 @@ func (r *DefaultRoutingTableManager) unregisterAndStopRoute(ctx context.Context,
 		r.Unlock()
 		err = liveRoute.Route.Stop(ctx)
 		if err != nil {
-			log.Ctx(ctx).Error().Str("op", "SyncRouteRemoved").Msg(err.Error())
+			r.logger.Error().Str("op", "SyncRouteRemoved").Msg(err.Error())
 			//return err
 		}
 		err = liveRoute.Unregister(ctx, r)
@@ -144,7 +145,7 @@ func (r *DefaultRoutingTableManager) registerAndRunRoute(ctx context.Context, ro
 		//TODO: use application context here? see issue #51
 		err = lrw.Route.Run(sctx, lrw.Receiver, lrw.FilterChain, lrw.Sender) // run is blocking
 		if err != nil {
-			log.Ctx(ctx).Error().Str("op", "AddRoute").Msg(err.Error())
+			r.logger.Error().Str("op", "AddRoute").Msg(err.Error())
 		}
 	}()
 	return nil
@@ -158,7 +159,7 @@ func (r *DefaultRoutingTableManager) RemoveRoute(ctx context.Context, routeId st
 	//TODO: only do this if syncing is configured properly
 	err = r.rtSyncer.PublishSyncRequest(ctx, routeId, true)
 	if err != nil {
-		log.Ctx(ctx).Error().Str("op", "RemoveRoute").Msg(err.Error())
+		r.logger.Error().Str("op", "RemoveRoute").Msg(err.Error())
 	}
 	return r.unregisterAndStopRoute(ctx, routeId)
 }
@@ -181,7 +182,7 @@ func (r *DefaultRoutingTableManager) AddRoute(ctx context.Context, routeConfig *
 	//TODO: only do this if syncing is configured properly
 	err = r.rtSyncer.PublishSyncRequest(ctx, routeConfig.Id, true)
 	if err != nil {
-		log.Ctx(ctx).Error().Str("op", "AddRoute").Msg(err.Error())
+		r.logger.Error().Str("op", "AddRoute").Msg(err.Error())
 	}
 	return r.registerAndRunRoute(ctx, routeConfig)
 }
@@ -244,7 +245,7 @@ func (r *DefaultRoutingTableManager) SyncAllRoutes(ctx context.Context) error {
 		err = r.registerAndRunRoute(ctx, &routeConfig)
 		if err != nil {
 			//TODO: discuss if best effort is the right strategy here
-			log.Ctx(ctx).Error().Str("op", "SyncAllRoutes").Msg(err.Error())
+			r.logger.Error().Str("op", "SyncAllRoutes").Msg(err.Error())
 		}
 	}
 	return nil
