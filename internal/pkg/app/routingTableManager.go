@@ -40,6 +40,31 @@ type LiveRouteWrapper struct {
 	FilterChain *filter.Chain
 }
 
+func (lrw *LiveRouteWrapper) Unregister(ctx context.Context, r *DefaultRoutingTableManager) error {
+	var e, err error
+	if lrw.Receiver != nil {
+		err = r.pluginMgr.UnregisterReceiver(ctx, lrw.Receiver)
+		if err != nil {
+			e = err
+		}
+	}
+	if lrw.Sender != nil {
+		err = r.pluginMgr.UnregisterSender(ctx, lrw.Sender)
+		if err != nil {
+			e = err
+		}
+	}
+	if lrw.FilterChain != nil {
+		for _, filter := range lrw.FilterChain.Filterers() {
+			err = r.pluginMgr.UnregisterFilter(ctx, filter)
+			if err != nil {
+				e = err
+			}
+		}
+	}
+	return e
+}
+
 func NewRoutingTableManager(pluginMgr plugin.Manager, storageMgr route.RouteStorer) RoutingTableManager {
 	return &DefaultRoutingTableManager{pluginMgr: pluginMgr, storageMgr: storageMgr, liveRouteMap: make(map[string]*LiveRouteWrapper, 0)}
 }
@@ -61,22 +86,9 @@ func (r *DefaultRoutingTableManager) RemoveRoute(ctx context.Context, routeId st
 		if err != nil {
 			return err
 		}
-		// should we really unregister sender, receiver and filter chain here or should this be done by route.Stop()?
-		err = r.pluginMgr.UnregisterSender(ctx, liveRoute.Sender)
+		err = liveRoute.Unregister(ctx, r)
 		if err != nil {
 			return err
-		}
-		err = r.pluginMgr.UnregisterReceiver(ctx, liveRoute.Receiver)
-		if err != nil {
-			return err
-		}
-		if liveRoute.FilterChain != nil {
-			for _, filter := range liveRoute.FilterChain.Filterers() {
-				err = r.pluginMgr.UnregisterFilter(ctx, filter)
-				if err != nil {
-					return err
-				}
-			}
 		}
 	}
 	return nil
@@ -108,38 +120,38 @@ func (r *DefaultRoutingTableManager) AddRoute(ctx context.Context, routeConfig *
 	if err != nil {
 		return err
 	}
-	// set up sender
-	sender, err := r.pluginMgr.RegisterSender(ctx, routeConfig.Sender.Plugin, routeConfig.Sender.Name, stringify(routeConfig.Sender.Config))
-	if err != nil {
-		return err
-	}
-	// set up receiver
-	//TODO need investigation
-	//It seems that receiver starts ingesting before the route is setup. Might need to figure out
-	//if we need to stop receiver if there is an error between here to the point where the route
-	//is fully up.
-	receiver, err := r.pluginMgr.RegisterReceiver(ctx, routeConfig.Receiver.Plugin, routeConfig.Receiver.Name, stringify(routeConfig.Receiver.Config))
-	if err != nil {
-		return err
-	}
+	var lrw LiveRouteWrapper
 	// set up filter chain
-	filterChain := &filter.Chain{}
+	lrw.FilterChain = &filter.Chain{}
 	if routeConfig.FilterChain != nil {
 		for _, f := range routeConfig.FilterChain {
 			filter, err := r.pluginMgr.RegisterFilter(ctx, f.Plugin, f.Name, stringify(f.Config))
-			filterChain.Add(filter)
 			if err != nil {
+				lrw.Unregister(ctx, r)
 				return err
 			}
+			lrw.FilterChain.Add(filter)
 		}
 	}
+	// set up sender
+	lrw.Sender, err = r.pluginMgr.RegisterSender(ctx, routeConfig.Sender.Plugin, routeConfig.Sender.Name, stringify(routeConfig.Sender.Config))
+	if err != nil {
+		lrw.Unregister(ctx, r)
+		return err
+	}
+	// set up receiver
+	lrw.Receiver, err = r.pluginMgr.RegisterReceiver(ctx, routeConfig.Receiver.Plugin, routeConfig.Receiver.Name, stringify(routeConfig.Receiver.Config))
+	if err != nil {
+		lrw.Unregister(ctx, r)
+		return err
+	}
 	// create live route
-	liveRoute := &route.Route{}
+	lrw.Route = &route.Route{}
 	r.Lock()
-	r.liveRouteMap[routeConfig.Id] = &LiveRouteWrapper{liveRoute, sender, receiver, filterChain}
+	r.liveRouteMap[routeConfig.Id] = &lrw
 	r.Unlock()
 	go func() {
-		err = liveRoute.Run(receiver, filterChain, sender) // run is blocking
+		err = lrw.Route.Run(lrw.Receiver, lrw.FilterChain, lrw.Sender) // run is blocking
 		if err != nil {
 			//TODO need investigation
 			//this probably won't work anymore as the request context may be
