@@ -45,12 +45,9 @@ type (
 //DISCUSS: mocks
 //DISCUSS: package structure
 
-//TODO: ensure all unit tests pass
-//TODO: integrate with uberfx
-//TODO: do we need to deal with multiple concurrent pub-ack handshakes?
-//TODO: unsubscribe from channels on shutdown
+//TODO: deal with multiple concurrent pub-ack handshakes
 //TODO: load entire table on launch
-//TODO: shutdown on catastrophic failure
+//TODO: ensure all unit tests pass
 //
 //TODO: introduce global table hash
 //TODO: reload all when hash failure
@@ -61,6 +58,8 @@ type (
 //
 //TODO: architecture.md
 //
+//DONE: unsubscribe from channels on shutdown
+//DONE: integrate with uberfx
 //DONE: remove ping logic
 //DONE: integrate with table manager
 //DONE: logging
@@ -214,9 +213,11 @@ func (s *RedisTableSyncer) StartListeningForSyncRequests() {
 					if elems[0] == EARS_REDIS_ADD_ROUTE_CMD {
 						s.logger.Info().Str("op", "ListenForSyncRequests").Str("instanceId", s.instanceId).Msg("received message to add route " + elems[1])
 						err = s.routingTableMgr.SyncRouteAdded(ctx, elems[1])
+						s.PublishAckMessage(ctx)
 					} else if elems[0] == EARS_REDIS_REMOVE_ROUTE_CMD {
 						s.logger.Info().Str("op", "ListenForSyncRequests").Str("instanceId", s.instanceId).Msg("received message to remove route " + elems[1])
 						err = s.routingTableMgr.SyncRouteRemoved(ctx, elems[1])
+						s.PublishAckMessage(ctx)
 					} else if elems[0] == EARS_REDIS_STOP_LISTENING_CMD {
 						s.logger.Info().Str("op", "ListenForSyncRequests").Str("instanceId", s.instanceId).Msg("stop message ignored")
 						// already handled above
@@ -226,7 +227,6 @@ func (s *RedisTableSyncer) StartListeningForSyncRequests() {
 					if err != nil {
 						s.logger.Error().Str("op", "ListenForSyncRequests").Str("instanceId", s.instanceId).Msg(err.Error())
 					}
-					s.PublishAckMessage(ctx)
 				} else {
 					s.logger.Info().Str("op", "ListenForSyncRequests").Str("instanceId", s.instanceId).Msg("no need to sync myself")
 				}
