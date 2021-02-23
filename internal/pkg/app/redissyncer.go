@@ -204,8 +204,10 @@ func (s *RedisTableSyncer) StartListeningForSyncRequests() {
 				}
 				// leave sync loop if asked
 				if elems[0] == EARS_REDIS_STOP_LISTENING_CMD {
-					s.logger.Info().Str("op", "ListenForSyncRequests").Str("instanceId", s.instanceId).Msg("received stop listening message")
-					return
+					if elems[2] == s.instanceId || elems[2] == "" {
+						s.logger.Info().Str("op", "ListenForSyncRequests").Str("instanceId", s.instanceId).Msg("received stop listening message")
+						return
+					}
 				}
 				// sync only whats needed
 				if elems[2] != s.instanceId {
@@ -215,6 +217,9 @@ func (s *RedisTableSyncer) StartListeningForSyncRequests() {
 					} else if elems[0] == EARS_REDIS_REMOVE_ROUTE_CMD {
 						s.logger.Info().Str("op", "ListenForSyncRequests").Str("instanceId", s.instanceId).Msg("received message to remove route " + elems[1])
 						err = s.routingTableMgr.SyncRouteRemoved(ctx, elems[1])
+					} else if elems[0] == EARS_REDIS_STOP_LISTENING_CMD {
+						s.logger.Info().Str("op", "ListenForSyncRequests").Str("instanceId", s.instanceId).Msg("stop message ignored")
+						// already handled above
 					} else {
 						err = errors.New("bad command " + elems[0])
 					}
