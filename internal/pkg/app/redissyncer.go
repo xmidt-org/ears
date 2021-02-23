@@ -31,11 +31,13 @@ import (
 type (
 	RedisTableSyncer struct {
 		sync.Mutex
-		client          *redis.Client
 		redisEndpoint   string
+		active          bool
+		instanceId      string
+		client          *redis.Client
 		routingTableMgr RoutingTableManager
 		logger          *zerolog.Logger
-		instanceId      string
+		config          Config
 	}
 )
 
@@ -43,39 +45,48 @@ type (
 //DISCUSS: mocks
 //DISCUSS: package structure
 
+//TODO: ensure all unit tests pass
+//TODO: integrate with uberfx
+//TODO: do we need to deal with multiple concurrent pub-ack handshakes?
+//TODO: unsubscribe from channels on shutdown
+//TODO: load entire table on launch
+//
+//TODO: introduce global table hash
+//TODO: reload all when hash failure
+//
 //TODO: add tests
+//TODO: review notification payload (json)
+//TODO: consider app id and org id
+//
+//TODO: architecture.md
+//
 //DONE: remove ping logic
 //DONE: integrate with table manager
-//TODO: load entire table on launch
 //DONE: logging
-//TODO: integrate with uberfx
-//TODO: extract configs (redis endpoint etc.)
-//TODO: review notification payload (json)
-//TODO: introduce global table hash
-//TODO: consider app id and org id
-//TODO: reload all when hash failure
+//DONE: extract configs (redis endpoint etc.)
 //DONE: do not rely on hostname (alone)
-//TODO: do we need to deal with multiple concurrent pub-ack handshakes?
-//TODO: need local shared storage (boltdb, redis)
-//TODO: ability to turn syncing on and off
+//DONE: need local shared storage (boltdb, redis)
+//DONE: ability to turn syncing on and off
 
-func NewRedisTableSyncer(routingTableMgr RoutingTableManager, logger *zerolog.Logger) RoutingTableSyncer {
+func NewRedisTableSyncer(routingTableMgr RoutingTableManager, logger *zerolog.Logger, config Config) RoutingTableSyncer {
 	s := new(RedisTableSyncer)
 	s.logger = logger
-	s.redisEndpoint = EARS_DEFAULT_REDIS_ENDPOINT
+	s.config = config
+	s.redisEndpoint = config.GetString("ears.synchronization.endpoint")
 	s.routingTableMgr = routingTableMgr
 	hostname, _ := os.Hostname()
 	s.instanceId = hostname + "_" + uuid.New().String()
-	if s.redisEndpoint == "" {
-		logger.Info().Msg("Redis Syncer Not Configured")
+	if config.GetString("ears.synchronization.active") != "yes" {
+		logger.Info().Msg("Redis Syncer Not Activated")
 	} else {
+		s.active = true
 		s.client = redis.NewClient(&redis.Options{
 			Addr:     s.redisEndpoint,
 			Password: "",
 			DB:       0,
 		})
 		s.ListenForSyncRequests()
-		logger.Info().Msg("Launching Redis Syncer")
+		logger.Info().Msg("Redis Syncer Started")
 	}
 	return s
 }
@@ -83,7 +94,7 @@ func NewRedisTableSyncer(routingTableMgr RoutingTableManager, logger *zerolog.Lo
 // PublishSyncRequest asks others to sync their routing tables
 
 func (s *RedisTableSyncer) PublishSyncRequest(ctx context.Context, routeId string, add bool) error {
-	if s.redisEndpoint == "" {
+	if !s.active {
 		return nil
 	}
 	// listen for ACKs first ...
@@ -152,6 +163,9 @@ func (s *RedisTableSyncer) PublishSyncRequest(ctx context.Context, routeId strin
 // ListenForSyncRequests listens for sync request
 
 func (s *RedisTableSyncer) ListenForSyncRequests() {
+	if !s.active {
+		return
+	}
 	go func() {
 		ctx := context.Background()
 		ctx = logs.SubLoggerCtx(ctx, s.logger)
@@ -201,6 +215,9 @@ func (s *RedisTableSyncer) ListenForSyncRequests() {
 // PublishAckMessage confirm successful syncing of routing table
 
 func (s *RedisTableSyncer) PublishAckMessage(ctx context.Context) error {
+	if !s.active {
+		return nil
+	}
 	err := s.client.Publish(EARS_REDIS_ACK_CHANNEL, s.instanceId).Err()
 	if err != nil {
 		s.logger.Error().Str("op", "PublishAckMessage").Msg(err.Error())
@@ -213,6 +230,9 @@ func (s *RedisTableSyncer) PublishAckMessage(ctx context.Context) error {
 // GetSubscriberCount gets number of live ears instances
 
 func (s *RedisTableSyncer) GetInstanceCount(ctx context.Context) int {
+	if !s.active {
+		return 0
+	}
 	channelMap, err := s.client.PubSubNumSub(EARS_REDIS_SYNC_CHANNEL).Result()
 	if err != nil {
 		s.logger.Error().Str("op", "GetInstanceCount").Msg(err.Error())
@@ -231,6 +251,9 @@ func (s *RedisTableSyncer) GetInstanceCount(ctx context.Context) int {
 
 func (s *RedisTableSyncer) PublishMutationMessage(ctx context.Context, routeId string, add bool) error {
 	//TODO: may not need this
+	if !s.active {
+		return nil
+	}
 	msg := ""
 	if add {
 		msg = EARS_REDIS_ADD_ROUTE_CMD

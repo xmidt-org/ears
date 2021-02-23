@@ -15,6 +15,7 @@
 package routestorerfx
 
 import (
+	"github.com/rs/zerolog"
 	"github.com/xmidt-org/ears/internal/pkg/db/bolt"
 	"github.com/xmidt-org/ears/internal/pkg/db/dynamo"
 	"github.com/xmidt-org/ears/internal/pkg/db/redis"
@@ -34,11 +35,11 @@ var Module = fx.Options(
 type StorageIn struct {
 	fx.In
 	Config app.Config
+	Logger *zerolog.Logger
 }
 
 type StorageOut struct {
 	fx.Out
-
 	RouteStorer route.RouteStorer
 }
 
@@ -61,7 +62,7 @@ func ProvideRouteStorer(in StorageIn) (StorageOut, error) {
 		}
 		out.RouteStorer = routeStorer
 	case "redis":
-		routeStorer, err := redis.NewRedisDbStorer(in.Config)
+		routeStorer, err := redis.NewRedisDbStorer(in.Config, in.Logger)
 		if err != nil {
 			return out, err
 		}

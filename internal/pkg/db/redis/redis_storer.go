@@ -19,6 +19,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/go-redis/redis"
+	"github.com/rs/zerolog"
 	"github.com/xmidt-org/ears/pkg/route"
 )
 
@@ -26,6 +27,8 @@ type RedisDbStorer struct {
 	client    *redis.Client
 	endpoint  string
 	tableName string
+	logger    *zerolog.Logger
+	config    Config
 }
 
 type Config interface {
@@ -34,19 +37,19 @@ type Config interface {
 	GetBool(key string) bool
 }
 
-//TODO: configuration
-
-func NewRedisDbStorer(config Config) (*RedisDbStorer, error) {
+func NewRedisDbStorer(config Config, logger *zerolog.Logger) (*RedisDbStorer, error) {
 	rdb := &RedisDbStorer{
-		endpoint:  "localhost:6379",
+		endpoint:  config.GetString("ears.storage.endpoint"),
 		tableName: "routes",
+		logger:    logger,
+		config:    config,
 	}
 	rdb.client = redis.NewClient(&redis.Options{
 		Addr:     rdb.endpoint,
 		Password: "",
 		DB:       0,
 	})
-	fmt.Printf("Started Redis DB\n")
+	logger.Info().Msg("connected to redis at " + rdb.endpoint)
 	return rdb, nil
 }
 

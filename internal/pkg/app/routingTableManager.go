@@ -34,6 +34,7 @@ type DefaultRoutingTableManager struct {
 	rtSyncer     RoutingTableSyncer
 	liveRouteMap map[string]*LiveRouteWrapper // in-memory references to live routes
 	logger       *zerolog.Logger
+	config       Config
 }
 
 type LiveRouteWrapper struct {
@@ -54,9 +55,9 @@ func stringify(data interface{}) string {
 	return string(buf)
 }
 
-func NewRoutingTableManager(pluginMgr plugin.Manager, storageMgr route.RouteStorer, logger *zerolog.Logger) RoutingTableManager {
-	rtm := &DefaultRoutingTableManager{pluginMgr: pluginMgr, storageMgr: storageMgr, liveRouteMap: make(map[string]*LiveRouteWrapper, 0), logger: logger}
-	rtm.rtSyncer = NewRedisTableSyncer(rtm, logger)
+func NewRoutingTableManager(pluginMgr plugin.Manager, storageMgr route.RouteStorer, logger *zerolog.Logger, config Config) RoutingTableManager {
+	rtm := &DefaultRoutingTableManager{pluginMgr: pluginMgr, storageMgr: storageMgr, liveRouteMap: make(map[string]*LiveRouteWrapper, 0), logger: logger, config: config}
+	rtm.rtSyncer = NewRedisTableSyncer(rtm, logger, config)
 	return rtm
 }
 
