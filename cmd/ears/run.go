@@ -59,6 +59,7 @@ var runCmd = &cobra.Command{
 			),
 			fx.Logger(logger),
 			fx.Invoke(app.SetupAPIServer),
+			fx.Invoke(app.SetupRoutingManager),
 		)
 		earsApp.Run()
 	},

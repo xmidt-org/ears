@@ -49,7 +49,7 @@ func NewRedisDbStorer(config Config, logger *zerolog.Logger) (*RedisDbStorer, er
 		Password: "",
 		DB:       0,
 	})
-	logger.Info().Msg("connected to redis at " + rdb.endpoint)
+	logger.Info().Msg("connected to redis storage layer at " + rdb.endpoint)
 	return rdb, nil
 }
 

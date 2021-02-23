@@ -86,8 +86,8 @@ func NewRedisTableSyncer(routingTableMgr RoutingTableManager, logger *zerolog.Lo
 			Password: "",
 			DB:       0,
 		})
-		s.ListenForSyncRequests()
-		logger.Info().Msg("Redis Syncer Started")
+		//s.ListenForSyncRequests()
+		//logger.Info().Msg("Redis Syncer Started")
 	}
 	return s
 }
@@ -165,9 +165,17 @@ func (s *RedisTableSyncer) PublishSyncRequest(ctx context.Context, routeId strin
 	return nil
 }
 
-// ListenForSyncRequests listens for sync request
+// StopListeningForSyncRequests stops listening for sync requests
+func (s *RedisTableSyncer) StopListeningForSyncRequests() {
+	msg := EARS_REDIS_STOP_LISTENING_CMD + ",," + s.instanceId
+	err := s.client.Publish(EARS_REDIS_SYNC_CHANNEL, msg).Err()
+	if err != nil {
+		s.logger.Error().Str("op", "StopListeningForSyncRequests").Msg(err.Error())
+	}
+}
 
-func (s *RedisTableSyncer) ListenForSyncRequests() {
+// ListenForSyncRequests listens for sync request
+func (s *RedisTableSyncer) StartListeningForSyncRequests() {
 	if !s.active {
 		return
 	}
@@ -193,6 +201,11 @@ func (s *RedisTableSyncer) ListenForSyncRequests() {
 				elems := strings.Split(msg.Payload, ",")
 				if len(elems) != 3 {
 					s.logger.Error().Str("op", "ListenForSyncRequests").Msg("bad message structure: " + msg.Payload)
+				}
+				// leave sync loop if asked
+				if elems[0] == EARS_REDIS_STOP_LISTENING_CMD {
+					s.logger.Info().Str("op", "ListenForSyncRequests").Str("instanceId", s.instanceId).Msg("received stop listening message")
+					return
 				}
 				// sync only whats needed
 				if elems[2] != s.instanceId {

@@ -40,6 +40,8 @@ const (
 
 	EARS_REDIS_REMOVE_ROUTE_CMD = "rem"
 
+	EARS_REDIS_STOP_LISTENING_CMD = "stop"
+
 	EARS_REDIS_RETRY_INTERVAL_SECONDS = 10 * time.Second
 )
 
@@ -67,12 +69,22 @@ type (
 		SyncRouteRemoved(ctx context.Context, routeId string) error
 		// SyncAllRoutes
 		SyncAllRoutes(ctx context.Context) error
+		// StartListeningForSyncRequests
+		StartListeningForSyncRequests()
+		// StopListeningForSyncRequests
+		StopListeningForSyncRequests()
 	}
 
 	RoutingTableSyncer interface {
-		ListenForSyncRequests()
+		// StartListeningForSyncRequests
+		StartListeningForSyncRequests()
+		// StopListeningForSyncRequests
+		StopListeningForSyncRequests()
+		// PublishSyncRequest
 		PublishSyncRequest(ctx context.Context, routeId string, add bool) error
+		// PublishAckMessage
 		PublishAckMessage(ctx context.Context) error
+		// GetInstanceCount
 		GetInstanceCount(ctx context.Context) int
 	}
 )
