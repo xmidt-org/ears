@@ -34,10 +34,6 @@ const (
 
 	EARS_REDIS_ACK_CHANNEL = "ears_ack"
 
-	// used by ears instance to tell other interested parties about updates (this can probably be removed)
-
-	EARS_REDIS_MUTATION_CHANNEL = "ears_mutation"
-
 	// operations
 
 	EARS_REDIS_ADD_ROUTE_CMD = "add"
@@ -45,8 +41,6 @@ const (
 	EARS_REDIS_REMOVE_ROUTE_CMD = "rem"
 
 	EARS_REDIS_RETRY_INTERVAL_SECONDS = 10 * time.Second
-
-	EARS_DEFAULT_REDIS_ENDPOINT = "localhost:6379"
 )
 
 type (
@@ -80,6 +74,5 @@ type (
 		PublishSyncRequest(ctx context.Context, routeId string, add bool) error
 		PublishAckMessage(ctx context.Context) error
 		GetInstanceCount(ctx context.Context) int
-		PublishMutationMessage(ctx context.Context, routeId string, add bool) error
 	}
 )
