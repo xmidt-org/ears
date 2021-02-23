@@ -22,7 +22,11 @@ import (
 	"fmt"
 	"github.com/rs/zerolog/log"
 	goldie "github.com/sebdah/goldie/v2"
+	"github.com/spf13/viper"
 	"github.com/xmidt-org/ears/internal/pkg/db"
+	"github.com/xmidt-org/ears/internal/pkg/db/bolt"
+	"github.com/xmidt-org/ears/internal/pkg/db/dynamo"
+	"github.com/xmidt-org/ears/internal/pkg/db/redis"
 	"github.com/xmidt-org/ears/internal/pkg/plugin"
 	pkgplugin "github.com/xmidt-org/ears/pkg/plugin"
 	"github.com/xmidt-org/ears/pkg/plugin/manager"
@@ -223,7 +227,38 @@ func checkNumRoutes(api *APIManager, currentTestName string, numExpected int) er
 }
 
 func setupRestApi() (*APIManager, RoutingTableManager, plugin.Manager, route.RouteStorer, error) {
-	inMemStorageMgr := db.NewInMemoryRouteStorer(nil)
+	viper.AddConfigPath(".")
+	viper.SetConfigName("ears")
+	viper.SetConfigType("yaml")
+	viper.AutomaticEnv()
+	err := viper.ReadInConfig()
+	if err != nil {
+		return nil, nil, nil, nil, err
+	}
+	config := viper.GetViper()
+	var storageMgr route.RouteStorer
+	storageType := config.GetString("ears.storage.type")
+	switch storageType {
+	case "inmemory":
+		storageMgr = db.NewInMemoryRouteStorer(config)
+	case "dynamodb":
+		storageMgr, err = dynamo.NewDynamoDbStorer(config)
+		if err != nil {
+			return nil, nil, nil, nil, err
+		}
+	case "boltdb":
+		storageMgr, err = bolt.NewBoltDbStorer(config)
+		if err != nil {
+			return nil, nil, nil, nil, err
+		}
+	case "redis":
+		storageMgr, err = redis.NewRedisDbStorer(config, &log.Logger)
+		if err != nil {
+			return nil, nil, nil, nil, err
+		}
+	default:
+		return nil, nil, nil, nil, errors.New("unsupported storage type '" + storageType + "'")
+	}
 	mgr, err := manager.New()
 	if err != nil {
 		return nil, nil, nil, nil, err
@@ -272,13 +307,12 @@ func setupRestApi() (*APIManager, RoutingTableManager, plugin.Manager, route.Rou
 			return nil, nil, nil, nil, err
 		}
 	}
-	routingMgr := NewRoutingTableManager(pluginMgr, inMemStorageMgr, &log.Logger)
+	routingMgr := NewRoutingTableManager(pluginMgr, storageMgr, &log.Logger, config)
 	apiMgr, err := NewAPIManager(routingMgr)
 	if err != nil {
 		return nil, nil, nil, nil, err
 	}
-	return apiMgr, routingMgr, pluginMgr, inMemStorageMgr, nil
-
+	return apiMgr, routingMgr, pluginMgr, storageMgr, nil
 }
 
 func resetDebugSender(routeFileName string, pluginMgr plugin.Manager) error {
