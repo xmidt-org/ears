@@ -265,12 +265,14 @@ func (m *manager) stopReceiving(ctx context.Context, r *receiver) error {
 
 	r.Lock()
 	defer r.Unlock()
-	r.active = false
+	//BW
+	//r.active = false
 
 	if r.done == nil {
 		return &NotRegisteredError{}
 	}
-	close(r.done)
+	//BW
+	//close(r.done)
 
 	return nil
 }
@@ -301,6 +303,11 @@ func (m *manager) UnregisterReceiver(ctx context.Context, pr pkgreceiver.Receive
 	}
 
 	delete(m.receiversWrapped, r.id)
+
+	//BW
+	r.Lock()
+	r.active = false
+	r.Unlock()
 
 	return nil
 

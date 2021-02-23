@@ -115,7 +115,8 @@ func (r *Receiver) StopReceiving(ctx context.Context) error {
 	defer r.Unlock()
 
 	if r.done != nil {
-		close(r.done)
+		//BW
+		//close(r.done)
 	}
 
 	return nil
