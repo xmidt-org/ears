@@ -456,6 +456,12 @@ func TestRestPostSimpleRouteHandler(t *testing.T) {
 	if err != nil {
 		t.Fatalf("check events sent error: %s", err.Error())
 	}
+	// delete route
+	rtId := "r100"
+	r = httptest.NewRequest(http.MethodDelete, "/ears/v1/routes/"+rtId, nil)
+	w = httptest.NewRecorder()
+	api.muxRouter.ServeHTTP(w, r)
+	t.Logf("deleted route with id: %s", rtId)
 }
 
 func TestRestPutSimpleRouteHandler(t *testing.T) {
@@ -479,6 +485,12 @@ func TestRestPutSimpleRouteHandler(t *testing.T) {
 		t.Fatalf("cannot unmarshal response %s into json %s", string(w.Body.Bytes()), err.Error())
 	}
 	g.AssertJson(t, "addroute", data)
+	// delete route
+	rtId := "r100"
+	r = httptest.NewRequest(http.MethodDelete, "/ears/v1/routes/"+rtId, nil)
+	w = httptest.NewRecorder()
+	api.muxRouter.ServeHTTP(w, r)
+	t.Logf("deleted route with id: %s", rtId)
 }
 
 func TestRestPostFilterMatchAllowRouteHandler(t *testing.T) {
@@ -508,6 +520,12 @@ func TestRestPostFilterMatchAllowRouteHandler(t *testing.T) {
 	if err != nil {
 		t.Fatalf("check events sent error: %s", err.Error())
 	}
+	// delete route
+	rtId := "f102"
+	r = httptest.NewRequest(http.MethodDelete, "/ears/v1/routes/"+rtId, nil)
+	w = httptest.NewRecorder()
+	api.muxRouter.ServeHTTP(w, r)
+	t.Logf("deleted route with id: %s", rtId)
 }
 
 func TestRestPostFilterMatchDenyRouteHandler(t *testing.T) {
@@ -537,6 +555,12 @@ func TestRestPostFilterMatchDenyRouteHandler(t *testing.T) {
 	if err != nil {
 		t.Fatalf("check events sent error: %s", err.Error())
 	}
+	// delete route
+	rtId := "f103"
+	r = httptest.NewRequest(http.MethodDelete, "/ears/v1/routes/"+rtId, nil)
+	w = httptest.NewRecorder()
+	api.muxRouter.ServeHTTP(w, r)
+	t.Logf("deleted route with id: %s", rtId)
 }
 
 func TestRestPostFilterChainMatchRouteHandler(t *testing.T) {
@@ -566,6 +590,12 @@ func TestRestPostFilterChainMatchRouteHandler(t *testing.T) {
 	if err != nil {
 		t.Fatalf("check events sent error: %s", err.Error())
 	}
+	// delete route
+	rtId := "f100"
+	r = httptest.NewRequest(http.MethodDelete, "/ears/v1/routes/"+rtId, nil)
+	w = httptest.NewRecorder()
+	api.muxRouter.ServeHTTP(w, r)
+	t.Logf("deleted route with id: %s", rtId)
 }
 
 func TestRestPostFilterSplitRouteHandler(t *testing.T) {
@@ -595,6 +625,12 @@ func TestRestPostFilterSplitRouteHandler(t *testing.T) {
 	if err != nil {
 		t.Fatalf("check events sent error: %s", err.Error())
 	}
+	// delete route
+	rtId := "f104"
+	r = httptest.NewRequest(http.MethodDelete, "/ears/v1/routes/"+rtId, nil)
+	w = httptest.NewRecorder()
+	api.muxRouter.ServeHTTP(w, r)
+	t.Logf("deleted route with id: %s", rtId)
 }
 
 func TestRestPostFilterDeepSplitRouteHandler(t *testing.T) {
@@ -624,11 +660,17 @@ func TestRestPostFilterDeepSplitRouteHandler(t *testing.T) {
 	if err != nil {
 		t.Fatalf("check events sent error: %s", err.Error())
 	}
+	// delete route
+	rtId := "f101"
+	r = httptest.NewRequest(http.MethodDelete, "/ears/v1/routes/"+rtId, nil)
+	w = httptest.NewRecorder()
+	api.muxRouter.ServeHTTP(w, r)
+	t.Logf("deleted route with id: %s", rtId)
 }
 
 // multi route tests
 
-func TestRestMultiRouteAABB(t *testing.T) {
+func TestRestMultiRouteAABBOnly(t *testing.T) {
 	Version = "v1.0.2"
 	w := httptest.NewRecorder()
 	routeFileName := "testdata/simpleRouteAA.json"
@@ -649,15 +691,8 @@ func TestRestMultiRouteAABB(t *testing.T) {
 	api.muxRouter.ServeHTTP(w, r)
 	r = httptest.NewRequest(http.MethodPost, "/ears/v1/routes", simpleRouteReader2)
 	api.muxRouter.ServeHTTP(w, r)
-	/*g := goldie.New(t)
-	var data interface{}
-	err = json.Unmarshal(w.Body.Bytes(), &data)
-	if err != nil {
-		t.Fatalf("cannot unmarshal response %s into json %s", string(w.Body.Bytes()), err.Error())
-	}
-	g.AssertJson(t, "addroute", data)*/
 	// check number of events received by output plugin
-	time.Sleep(time.Duration(100) * time.Millisecond)
+	time.Sleep(time.Duration(200) * time.Millisecond)
 	err = checkEventsSent(routeFileName, "", pluginMgr, 5, "testdata/event1.json", 0)
 	if err != nil {
 		t.Fatalf("check events sent error: %s", err.Error())
@@ -666,6 +701,17 @@ func TestRestMultiRouteAABB(t *testing.T) {
 	if err != nil {
 		t.Fatalf("check events sent error: %s", err.Error())
 	}
+	// delete routes
+	rtId := "r102"
+	r = httptest.NewRequest(http.MethodDelete, "/ears/v1/routes/"+rtId, nil)
+	w = httptest.NewRecorder()
+	api.muxRouter.ServeHTTP(w, r)
+	t.Logf("deleted route with id: %s", rtId)
+	rtId = "x102"
+	r = httptest.NewRequest(http.MethodDelete, "/ears/v1/routes/"+rtId, nil)
+	w = httptest.NewRecorder()
+	api.muxRouter.ServeHTTP(w, r)
+	t.Logf("deleted route with id: %s", rtId)
 }
 
 func TestRestMultiRouteAABBAB(t *testing.T) {
@@ -696,13 +742,6 @@ func TestRestMultiRouteAABBAB(t *testing.T) {
 	api.muxRouter.ServeHTTP(w, r)
 	r = httptest.NewRequest(http.MethodPost, "/ears/v1/routes", simpleRouteReader3)
 	api.muxRouter.ServeHTTP(w, r)
-	/*g := goldie.New(t)
-	var data interface{}
-	err = json.Unmarshal(w.Body.Bytes(), &data)
-	if err != nil {
-		t.Fatalf("cannot unmarshal response %s into json %s", string(w.Body.Bytes()), err.Error())
-	}
-	g.AssertJson(t, "addroute", data)*/
 	// check number of events received by output plugin
 	time.Sleep(time.Duration(100) * time.Millisecond)
 	err = checkEventsSent(routeFileName, "", pluginMgr, 5, "testdata/event1.json", 0)
@@ -713,6 +752,22 @@ func TestRestMultiRouteAABBAB(t *testing.T) {
 	if err != nil {
 		t.Fatalf("check events sent error: %s", err.Error())
 	}
+	// delete routes
+	rtId := "r102"
+	r = httptest.NewRequest(http.MethodDelete, "/ears/v1/routes/"+rtId, nil)
+	w = httptest.NewRecorder()
+	api.muxRouter.ServeHTTP(w, r)
+	t.Logf("deleted route with id: %s", rtId)
+	rtId = "x102"
+	r = httptest.NewRequest(http.MethodDelete, "/ears/v1/routes/"+rtId, nil)
+	w = httptest.NewRecorder()
+	api.muxRouter.ServeHTTP(w, r)
+	t.Logf("deleted route with id: %s", rtId)
+	rtId = "r103"
+	r = httptest.NewRequest(http.MethodDelete, "/ears/v1/routes/"+rtId, nil)
+	w = httptest.NewRecorder()
+	api.muxRouter.ServeHTTP(w, r)
+	t.Logf("deleted route with id: %s", rtId)
 }
 
 func TestRestMultiRouteAAAB(t *testing.T) {
@@ -736,13 +791,6 @@ func TestRestMultiRouteAAAB(t *testing.T) {
 	api.muxRouter.ServeHTTP(w, r)
 	r = httptest.NewRequest(http.MethodPost, "/ears/v1/routes", simpleRouteReader2)
 	api.muxRouter.ServeHTTP(w, r)
-	/*g := goldie.New(t)
-	var data interface{}
-	err = json.Unmarshal(w.Body.Bytes(), &data)
-	if err != nil {
-		t.Fatalf("cannot unmarshal response %s into json %s", string(w.Body.Bytes()), err.Error())
-	}
-	g.AssertJson(t, "addroute", data)*/
 	// check number of events received by output plugin
 	time.Sleep(time.Duration(100) * time.Millisecond)
 	err = checkEventsSent(routeFileName, "", pluginMgr, 5, "testdata/event1.json", 0)
@@ -753,6 +801,17 @@ func TestRestMultiRouteAAAB(t *testing.T) {
 	if err != nil {
 		t.Fatalf("check events sent error: %s", err.Error())
 	}
+	// delete routes
+	rtId := "r102"
+	r = httptest.NewRequest(http.MethodDelete, "/ears/v1/routes/"+rtId, nil)
+	w = httptest.NewRecorder()
+	api.muxRouter.ServeHTTP(w, r)
+	t.Logf("deleted route with id: %s", rtId)
+	rtId = "r103"
+	r = httptest.NewRequest(http.MethodDelete, "/ears/v1/routes/"+rtId, nil)
+	w = httptest.NewRecorder()
+	api.muxRouter.ServeHTTP(w, r)
+	t.Logf("deleted route with id: %s", rtId)
 }
 
 func TestRestMultiRouteBBAB(t *testing.T) {
@@ -777,13 +836,6 @@ func TestRestMultiRouteBBAB(t *testing.T) {
 	api.muxRouter.ServeHTTP(w, r)
 	r = httptest.NewRequest(http.MethodPost, "/ears/v1/routes", simpleRouteReader2)
 	api.muxRouter.ServeHTTP(w, r)
-	/*g := goldie.New(t)
-	var data interface{}
-	err = json.Unmarshal(w.Body.Bytes(), &data)
-	if err != nil {
-		t.Fatalf("cannot unmarshal response %s into json %s", string(w.Body.Bytes()), err.Error())
-	}
-	g.AssertJson(t, "addroute", data)*/
 	// check number of events received by output plugin
 	time.Sleep(time.Duration(100) * time.Millisecond)
 	err = checkEventsSent(routeFileName, "", pluginMgr, 10, "testdata/event1.json", 0)
@@ -794,6 +846,17 @@ func TestRestMultiRouteBBAB(t *testing.T) {
 	if err != nil {
 		t.Fatalf("check events sent error: %s", err.Error())
 	}
+	// delete routes
+	rtId := "x102"
+	r = httptest.NewRequest(http.MethodDelete, "/ears/v1/routes/"+rtId, nil)
+	w = httptest.NewRecorder()
+	api.muxRouter.ServeHTTP(w, r)
+	t.Logf("deleted route with id: %s", rtId)
+	rtId = "r103"
+	r = httptest.NewRequest(http.MethodDelete, "/ears/v1/routes/"+rtId, nil)
+	w = httptest.NewRecorder()
+	api.muxRouter.ServeHTTP(w, r)
+	t.Logf("deleted route with id: %s", rtId)
 }
 
 // various api tests
@@ -825,6 +888,12 @@ func TestRestGetRouteHandler(t *testing.T) {
 	delete(item, "created")
 	delete(item, "modified")
 	g.AssertJson(t, "getroute", data)
+	// delete routes
+	rtId := "r100"
+	r = httptest.NewRequest(http.MethodDelete, "/ears/v1/routes/"+rtId, nil)
+	w = httptest.NewRecorder()
+	api.muxRouter.ServeHTTP(w, r)
+	t.Logf("deleted route with id: %s", rtId)
 }
 
 func TestRestGetMultipleRoutesHandler(t *testing.T) {
@@ -834,10 +903,6 @@ func TestRestGetMultipleRoutesHandler(t *testing.T) {
 	if err != nil {
 		t.Fatalf("cannot read file: %s", err.Error())
 	}
-	/*simpleFilterRouteReader, err := os.Open("testdata/simpleFilterMatchAllowRoute.json")
-	if err != nil {
-		t.Fatalf("cannot read file: %s", err.Error())
-	}*/
 	api, _, _, _, err := setupRestApi()
 	if err != nil {
 		t.Fatalf("cannot create api manager: %s\n", err.Error())
@@ -845,9 +910,6 @@ func TestRestGetMultipleRoutesHandler(t *testing.T) {
 	w := httptest.NewRecorder()
 	r := httptest.NewRequest(http.MethodPost, "/ears/v1/routes", simpleRouteReader)
 	api.muxRouter.ServeHTTP(w, r)
-	/*w = httptest.NewRecorder()
-	r = httptest.NewRequest(http.MethodPost, "/ears/v1/routes", simpleFilterRouteReader)
-	api.muxRouter.ServeHTTP(w, r)*/
 	w = httptest.NewRecorder()
 	r = httptest.NewRequest(http.MethodGet, "/ears/v1/routes", nil)
 	api.muxRouter.ServeHTTP(w, r)
@@ -863,6 +925,12 @@ func TestRestGetMultipleRoutesHandler(t *testing.T) {
 		delete(item.(map[string]interface{}), "modified")
 	}
 	g.AssertJson(t, "getmultipleroutes", data)
+	// delete routes
+	rtId := "r100"
+	r = httptest.NewRequest(http.MethodDelete, "/ears/v1/routes/"+rtId, nil)
+	w = httptest.NewRecorder()
+	api.muxRouter.ServeHTTP(w, r)
+	t.Logf("deleted route with id: %s", rtId)
 }
 
 func TestRestDeleteRouteHandler(t *testing.T) {
@@ -905,6 +973,12 @@ func TestRestDeleteRouteHandler(t *testing.T) {
 		delete(item.(map[string]interface{}), "modified")
 	}
 	g.AssertJson(t, "deleteroute", data)
+	// delete routes
+	rtId := "f102"
+	r = httptest.NewRequest(http.MethodDelete, "/ears/v1/routes/"+rtId, nil)
+	w = httptest.NewRecorder()
+	api.muxRouter.ServeHTTP(w, r)
+	t.Logf("deleted route with id: %s", rtId)
 }
 
 // tests for various error conditions
