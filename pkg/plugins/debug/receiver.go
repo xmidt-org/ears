@@ -27,6 +27,9 @@ import (
 	"github.com/xmidt-org/ears/pkg/receiver"
 )
 
+//TODO an configuration option to make this configurable
+var debugMaxTO = time.Second * 10 //Default acknowledge timeout (10 seconds)
+
 func (r *Receiver) Receive(next receiver.NextFn) error {
 	if r == nil {
 		return &pkgplugin.Error{
@@ -63,7 +66,7 @@ func (r *Receiver) Receive(next receiver.NextFn) error {
 				return
 			case <-time.After(time.Duration(*r.config.IntervalMs) * time.Millisecond):
 				//fmt.Printf("RECEIVER NEW EVENT\n")
-				ctx := context.Background()
+				ctx, _ := context.WithTimeout(context.Background(), debugMaxTO)
 				e, err := event.New(ctx, r.config.Payload, event.WithAck(
 					func() {
 						eventsDone.Done()

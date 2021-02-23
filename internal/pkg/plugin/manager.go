@@ -18,7 +18,9 @@ import (
 	"context"
 	"fmt"
 	"github.com/rs/zerolog"
+	"github.com/rs/zerolog/log"
 	"github.com/xmidt-org/ears/internal/pkg/logs"
+	"github.com/xmidt-org/ears/pkg/panics"
 	"sync"
 	"time"
 
@@ -191,18 +193,34 @@ func (m *manager) Receivers() map[string]pkgreceiver.Receiver {
 // a receiver (unique by name + config hash).  These must be independent,
 // so no error can actually be returned to the receiver if a problem occurs.
 // This must leverage the Ack() interface
-func (m *manager) next(receiverKey string, e pkgevent.Event) error {
+func (m *manager) next(receiverKey string, e pkgevent.Event) {
+
+	if e == nil {
+		//TODO put metric here
+		m.logger.Error().Str("receiverKey", receiverKey).Msg("event is nil")
+		return
+	}
 
 	m.Lock()
 	nextFns := m.receiversFn[receiverKey]
 
-	for _, n := range nextFns {
+	for wid, n := range nextFns {
 		subCtx := logs.SubLoggerCtx(e.Context(), m.logger)
+		logs.StrToLogCtx(subCtx, "wid", wid)
+		logs.StrToLogCtx(subCtx, "receiverKey", receiverKey)
 		childEvt, err := e.Clone(subCtx)
 		if err != nil {
 			e.Nack(err)
 		} else {
 			go func(fn pkgreceiver.NextFn, evt event.Event) {
+				defer func() {
+					p := recover()
+					if p != nil {
+						panicErr := panics.ToError(p)
+						log.Ctx(e.Context()).Error().Str("op", "nextRoute").Str("error", panicErr.Error()).
+							Str("stackTrace", panicErr.StackTrace()).Msg("A panic has occurred")
+					}
+				}()
 				fn(evt)
 			}(n, childEvt)
 		}
@@ -210,7 +228,6 @@ func (m *manager) next(receiverKey string, e pkgevent.Event) error {
 	m.Unlock()
 
 	e.Ack()
-	return nil
 }
 
 func (m *manager) receive(r *receiver, nextFn pkgreceiver.NextFn) error {
