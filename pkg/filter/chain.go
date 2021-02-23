@@ -68,19 +68,24 @@ func (c *Chain) Filter(e event.Event) []event.Event {
 
 	events := []event.Event{}
 
+	ctx := e.Context()
 	for elem := queue.Front(); elem != nil; elem = elem.Next() {
-		w := elem.Value.(work)
-		evts := w.f.Filter(w.e)
+		select {
+		case <-ctx.Done():
+			return nil
+		default:
+			w := elem.Value.(work)
+			evts := w.f.Filter(w.e)
 
-		next := w.i + 1
-		if next < len(c.filterers) {
-			for _, e := range evts {
-				queue.PushBack(work{e: e, f: c.filterers[next], i: next})
+			next := w.i + 1
+			if next < len(c.filterers) {
+				for _, e := range evts {
+					queue.PushBack(work{e: e, f: c.filterers[next], i: next})
+				}
+			} else {
+				events = append(events, evts...)
 			}
-		} else {
-			events = append(events, evts...)
 		}
 	}
-
 	return events
 }

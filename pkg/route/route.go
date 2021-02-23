@@ -17,6 +17,8 @@ package route
 import (
 	"context"
 	"fmt"
+	"github.com/rs/zerolog/log"
+	"github.com/xmidt-org/ears/pkg/panics"
 
 	"github.com/xmidt-org/ears/pkg/event"
 	"github.com/xmidt-org/ears/pkg/filter"
@@ -84,6 +86,14 @@ func fanOut(events []event.Event, next receiver.NextFn) error {
 
 	for _, e := range events {
 		go func(evt event.Event) {
+			defer func() {
+				p := recover()
+				if p != nil {
+					panicErr := panics.ToError(p)
+					log.Ctx(e.Context()).Error().Str("op", "fanOutToSender").Str("error", panicErr.Error()).
+						Str("stackTrace", panicErr.StackTrace()).Msg("A panic has occurred")
+				}
+			}()
 			next(evt)
 		}(e)
 	}
