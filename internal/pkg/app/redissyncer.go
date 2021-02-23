@@ -50,6 +50,7 @@ type (
 //TODO: do we need to deal with multiple concurrent pub-ack handshakes?
 //TODO: unsubscribe from channels on shutdown
 //TODO: load entire table on launch
+//TODO: shutdown on catastrophic failure
 //
 //TODO: introduce global table hash
 //TODO: reload all when hash failure
@@ -76,10 +77,10 @@ func NewRedisTableSyncer(routingTableMgr RoutingTableManager, logger *zerolog.Lo
 	s.routingTableMgr = routingTableMgr
 	hostname, _ := os.Hostname()
 	s.instanceId = hostname + "_" + uuid.New().String()
-	if config.GetString("ears.synchronization.active") != "yes" {
+	s.active = config.GetBool("ears.synchronization.active")
+	if !s.active {
 		logger.Info().Msg("Redis Syncer Not Activated")
 	} else {
-		s.active = true
 		s.client = redis.NewClient(&redis.Options{
 			Addr:     s.redisEndpoint,
 			Password: "",
