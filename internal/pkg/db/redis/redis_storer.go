@@ -37,6 +37,8 @@ type Config interface {
 	GetBool(key string) bool
 }
 
+//TODO: handle timestamps here
+
 func NewRedisDbStorer(config Config, logger *zerolog.Logger) (*RedisDbStorer, error) {
 	rdb := &RedisDbStorer{
 		endpoint:  config.GetString("ears.storage.endpoint"),
@@ -91,12 +93,12 @@ func (d *RedisDbStorer) SetRoute(ctx context.Context, r route.Config) error {
 	if err != nil {
 		return err
 	}
-	success, err := d.client.HSet(d.tableName, r.Id, val).Result()
+	isNew, err := d.client.HSet(d.tableName, r.Id, val).Result()
 	if err != nil {
 		return fmt.Errorf("could not insert route into redis: %v", err)
 	}
-	if !success {
-		return fmt.Errorf("could not insert route into redis")
+	if !isNew {
+		//return fmt.Errorf("could not insert route into redis")
 	}
 	return nil
 }
@@ -124,7 +126,7 @@ func (d *RedisDbStorer) DeleteRoute(ctx context.Context, id string) error {
 		return fmt.Errorf("could not delete route from redis: %v", err)
 	}
 	if num != 1 {
-		return fmt.Errorf("could not delete route from redis")
+		//return fmt.Errorf("could not delete route from redis")
 	}
 	return nil
 }

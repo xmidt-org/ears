@@ -180,6 +180,7 @@ func (r *DefaultRoutingTableManager) registerAndRunRoute(ctx context.Context, ro
 }
 
 func (r *DefaultRoutingTableManager) RemoveRoute(ctx context.Context, routeId string) error {
+	//TODO: check if reference counters get out of sync when same route is deleted more than once
 	err := r.storageMgr.DeleteRoute(ctx, routeId)
 	if err != nil {
 		return err
@@ -192,6 +193,7 @@ func (r *DefaultRoutingTableManager) RemoveRoute(ctx context.Context, routeId st
 }
 
 func (r *DefaultRoutingTableManager) AddRoute(ctx context.Context, routeConfig *route.Config) error {
+	//TODO: check if reference counters get out of sync when same route is added more than once
 	ctx = context.Background()
 	// use hashed ID if none is provided - this ID will be returned by the AddRoute REST API
 	if routeConfig.Id == "" {
