@@ -139,7 +139,7 @@ func (s *RedisTableSyncer) PublishSyncRequest(ctx context.Context, routeId strin
 				s.logger.Info().Str("op", "PublishSyncRequest").Msg("timeout while collecting acks")
 			}
 		}
-		s.PublishMutationMessage(ctx, routeId, add)
+		// at this point the delta has been fully synchronized - may want to publish something about that here
 	}()
 	if numSubscribers <= 1 {
 		s.logger.Info().Str("op", "PublishSyncRequest").Msg("no subscribers but me - no need to publish sync")
@@ -250,22 +250,4 @@ func (s *RedisTableSyncer) GetInstanceCount(ctx context.Context) int {
 	}
 	s.logger.Debug().Str("op", "GetInstanceCount").Msg(fmt.Sprintf("num subscribers for channel %s is %d", EARS_REDIS_SYNC_CHANNEL, numSubscribers))
 	return int(numSubscribers)
-}
-
-// PublishMutationMessage lets other interested parties know that updates are available
-
-func (s *RedisTableSyncer) PublishMutationMessage(ctx context.Context, routeId string, add bool) error {
-	//TODO: may not need this
-	if !s.active {
-		return nil
-	}
-	msg := ""
-	if add {
-		msg = EARS_REDIS_ADD_ROUTE_CMD
-	} else {
-		msg = EARS_REDIS_REMOVE_ROUTE_CMD
-	}
-	msg += "," + routeId + "," + s.instanceId
-	s.logger.Info().Str("op", "ListenForPingMessages").Msg("published mutation message")
-	return s.client.Publish(EARS_REDIS_MUTATION_CHANNEL, msg).Err()
 }
