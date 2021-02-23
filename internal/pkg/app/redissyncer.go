@@ -98,11 +98,11 @@ func (s *RedisTableSyncer) PublishSyncRequest(ctx context.Context, routeId strin
 	if !s.active {
 		return nil
 	}
+	numSubscribers := s.GetInstanceCount(ctx)
 	// listen for ACKs first ...
 	go func() {
-		numSubscribers := s.GetInstanceCount(ctx)
 		if numSubscribers <= 1 {
-			s.logger.Info().Str("op", "PublishSyncRequest").Msg("no subscribers but me")
+			s.logger.Info().Str("op", "PublishSyncRequest").Msg("no subscribers but me - no need to wait for ack")
 		} else {
 			received := make(map[string]bool, 0)
 			lrc := redis.NewClient(&redis.Options{
@@ -141,22 +141,26 @@ func (s *RedisTableSyncer) PublishSyncRequest(ctx context.Context, routeId strin
 		}
 		s.PublishMutationMessage(ctx, routeId, add)
 	}()
-	// wait for listener to be ready
-	time.Sleep(10 * time.Millisecond)
-	// ... then request all flow apis to sync
-	msg := ""
-	if add {
-		msg = EARS_REDIS_ADD_ROUTE_CMD
+	if numSubscribers <= 1 {
+		s.logger.Info().Str("op", "PublishSyncRequest").Msg("no subscribers but me - no need to publish sync")
 	} else {
-		msg = EARS_REDIS_REMOVE_ROUTE_CMD
-	}
-	msg += "," + routeId + "," + s.instanceId
-	err := s.client.Publish(EARS_REDIS_SYNC_CHANNEL, msg).Err()
-	if err != nil {
-		s.logger.Error().Str("op", "PublishSyncRequest").Msg(err.Error())
-		return err
-	} else {
-		s.logger.Info().Str("op", "PublishSyncRequest").Msg("publish on channel " + EARS_REDIS_SYNC_CHANNEL)
+		// wait for listener to be ready
+		time.Sleep(10 * time.Millisecond)
+		// ... then request all flow apis to sync
+		msg := ""
+		if add {
+			msg = EARS_REDIS_ADD_ROUTE_CMD
+		} else {
+			msg = EARS_REDIS_REMOVE_ROUTE_CMD
+		}
+		msg += "," + routeId + "," + s.instanceId
+		err := s.client.Publish(EARS_REDIS_SYNC_CHANNEL, msg).Err()
+		if err != nil {
+			s.logger.Error().Str("op", "PublishSyncRequest").Msg(err.Error())
+			return err
+		} else {
+			s.logger.Info().Str("op", "PublishSyncRequest").Msg("publish on channel " + EARS_REDIS_SYNC_CHANNEL)
+		}
 	}
 	return nil
 }
