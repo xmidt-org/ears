@@ -24,6 +24,7 @@ import (
 	"github.com/xmidt-org/ears/pkg/receiver"
 	"github.com/xmidt-org/ears/pkg/route"
 	"github.com/xmidt-org/ears/pkg/sender"
+	"go.uber.org/fx"
 	"sync"
 )
 
@@ -55,10 +56,36 @@ func stringify(data interface{}) string {
 	return string(buf)
 }
 
+func SetupRoutingManager(lifecycle fx.Lifecycle, config Config, logger *zerolog.Logger, routingTableMgr RoutingTableManager) error {
+	lifecycle.Append(
+		fx.Hook{
+			OnStart: func(context.Context) error {
+				routingTableMgr.StartListeningForSyncRequests()
+				logger.Info().Msg("Route Sync Service Started")
+				return nil
+			},
+			OnStop: func(ctx context.Context) error {
+				routingTableMgr.StopListeningForSyncRequests()
+				logger.Info().Msg("Route Sync Service Stopped")
+				return nil
+			},
+		},
+	)
+	return nil
+}
+
 func NewRoutingTableManager(pluginMgr plugin.Manager, storageMgr route.RouteStorer, logger *zerolog.Logger, config Config) RoutingTableManager {
 	rtm := &DefaultRoutingTableManager{pluginMgr: pluginMgr, storageMgr: storageMgr, liveRouteMap: make(map[string]*LiveRouteWrapper, 0), logger: logger, config: config}
 	rtm.rtSyncer = NewRedisTableSyncer(rtm, logger, config)
 	return rtm
+}
+
+func (r *DefaultRoutingTableManager) StartListeningForSyncRequests() {
+	r.rtSyncer.StartListeningForSyncRequests()
+}
+
+func (r *DefaultRoutingTableManager) StopListeningForSyncRequests() {
+	r.rtSyncer.StopListeningForSyncRequests()
 }
 
 func (lrw *LiveRouteWrapper) Unregister(ctx context.Context, r *DefaultRoutingTableManager) error {
