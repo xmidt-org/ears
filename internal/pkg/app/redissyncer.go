@@ -56,13 +56,13 @@ type (
 //TODO: reload all when hash failure
 //DONE: do not rely on hostname (alone)
 //TODO: do we need to deal with multiple concurrent pub-ack handshakes?
-//TODO: need local shared storage (boltdb)
+//TODO: need local shared storage (boltdb, redis)
 //TODO: ability to turn syncing on and off
 
 func NewRedisTableSyncer(routingTableMgr RoutingTableManager, logger *zerolog.Logger) RoutingTableSyncer {
 	s := new(RedisTableSyncer)
 	s.logger = logger
-	s.redisEndpoint = "" //EARS_DEFAULT_REDIS_ENDPOINT
+	s.redisEndpoint = EARS_DEFAULT_REDIS_ENDPOINT
 	s.routingTableMgr = routingTableMgr
 	hostname, _ := os.Hostname()
 	s.instanceId = hostname + "_" + uuid.New().String()

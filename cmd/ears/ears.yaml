@@ -6,7 +6,8 @@ ears:
     port: 3000
 
   storage:
-    type: boltdb
+    type: redis
+    endpoint: localhost:6379
 
   synchronization:
     type: redis

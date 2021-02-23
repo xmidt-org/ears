@@ -17,6 +17,7 @@ package routestorerfx
 import (
 	"github.com/xmidt-org/ears/internal/pkg/db/bolt"
 	"github.com/xmidt-org/ears/internal/pkg/db/dynamo"
+	"github.com/xmidt-org/ears/internal/pkg/db/redis"
 
 	"github.com/xmidt-org/ears/internal/pkg/app"
 	"github.com/xmidt-org/ears/internal/pkg/db"
@@ -55,6 +56,12 @@ func ProvideRouteStorer(in StorageIn) (StorageOut, error) {
 		out.RouteStorer = routeStorer
 	case "boltdb":
 		routeStorer, err := bolt.NewBoltDbStorer(in.Config)
+		if err != nil {
+			return out, err
+		}
+		out.RouteStorer = routeStorer
+	case "redis":
+		routeStorer, err := redis.NewRedisDbStorer(in.Config)
 		if err != nil {
 			return out, err
 		}

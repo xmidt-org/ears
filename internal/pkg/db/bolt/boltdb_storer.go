@@ -59,7 +59,7 @@ func NewBoltDbStorer(config Config) (*BoltDbStorer, error) {
 	if err != nil {
 		return nil, fmt.Errorf("could not set up buckets, %v", err)
 	}
-	fmt.Printf("Started Bolt DB")
+	fmt.Printf("Started Bolt DB\n")
 	return bdb, nil
 }
 
