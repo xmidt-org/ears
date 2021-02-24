@@ -45,8 +45,8 @@ type (
 //DISCUSS: mocks
 //DISCUSS: package structure
 
-//TODO: deal with multiple concurrent pub-ack handshakes
-//TODO: consider using one channel per transaction
+//DONE: deal with multiple concurrent pub-ack handshakes
+//DONE: consider using one channel per transaction
 //TODO: load entire table on launch
 //TODO: ensure all unit tests pass
 //
@@ -54,7 +54,7 @@ type (
 //TODO: reload all when hash failure
 //
 //TODO: add tests
-//TODO: review notification payload (json)
+//DONE: review notification payload (json)
 //TODO: consider app id and org id
 //
 //TODO: architecture.md
@@ -178,6 +178,9 @@ func (s *RedisTableSyncer) PublishSyncRequest(ctx context.Context, routeId strin
 
 // StopListeningForSyncRequests stops listening for sync requests
 func (s *RedisTableSyncer) StopListeningForSyncRequests() {
+	if !s.active {
+		return
+	}
 	msg := EARS_REDIS_STOP_LISTENING_CMD + ",," + s.instanceId
 	err := s.client.Publish(EARS_REDIS_SYNC_CHANNEL, msg).Err()
 	if err != nil {
