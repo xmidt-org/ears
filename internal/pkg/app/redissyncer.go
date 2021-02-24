@@ -94,9 +94,9 @@ func NewRedisTableSyncer(routingTableMgr RoutingTableManager, logger *zerolog.Lo
 
 // PublishSyncRequest asks others to sync their routing tables
 
-func (s *RedisTableSyncer) PublishSyncRequest(ctx context.Context, routeId string, add bool) error {
+func (s *RedisTableSyncer) PublishSyncRequest(ctx context.Context, routeId string, add bool) {
 	if !s.active {
-		return nil
+		return
 	}
 	cmd := ""
 	if add {
@@ -106,74 +106,77 @@ func (s *RedisTableSyncer) PublishSyncRequest(ctx context.Context, routeId strin
 	}
 	sid := uuid.New().String() // session id
 	numSubscribers := s.GetInstanceCount(ctx)
-	// listen for ACKs first ...
+	// outer go func is so that PublishSyncRequest returns immediately despite the 10 ms wait below
+	// this primarily cause issues when multi route unit tests share the same debug receiver
+	// in practice this may not be an issue
 	go func() {
-		if numSubscribers <= 1 {
-			s.logger.Info().Str("op", "PublishSyncRequest").Msg("no subscribers but me - no need to wait for ack")
-		} else {
-			received := make(map[string]bool, 0)
-			lrc := redis.NewClient(&redis.Options{
-				Addr:     s.redisEndpoint,
-				Password: "",
-				DB:       0,
-			})
-			defer lrc.Close()
-			pubsub := lrc.Subscribe(EARS_REDIS_ACK_CHANNEL)
-			defer pubsub.Close()
-			// 30 sec timeout on collecting acks
-			done := make(chan bool, 1)
-			go func() {
-				for {
-					msg, err := pubsub.ReceiveMessage()
-					if err != nil {
-						s.logger.Error().Str("op", "PublishSyncRequest").Msg(err.Error())
-						break
-					} else {
-						s.logger.Info().Str("op", "PublishSyncRequest").Msg("receive ack on channel " + EARS_REDIS_ACK_CHANNEL)
-					}
-					elems := strings.Split(msg.Payload, ",")
-					if len(elems) != 4 {
-						s.logger.Error().Str("op", "PublishSyncRequest").Msg("bad ack message structure: " + msg.Payload)
-						break
-					}
-					// only collect acks for this session
-					if cmd == elems[0] && routeId == elems[1] && elems[3] == sid {
-						received[elems[2]] = true
-						// wait until we received an ack from each subscriber (except the one originating the request)
-						if len(received) >= numSubscribers-1 {
+		// listen for ACKs first ...
+		go func() {
+			if numSubscribers <= 1 {
+				s.logger.Info().Str("op", "PublishSyncRequest").Msg("no subscribers but me - no need to wait for ack")
+			} else {
+				received := make(map[string]bool, 0)
+				lrc := redis.NewClient(&redis.Options{
+					Addr:     s.redisEndpoint,
+					Password: "",
+					DB:       0,
+				})
+				defer lrc.Close()
+				pubsub := lrc.Subscribe(EARS_REDIS_ACK_CHANNEL)
+				defer pubsub.Close()
+				// 30 sec timeout on collecting acks
+				done := make(chan bool, 1)
+				go func() {
+					for {
+						msg, err := pubsub.ReceiveMessage()
+						if err != nil {
+							s.logger.Error().Str("op", "PublishSyncRequest").Msg(err.Error())
+							break
+						} else {
+							s.logger.Info().Str("op", "PublishSyncRequest").Msg("receive ack on channel " + EARS_REDIS_ACK_CHANNEL)
+						}
+						elems := strings.Split(msg.Payload, ",")
+						if len(elems) != 4 {
+							s.logger.Error().Str("op", "PublishSyncRequest").Msg("bad ack message structure: " + msg.Payload)
 							break
 						}
-					} else {
-						s.logger.Info().Str("op", "PublishSyncRequest").Msg("ignoring unrelated ack: " + msg.Payload)
+						// only collect acks for this session
+						if cmd == elems[0] && routeId == elems[1] && elems[3] == sid {
+							received[elems[2]] = true
+							// wait until we received an ack from each subscriber (except the one originating the request)
+							if len(received) >= numSubscribers-1 {
+								break
+							}
+						} else {
+							s.logger.Info().Str("op", "PublishSyncRequest").Msg("ignoring unrelated ack: " + msg.Payload)
+						}
 					}
+					done <- true
+				}()
+				select {
+				case <-done:
+					s.logger.Info().Str("op", "PublishSyncRequest").Msg("done collecting acks")
+				case <-time.After(30 * time.Second):
+					s.logger.Info().Str("op", "PublishSyncRequest").Msg("timeout while collecting acks")
 				}
-				done <- true
-			}()
-			select {
-			case <-done:
-				s.logger.Info().Str("op", "PublishSyncRequest").Msg("done collecting acks")
-			case <-time.After(30 * time.Second):
-				s.logger.Info().Str("op", "PublishSyncRequest").Msg("timeout while collecting acks")
+			}
+			// at this point the delta has been fully synchronized - may want to publish something about that here
+		}()
+		if numSubscribers <= 1 {
+			s.logger.Info().Str("op", "PublishSyncRequest").Msg("no subscribers but me - no need to publish sync")
+		} else {
+			// wait for listener to be ready
+			time.Sleep(10 * time.Millisecond)
+			// ... then request all flow apis to sync
+			msg := cmd + "," + routeId + "," + s.instanceId + "," + sid
+			err := s.client.Publish(EARS_REDIS_SYNC_CHANNEL, msg).Err()
+			if err != nil {
+				s.logger.Error().Str("op", "PublishSyncRequest").Msg(err.Error())
+			} else {
+				s.logger.Info().Str("op", "PublishSyncRequest").Msg("publish on channel " + EARS_REDIS_SYNC_CHANNEL)
 			}
 		}
-		// at this point the delta has been fully synchronized - may want to publish something about that here
 	}()
-	if numSubscribers <= 1 {
-		s.logger.Info().Str("op", "PublishSyncRequest").Msg("no subscribers but me - no need to publish sync")
-	} else {
-		// wait for listener to be ready
-		time.Sleep(10 * time.Millisecond)
-		// ... then request all flow apis to sync
-		msg := cmd + "," + routeId + "," + s.instanceId + "," + sid
-		err := s.client.Publish(EARS_REDIS_SYNC_CHANNEL, msg).Err()
-		if err != nil {
-			s.logger.Error().Str("op", "PublishSyncRequest").Msg(err.Error())
-			return err
-		} else {
-			s.logger.Info().Str("op", "PublishSyncRequest").Msg("publish on channel " + EARS_REDIS_SYNC_CHANNEL)
-		}
-	}
-	return nil
 }
 
 // StopListeningForSyncRequests stops listening for sync requests
