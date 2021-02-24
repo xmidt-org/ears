@@ -34,6 +34,7 @@ type DefaultRoutingTableManager struct {
 	storageMgr   route.RouteStorer
 	rtSyncer     RoutingTableSyncer
 	liveRouteMap map[string]*LiveRouteWrapper // in-memory references to live routes
+	routeHashMap map[string]bool              // keep around the hashes of route configs
 	logger       *zerolog.Logger
 	config       Config
 }
@@ -75,7 +76,7 @@ func SetupRoutingManager(lifecycle fx.Lifecycle, config Config, logger *zerolog.
 }
 
 func NewRoutingTableManager(pluginMgr plugin.Manager, storageMgr route.RouteStorer, logger *zerolog.Logger, config Config) RoutingTableManager {
-	rtm := &DefaultRoutingTableManager{pluginMgr: pluginMgr, storageMgr: storageMgr, liveRouteMap: make(map[string]*LiveRouteWrapper, 0), logger: logger, config: config}
+	rtm := &DefaultRoutingTableManager{pluginMgr: pluginMgr, storageMgr: storageMgr, liveRouteMap: make(map[string]*LiveRouteWrapper, 0), routeHashMap: make(map[string]bool, 0), logger: logger, config: config}
 	rtm.rtSyncer = NewRedisTableSyncer(rtm, logger, config)
 	return rtm
 }
@@ -180,8 +181,26 @@ func (r *DefaultRoutingTableManager) registerAndRunRoute(ctx context.Context, ro
 }
 
 func (r *DefaultRoutingTableManager) RemoveRoute(ctx context.Context, routeId string) error {
-	//TODO: check if reference counters get out of sync when same route is deleted more than once
-	err := r.storageMgr.DeleteRoute(ctx, routeId)
+	if routeId == "" {
+		return errors.New("missing route ID")
+	}
+	routeConfig, err := r.storageMgr.GetRoute(ctx, routeId)
+	// route does not even exist in persistence layer
+	if err != nil {
+		r.logger.Info().Str("op", "RemoveRoute").Str("routeId", routeConfig.Id).Msg("route already removed")
+		return nil
+	}
+	routeHash := routeConfig.Hash(ctx)
+	r.Lock()
+	_, exists := r.routeHashMap[routeHash]
+	delete(r.routeHashMap, routeHash)
+	r.Unlock()
+	// route does not exist as live route on this ears instance
+	if !exists {
+		r.logger.Info().Str("op", "RemoveRoute").Str("routeId", routeConfig.Id).Str("routeHash", routeHash).Msg("route already removed")
+		return nil
+	}
+	err = r.storageMgr.DeleteRoute(ctx, routeId)
 	if err != nil {
 		return err
 	}
@@ -193,15 +212,27 @@ func (r *DefaultRoutingTableManager) RemoveRoute(ctx context.Context, routeId st
 }
 
 func (r *DefaultRoutingTableManager) AddRoute(ctx context.Context, routeConfig *route.Config) error {
-	//TODO: check if reference counters get out of sync when same route is added more than once
 	ctx = context.Background()
+	if routeConfig == nil {
+		return errors.New("missing route config")
+	}
 	// use hashed ID if none is provided - this ID will be returned by the AddRoute REST API
+	routeHash := routeConfig.Hash(ctx)
 	if routeConfig.Id == "" {
-		routeConfig.Id = routeConfig.Hash(ctx)
+		routeConfig.Id = routeHash
 	}
 	err := routeConfig.Validate(ctx)
 	if err != nil {
 		return err
+	}
+	// check if identical route (with same hash) already exists
+	r.Lock()
+	_, ok := r.routeHashMap[routeHash]
+	r.routeHashMap[routeHash] = true
+	r.Unlock()
+	if ok {
+		r.logger.Info().Str("op", "AddRoute").Str("routeId", routeConfig.Id).Str("routeHash", routeHash).Msg("route already exists")
+		return nil
 	}
 	// currently storage layer handles created and updated timestamps
 	err = r.storageMgr.SetRoute(ctx, *routeConfig)
