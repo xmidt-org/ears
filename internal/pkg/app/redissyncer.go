@@ -46,6 +46,7 @@ type (
 //DISCUSS: package structure
 
 //TODO: deal with multiple concurrent pub-ack handshakes
+//TODO: consider using one channel per transaction
 //TODO: load entire table on launch
 //TODO: ensure all unit tests pass
 //
@@ -97,6 +98,12 @@ func (s *RedisTableSyncer) PublishSyncRequest(ctx context.Context, routeId strin
 	if !s.active {
 		return nil
 	}
+	cmd := ""
+	if add {
+		cmd = EARS_REDIS_ADD_ROUTE_CMD
+	} else {
+		cmd = EARS_REDIS_REMOVE_ROUTE_CMD
+	}
 	numSubscribers := s.GetInstanceCount(ctx)
 	// listen for ACKs first ...
 	go func() {
@@ -123,10 +130,19 @@ func (s *RedisTableSyncer) PublishSyncRequest(ctx context.Context, routeId strin
 					} else {
 						s.logger.Info().Str("op", "PublishSyncRequest").Msg("receive ack on channel " + EARS_REDIS_ACK_CHANNEL)
 					}
-					received[msg.Payload] = true
-					// wait until we received an ack from each subscriber (except the one originating the request)
-					if len(received) >= numSubscribers-1 {
+					elems := strings.Split(msg.Payload, ",")
+					if len(elems) != 3 {
+						s.logger.Error().Str("op", "PublishSyncRequest").Msg("bad ack message structure: " + msg.Payload)
 						break
+					}
+					if cmd == elems[0] && routeId == elems[1] {
+						received[elems[2]] = true
+						// wait until we received an ack from each subscriber (except the one originating the request)
+						if len(received) >= numSubscribers-1 {
+							break
+						}
+					} else {
+						s.logger.Info().Str("op", "PublishSyncRequest").Msg("ignoring unrelated ack: " + msg.Payload)
 					}
 				}
 				done <- true
@@ -146,13 +162,7 @@ func (s *RedisTableSyncer) PublishSyncRequest(ctx context.Context, routeId strin
 		// wait for listener to be ready
 		time.Sleep(10 * time.Millisecond)
 		// ... then request all flow apis to sync
-		msg := ""
-		if add {
-			msg = EARS_REDIS_ADD_ROUTE_CMD
-		} else {
-			msg = EARS_REDIS_REMOVE_ROUTE_CMD
-		}
-		msg += "," + routeId + "," + s.instanceId
+		msg := cmd + "," + routeId + "," + s.instanceId
 		err := s.client.Publish(EARS_REDIS_SYNC_CHANNEL, msg).Err()
 		if err != nil {
 			s.logger.Error().Str("op", "PublishSyncRequest").Msg(err.Error())
@@ -213,11 +223,11 @@ func (s *RedisTableSyncer) StartListeningForSyncRequests() {
 					if elems[0] == EARS_REDIS_ADD_ROUTE_CMD {
 						s.logger.Info().Str("op", "ListenForSyncRequests").Str("instanceId", s.instanceId).Msg("received message to add route " + elems[1])
 						err = s.routingTableMgr.SyncRouteAdded(ctx, elems[1])
-						s.PublishAckMessage(ctx)
+						s.PublishAckMessage(ctx, elems[0], elems[1], elems[2])
 					} else if elems[0] == EARS_REDIS_REMOVE_ROUTE_CMD {
 						s.logger.Info().Str("op", "ListenForSyncRequests").Str("instanceId", s.instanceId).Msg("received message to remove route " + elems[1])
 						err = s.routingTableMgr.SyncRouteRemoved(ctx, elems[1])
-						s.PublishAckMessage(ctx)
+						s.PublishAckMessage(ctx, elems[0], elems[1], elems[2])
 					} else if elems[0] == EARS_REDIS_STOP_LISTENING_CMD {
 						s.logger.Info().Str("op", "ListenForSyncRequests").Str("instanceId", s.instanceId).Msg("stop message ignored")
 						// already handled above
@@ -237,11 +247,12 @@ func (s *RedisTableSyncer) StartListeningForSyncRequests() {
 
 // PublishAckMessage confirm successful syncing of routing table
 
-func (s *RedisTableSyncer) PublishAckMessage(ctx context.Context) error {
+func (s *RedisTableSyncer) PublishAckMessage(ctx context.Context, cmd string, routeId string, instanceId string) error {
 	if !s.active {
 		return nil
 	}
-	err := s.client.Publish(EARS_REDIS_ACK_CHANNEL, s.instanceId).Err()
+	msg := cmd + "," + routeId + "," + instanceId
+	err := s.client.Publish(EARS_REDIS_ACK_CHANNEL, msg).Err()
 	if err != nil {
 		s.logger.Error().Str("op", "PublishAckMessage").Msg(err.Error())
 	} else {
