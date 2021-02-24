@@ -9,30 +9,27 @@
     "filterChain": [
       {
         "config": {
-          "matcher": "pattern",
-          "mode": "allow",
-          "pattern": {
-            "foo": "baz"
-          }
+          "matcher": "regex",
+          "mode": "deny",
+          "pattern": "^.*$"
         },
-        "name": "simpleFilterMatchPatternDenyRouteMatcher",
+        "name": "simpleFilterMatchDenyRouteMatcher",
         "plugin": "match"
       }
     ],
-    "id": "f106",
-    "name": "tbltstsimpleFilterMatchPatternDenyRoutesimpleFilterMatchPatternDenyRoute",
+    "id": "f104",
+    "name": "tbltstmatchFilterDenysimpleFilterMatchDenyRoute",
     "orgId": "comcast",
     "receiver": {
       "config": {
         "intervalMs": 10,
         "maxHistory": 100,
         "payload": {
-          "baz": "baz",
           "foo": "bar"
         },
         "rounds": 5
       },
-      "name": "tbltstsimpleFilterMatchPatternDenyRoutesimpleFilterMatchPatternDenyRouteReceiver",
+      "name": "tbltstmatchFilterDenysimpleFilterMatchDenyRouteReceiver",
       "plugin": "debug"
     },
     "sender": {
@@ -40,7 +37,7 @@
         "destination": "stdout",
         "maxHistory": 100
       },
-      "name": "tbltstsimpleFilterMatchPatternDenyRoutesimpleFilterMatchPatternDenyRouteSender",
+      "name": "tbltstmatchFilterDenysimpleFilterMatchDenyRouteSender",
       "plugin": "debug"
     },
     "userId": "boris"

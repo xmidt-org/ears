@@ -1,9 +1,9 @@
 {
-  "id" : "f103",
+  "id" : "f104",
   "orgId" : "comcast",
   "appId" : "xfi",
   "userId" : "boris",
-  "name" : "simpleFilterRoute",
+  "name" : "simpleFilterMatchDenyRoute",
   "receiver" : {
     "plugin" : "debug",
     "name" : "simpleFilterMatchDenyRouteReceiver",
