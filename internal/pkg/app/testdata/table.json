@@ -1,13 +1,13 @@
 {
   "sharePluginsAcrossTests": false,
-  "testToRunAllIfBlank": "multiRouteAABBAB",
+  "testToRunAllIfBlank": "",
   "table": {
     "simpleRouteA": {
       "id": 0,
       "routeFiles": [
         "simpleRouteA"
       ],
-      "waitMs": 1000,
+      "waitMs": 100,
       "events": [
         {
           "senderRouteFiles": "simpleRouteA",
@@ -22,7 +22,7 @@
       "routeFiles": [
         "simpleRouteB"
       ],
-      "waitMs": 1000,
+      "waitMs": 100,
       "events": [
         {
           "senderRouteFiles": "simpleRouteB",
@@ -37,7 +37,7 @@
       "routeFiles": [
         "simpleFilterSplitRoute"
       ],
-      "waitMs": 1000,
+      "waitMs": 100,
       "events": [
         {
           "senderRouteFiles": "simpleFilterSplitRoute",
@@ -52,7 +52,7 @@
       "routeFiles": [
         "simpleFilterDeepSplitRoute"
       ],
-      "waitMs": 1000,
+      "waitMs": 100,
       "events": [
         {
           "senderRouteFiles": "simpleFilterDeepSplitRoute",
@@ -67,7 +67,7 @@
       "routeFiles": [
         "simpleFilterMatchAllowRoute"
       ],
-      "waitMs": 1000,
+      "waitMs": 100,
       "events": [
         {
           "senderRouteFiles": "simpleFilterMatchAllowRoute",
@@ -82,7 +82,7 @@
       "routeFiles": [
         "simpleFilterMatchDenyRoute"
       ],
-      "waitMs": 1000,
+      "waitMs": 100,
       "events": [
         {
           "senderRouteFiles": "simpleFilterMatchDenyRoute",
@@ -97,7 +97,7 @@
       "routeFiles": [
         "simpleFilterChainMatchRoute"
       ],
-      "waitMs": 1000,
+      "waitMs": 100,
       "events": [
         {
           "senderRouteFiles": "simpleFilterChainMatchRoute",
@@ -113,7 +113,7 @@
         "simpleRouteAA",
         "simpleRouteBB"
       ],
-      "waitMs": 1000,
+      "waitMs": 100,
       "events": [
         {
           "senderRouteFiles": "simpleRouteAA",
@@ -136,7 +136,7 @@
         "simpleRouteAB",
         "simpleRouteBB"
       ],
-      "waitMs": 1000,
+      "waitMs": 100,
       "events": [
         {
           "senderRouteFiles": "simpleRouteAA",
@@ -157,7 +157,7 @@
       "routeFiles": [
         "simpleFilterUnwrapRoute"
       ],
-      "waitMs": 1000,
+      "waitMs": 100,
       "events": [
         {
           "senderRouteFiles": "simpleFilterUnwrapRoute",
@@ -172,7 +172,7 @@
       "routeFiles": [
         "simpleFilterLongChainRoute"
       ],
-      "waitMs": 1000,
+      "waitMs": 100,
       "events": [
         {
           "senderRouteFiles": "simpleFilterLongChainRoute",
@@ -187,7 +187,7 @@
       "routeFiles": [
         "simpleFilterMatchPatternAllowRoute"
       ],
-      "waitMs": 1000,
+      "waitMs": 100,
       "events": [
         {
           "senderRouteFiles": "simpleFilterMatchPatternAllowRoute",
@@ -202,7 +202,7 @@
       "routeFiles": [
         "simpleFilterMatchPatternDenyRoute"
       ],
-      "waitMs": 1000,
+      "waitMs": 100,
       "events": [
         {
           "senderRouteFiles": "simpleFilterMatchPatternDenyRoute",
@@ -217,7 +217,7 @@
       "routeFiles": [
         "simpleFilterMatchPatternWildRoute"
       ],
-      "waitMs": 1000,
+      "waitMs": 100,
       "events": [
         {
           "senderRouteFiles": "simpleFilterMatchPatternWildRoute",
@@ -232,7 +232,7 @@
       "routeFiles": [
         "simpleFilterTransformRoute"
       ],
-      "waitMs": 1000,
+      "waitMs": 100,
       "events": [
         {
           "senderRouteFiles": "simpleFilterTransformRoute",

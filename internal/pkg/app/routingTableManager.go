@@ -204,10 +204,7 @@ func (r *DefaultRoutingTableManager) RemoveRoute(ctx context.Context, routeId st
 	if err != nil {
 		return err
 	}
-	err = r.rtSyncer.PublishSyncRequest(ctx, routeId, false)
-	if err != nil {
-		r.logger.Error().Str("op", "RemoveRoute").Msg(err.Error())
-	}
+	r.rtSyncer.PublishSyncRequest(ctx, routeId, false)
 	return r.unregisterAndStopRoute(ctx, routeId)
 }
 
@@ -239,10 +236,7 @@ func (r *DefaultRoutingTableManager) AddRoute(ctx context.Context, routeConfig *
 	if err != nil {
 		return err
 	}
-	err = r.rtSyncer.PublishSyncRequest(ctx, routeConfig.Id, true)
-	if err != nil {
-		r.logger.Error().Str("op", "AddRoute").Msg(err.Error())
-	}
+	r.rtSyncer.PublishSyncRequest(ctx, routeConfig.Id, true)
 	return r.registerAndRunRoute(ctx, routeConfig)
 }
 

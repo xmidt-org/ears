@@ -81,7 +81,7 @@ type (
 		// StopListeningForSyncRequests
 		StopListeningForSyncRequests()
 		// PublishSyncRequest
-		PublishSyncRequest(ctx context.Context, routeId string, add bool) error
+		PublishSyncRequest(ctx context.Context, routeId string, add bool)
 		// PublishAckMessage
 		PublishAckMessage(ctx context.Context, cmd string, routeId string, instanceId string, sid string) error
 		// GetInstanceCount
