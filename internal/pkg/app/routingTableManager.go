@@ -44,6 +44,7 @@ type LiveRouteWrapper struct {
 	Sender      sender.Sender
 	Receiver    receiver.Receiver
 	FilterChain *filter.Chain
+	Config      *route.Config
 }
 
 func stringify(data interface{}) string {
@@ -61,13 +62,15 @@ func SetupRoutingManager(lifecycle fx.Lifecycle, config Config, logger *zerolog.
 	lifecycle.Append(
 		fx.Hook{
 			OnStart: func(context.Context) error {
+				routingTableMgr.RegisterAllRoutes()
 				routingTableMgr.StartListeningForSyncRequests()
-				logger.Info().Msg("Route Sync Service Started")
+				logger.Info().Msg("Routing Manager Service Started")
 				return nil
 			},
 			OnStop: func(ctx context.Context) error {
 				routingTableMgr.StopListeningForSyncRequests()
-				logger.Info().Msg("Route Sync Service Stopped")
+				routingTableMgr.UnregisterAllRoutes()
+				logger.Info().Msg("Routing Manager Stopped")
 				return nil
 			},
 		},
@@ -140,6 +143,7 @@ func (r *DefaultRoutingTableManager) unregisterAndStopRoute(ctx context.Context,
 func (r *DefaultRoutingTableManager) registerAndRunRoute(ctx context.Context, routeConfig *route.Config) error {
 	var err error
 	var lrw LiveRouteWrapper
+	lrw.Config = routeConfig
 	// set up filter chain
 	lrw.FilterChain = &filter.Chain{}
 	if routeConfig.FilterChain != nil {
@@ -284,22 +288,39 @@ func (r *DefaultRoutingTableManager) SyncRouteRemoved(ctx context.Context, route
 	return r.unregisterAndStopRoute(ctx, routeId)
 }
 
-func (r *DefaultRoutingTableManager) SyncAllRoutes(ctx context.Context) error {
-	if len(r.liveRouteMap) > 0 {
-		//TODO: or should we unregister all running routes here?
-		return errors.New("live route map must be empty for sync all")
+func (r *DefaultRoutingTableManager) UnregisterAllRoutes() error {
+	ctx := context.Background()
+	r.logger.Info().Msg("starting to unregister all routes")
+	var err error
+	for _, lrw := range r.liveRouteMap {
+		r.logger.Info().Msg("unregistering route " + lrw.Config.Id)
+		err = r.unregisterAndStopRoute(ctx, lrw.Config.Id)
+		if err != nil {
+			//TODO: discuss if best effort is the right strategy here
+			r.logger.Error().Str("op", "SyncAllRoutes").Msg(err.Error())
+		}
 	}
+	r.logger.Info().Msg("done unregistering all routes")
+	return nil
+}
+
+func (r *DefaultRoutingTableManager) RegisterAllRoutes() error {
+	ctx := context.Background()
+	r.logger.Info().Msg("starting to register all routes")
+	var err error
 	routeConfigs, err := r.storageMgr.GetAllRoutes(ctx)
 	if err != nil {
 		return err
 	}
 	//TODO: should this be locked in any way?
 	for _, routeConfig := range routeConfigs {
+		r.logger.Info().Msg("registering route " + routeConfig.Id)
 		err = r.registerAndRunRoute(ctx, &routeConfig)
 		if err != nil {
 			//TODO: discuss if best effort is the right strategy here
 			r.logger.Error().Str("op", "SyncAllRoutes").Msg(err.Error())
 		}
 	}
+	r.logger.Info().Msg("done registering all routes")
 	return nil
 }
