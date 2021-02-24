@@ -45,13 +45,13 @@ type (
 //DISCUSS: mocks
 //DISCUSS: package structure
 //
-//TODO: load entire table on launch
 //TODO: introduce global table hash
 //TODO: reload all when hash failure
 //TODO: add tests
 //TODO: consider app id and org id
 //TODO: architecture.md
 //
+//DONE: load entire table on launch, unload on stop
 //DONE: deal with multiple concurrent pub-ack handshakes
 //DONE: consider using one channel per transaction
 //DONE: ensure all unit tests pass (issue of concurrent execution remains for shared data stores)
@@ -183,7 +183,7 @@ func (s *RedisTableSyncer) StopListeningForSyncRequests() {
 	if !s.active {
 		return
 	}
-	msg := EARS_REDIS_STOP_LISTENING_CMD + ",," + s.instanceId
+	msg := EARS_REDIS_STOP_LISTENING_CMD + ",," + s.instanceId + ","
 	err := s.client.Publish(EARS_REDIS_SYNC_CHANNEL, msg).Err()
 	if err != nil {
 		s.logger.Error().Str("op", "StopListeningForSyncRequests").Msg(err.Error())

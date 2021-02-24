@@ -26,6 +26,7 @@ import (
 	"github.com/xmidt-org/ears/pkg/sender"
 	"go.uber.org/fx"
 	"sync"
+	"time"
 )
 
 type DefaultRoutingTableManager struct {
@@ -64,6 +65,7 @@ func SetupRoutingManager(lifecycle fx.Lifecycle, config Config, logger *zerolog.
 			OnStart: func(context.Context) error {
 				routingTableMgr.RegisterAllRoutes()
 				routingTableMgr.StartListeningForSyncRequests()
+				routingTableMgr.StartGlobalSyncChecker()
 				logger.Info().Msg("Routing Manager Service Started")
 				return nil
 			},
@@ -288,12 +290,51 @@ func (r *DefaultRoutingTableManager) SyncRouteRemoved(ctx context.Context, route
 	return r.unregisterAndStopRoute(ctx, routeId)
 }
 
+func (r *DefaultRoutingTableManager) StartGlobalSyncChecker() {
+	go func() {
+		time.Sleep(5 * time.Second)
+		for {
+			isSynchronized, err := r.IsSynchronized()
+			if err == nil {
+				if isSynchronized {
+					r.logger.Info().Msg("routing table is synchronzied")
+				} else {
+					r.logger.Error().Msg("routing table is not synchronzied")
+				}
+			}
+			time.Sleep(60 * time.Second)
+		}
+	}()
+}
+
+func (r *DefaultRoutingTableManager) IsSynchronized() (bool, error) {
+	//TODO: should this be locked in any way?
+	ctx := context.Background()
+	storedRoutes, err := r.storageMgr.GetAllRoutes(ctx)
+	if err != nil {
+		return true, err
+	}
+	if len(storedRoutes) != len(r.routeHashMap) {
+		return false, nil
+	}
+	for _, sr := range storedRoutes {
+		_, ok := r.routeHashMap[sr.Hash(ctx)]
+		if !ok {
+			return false, nil
+		}
+	}
+	return true, nil
+}
+
 func (r *DefaultRoutingTableManager) UnregisterAllRoutes() error {
 	ctx := context.Background()
 	r.logger.Info().Msg("starting to unregister all routes")
 	var err error
 	for _, lrw := range r.liveRouteMap {
 		r.logger.Info().Msg("unregistering route " + lrw.Config.Id)
+		r.Lock()
+		delete(r.routeHashMap, lrw.Config.Hash(ctx))
+		r.Unlock()
 		err = r.unregisterAndStopRoute(ctx, lrw.Config.Id)
 		if err != nil {
 			//TODO: discuss if best effort is the right strategy here
@@ -315,6 +356,9 @@ func (r *DefaultRoutingTableManager) RegisterAllRoutes() error {
 	//TODO: should this be locked in any way?
 	for _, routeConfig := range routeConfigs {
 		r.logger.Info().Msg("registering route " + routeConfig.Id)
+		r.Lock()
+		r.routeHashMap[routeConfig.Hash(ctx)] = true
+		r.Unlock()
 		err = r.registerAndRunRoute(ctx, &routeConfig)
 		if err != nil {
 			//TODO: discuss if best effort is the right strategy here
