@@ -44,20 +44,19 @@ type (
 //DISCUSS: instance id
 //DISCUSS: mocks
 //DISCUSS: package structure
-
-//DONE: deal with multiple concurrent pub-ack handshakes
-//DONE: consider using one channel per transaction
-//TODO: load entire table on launch
-//TODO: ensure all unit tests pass
 //
+//TODO: load entire table on launch
 //TODO: introduce global table hash
 //TODO: reload all when hash failure
-//
 //TODO: add tests
-//DONE: review notification payload (json)
 //TODO: consider app id and org id
-//
 //TODO: architecture.md
+//
+//DONE: deal with multiple concurrent pub-ack handshakes
+//DONE: consider using one channel per transaction
+//DONE: ensure all unit tests pass (issue of concurrent execution remains for shared data stores)
+//
+//DONE: review notification payload (json)
 //
 //DONE: unsubscribe from channels on shutdown
 //DONE: integrate with uberfx
