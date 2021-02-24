@@ -104,6 +104,7 @@ func (s *RedisTableSyncer) PublishSyncRequest(ctx context.Context, routeId strin
 	} else {
 		cmd = EARS_REDIS_REMOVE_ROUTE_CMD
 	}
+	sid := uuid.New().String() // session id
 	numSubscribers := s.GetInstanceCount(ctx)
 	// listen for ACKs first ...
 	go func() {
@@ -131,11 +132,12 @@ func (s *RedisTableSyncer) PublishSyncRequest(ctx context.Context, routeId strin
 						s.logger.Info().Str("op", "PublishSyncRequest").Msg("receive ack on channel " + EARS_REDIS_ACK_CHANNEL)
 					}
 					elems := strings.Split(msg.Payload, ",")
-					if len(elems) != 3 {
+					if len(elems) != 4 {
 						s.logger.Error().Str("op", "PublishSyncRequest").Msg("bad ack message structure: " + msg.Payload)
 						break
 					}
-					if cmd == elems[0] && routeId == elems[1] {
+					// only collect acks for this session
+					if cmd == elems[0] && routeId == elems[1] && elems[3] == sid {
 						received[elems[2]] = true
 						// wait until we received an ack from each subscriber (except the one originating the request)
 						if len(received) >= numSubscribers-1 {
@@ -162,7 +164,7 @@ func (s *RedisTableSyncer) PublishSyncRequest(ctx context.Context, routeId strin
 		// wait for listener to be ready
 		time.Sleep(10 * time.Millisecond)
 		// ... then request all flow apis to sync
-		msg := cmd + "," + routeId + "," + s.instanceId
+		msg := cmd + "," + routeId + "," + s.instanceId + "," + sid
 		err := s.client.Publish(EARS_REDIS_SYNC_CHANNEL, msg).Err()
 		if err != nil {
 			s.logger.Error().Str("op", "PublishSyncRequest").Msg(err.Error())
@@ -208,7 +210,7 @@ func (s *RedisTableSyncer) StartListeningForSyncRequests() {
 				s.logger.Info().Str("op", "ListenForSyncRequests").Msg("received message on channel " + EARS_REDIS_SYNC_CHANNEL)
 				// parse message
 				elems := strings.Split(msg.Payload, ",")
-				if len(elems) != 3 {
+				if len(elems) != 4 {
 					s.logger.Error().Str("op", "ListenForSyncRequests").Msg("bad message structure: " + msg.Payload)
 				}
 				// leave sync loop if asked
@@ -221,13 +223,13 @@ func (s *RedisTableSyncer) StartListeningForSyncRequests() {
 				// sync only whats needed
 				if elems[2] != s.instanceId {
 					if elems[0] == EARS_REDIS_ADD_ROUTE_CMD {
-						s.logger.Info().Str("op", "ListenForSyncRequests").Str("instanceId", s.instanceId).Msg("received message to add route " + elems[1])
+						s.logger.Info().Str("op", "ListenForSyncRequests").Str("instanceId", s.instanceId).Str("routeId", elems[1]).Str("sid", elems[3]).Msg("received message to add route")
 						err = s.routingTableMgr.SyncRouteAdded(ctx, elems[1])
-						s.PublishAckMessage(ctx, elems[0], elems[1], elems[2])
+						s.PublishAckMessage(ctx, elems[0], elems[1], elems[2], elems[3])
 					} else if elems[0] == EARS_REDIS_REMOVE_ROUTE_CMD {
-						s.logger.Info().Str("op", "ListenForSyncRequests").Str("instanceId", s.instanceId).Msg("received message to remove route " + elems[1])
+						s.logger.Info().Str("op", "ListenForSyncRequests").Str("instanceId", s.instanceId).Str("routeId", elems[1]).Str("sid", elems[3]).Msg("received message to remove route")
 						err = s.routingTableMgr.SyncRouteRemoved(ctx, elems[1])
-						s.PublishAckMessage(ctx, elems[0], elems[1], elems[2])
+						s.PublishAckMessage(ctx, elems[0], elems[1], elems[2], elems[3])
 					} else if elems[0] == EARS_REDIS_STOP_LISTENING_CMD {
 						s.logger.Info().Str("op", "ListenForSyncRequests").Str("instanceId", s.instanceId).Msg("stop message ignored")
 						// already handled above
@@ -247,11 +249,11 @@ func (s *RedisTableSyncer) StartListeningForSyncRequests() {
 
 // PublishAckMessage confirm successful syncing of routing table
 
-func (s *RedisTableSyncer) PublishAckMessage(ctx context.Context, cmd string, routeId string, instanceId string) error {
+func (s *RedisTableSyncer) PublishAckMessage(ctx context.Context, cmd string, routeId string, instanceId string, sid string) error {
 	if !s.active {
 		return nil
 	}
-	msg := cmd + "," + routeId + "," + instanceId
+	msg := cmd + "," + routeId + "," + instanceId + "," + sid
 	err := s.client.Publish(EARS_REDIS_ACK_CHANNEL, msg).Err()
 	if err != nil {
 		s.logger.Error().Str("op", "PublishAckMessage").Msg(err.Error())

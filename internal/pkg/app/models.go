@@ -83,7 +83,7 @@ type (
 		// PublishSyncRequest
 		PublishSyncRequest(ctx context.Context, routeId string, add bool) error
 		// PublishAckMessage
-		PublishAckMessage(ctx context.Context, cmd string, routeId string, instanceId string) error
+		PublishAckMessage(ctx context.Context, cmd string, routeId string, instanceId string, sid string) error
 		// GetInstanceCount
 		GetInstanceCount(ctx context.Context) int
 	}
