@@ -111,6 +111,8 @@ func (s *RedisTableSyncer) PublishSyncRequest(ctx context.Context, routeId strin
 	// this primarily cause issues when multi route unit tests share the same debug receiver
 	// in practice this may not be an issue
 	go func() {
+		var wg sync.WaitGroup
+		wg.Add(1)
 		// listen for ACKs first ...
 		go func() {
 			if numSubscribers <= 1 {
@@ -127,6 +129,7 @@ func (s *RedisTableSyncer) PublishSyncRequest(ctx context.Context, routeId strin
 				defer pubsub.Close()
 				// 30 sec timeout on collecting acks
 				done := make(chan bool, 1)
+				wg.Done()
 				go func() {
 					for {
 						msg, err := pubsub.ReceiveMessage()
@@ -167,7 +170,8 @@ func (s *RedisTableSyncer) PublishSyncRequest(ctx context.Context, routeId strin
 			s.logger.Info().Str("op", "PublishSyncRequest").Msg("no subscribers but me - no need to publish sync")
 		} else {
 			// wait for listener to be ready
-			time.Sleep(10 * time.Millisecond)
+			//time.Sleep(10 * time.Millisecond)
+			wg.Wait()
 			// ... then request all flow apis to sync
 			msg := cmd + "," + routeId + "," + s.instanceId + "," + sid
 			err := s.client.Publish(EARS_REDIS_SYNC_CHANNEL, msg).Err()
