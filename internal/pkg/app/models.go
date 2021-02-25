@@ -80,7 +80,7 @@ type (
 		// IsSynchronized
 		IsSynchronized() (bool, error)
 		// Synchronize
-		Synchronize() (bool, error)
+		Synchronize() (int, error)
 	}
 
 	RoutingTableSyncer interface {
