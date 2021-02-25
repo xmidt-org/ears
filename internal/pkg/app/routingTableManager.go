@@ -18,6 +18,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"github.com/rs/zerolog"
 	"github.com/xmidt-org/ears/internal/pkg/plugin"
 	"github.com/xmidt-org/ears/pkg/filter"
@@ -295,12 +296,12 @@ func (r *DefaultRoutingTableManager) StartGlobalSyncChecker() {
 	go func() {
 		time.Sleep(5 * time.Second)
 		for {
-			inconsistencyDetected, err := r.Synchronize()
+			cnt, err := r.Synchronize()
 			if err != nil {
 				r.logger.Error().Str("op", "StartGlobalSyncChecker").Msg(err.Error())
 			}
-			if inconsistencyDetected {
-				r.logger.Error().Str("op", "StartGlobalSyncChecker").Msg("inconsistency detecting, routing table reloaded from storage layer")
+			if cnt > 0 {
+				r.logger.Error().Str("op", "StartGlobalSyncChecker").Msg(fmt.Sprintf("inconsistency detecting, %d entries in routing table repaired", cnt))
 			} else {
 				r.logger.Info().Str("op", "StartGlobalSyncChecker").Msg("routing table is synchronized")
 			}
@@ -327,42 +328,41 @@ func (r *DefaultRoutingTableManager) IsSynchronized() (bool, error) {
 	return true, nil
 }
 
-/*func (r *DefaultRoutingTableManager) Synchronize() (bool, error) {
+/*func (r *DefaultRoutingTableManager) Synchronize() (int, error) {
 	ok, err := r.IsSynchronized()
 	if err != nil {
-		return false, err
+		return 0, err
 	}
 	if !ok {
 		r.UnregisterAllRoutes()
 		r.RegisterAllRoutes()
-		return true, nil
+		return 1, nil
 	}
-	return false, nil
+	return 0, nil
 }*/
 
-func (r *DefaultRoutingTableManager) Synchronize() (bool, error) {
+func (r *DefaultRoutingTableManager) Synchronize() (int, error) {
 	ctx := context.Background()
 	storedRoutes, err := r.storageMgr.GetAllRoutes(ctx)
 	if err != nil {
-		return false, err
+		return 0, err
 	}
 	storedRouteMap := make(map[string]route.Config, 0)
 	for _, storedRoute := range storedRoutes {
 		storedRouteMap[storedRoute.Id] = storedRoute
 	}
-	mutated := false
+	mutated := 0
 	// stop all inconsistent or deleted routes
 	for _, liveRoute := range r.liveRouteMap {
 		storedRoute, ok := storedRouteMap[liveRoute.Config.Id]
 		if !ok {
 			r.logger.Info().Str("op", "Synchronize").Str("routeId", liveRoute.Config.Id).Msg("route stopped")
 			r.unregisterAndStopRoute(ctx, liveRoute.Config.Id)
-			mutated = true
-		}
-		if liveRoute.Config.Hash(ctx) != storedRoute.Hash(ctx) {
+			mutated++
+		} else if liveRoute.Config.Hash(ctx) != storedRoute.Hash(ctx) {
 			r.logger.Info().Str("op", "Synchronize").Str("routeId", liveRoute.Config.Id).Msg("route stopped")
 			r.unregisterAndStopRoute(ctx, liveRoute.Config.Id)
-			mutated = true
+			mutated++
 		}
 	}
 	// start all missing routes
@@ -373,7 +373,7 @@ func (r *DefaultRoutingTableManager) Synchronize() (bool, error) {
 			var rc route.Config
 			rc = storedRoute
 			r.registerAndRunRoute(ctx, &rc)
-			mutated = true
+			mutated++
 		}
 	}
 	return mutated, nil
