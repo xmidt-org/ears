@@ -327,7 +327,7 @@ func (r *DefaultRoutingTableManager) IsSynchronized() (bool, error) {
 	return true, nil
 }
 
-func (r *DefaultRoutingTableManager) Synchronize() (bool, error) {
+/*func (r *DefaultRoutingTableManager) Synchronize() (bool, error) {
 	ok, err := r.IsSynchronized()
 	if err != nil {
 		return false, err
@@ -338,6 +338,45 @@ func (r *DefaultRoutingTableManager) Synchronize() (bool, error) {
 		return true, nil
 	}
 	return false, nil
+}*/
+
+func (r *DefaultRoutingTableManager) Synchronize() (bool, error) {
+	ctx := context.Background()
+	storedRoutes, err := r.storageMgr.GetAllRoutes(ctx)
+	if err != nil {
+		return false, err
+	}
+	storedRouteMap := make(map[string]route.Config, 0)
+	for _, storedRoute := range storedRoutes {
+		storedRouteMap[storedRoute.Id] = storedRoute
+	}
+	mutated := false
+	// stop all inconsistent or deleted routes
+	for _, liveRoute := range r.liveRouteMap {
+		storedRoute, ok := storedRouteMap[liveRoute.Config.Id]
+		if !ok {
+			r.logger.Info().Str("op", "Synchronize").Str("routeId", liveRoute.Config.Id).Msg("route stopped")
+			r.unregisterAndStopRoute(ctx, liveRoute.Config.Id)
+			mutated = true
+		}
+		if liveRoute.Config.Hash(ctx) != storedRoute.Hash(ctx) {
+			r.logger.Info().Str("op", "Synchronize").Str("routeId", liveRoute.Config.Id).Msg("route stopped")
+			r.unregisterAndStopRoute(ctx, liveRoute.Config.Id)
+			mutated = true
+		}
+	}
+	// start all missing routes
+	for _, storedRoute := range storedRoutes {
+		_, ok := r.liveRouteMap[storedRoute.Id]
+		if !ok {
+			r.logger.Info().Str("op", "Synchronize").Str("routeId", storedRoute.Id).Msg("route started")
+			var rc route.Config
+			rc = storedRoute
+			r.registerAndRunRoute(ctx, &rc)
+			mutated = true
+		}
+	}
+	return mutated, nil
 }
 
 func (r *DefaultRoutingTableManager) UnregisterAllRoutes() error {
@@ -365,8 +404,10 @@ func (r *DefaultRoutingTableManager) RegisterAllRoutes() error {
 		return err
 	}
 	for _, routeConfig := range routeConfigs {
+		var rc route.Config
+		rc = routeConfig
 		r.logger.Info().Str("op", "RegisterAllRoutes").Msg("registering route " + routeConfig.Id)
-		err = r.registerAndRunRoute(ctx, &routeConfig)
+		err = r.registerAndRunRoute(ctx, &rc)
 		if err != nil {
 			// best effort strategy
 			r.logger.Error().Str("op", "RegisterAllRoutes").Msg(err.Error())
