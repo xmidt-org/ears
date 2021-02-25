@@ -295,13 +295,14 @@ func (r *DefaultRoutingTableManager) StartGlobalSyncChecker() {
 	go func() {
 		time.Sleep(5 * time.Second)
 		for {
-			isSynchronized, err := r.IsSynchronized()
-			if err == nil {
-				if isSynchronized {
-					r.logger.Info().Msg("routing table is synchronized")
-				} else {
-					r.logger.Error().Msg("routing table is not synchronized")
-				}
+			inconsistencyDetected, err := r.Synchronize()
+			if err != nil {
+				r.logger.Error().Str("op", "StartGlobalSyncChecker").Msg(err.Error())
+			}
+			if inconsistencyDetected {
+				r.logger.Error().Str("op", "StartGlobalSyncChecker").Msg("inconsistency detecting, routing table reloaded from storage layer")
+			} else {
+				r.logger.Info().Str("op", "StartGlobalSyncChecker").Msg("routing table is synchronized")
 			}
 			time.Sleep(60 * time.Second)
 		}
@@ -326,26 +327,17 @@ func (r *DefaultRoutingTableManager) IsSynchronized() (bool, error) {
 	return true, nil
 }
 
-func (r *DefaultRoutingTableManager) Synchronize() (int, error) {
-	ctx := context.Background()
-	storedRoutes, err := r.storageMgr.GetAllRoutes(ctx)
+func (r *DefaultRoutingTableManager) Synchronize() (bool, error) {
+	ok, err := r.IsSynchronized()
 	if err != nil {
-		return 0, err
+		return false, err
 	}
-	touched := 0
-	//TODO: identify routes that are running but shouldn't
-	for _, sr := range storedRoutes {
-		_, ok := r.routeHashMap[sr.Hash(ctx)]
-		if !ok {
-			err = r.registerAndRunRoute(ctx, &sr)
-			if err != nil {
-				r.logger.Error().Str("op", "SyncAllRoutes").Msg(err.Error())
-			}
-			touched++
-		}
+	if !ok {
+		r.UnregisterAllRoutes()
+		r.RegisterAllRoutes()
+		return true, nil
 	}
-
-	return touched, nil
+	return false, nil
 }
 
 func (r *DefaultRoutingTableManager) UnregisterAllRoutes() error {

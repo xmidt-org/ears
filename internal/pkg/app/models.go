@@ -77,8 +77,10 @@ type (
 		StopListeningForSyncRequests()
 		// StopListeningForSyncRequests
 		StartGlobalSyncChecker()
-		//IsSynchronized
+		// IsSynchronized
 		IsSynchronized() (bool, error)
+		// Synchronize
+		Synchronize() (bool, error)
 	}
 
 	RoutingTableSyncer interface {
