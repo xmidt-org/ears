@@ -45,15 +45,17 @@ type (
 //DISCUSS: mocks
 //DISCUSS: package structure
 //
-//TODO: introduce global table hash
 //TODO: reload all when hash failure
 //TODO: add tests
 //TODO: consider app id and org id
 //TODO: architecture.md
 //
+//DONE: consider introduce global table hash (rejetced)
 //DONE: load entire table on launch, unload on stop
 //DONE: deal with multiple concurrent pub-ack handshakes
-//DONE: consider using one channel per transaction
+//DONE: don't do acks (rejected)
+//DONE: contain route config in sync message
+//DONE: consider using one channel per transaction (rejected)
 //DONE: ensure all unit tests pass (issue of concurrent execution remains for shared data stores)
 //
 //DONE: review notification payload (json)
