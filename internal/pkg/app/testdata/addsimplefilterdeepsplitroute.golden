@@ -1,4 +1,8 @@
 {
+  "status": {
+    "code": 200,
+    "message": "OK"
+  },
   "item": {
     "appId": "xfi",
     "deliveryMode": "whoCares",
@@ -46,9 +50,5 @@
       "plugin": "debug"
     },
     "userId": "boris"
-  },
-  "status": {
-    "code": 200,
-    "message": "OK"
   }
 }
