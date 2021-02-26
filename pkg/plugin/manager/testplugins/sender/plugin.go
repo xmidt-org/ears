@@ -62,8 +62,7 @@ func NewSender(config interface{}) (sender.Sender, error) {
 	return &plugin{}, nil
 }
 
-func (p *plugin) Send(e event.Event) error {
-	return nil
+func (p *plugin) Send(e event.Event) {
 }
 
 func (p *plugin) Unwrap() sender.Sender {

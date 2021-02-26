@@ -52,13 +52,14 @@ func NewFilter(config interface{}) (*Filter, error) {
 }
 
 // Filter splits an event containing an array into multiple events
-func (f *Filter) Filter(evt event.Event) ([]event.Event, error) {
+func (f *Filter) Filter(evt event.Event) []event.Event {
 	//TODO: add validation logic to filter
 	//TODO: maybe replace with jq filter
 	if f == nil {
-		return nil, &filter.InvalidConfigError{
+		evt.Nack(&filter.InvalidConfigError{
 			Err: fmt.Errorf("<nil> pointer filter"),
-		}
+		})
+		return nil
 	}
 	events := []event.Event{}
 	if f.config.UnwrapPath == "" {
@@ -72,20 +73,18 @@ func (f *Filter) Filter(evt event.Event) ([]event.Event, error) {
 			var ok bool
 			obj, ok = obj.(map[string]interface{})[p]
 			if !ok {
-				return events, errors.New("invalid object in filter path")
+				evt.Nack(errors.New("invalid object in filter path"))
+				return nil
 			}
 		}
-		//nevt, err := evt.Dup()
-		//if err != nil {
-		//	return events, err
-		//}
 		err := evt.SetPayload(obj)
 		if err != nil {
-			return events, err
+			evt.Nack(err)
+			return nil
 		}
 		events = append(events, evt)
 	}
-	return events, nil
+	return events
 }
 
 func (f *Filter) Config() Config {

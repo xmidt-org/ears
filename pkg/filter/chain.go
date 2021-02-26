@@ -47,14 +47,14 @@ func (c *Chain) Filterers() []Filterer {
 	return fs
 }
 
-func (c *Chain) Filter(e event.Event) ([]event.Event, error) {
+func (c *Chain) Filter(e event.Event) []event.Event {
 
 	c.Lock()
 	defer c.Unlock()
 
 	// pass event through in case of empty filter chain
 	if len(c.filterers) == 0 {
-		return []event.Event{e}, nil
+		return []event.Event{e}
 	}
 
 	type work struct {
@@ -72,14 +72,10 @@ func (c *Chain) Filter(e event.Event) ([]event.Event, error) {
 	for elem := queue.Front(); elem != nil; elem = elem.Next() {
 		select {
 		case <-ctx.Done():
-			return nil, ctx.Err()
+			return nil
 		default:
 			w := elem.Value.(work)
-			evts, err := w.f.Filter(w.e)
-			// TODO: return errors through metrics
-			if err != nil {
-				return nil, err
-			}
+			evts := w.f.Filter(w.e)
 
 			next := w.i + 1
 			if next < len(c.filterers) {
@@ -91,6 +87,5 @@ func (c *Chain) Filter(e event.Event) ([]event.Event, error) {
 			}
 		}
 	}
-
-	return events, nil
+	return events
 }

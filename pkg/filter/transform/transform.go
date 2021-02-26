@@ -41,13 +41,14 @@ func NewFilter(config interface{}) (*Filter, error) {
 }
 
 // Filter splits an event containing an array into multiple events
-func (f *Filter) Filter(evt event.Event) ([]event.Event, error) {
+func (f *Filter) Filter(evt event.Event) []event.Event {
 	//TODO: add validation logic to filter
 	//TODO: maybe replace with jq filter
 	if f == nil {
-		return nil, &filter.InvalidConfigError{
+		evt.Nack(&filter.InvalidConfigError{
 			Err: fmt.Errorf("<nil> pointer filter"),
-		}
+		})
+		return nil
 	}
 	events := []event.Event{}
 	if f.config.Transformation == nil {
@@ -57,11 +58,12 @@ func (f *Filter) Filter(evt event.Event) ([]event.Event, error) {
 		transform(evt.Payload(), thisTransfrom, nil, "", -1)
 		err := evt.SetPayload(thisTransfrom)
 		if err != nil {
-			return events, err
+			evt.Nack(err)
+			return nil
 		}
 		events = append(events, evt)
 	}
-	return events, nil
+	return events
 }
 
 func (f *Filter) Config() Config {

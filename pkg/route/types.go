@@ -29,7 +29,7 @@ import (
 )
 
 type Router interface {
-	Run(ctx context.Context, r receiver.Receiver, f filter.Filterer, s sender.Sender) error
+	Run(r receiver.Receiver, f filter.Filterer, s sender.Sender) error
 	Stop(ctx context.Context) error
 }
 

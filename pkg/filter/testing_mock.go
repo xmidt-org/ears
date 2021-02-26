@@ -191,7 +191,7 @@ var _ Filterer = &FiltererMock{}
 //
 // 		// make and configure a mocked Filterer
 // 		mockedFilterer := &FiltererMock{
-// 			FilterFunc: func(e event.Event) ([]event.Event, error) {
+// 			FilterFunc: func(e event.Event) []event.Event {
 // 				panic("mock out the Filter method")
 // 			},
 // 		}
@@ -202,7 +202,7 @@ var _ Filterer = &FiltererMock{}
 // 	}
 type FiltererMock struct {
 	// FilterFunc mocks the Filter method.
-	FilterFunc func(e event.Event) ([]event.Event, error)
+	FilterFunc func(e event.Event) []event.Event
 
 	// calls tracks calls to the methods.
 	calls struct {
@@ -216,7 +216,7 @@ type FiltererMock struct {
 }
 
 // Filter calls FilterFunc.
-func (mock *FiltererMock) Filter(e event.Event) ([]event.Event, error) {
+func (mock *FiltererMock) Filter(e event.Event) []event.Event {
 	if mock.FilterFunc == nil {
 		panic("FiltererMock.FilterFunc: method is nil but Filterer.Filter was just called")
 	}
@@ -259,7 +259,7 @@ var _ Chainer = &ChainerMock{}
 // 			AddFunc: func(f Filterer) error {
 // 				panic("mock out the Add method")
 // 			},
-// 			FilterFunc: func(e event.Event) ([]event.Event, error) {
+// 			FilterFunc: func(e event.Event) []event.Event {
 // 				panic("mock out the Filter method")
 // 			},
 // 			FilterersFunc: func() []Filterer {
@@ -276,7 +276,7 @@ type ChainerMock struct {
 	AddFunc func(f Filterer) error
 
 	// FilterFunc mocks the Filter method.
-	FilterFunc func(e event.Event) ([]event.Event, error)
+	FilterFunc func(e event.Event) []event.Event
 
 	// FilterersFunc mocks the Filterers method.
 	FilterersFunc func() []Filterer
@@ -334,7 +334,7 @@ func (mock *ChainerMock) AddCalls() []struct {
 }
 
 // Filter calls FilterFunc.
-func (mock *ChainerMock) Filter(e event.Event) ([]event.Event, error) {
+func (mock *ChainerMock) Filter(e event.Event) []event.Event {
 	if mock.FilterFunc == nil {
 		panic("ChainerMock.FilterFunc: method is nil but Chainer.Filter was just called")
 	}

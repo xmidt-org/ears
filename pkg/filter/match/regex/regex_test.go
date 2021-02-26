@@ -49,7 +49,7 @@ func TestRegexMatchError(t *testing.T) {
 	ctx := context.Background()
 
 	evt := func(payload interface{}) event.Event {
-		e, _ := event.NewEvent(ctx, payload)
+		e, _ := event.New(ctx, payload)
 		return e
 	}
 
@@ -130,7 +130,7 @@ func TestMatcherRegex(t *testing.T) {
 			for _, in := range tc.succeed {
 				t.Run(in, func(t *testing.T) {
 					a := NewWithT(t)
-					e, err := event.NewEvent(ctx, in)
+					e, err := event.New(ctx, in)
 					a.Expect(err).To(BeNil())
 					a.Expect(m.Match(e)).To(BeTrue(), "succeed input: "+in)
 				})
@@ -139,7 +139,7 @@ func TestMatcherRegex(t *testing.T) {
 			for _, in := range tc.fail {
 				t.Run(in, func(t *testing.T) {
 					a := NewWithT(t)
-					e, err := event.NewEvent(ctx, in)
+					e, err := event.New(ctx, in)
 					a.Expect(err).To(BeNil())
 					a.Expect(m.Match(e)).To(BeFalse(), "fail input: "+in)
 				})

@@ -27,7 +27,10 @@ import (
 	"github.com/xmidt-org/ears/pkg/receiver"
 )
 
-func (r *Receiver) Receive(ctx context.Context, next receiver.NextFn) error {
+//TODO an configuration option to make this configurable
+var debugMaxTO = time.Second * 10 //Default acknowledge timeout (10 seconds)
+
+func (r *Receiver) Receive(next receiver.NextFn) error {
 	if r == nil {
 		return &pkgplugin.Error{
 			Err: fmt.Errorf("Receive called on <nil> pointer"),
@@ -49,49 +52,33 @@ func (r *Receiver) Receive(ctx context.Context, next receiver.NextFn) error {
 		defer func() {
 			r.Lock()
 			if r.done != nil {
-				close(r.done)
+				r.done <- struct{}{}
 			}
 			r.Unlock()
 		}()
 
 		eventsDone := &sync.WaitGroup{}
-
-		// NOTE:  If rounds < 0, this messaging will continue
-		// until the context is cancelled.
+		eventsDone.Add(*r.config.Rounds)
 		for count := *r.config.Rounds; count != 0; {
 			select {
-			case <-ctx.Done():
-				//fmt.Printf("RECEIVER DONE BY CTX\n")
-				return
 			case <-r.done:
 				//fmt.Printf("RECEIVER DONE BY ROUTE\n")
 				return
 			case <-time.After(time.Duration(*r.config.IntervalMs) * time.Millisecond):
 				//fmt.Printf("RECEIVER NEW EVENT\n")
-				ctx := context.Background()
-				e, err := event.NewEventWithAck(ctx, r.config.Payload,
+				ctx, _ := context.WithTimeout(context.Background(), debugMaxTO)
+				e, err := event.New(ctx, r.config.Payload, event.WithAck(
 					func() {
-						fmt.Println("Debug success")
 						eventsDone.Done()
 					}, func(err error) {
-						fmt.Println("Debug error", err.Error())
+						//fmt.Println("Debug error", err.Error())
 						eventsDone.Done()
-					})
+					}))
 				if err != nil {
 					return
 				}
 
-				eventsDone.Add(1)
-
-				// TODO:  Determine context propagation lifecycle
-				//   * https://github.com/xmidt-org/ears/issues/51
-				//
-				// NOTES: Discussed that this behavior could be determined
-				//  by a configuration value
-				err = r.Trigger(e)
-				if err != nil {
-					return
-				}
+				r.Trigger(e)
 
 				if count > 0 {
 					count--
@@ -101,13 +88,8 @@ func (r *Receiver) Receive(ctx context.Context, next receiver.NextFn) error {
 		eventsDone.Wait()
 	}()
 
-	//both cases should unblock
-	select {
-	case <-ctx.Done():
-	case <-r.done:
-	}
-
-	return ctx.Err()
+	<-r.done
+	return nil
 }
 
 func (r *Receiver) StopReceiving(ctx context.Context) error {
@@ -163,7 +145,7 @@ func (r *Receiver) Count() int {
 	return r.history.Count()
 }
 
-func (r *Receiver) Trigger(e event.Event) error {
+func (r *Receiver) Trigger(e event.Event) {
 	// Ensure that `next` can be slow and locking here will not
 	// prevent other requests from executing.
 	//BW TODO: where is the next slice here?
@@ -175,7 +157,7 @@ func (r *Receiver) Trigger(e event.Event) error {
 
 	r.history.Add(e)
 
-	return next(e)
+	next(e)
 }
 
 func (r *Receiver) History() []event.Event {

@@ -34,8 +34,6 @@ require (
 	github.com/pelletier/go-toml v1.8.1 // indirect
 	github.com/pkg/errors v0.9.1
 	github.com/rs/zerolog v1.20.0
-	github.com/searKing/golang v1.0.116 // indirect
-	github.com/searKing/golang/tools/cmd/go-enum v0.0.0-20210209072348-c35c331a64dc // indirect
 	github.com/sebdah/goldie/v2 v2.5.3
 	github.com/sergi/go-diff v1.1.0 // indirect
 	github.com/smartystreets/assertions v0.0.0-20190116191733-b6c0e53d7304 // indirect

@@ -17,7 +17,7 @@ package app
 import (
 	"context"
 	"encoding/json"
-	"github.com/rs/zerolog/log"
+	"github.com/rs/zerolog"
 	"github.com/xmidt-org/ears/internal/pkg/plugin"
 	"github.com/xmidt-org/ears/pkg/filter"
 	"github.com/xmidt-org/ears/pkg/receiver"
@@ -31,6 +31,7 @@ type DefaultRoutingTableManager struct {
 	pluginMgr    plugin.Manager
 	storageMgr   route.RouteStorer
 	liveRouteMap map[string]*LiveRouteWrapper // in-memory references to live routes
+	logger       *zerolog.Logger
 }
 
 type LiveRouteWrapper struct {
@@ -65,8 +66,13 @@ func (lrw *LiveRouteWrapper) Unregister(ctx context.Context, r *DefaultRoutingTa
 	return e
 }
 
-func NewRoutingTableManager(pluginMgr plugin.Manager, storageMgr route.RouteStorer) RoutingTableManager {
-	return &DefaultRoutingTableManager{pluginMgr: pluginMgr, storageMgr: storageMgr, liveRouteMap: make(map[string]*LiveRouteWrapper, 0)}
+func NewRoutingTableManager(pluginMgr plugin.Manager, storageMgr route.RouteStorer, logger *zerolog.Logger) RoutingTableManager {
+	return &DefaultRoutingTableManager{
+		pluginMgr:    pluginMgr,
+		storageMgr:   storageMgr,
+		liveRouteMap: make(map[string]*LiveRouteWrapper, 0),
+		logger:       logger,
+	}
 }
 
 func (r *DefaultRoutingTableManager) RemoveRoute(ctx context.Context, routeId string) error {
@@ -151,11 +157,11 @@ func (r *DefaultRoutingTableManager) AddRoute(ctx context.Context, routeConfig *
 	r.liveRouteMap[routeConfig.Id] = &lrw
 	r.Unlock()
 	go func() {
-		sctx := context.Background()
-		//TODO: use application context here? see issue #51
-		err = lrw.Route.Run(sctx, lrw.Receiver, lrw.FilterChain, lrw.Sender) // run is blocking
+		//This is a long running goroutine. Do NOT keep request scoped variable here or
+		//we will have memory leak
+		err = lrw.Route.Run(lrw.Receiver, lrw.FilterChain, lrw.Sender) // run is blocking
 		if err != nil {
-			log.Ctx(ctx).Error().Str("op", "AddRoute").Msg(err.Error())
+			r.logger.Error().Str("op", "AddRoute").Msg(err.Error())
 		}
 	}()
 	return nil

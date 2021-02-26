@@ -25,10 +25,10 @@ type TTLFilter struct {
 }
 
 // Filter filters event if it hhas expired
-func (mf *TTLFilter) Filter(evt event.Event) ([]event.Event, error) {
+func (mf *TTLFilter) Filter(evt event.Event) []event.Event {
 	// never filters
 	events := []event.Event{}
 	//TODO: implement filter logic
 	events = append(events, evt)
-	return events, nil
+	return events
 }
