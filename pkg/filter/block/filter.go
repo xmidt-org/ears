@@ -28,7 +28,7 @@ func NewFilter(config interface{}) (*Filter, error) {
 type Filter struct{}
 
 // Filter lets no event pass
-func (f *Filter) Filter(evt event.Event) ([]event.Event, error) {
+func (f *Filter) Filter(evt event.Event) []event.Event {
 	evt.Ack()
-	return []event.Event{}, nil
+	return []event.Event{}
 }

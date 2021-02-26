@@ -1,3 +1,17 @@
+// Copyright 2021 Comcast Cable Communications Management, LLC
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package event_test
 
 import (
@@ -18,7 +32,7 @@ func TestEventBasic(t *testing.T) {
 		"field1": "abcd",
 		"field2": 1234,
 	}
-	e, err := event.NewEvent(ctx, payload)
+	e, err := event.New(ctx, payload)
 	if err != nil {
 		t.Errorf("Fail to create new event %s\n", err.Error())
 	}
@@ -57,7 +71,7 @@ func TestCloneEvent(t *testing.T) {
 		},
 	}
 
-	e1, err := event.NewEvent(ctx, payload)
+	e1, err := event.New(ctx, payload)
 	if err != nil {
 		t.Errorf("Fail to create new event %s\n", err.Error())
 	}
@@ -111,7 +125,7 @@ func TestEventAck(t *testing.T) {
 	}
 
 	done := make(chan bool)
-	e1, err := event.NewEventWithAck(ctx, payload,
+	e1, err := event.New(ctx, payload, event.WithAck(
 		func() {
 			fmt.Println("success")
 			done <- true
@@ -119,7 +133,7 @@ func TestEventAck(t *testing.T) {
 		func(err error) {
 			t.Errorf("Fail to receive all acknowledgements %s\n", err.Error())
 			done <- true
-		})
+		}))
 
 	if err != nil {
 		t.Errorf("Fail to create new event %s\n", err.Error())
@@ -193,7 +207,7 @@ func TestEventNack(t *testing.T) {
 	}
 
 	done := make(chan bool)
-	e1, err := event.NewEventWithAck(ctx, payload,
+	e1, err := event.New(ctx, payload, event.WithAck(
 		func() {
 			t.Errorf("Expect error function to be called")
 			done <- true
@@ -204,7 +218,7 @@ func TestEventNack(t *testing.T) {
 				t.Errorf("Expect nackError but get +%v\n", err)
 			}
 			done <- true
-		})
+		}))
 
 	e2, err := e1.Clone(ctx)
 	if err != nil {
@@ -236,7 +250,7 @@ func TestEventTimeout(t *testing.T) {
 	ctx, _ = context.WithTimeout(ctx, time.Millisecond*500)
 
 	done := make(chan bool)
-	e1, err := event.NewEventWithAck(ctx, payload,
+	e1, err := event.New(ctx, payload, event.WithAck(
 		func() {
 			t.Errorf("Expect error function to be called")
 			done <- true
@@ -247,7 +261,7 @@ func TestEventTimeout(t *testing.T) {
 				t.Errorf("Expect toErr but get +%v\n", err)
 			}
 			done <- true
-		})
+		}))
 
 	_, err = e1.Clone(ctx)
 	if err != nil {

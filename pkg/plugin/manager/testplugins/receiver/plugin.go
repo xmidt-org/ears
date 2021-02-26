@@ -63,7 +63,7 @@ func NewReceiver(config interface{}) (receiver.Receiver, error) {
 	return &plugin{}, nil
 }
 
-func (p *plugin) Receive(ctx context.Context, next receiver.NextFn) error {
+func (p *plugin) Receive(next receiver.NextFn) error {
 	return nil
 }
 

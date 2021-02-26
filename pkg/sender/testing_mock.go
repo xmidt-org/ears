@@ -191,7 +191,7 @@ var _ Sender = &SenderMock{}
 //
 // 		// make and configure a mocked Sender
 // 		mockedSender := &SenderMock{
-// 			SendFunc: func(e event.Event) error {
+// 			SendFunc: func(e event.Event)  {
 // 				panic("mock out the Send method")
 // 			},
 // 			UnwrapFunc: func() Sender {
@@ -205,7 +205,7 @@ var _ Sender = &SenderMock{}
 // 	}
 type SenderMock struct {
 	// SendFunc mocks the Send method.
-	SendFunc func(e event.Event) error
+	SendFunc func(e event.Event)
 
 	// UnwrapFunc mocks the Unwrap method.
 	UnwrapFunc func() Sender
@@ -226,7 +226,7 @@ type SenderMock struct {
 }
 
 // Send calls SendFunc.
-func (mock *SenderMock) Send(e event.Event) error {
+func (mock *SenderMock) Send(e event.Event) {
 	if mock.SendFunc == nil {
 		panic("SenderMock.SendFunc: method is nil but Sender.Send was just called")
 	}
@@ -238,7 +238,7 @@ func (mock *SenderMock) Send(e event.Event) error {
 	mock.lockSend.Lock()
 	mock.calls.Send = append(mock.calls.Send, callInfo)
 	mock.lockSend.Unlock()
-	return mock.SendFunc(e)
+	mock.SendFunc(e)
 }
 
 // SendCalls gets all the calls that were made to Send.

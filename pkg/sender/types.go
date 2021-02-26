@@ -40,6 +40,6 @@ type NewSenderer interface {
 // or Outputter[√] or Producer[x] or Publisher[√]
 type Sender interface {
 	// Send consumes and event and sends it to the target
-	Send(e event.Event) error
+	Send(e event.Event)
 	Unwrap() Sender
 }

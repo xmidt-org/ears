@@ -18,7 +18,9 @@ import (
 	"context"
 	"fmt"
 	"github.com/rs/zerolog"
+	"github.com/rs/zerolog/log"
 	"github.com/xmidt-org/ears/internal/pkg/logs"
+	"github.com/xmidt-org/ears/pkg/panics"
 	"sync"
 	"time"
 
@@ -144,8 +146,8 @@ func (m *manager) RegisterReceiver(
 		m.receiversFn[key] = map[string]pkgreceiver.NextFn{}
 
 		go func() {
-			r.Receive(ctx, func(e event.Event) error {
-				return m.next(ctx, key, e)
+			r.Receive(func(e event.Event) {
+				m.next(key, e)
 			})
 		}()
 	}
@@ -191,56 +193,44 @@ func (m *manager) Receivers() map[string]pkgreceiver.Receiver {
 // a receiver (unique by name + config hash).  These must be independent,
 // so no error can actually be returned to the receiver if a problem occurs.
 // This must leverage the Ack() interface
-func (m *manager) next(ctx context.Context, receiverKey string, e pkgevent.Event) error {
+func (m *manager) next(receiverKey string, e pkgevent.Event) {
 
-	ctx, cancel := context.WithTimeout(ctx, m.nextFnDeadline)
-	defer cancel()
+	if e == nil {
+		//TODO put metric here
+		m.logger.Error().Str("receiverKey", receiverKey).Msg("event is nil")
+		return
+	}
 
 	m.Lock()
 	nextFns := m.receiversFn[receiverKey]
+
+	for wid, n := range nextFns {
+		subCtx := logs.SubLoggerCtx(e.Context(), m.logger)
+		logs.StrToLogCtx(subCtx, "wid", wid)
+		logs.StrToLogCtx(subCtx, "receiverKey", receiverKey)
+		childEvt, err := e.Clone(subCtx)
+		if err != nil {
+			e.Nack(err)
+		} else {
+			go func(fn pkgreceiver.NextFn, evt event.Event) {
+				defer func() {
+					p := recover()
+					if p != nil {
+						panicErr := panics.ToError(p)
+						log.Ctx(e.Context()).Error().Str("op", "nextRoute").Str("error", panicErr.Error()).
+							Str("stackTrace", panicErr.StackTrace()).Msg("A panic has occurred")
+					}
+				}()
+				fn(evt)
+			}(n, childEvt)
+		}
+	}
 	m.Unlock()
 
-	errCh := make(chan error, len(nextFns))
-
-	// TODO: Issues to resove here
-	//   * https://github.com/xmidt-org/ears/issues/40 - Fan Out
-	//   * https://github.com/xmidt-org/ears/issues/52 - Event cloning
-	//   * https://github.com/xmidt-org/ears/issues/51 - Context propagation
-	//
-	var wg sync.WaitGroup
-	for _, n := range nextFns {
-		wg.Add(1)
-		go func(fn pkgreceiver.NextFn) {
-			subCtx := logs.SubLoggerCtx(e.Context(), m.logger)
-			childEvt, err := e.Clone(subCtx)
-			if err != nil {
-				errCh <- err
-			} else {
-				err = fn(childEvt)
-				//err = n(ctx, e)
-				if err != nil {
-					errCh <- err
-				}
-			}
-			wg.Done()
-		}(n)
-	}
-
-	wg.Wait()
-	close(errCh)
 	e.Ack()
-
-	// Does it make sense to return an error if any of the filters fail?
-	// TODO:
-	//   * https://github.com/xmidt-org/ears/issues/11 - Metrics
-	if len(errCh) > 0 {
-		return <-errCh
-	}
-
-	return nil
 }
 
-func (m *manager) receive(ctx context.Context, r *receiver, nextFn pkgreceiver.NextFn) error {
+func (m *manager) receive(r *receiver, nextFn pkgreceiver.NextFn) error {
 	r.Lock()
 	r.done = make(chan struct{})
 	r.Unlock()
@@ -249,11 +239,7 @@ func (m *manager) receive(ctx context.Context, r *receiver, nextFn pkgreceiver.N
 	m.receiversFn[m.mapkey(r.name, r.hash)][r.id] = nextFn
 	m.Unlock()
 
-	select {
-	case <-ctx.Done():
-		return ctx.Err()
-	case <-r.done:
-	}
+	<-r.done
 
 	return nil
 }
