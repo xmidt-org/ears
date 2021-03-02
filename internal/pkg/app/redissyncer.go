@@ -45,11 +45,11 @@ type (
 //DISCUSS: mocks
 //DISCUSS: package structure
 //
-//TODO: reload all when hash failure
 //TODO: add tests
 //TODO: consider app id and org id
 //TODO: architecture.md
 //
+//DONE: reload all when hash failure or incremental repair
 //DONE: consider introduce global table hash (rejetced)
 //DONE: load entire table on launch, unload on stop
 //DONE: deal with multiple concurrent pub-ack handshakes

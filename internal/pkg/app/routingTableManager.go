@@ -64,8 +64,8 @@ func SetupRoutingManager(lifecycle fx.Lifecycle, config Config, logger *zerolog.
 	lifecycle.Append(
 		fx.Hook{
 			OnStart: func(context.Context) error {
-				routingTableMgr.RegisterAllRoutes()
 				routingTableMgr.StartListeningForSyncRequests()
+				routingTableMgr.RegisterAllRoutes()
 				routingTableMgr.StartGlobalSyncChecker()
 				logger.Info().Msg("Routing Manager Service Started")
 				return nil
