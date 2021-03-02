@@ -124,6 +124,20 @@ func TestRouteTable(t *testing.T) {
 		t.Fatalf("cannot create ears runtime: %s\n", err.Error())
 	}
 	runtime.routingTableManager.StartListeningForSyncRequests()
+	// add passive ears instances if any
+	passiveRuntimes := make([]*EarsRuntime, 0)
+	if table.NumInstances < 2 {
+		t.Logf("no passive ears runtime configured")
+	}
+	for i := 1; i < table.NumInstances; i++ {
+		rt, err := setupRestApi(config, storageMgr)
+		if err != nil {
+			t.Fatalf("cannot create passive ears runtime: %s\n", err.Error())
+		}
+		rt.routingTableManager.StartListeningForSyncRequests()
+		t.Logf("started passive ears runtime %d", i)
+		passiveRuntimes = append(passiveRuntimes, rt)
+	}
 	// run tests
 	cnt := 0
 	for currentTestName, currentTest := range table.Table {
@@ -231,6 +245,9 @@ func TestRouteTable(t *testing.T) {
 	}
 	// tear down ears runtime
 	runtime.routingTableManager.StopListeningForSyncRequests()
+	for _, rt := range passiveRuntimes {
+		rt.routingTableManager.StopListeningForSyncRequests()
+	}
 }
 
 func checkNumRoutes(api *APIManager, currentTestName string, numExpected int) error {

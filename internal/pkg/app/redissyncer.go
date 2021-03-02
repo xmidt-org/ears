@@ -233,6 +233,7 @@ func (s *RedisTableSyncer) StartListeningForSyncRequests() {
 				}
 				// sync only whats needed
 				if elems[2] != s.instanceId {
+					s.GetInstanceCount(ctx) // just for logging
 					if elems[0] == EARS_REDIS_ADD_ROUTE_CMD {
 						s.logger.Info().Str("op", "ListenForSyncRequests").Str("instanceId", s.instanceId).Str("routeId", elems[1]).Str("sid", elems[3]).Msg("received message to add route")
 						err = s.routingTableMgr.SyncRouteAdded(ctx, elems[1])
