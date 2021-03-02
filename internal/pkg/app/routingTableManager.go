@@ -42,11 +42,89 @@ type DefaultRoutingTableManager struct {
 }
 
 type LiveRouteWrapper struct {
+	sync.Mutex
 	Route       *route.Route
 	Sender      sender.Sender
 	Receiver    receiver.Receiver
 	FilterChain *filter.Chain
-	Config      *route.Config
+	Config      route.Config
+	RouteIdMap  map[string]struct{} // map of route IDs who share this route - a simple counter would cause issues with idempotency of AddRoute / RemoveRoute APIs
+}
+
+func NewLiveRouteWrapper(routeConfig route.Config) *LiveRouteWrapper {
+	lrw := new(LiveRouteWrapper)
+	lrw.Config = routeConfig
+	lrw.Lock()
+	defer lrw.Unlock()
+	lrw.RouteIdMap = make(map[string]struct{})
+	lrw.RouteIdMap[routeConfig.Id] = struct{}{}
+	return lrw
+}
+
+func (lrw *LiveRouteWrapper) AddRouteId(routeId string) int {
+	lrw.Lock()
+	defer lrw.Unlock()
+	lrw.RouteIdMap[routeId] = struct{}{}
+	return len(lrw.RouteIdMap)
+}
+
+func (lrw *LiveRouteWrapper) RemoveRouteId(routeId string) int {
+	lrw.Lock()
+	defer lrw.Unlock()
+	delete(lrw.RouteIdMap, routeId)
+	return len(lrw.RouteIdMap)
+}
+
+func (lrw *LiveRouteWrapper) Unregister(ctx context.Context, r *DefaultRoutingTableManager) error {
+	var e, err error
+	if lrw.Receiver != nil {
+		err = r.pluginMgr.UnregisterReceiver(ctx, lrw.Receiver)
+		if err != nil {
+			e = err
+		}
+	}
+	if lrw.Sender != nil {
+		err = r.pluginMgr.UnregisterSender(ctx, lrw.Sender)
+		if err != nil {
+			e = err
+		}
+	}
+	if lrw.FilterChain != nil {
+		for _, filter := range lrw.FilterChain.Filterers() {
+			err = r.pluginMgr.UnregisterFilter(ctx, filter)
+			if err != nil {
+				e = err
+			}
+		}
+	}
+	return e
+}
+func (lrw *LiveRouteWrapper) Register(ctx context.Context, r *DefaultRoutingTableManager) error {
+	var err error
+	lrw.FilterChain = &filter.Chain{}
+	if lrw.Config.FilterChain != nil {
+		for _, f := range lrw.Config.FilterChain {
+			filter, err := r.pluginMgr.RegisterFilter(ctx, f.Plugin, f.Name, stringify(f.Config))
+			if err != nil {
+				lrw.Unregister(ctx, r)
+				return err
+			}
+			lrw.FilterChain.Add(filter)
+		}
+	}
+	// set up sender
+	lrw.Sender, err = r.pluginMgr.RegisterSender(ctx, lrw.Config.Sender.Plugin, lrw.Config.Sender.Name, stringify(lrw.Config.Sender.Config))
+	if err != nil {
+		lrw.Unregister(ctx, r)
+		return err
+	}
+	// set up receiver
+	lrw.Receiver, err = r.pluginMgr.RegisterReceiver(ctx, lrw.Config.Receiver.Plugin, lrw.Config.Receiver.Name, stringify(lrw.Config.Receiver.Config))
+	if err != nil {
+		lrw.Unregister(ctx, r)
+		return err
+	}
+	return nil
 }
 
 func stringify(data interface{}) string {
@@ -95,31 +173,6 @@ func (r *DefaultRoutingTableManager) StopListeningForSyncRequests() {
 	r.rtSyncer.StopListeningForSyncRequests()
 }
 
-func (lrw *LiveRouteWrapper) Unregister(ctx context.Context, r *DefaultRoutingTableManager) error {
-	var e, err error
-	if lrw.Receiver != nil {
-		err = r.pluginMgr.UnregisterReceiver(ctx, lrw.Receiver)
-		if err != nil {
-			e = err
-		}
-	}
-	if lrw.Sender != nil {
-		err = r.pluginMgr.UnregisterSender(ctx, lrw.Sender)
-		if err != nil {
-			e = err
-		}
-	}
-	if lrw.FilterChain != nil {
-		for _, filter := range lrw.FilterChain.Filterers() {
-			err = r.pluginMgr.UnregisterFilter(ctx, filter)
-			if err != nil {
-				e = err
-			}
-		}
-	}
-	return e
-}
-
 func (r *DefaultRoutingTableManager) unregisterAndStopRoute(ctx context.Context, routeId string) error {
 	var err error
 	liveRoute, ok := r.liveRouteMap[routeId]
@@ -130,26 +183,30 @@ func (r *DefaultRoutingTableManager) unregisterAndStopRoute(ctx context.Context,
 	} else {
 		r.Lock()
 		delete(r.liveRouteMap, routeId)
-		delete(r.routeHashMap, liveRoute.Config.Hash(ctx))
 		r.Unlock()
-		err = liveRoute.Route.Stop(ctx)
-		if err != nil {
-			r.logger.Error().Str("op", "unregisterAndStopRoute").Msg(err.Error())
-			//return err
+		numRefs := liveRoute.RemoveRouteId(routeId)
+		r.logger.Info().Str("op", "unregisterAndStopRoute").Str("routeId", routeId).Int("numRefs", numRefs).Str("routeHash", liveRoute.Config.Hash(ctx)).Msg("number references")
+		if numRefs == 0 {
+			r.Lock()
+			delete(r.routeHashMap, liveRoute.Config.Hash(ctx))
+			r.Unlock()
+			err = liveRoute.Route.Stop(ctx)
+			if err != nil {
+				r.logger.Error().Str("op", "unregisterAndStopRoute").Msg("could not stop route: " + err.Error())
+				//return err
+			}
+			err = liveRoute.Unregister(ctx, r)
+			if err != nil {
+				return err
+			}
+			r.logger.Info().Str("op", "unregisterAndStopRoute").Str("routeId", routeId).Msg("route stopped")
 		}
-		err = liveRoute.Unregister(ctx, r)
-		if err != nil {
-			return err
-		}
-		r.logger.Info().Str("op", "unregisterAndStopRoute").Str("routeId", routeId).Msg("route stopped")
 	}
 	return nil
 }
 
 func (r *DefaultRoutingTableManager) registerAndRunRoute(ctx context.Context, routeConfig *route.Config) error {
 	var err error
-	var lrw LiveRouteWrapper
-	lrw.Config = routeConfig
 	// check if route already exists, check if this is an update etc.
 	existingLiveRoute, ok := r.liveRouteMap[routeConfig.Id]
 	if ok && existingLiveRoute.Config.Hash(ctx) == routeConfig.Hash(ctx) {
@@ -161,44 +218,39 @@ func (r *DefaultRoutingTableManager) registerAndRunRoute(ctx context.Context, ro
 		r.logger.Info().Str("op", "registerAndRunRoute").Str("routeId", routeConfig.Id).Msg("existing route needs to be updated")
 		err = r.unregisterAndStopRoute(ctx, routeConfig.Id)
 		if err != nil {
-			r.logger.Info().Str("op", "registerAndRunRoute").Str("routeId", routeConfig.Id).Msg(err.Error())
+			r.logger.Error().Str("op", "registerAndRunRoute").Str("routeId", routeConfig.Id).Msg(err.Error())
 		}
 	}
-	// an identical route already exists under a different ID - what to do here?
+	// An identical route already exists under a different ID.
+	// It would be ok to simply create another route here because plugin manager will ensure we share receiver and sender
+	// plugin for performance. However, simply creating another route would cause event duplication. Instead we need to
+	// have a route level reference counter - or maybe more slightly more robust, the live route wrapper needs to hold
+	// a map of current route IDs sharing this route. Need to performance test this approach with large number of routes.
+	// While this approach will work functionally it will not scale in practice. Remember: We will have millions of identical
+	// routes (with different route IDs!) in Xfi. This will lead to millions of entries in the internal hashmaps and worse yet,
+	// millions of entries in the storage layer. I still believe it would be much simpler and faster to force the route ID to be
+	// the route hash, use an internal reference counter and give up on idempotency. An alternative would be to take route creation
+	// out of the flow and use a dedicated route management UI.
 	existingLiveRoute, ok = r.routeHashMap[routeConfig.Hash(ctx)]
 	if ok {
-		r.logger.Info().Str("op", "registerAndRunRoute").Str("routeId", routeConfig.Id).Msg("identical route already exists under different ID " + existingLiveRoute.Config.Id)
+		r.logger.Info().Str("op", "registerAndRunRoute").Str("routeId", routeConfig.Id).Msg("adding route ID to identical route which already exists under different ID " + existingLiveRoute.Config.Id)
+		existingLiveRoute.AddRouteId(routeConfig.Id)
+		r.Lock()
+		r.liveRouteMap[routeConfig.Id] = existingLiveRoute
+		r.Unlock()
 		return nil
 	}
 	// set up filter chain
-	lrw.FilterChain = &filter.Chain{}
-	if routeConfig.FilterChain != nil {
-		for _, f := range routeConfig.FilterChain {
-			filter, err := r.pluginMgr.RegisterFilter(ctx, f.Plugin, f.Name, stringify(f.Config))
-			if err != nil {
-				lrw.Unregister(ctx, r)
-				return err
-			}
-			lrw.FilterChain.Add(filter)
-		}
-	}
-	// set up sender
-	lrw.Sender, err = r.pluginMgr.RegisterSender(ctx, routeConfig.Sender.Plugin, routeConfig.Sender.Name, stringify(routeConfig.Sender.Config))
+	lrw := NewLiveRouteWrapper(*routeConfig)
+	err = lrw.Register(ctx, r)
 	if err != nil {
-		lrw.Unregister(ctx, r)
-		return err
-	}
-	// set up receiver
-	lrw.Receiver, err = r.pluginMgr.RegisterReceiver(ctx, routeConfig.Receiver.Plugin, routeConfig.Receiver.Name, stringify(routeConfig.Receiver.Config))
-	if err != nil {
-		lrw.Unregister(ctx, r)
-		return err
+		r.logger.Error().Str("op", "registerAndRunRoute").Str("routeId", routeConfig.Id).Msg("failed to register new route: " + err.Error())
 	}
 	// create live route
 	lrw.Route = &route.Route{}
 	r.Lock()
-	r.liveRouteMap[routeConfig.Id] = &lrw
-	r.routeHashMap[routeConfig.Hash(ctx)] = &lrw
+	r.liveRouteMap[routeConfig.Id] = lrw
+	r.routeHashMap[routeConfig.Hash(ctx)] = lrw
 	r.Unlock()
 	r.logger.Info().Str("op", "registerAndRunRoute").Str("routeId", routeConfig.Id).Msg("starting route")
 	go func() {
