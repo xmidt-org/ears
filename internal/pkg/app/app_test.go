@@ -23,6 +23,7 @@ import (
 	"github.com/xmidt-org/ears/internal/pkg/fx/pluginmanagerfx"
 	"github.com/xmidt-org/ears/internal/pkg/fx/routestorerfx"
 	"github.com/xmidt-org/ears/internal/pkg/fx/routetablesyncerfx"
+	"github.com/xmidt-org/ears/internal/pkg/tablemgr"
 	testLog "github.com/xmidt-org/ears/test/log"
 	"go.uber.org/fx"
 	"os"
@@ -31,6 +32,15 @@ import (
 )
 
 func AppConfig() app.Config {
+	v := viper.New()
+	v.Set("ears.logLevel", "info")
+	v.Set("ears.api.port", 8080)
+	v.Set("ears.storage.type", "inmemory")
+	v.Set("ears.synchronization.type", "inmemory")
+	return v
+}
+
+func TableMgrConfig() tablemgr.Config {
 	v := viper.New()
 	v.Set("ears.logLevel", "info")
 	v.Set("ears.api.port", 8080)
@@ -91,9 +101,10 @@ func TestAppRunSuccess(t *testing.T) {
 		routetablesyncerfx.Module,
 		fx.Provide(
 			AppConfig,
+			TableMgrConfig,
 			GetTestLogger,
 			app.NewAPIManager,
-			app.NewRoutingTableManager,
+			tablemgr.NewRoutingTableManager,
 			app.NewMiddleware,
 			app.NewMux,
 		),

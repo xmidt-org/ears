@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package app
+package tablemgr
 
 import (
 	"context"
@@ -29,6 +29,12 @@ const (
 
 	EARS_STOP_LISTENING_CMD = "stop"
 )
+
+type Config interface {
+	GetString(key string) string
+	GetInt(key string) int
+	GetBool(key string) bool
+}
 
 type (
 
