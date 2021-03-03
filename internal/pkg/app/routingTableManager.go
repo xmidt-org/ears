@@ -73,17 +73,16 @@ func SetupRoutingManager(lifecycle fx.Lifecycle, config Config, logger *zerolog.
 	return nil
 }
 
-func NewRoutingTableManager(pluginMgr plugin.Manager, storageMgr route.RouteStorer, logger *zerolog.Logger, config Config) RoutingTableManager {
-	rtm := &DefaultRoutingTableManager{pluginMgr: pluginMgr, storageMgr: storageMgr, liveRouteMap: make(map[string]*LiveRouteWrapper, 0), routeHashMap: make(map[string]*LiveRouteWrapper, 0), logger: logger, config: config}
-	syncType := config.GetString("ears.synchronization.type")
-	switch syncType {
-	case "redis":
-		rtm.rtSyncer = NewRedisDeltaSyncer(rtm, logger, config)
-		rtm.rtSyncer.RegisterLocalTableSyncer(rtm)
-	case "inmemory":
-		rtm.rtSyncer = NewInMemoryDeltaSyncer(logger, config)
-	default:
-	}
+func NewRoutingTableManager(pluginMgr plugin.Manager, storageMgr route.RouteStorer, tableSyncer RoutingTableDeltaSyncer, logger *zerolog.Logger, config Config) RoutingTableManager {
+	rtm := &DefaultRoutingTableManager{
+		pluginMgr:    pluginMgr,
+		storageMgr:   storageMgr,
+		rtSyncer:     tableSyncer,
+		liveRouteMap: make(map[string]*LiveRouteWrapper, 0),
+		routeHashMap: make(map[string]*LiveRouteWrapper, 0),
+		logger:       logger,
+		config:       config}
+	rtm.RegisterLocalTableSyncer(rtm)
 	return rtm
 }
 

@@ -53,11 +53,6 @@ type (
 		GetAllFilters(ctx context.Context) (map[string]filter.Filterer, error)
 	}
 
-	RoutingTableLocalSyncer interface {
-		// SyncRoute
-		SyncRoute(ctx context.Context, routeId string, add bool) error
-	}
-
 	RoutingTableGlobalSyncer interface {
 		// StartGlobalSyncChecker
 		StartGlobalSyncChecker()
@@ -69,6 +64,11 @@ type (
 		SynchronizeAllRoutes() (int, error)
 		// IsSynchronized
 		IsSynchronized() (bool, error)
+	}
+
+	RoutingTableLocalSyncer interface {
+		// SyncRoute
+		SyncRoute(ctx context.Context, routeId string, add bool) error
 	}
 
 	RoutingTableDeltaSyncer interface {

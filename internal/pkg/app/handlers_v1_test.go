@@ -332,6 +332,23 @@ func getStorageLayer(config Config, storageType string) (route.RouteStorer, erro
 	return storageMgr, nil
 }
 
+// if storageType is blank choose storag elayer specified in ears.yaml
+func getTableSyncer(config Config, syncType string) (RoutingTableDeltaSyncer, error) {
+	if syncType == "" {
+		syncType = config.GetString("ears.synchronization.type")
+	}
+	var syncer RoutingTableDeltaSyncer
+	switch syncType {
+	case "inmemory":
+		syncer = NewInMemoryDeltaSyncer(&log.Logger, config)
+	case "redis":
+		syncer = NewRedisDeltaSyncer(&log.Logger, config)
+	default:
+		return nil, errors.New("unsupported syncer type '" + syncType + "'")
+	}
+	return syncer, nil
+}
+
 func setupRestApi(config Config, storageMgr route.RouteStorer) (*EarsRuntime, error) {
 	mgr, err := manager.New()
 	if err != nil {
@@ -381,7 +398,11 @@ func setupRestApi(config Config, storageMgr route.RouteStorer) (*EarsRuntime, er
 			return &EarsRuntime{config, nil, nil, storageMgr, nil}, err
 		}
 	}
-	routingMgr := NewRoutingTableManager(pluginMgr, storageMgr, &log.Logger, config)
+	tableSyncer, err := getTableSyncer(config, "")
+	if err != nil {
+		return &EarsRuntime{config, nil, nil, storageMgr, nil}, err
+	}
+	routingMgr := NewRoutingTableManager(pluginMgr, storageMgr, tableSyncer, &log.Logger, config)
 	apiMgr, err := NewAPIManager(routingMgr)
 	if err != nil {
 		return &EarsRuntime{config, nil, nil, storageMgr, nil}, err
