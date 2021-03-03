@@ -62,35 +62,6 @@ type (
 	}
 )
 
-//DISCUSS: instance id
-//DISCUSS: mocks
-//DISCUSS: package structure
-//
-//TODO: add tests
-//TODO: consider app id and org id
-//TODO: architecture.md
-//
-//DONE: reload all when hash failure or incremental repair
-//DONE: consider introduce global table hash (rejetced)
-//DONE: load entire table on launch, unload on stop
-//DONE: deal with multiple concurrent pub-ack handshakes
-//DONE: don't do acks (rejected)
-//DONE: contain route config in sync message
-//DONE: consider using one channel per transaction (rejected)
-//DONE: ensure all unit tests pass (issue of concurrent execution remains for shared data stores)
-//
-//DONE: review notification payload (json)
-//
-//DONE: unsubscribe from channels on shutdown
-//DONE: integrate with uberfx
-//DONE: remove ping logic
-//DONE: integrate with table manager
-//DONE: logging
-//DONE: extract configs (redis endpoint etc.)
-//DONE: do not rely on hostname (alone)
-//DONE: need local shared storage (boltdb, redis)
-//DONE: ability to turn syncing on and off
-
 func NewRedisTableSyncer(localTableSyncer RoutingTableLocalSyncer, logger *zerolog.Logger, config Config) RoutingTableDeltaSyncer {
 	s := new(RedisTableSyncer)
 	s.logger = logger
