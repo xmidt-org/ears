@@ -28,6 +28,27 @@ import (
 	"time"
 )
 
+const (
+
+	// used by one instance of ears to ask others to sync routing table
+
+	EARS_REDIS_SYNC_CHANNEL = "ears_sync"
+
+	// used by one instance of ears to tell all others that it just finished syncing its routing table
+
+	EARS_REDIS_ACK_CHANNEL = "ears_ack"
+
+	// operations
+
+	EARS_REDIS_ADD_ROUTE_CMD = "add"
+
+	EARS_REDIS_REMOVE_ROUTE_CMD = "rem"
+
+	EARS_REDIS_STOP_LISTENING_CMD = "stop"
+
+	EARS_REDIS_RETRY_INTERVAL_SECONDS = 10 * time.Second
+)
+
 type (
 	RedisTableSyncer struct {
 		sync.Mutex
@@ -70,7 +91,7 @@ type (
 //DONE: need local shared storage (boltdb, redis)
 //DONE: ability to turn syncing on and off
 
-func NewRedisTableSyncer(routingTableMgr RoutingTableManager, logger *zerolog.Logger, config Config) RoutingTableSyncer {
+func NewRedisTableSyncer(routingTableMgr RoutingTableManager, logger *zerolog.Logger, config Config) RoutingTableDeltaSyncer {
 	s := new(RedisTableSyncer)
 	s.logger = logger
 	s.config = config
@@ -237,11 +258,11 @@ func (s *RedisTableSyncer) StartListeningForSyncRequests() {
 					if elems[0] == EARS_REDIS_ADD_ROUTE_CMD {
 						s.logger.Info().Str("op", "ListenForSyncRequests").Str("instanceId", s.instanceId).Str("routeId", elems[1]).Str("sid", elems[3]).Msg("received message to add route")
 						err = s.routingTableMgr.SyncRouteAdded(ctx, elems[1])
-						s.PublishAckMessage(ctx, elems[0], elems[1], elems[2], elems[3])
+						s.publishAckMessage(ctx, elems[0], elems[1], elems[2], elems[3])
 					} else if elems[0] == EARS_REDIS_REMOVE_ROUTE_CMD {
 						s.logger.Info().Str("op", "ListenForSyncRequests").Str("instanceId", s.instanceId).Str("routeId", elems[1]).Str("sid", elems[3]).Msg("received message to remove route")
 						err = s.routingTableMgr.SyncRouteRemoved(ctx, elems[1])
-						s.PublishAckMessage(ctx, elems[0], elems[1], elems[2], elems[3])
+						s.publishAckMessage(ctx, elems[0], elems[1], elems[2], elems[3])
 					} else if elems[0] == EARS_REDIS_STOP_LISTENING_CMD {
 						s.logger.Info().Str("op", "ListenForSyncRequests").Str("instanceId", s.instanceId).Msg("stop message ignored")
 						// already handled above
@@ -261,7 +282,7 @@ func (s *RedisTableSyncer) StartListeningForSyncRequests() {
 
 // PublishAckMessage confirm successful syncing of routing table
 
-func (s *RedisTableSyncer) PublishAckMessage(ctx context.Context, cmd string, routeId string, instanceId string, sid string) error {
+func (s *RedisTableSyncer) publishAckMessage(ctx context.Context, cmd string, routeId string, instanceId string, sid string) error {
 	if !s.active {
 		return nil
 	}

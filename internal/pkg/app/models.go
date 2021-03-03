@@ -18,37 +18,16 @@ import (
 	"context"
 	"github.com/xmidt-org/ears/pkg/filter"
 	"github.com/xmidt-org/ears/pkg/receiver"
-	"github.com/xmidt-org/ears/pkg/sender"
-	"time"
-
 	"github.com/xmidt-org/ears/pkg/route"
-)
-
-const (
-
-	// used by one instance of ears to ask others to sync routing table
-
-	EARS_REDIS_SYNC_CHANNEL = "ears_sync"
-
-	// used by one instance of ears to tell all others that it just finished syncing its routing table
-
-	EARS_REDIS_ACK_CHANNEL = "ears_ack"
-
-	// operations
-
-	EARS_REDIS_ADD_ROUTE_CMD = "add"
-
-	EARS_REDIS_REMOVE_ROUTE_CMD = "rem"
-
-	EARS_REDIS_STOP_LISTENING_CMD = "stop"
-
-	EARS_REDIS_RETRY_INTERVAL_SECONDS = 10 * time.Second
+	"github.com/xmidt-org/ears/pkg/sender"
 )
 
 type (
 
 	// A RoutingTableManager supports modifying and querying an EARS routing table
 	RoutingTableManager interface {
+		RoutingTableDeltaSyncer  // routing table manager delegates to routing table delta syncer
+		RoutingTableGlobalSyncer // routing table manager delegates to routing table global syncer
 		// AddRoute adds a route to live routing table and runs it and also stores the route in the persistence layer
 		AddRoute(ctx context.Context, route *route.Config) error
 		// RemoveRoute removes a route from a live routing table and stops it and also removes the route from the persistence layer
@@ -67,15 +46,14 @@ type (
 		SyncRouteAdded(ctx context.Context, routeId string) error
 		// SyncRouteRemoved
 		SyncRouteRemoved(ctx context.Context, routeId string) error
+	}
+
+	RoutingTableGlobalSyncer interface {
 		// RegisterAllRoutes
 		RegisterAllRoutes() error
 		// UnregisterAllRoutes
 		UnregisterAllRoutes() error
-		// StartListeningForSyncRequests
-		StartListeningForSyncRequests()
-		// StopListeningForSyncRequests
-		StopListeningForSyncRequests()
-		// StopListeningForSyncRequests
+		// StartGlobalSyncChecker
 		StartGlobalSyncChecker()
 		// IsSynchronized
 		IsSynchronized() (bool, error)
@@ -83,15 +61,13 @@ type (
 		Synchronize() (int, error)
 	}
 
-	RoutingTableSyncer interface {
+	RoutingTableDeltaSyncer interface {
 		// StartListeningForSyncRequests
 		StartListeningForSyncRequests()
 		// StopListeningForSyncRequests
 		StopListeningForSyncRequests()
 		// PublishSyncRequest
 		PublishSyncRequest(ctx context.Context, routeId string, add bool)
-		// PublishAckMessage
-		PublishAckMessage(ctx context.Context, cmd string, routeId string, instanceId string, sid string) error
 		// GetInstanceCount
 		GetInstanceCount(ctx context.Context) int
 	}
