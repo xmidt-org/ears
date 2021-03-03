@@ -28,6 +28,7 @@ import (
 	"github.com/xmidt-org/ears/internal/pkg/db/dynamo"
 	"github.com/xmidt-org/ears/internal/pkg/db/redis"
 	"github.com/xmidt-org/ears/internal/pkg/plugin"
+	"github.com/xmidt-org/ears/internal/pkg/tablemgr"
 	pkgplugin "github.com/xmidt-org/ears/pkg/plugin"
 	"github.com/xmidt-org/ears/pkg/plugin/manager"
 	"github.com/xmidt-org/ears/pkg/plugins/block"
@@ -71,11 +72,22 @@ type (
 		apiManager          *APIManager
 		pluginManger        plugin.Manager
 		storageLayer        route.RouteStorer
-		routingTableManager RoutingTableManager
+		routingTableManager tablemgr.RoutingTableManager
 	}
 )
 
-var cachedInMemoryDeltaSyncer RoutingTableDeltaSyncer
+var cachedInMemoryDeltaSyncer tablemgr.RoutingTableDeltaSyncer
+
+func stringify(data interface{}) string {
+	if data == nil {
+		return ""
+	}
+	buf, err := json.Marshal(data)
+	if err != nil {
+		return ""
+	}
+	return string(buf)
+}
 
 func prefixRouteConfig(routeConfig *route.Config, prefix string) {
 	routeConfig.Name = prefix + routeConfig.Name
@@ -347,20 +359,20 @@ func getStorageLayer(config Config, storageType string) (route.RouteStorer, erro
 }
 
 // if storageType is blank choose storag elayer specified in ears.yaml
-func getTableSyncer(config Config, syncType string) (RoutingTableDeltaSyncer, error) {
+func getTableSyncer(config Config, syncType string) (tablemgr.RoutingTableDeltaSyncer, error) {
 	if syncType == "" {
 		syncType = config.GetString("ears.synchronization.type")
 	}
-	var syncer RoutingTableDeltaSyncer
+	var syncer tablemgr.RoutingTableDeltaSyncer
 	switch syncType {
 	case "inmemory":
 		if cachedInMemoryDeltaSyncer != nil {
 			return cachedInMemoryDeltaSyncer, nil
 		}
-		syncer = NewInMemoryDeltaSyncer(&log.Logger, config)
+		syncer = tablemgr.NewInMemoryDeltaSyncer(&log.Logger, config)
 		cachedInMemoryDeltaSyncer = syncer
 	case "redis":
-		syncer = NewRedisDeltaSyncer(&log.Logger, config)
+		syncer = tablemgr.NewRedisDeltaSyncer(&log.Logger, config)
 	default:
 		return nil, errors.New("unsupported syncer type '" + syncType + "'")
 	}
@@ -420,7 +432,7 @@ func setupRestApi(config Config, storageMgr route.RouteStorer) (*EarsRuntime, er
 	if err != nil {
 		return &EarsRuntime{config, nil, nil, storageMgr, nil}, err
 	}
-	routingMgr := NewRoutingTableManager(pluginMgr, storageMgr, tableSyncer, &log.Logger, config)
+	routingMgr := tablemgr.NewRoutingTableManager(pluginMgr, storageMgr, tableSyncer, &log.Logger, config)
 	apiMgr, err := NewAPIManager(routingMgr)
 	if err != nil {
 		return &EarsRuntime{config, nil, nil, storageMgr, nil}, err
@@ -526,7 +538,7 @@ func TestRestVersionHandler(t *testing.T) {
 	Version = "v1.0.2"
 	w := httptest.NewRecorder()
 	r := httptest.NewRequest(http.MethodGet, "/version", nil)
-	api, err := NewAPIManager(&DefaultRoutingTableManager{})
+	api, err := NewAPIManager(&tablemgr.DefaultRoutingTableManager{})
 	if err != nil {
 		t.Fatalf("Fail to setup api manager: %s\n", err.Error())
 	}

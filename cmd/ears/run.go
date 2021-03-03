@@ -22,6 +22,7 @@ import (
 	"github.com/xmidt-org/ears/internal/pkg/fx/pluginmanagerfx"
 	"github.com/xmidt-org/ears/internal/pkg/fx/routestorerfx"
 	"github.com/xmidt-org/ears/internal/pkg/fx/routetablesyncerfx"
+	"github.com/xmidt-org/ears/internal/pkg/tablemgr"
 	"github.com/xmidt-org/ears/pkg/cli"
 	"github.com/xmidt-org/ears/pkg/panics"
 	"go.uber.org/fx"
@@ -42,7 +43,7 @@ var runCmd = &cobra.Command{
 			}
 		}()
 
-		logger, err := app.ProvideLogger(ViperConfig())
+		logger, err := app.ProvideLogger(AppConfig())
 		if err != nil {
 			log.Logger.Fatal().Str("op", "InitLogger").Str("error", "panic").
 				Msg("Error initialize logger")
@@ -52,22 +53,27 @@ var runCmd = &cobra.Command{
 			routestorerfx.Module,
 			routetablesyncerfx.Module,
 			fx.Provide(
-				ViperConfig,
+				AppConfig,
+				TableMgrConfig,
 				app.ProvideLogger,
-				app.NewRoutingTableManager,
+				tablemgr.NewRoutingTableManager,
 				app.NewAPIManager,
 				app.NewMiddleware,
 				app.NewMux,
 			),
 			fx.Logger(logger),
 			fx.Invoke(app.SetupAPIServer),
-			fx.Invoke(app.SetupRoutingManager),
+			fx.Invoke(tablemgr.SetupRoutingManager),
 		)
 		earsApp.Run()
 	},
 }
 
-func ViperConfig() app.Config {
+func AppConfig() app.Config {
+	return viper.GetViper()
+}
+
+func TableMgrConfig() tablemgr.Config {
 	return viper.GetViper()
 }
 
