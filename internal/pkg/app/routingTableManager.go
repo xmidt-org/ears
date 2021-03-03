@@ -116,21 +116,23 @@ func (r *DefaultRoutingTableManager) GetInstanceId() string {
 
 func (r *DefaultRoutingTableManager) unregisterAndStopRoute(ctx context.Context, routeId string) error {
 	var err error
+	r.Lock()
+	defer r.Unlock()
 	liveRoute, ok := r.liveRouteMap[routeId]
 	if !ok {
 		r.logger.Info().Str("op", "unregisterAndStopRoute").Str("routeId", routeId).Msg("no live route exists with this ID")
 		// no error to make this idempotent
 		//return errors.New("no live route exists with ID " + routeId)
 	} else {
-		r.Lock()
+		//r.Lock()
 		delete(r.liveRouteMap, routeId)
-		r.Unlock()
+		//r.Unlock()
 		numRefs := liveRoute.RemoveRouteId(routeId)
 		r.logger.Info().Str("op", "unregisterAndStopRoute").Str("routeId", routeId).Int("numRefs", numRefs).Str("routeHash", liveRoute.Config.Hash(ctx)).Msg("number references")
 		if numRefs == 0 {
-			r.Lock()
+			//r.Lock()
 			delete(r.routeHashMap, liveRoute.Config.Hash(ctx))
-			r.Unlock()
+			//r.Unlock()
 			err = liveRoute.Route.Stop(ctx)
 			if err != nil {
 				r.logger.Error().Str("op", "unregisterAndStopRoute").Msg("could not stop route: " + err.Error())
@@ -148,6 +150,8 @@ func (r *DefaultRoutingTableManager) unregisterAndStopRoute(ctx context.Context,
 
 func (r *DefaultRoutingTableManager) registerAndRunRoute(ctx context.Context, routeConfig *route.Config) error {
 	var err error
+	r.Lock()
+	r.Unlock()
 	// check if route already exists, check if this is an update etc.
 	existingLiveRoute, ok := r.liveRouteMap[routeConfig.Id]
 	if ok && existingLiveRoute.Config.Hash(ctx) == routeConfig.Hash(ctx) {
@@ -176,9 +180,9 @@ func (r *DefaultRoutingTableManager) registerAndRunRoute(ctx context.Context, ro
 	if ok {
 		r.logger.Info().Str("op", "registerAndRunRoute").Str("routeId", routeConfig.Id).Msg("adding route ID to identical route which already exists under different ID " + existingLiveRoute.Config.Id)
 		existingLiveRoute.AddRouteId(routeConfig.Id)
-		r.Lock()
+		//r.Lock()
 		r.liveRouteMap[routeConfig.Id] = existingLiveRoute
-		r.Unlock()
+		//r.Unlock()
 		return nil
 	}
 	// set up filter chain
@@ -189,10 +193,10 @@ func (r *DefaultRoutingTableManager) registerAndRunRoute(ctx context.Context, ro
 	}
 	// create live route
 	lrw.Route = &route.Route{}
-	r.Lock()
+	//r.Lock()
 	r.liveRouteMap[routeConfig.Id] = lrw
 	r.routeHashMap[routeConfig.Hash(ctx)] = lrw
-	r.Unlock()
+	//r.Unlock()
 	r.logger.Info().Str("op", "registerAndRunRoute").Str("routeId", routeConfig.Id).Msg("starting route")
 	go func() {
 		sctx := context.Background()

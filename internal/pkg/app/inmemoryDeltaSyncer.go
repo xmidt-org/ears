@@ -38,6 +38,9 @@ type (
 )
 
 func NewInMemoryDeltaSyncer(logger *zerolog.Logger, config Config) RoutingTableDeltaSyncer {
+	// This delta syncer is mainly for testing purposes. For it to work, multiple ears runtimes
+	// should run within the same process and share the same instance of the in memory delta
+	// syncer.
 	s := new(InmemoryDeltaSyncer)
 	s.logger = logger
 	s.config = config
@@ -118,7 +121,8 @@ func (s *InmemoryDeltaSyncer) StartListeningForSyncRequests() {
 				}
 			}
 			// sync only whats needed
-			if elems[2] != s.instanceId {
+			//if elems[2] != s.instanceId { // need to manage instance IDs better
+			if len(s.localTableSyncers) > 1 {
 				s.GetInstanceCount(ctx) // just for logging
 				var err error
 				if elems[0] == EARS_ADD_ROUTE_CMD {
@@ -144,7 +148,7 @@ func (s *InmemoryDeltaSyncer) StartListeningForSyncRequests() {
 					s.logger.Error().Str("op", "ListenForSyncRequests").Str("instanceId", s.instanceId).Str("routeId", elems[1]).Str("sid", elems[3]).Msg("bad command " + elems[0])
 				}
 			} else {
-				s.logger.Info().Str("op", "ListenForSyncRequests").Str("instanceId", s.instanceId).Msg("no need to sync myself")
+				s.logger.Info().Str("op", "ListenForSyncRequests").Str("instanceId", s.instanceId).Msg("no need to sync just myself")
 			}
 		}
 	}()

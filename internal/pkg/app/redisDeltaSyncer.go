@@ -132,7 +132,7 @@ func (s *RedisDeltaSyncer) PublishSyncRequest(ctx context.Context, routeId strin
 							s.logger.Error().Str("op", "PublishSyncRequest").Msg(err.Error())
 							break
 						} else {
-							s.logger.Info().Str("op", "PublishSyncRequest").Msg("receive ack on channel " + EARS_REDIS_ACK_CHANNEL)
+							//s.logger.Info().Str("op", "PublishSyncRequest").Msg("receive ack on channel " + EARS_REDIS_ACK_CHANNEL)
 						}
 						elems := strings.Split(msg.Payload, ",")
 						if len(elems) != 4 {
@@ -147,7 +147,7 @@ func (s *RedisDeltaSyncer) PublishSyncRequest(ctx context.Context, routeId strin
 								break
 							}
 						} else {
-							s.logger.Info().Str("op", "PublishSyncRequest").Msg("ignoring unrelated ack: " + msg.Payload)
+							//s.logger.Info().Str("op", "PublishSyncRequest").Msg("ignoring unrelated ack: " + msg.Payload)
 						}
 					}
 					done <- true
@@ -173,7 +173,7 @@ func (s *RedisDeltaSyncer) PublishSyncRequest(ctx context.Context, routeId strin
 			if err != nil {
 				s.logger.Error().Str("op", "PublishSyncRequest").Msg(err.Error())
 			} else {
-				s.logger.Info().Str("op", "PublishSyncRequest").Msg("publish on channel " + EARS_REDIS_SYNC_CHANNEL)
+				//s.logger.Info().Str("op", "PublishSyncRequest").Msg("publish on channel " + EARS_REDIS_SYNC_CHANNEL)
 			}
 		}
 	}()
@@ -213,7 +213,7 @@ func (s *RedisDeltaSyncer) StartListeningForSyncRequests() {
 				s.logger.Error().Str("op", "ListenForSyncRequests").Msg(err.Error())
 				time.Sleep(EARS_REDIS_RETRY_INTERVAL_SECONDS)
 			} else {
-				s.logger.Info().Str("op", "ListenForSyncRequests").Msg("received message on channel " + EARS_REDIS_SYNC_CHANNEL)
+				//s.logger.Info().Str("op", "ListenForSyncRequests").Msg("received message on channel " + EARS_REDIS_SYNC_CHANNEL)
 				// parse message
 				elems := strings.Split(msg.Payload, ",")
 				if len(elems) != 4 {
@@ -272,7 +272,7 @@ func (s *RedisDeltaSyncer) publishAckMessage(ctx context.Context, cmd string, ro
 	if err != nil {
 		s.logger.Error().Str("op", "PublishAckMessage").Msg(err.Error())
 	} else {
-		s.logger.Info().Str("op", "PublishAckMessage").Msg("published ack message")
+		//s.logger.Info().Str("op", "PublishAckMessage").Msg("published ack message")
 	}
 	return err
 }
