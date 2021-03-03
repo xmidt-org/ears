@@ -75,6 +75,8 @@ type (
 	}
 )
 
+var cachedInMemoryDeltaSyncer RoutingTableDeltaSyncer
+
 func prefixRouteConfig(routeConfig *route.Config, prefix string) {
 	routeConfig.Name = prefix + routeConfig.Name
 	if routeConfig.Sender.Name != "" {
@@ -208,6 +210,12 @@ func TestRouteTable(t *testing.T) {
 			if err != nil {
 				t.Fatalf("%s test: route count issue: %s", currentTestName, err.Error())
 			}
+			for _, rt := range passiveRuntimes {
+				err = checkNumRoutes(rt.apiManager, currentTestName, len(routeIds))
+				if err != nil {
+					t.Fatalf("%s test: synchronized route count issue: %s", currentTestName, err.Error())
+				}
+			}
 			// sleep
 			time.Sleep(time.Duration(currentTest.WaitMs) * time.Millisecond)
 			// check number of events and payloads if desired
@@ -238,6 +246,12 @@ func TestRouteTable(t *testing.T) {
 			err = checkNumRoutes(runtime.apiManager, currentTestName, 0)
 			if err != nil {
 				t.Fatalf("%s test: zero route count issue: %s", currentTestName, err.Error())
+			}
+			for _, rt := range passiveRuntimes {
+				err = checkNumRoutes(rt.apiManager, currentTestName, 0)
+				if err != nil {
+					t.Fatalf("%s test: synchronized route count issue: %s", currentTestName, err.Error())
+				}
 			}
 			// sleep
 			time.Sleep(time.Duration(currentTest.WaitMs) * time.Millisecond)
@@ -340,7 +354,11 @@ func getTableSyncer(config Config, syncType string) (RoutingTableDeltaSyncer, er
 	var syncer RoutingTableDeltaSyncer
 	switch syncType {
 	case "inmemory":
+		if cachedInMemoryDeltaSyncer != nil {
+			return cachedInMemoryDeltaSyncer, nil
+		}
 		syncer = NewInMemoryDeltaSyncer(&log.Logger, config)
+		cachedInMemoryDeltaSyncer = syncer
 	case "redis":
 		syncer = NewRedisDeltaSyncer(&log.Logger, config)
 	default:
