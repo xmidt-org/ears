@@ -95,6 +95,10 @@ func (r *DefaultRoutingTableManager) GetInstanceCount(ctx context.Context) int {
 	return r.rtSyncer.GetInstanceCount(ctx)
 }
 
+func (r *DefaultRoutingTableManager) GetInstanceId() string {
+	return r.rtSyncer.GetInstanceId()
+}
+
 func (r *DefaultRoutingTableManager) unregisterAndStopRoute(ctx context.Context, routeId string) error {
 	var err error
 	liveRoute, ok := r.liveRouteMap[routeId]
@@ -290,11 +294,17 @@ func (r *DefaultRoutingTableManager) IsSynchronized() (bool, error) {
 	if err != nil {
 		return true, err
 	}
-	if len(storedRoutes) != len(r.routeHashMap) {
+	r.Lock()
+	defer r.Unlock()
+	if len(storedRoutes) != len(r.liveRouteMap) {
 		return false, nil
 	}
 	for _, sr := range storedRoutes {
 		_, ok := r.routeHashMap[sr.Hash(ctx)]
+		if !ok {
+			return false, nil
+		}
+		_, ok = r.liveRouteMap[sr.Id]
 		if !ok {
 			return false, nil
 		}
