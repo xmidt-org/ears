@@ -34,7 +34,7 @@ type DefaultRoutingTableManager struct {
 	sync.Mutex
 	pluginMgr    plugin.Manager
 	storageMgr   route.RouteStorer
-	rtSyncer     RoutingTableSyncer
+	rtSyncer     RoutingTableDeltaSyncer
 	liveRouteMap map[string]*LiveRouteWrapper // references to live routes by route ID
 	routeHashMap map[string]*LiveRouteWrapper // references to live routes by hash
 	logger       *zerolog.Logger
@@ -85,6 +85,14 @@ func (r *DefaultRoutingTableManager) StartListeningForSyncRequests() {
 
 func (r *DefaultRoutingTableManager) StopListeningForSyncRequests() {
 	r.rtSyncer.StopListeningForSyncRequests()
+}
+
+func (r *DefaultRoutingTableManager) PublishSyncRequest(ctx context.Context, routeId string, add bool) {
+	r.rtSyncer.PublishSyncRequest(ctx, routeId, add)
+}
+
+func (r *DefaultRoutingTableManager) GetInstanceCount(ctx context.Context) int {
+	return r.rtSyncer.GetInstanceCount(ctx)
 }
 
 func (r *DefaultRoutingTableManager) unregisterAndStopRoute(ctx context.Context, routeId string) error {
