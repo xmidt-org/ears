@@ -315,3 +315,7 @@ func (s *RedisTableSyncer) GetInstanceCount(ctx context.Context) int {
 	s.logger.Debug().Str("op", "GetInstanceCount").Msg(fmt.Sprintf("num subscribers for channel %s is %d", EARS_REDIS_SYNC_CHANNEL, numSubscribers))
 	return int(numSubscribers)
 }
+
+func (s *RedisTableSyncer) GetInstanceId() string {
+	return s.instanceId
+}

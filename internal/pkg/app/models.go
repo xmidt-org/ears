@@ -70,5 +70,7 @@ type (
 		PublishSyncRequest(ctx context.Context, routeId string, add bool)
 		// GetInstanceCount
 		GetInstanceCount(ctx context.Context) int
+		// GetInstanceId
+		GetInstanceId() string
 	}
 )
