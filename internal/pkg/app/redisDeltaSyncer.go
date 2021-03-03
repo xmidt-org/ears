@@ -53,7 +53,7 @@ type (
 	}
 )
 
-func NewRedisDeltaSyncer(localTableSyncer RoutingTableLocalSyncer, logger *zerolog.Logger, config Config) RoutingTableDeltaSyncer {
+func NewRedisDeltaSyncer(logger *zerolog.Logger, config Config) RoutingTableDeltaSyncer {
 	s := new(RedisDeltaSyncer)
 	s.logger = logger
 	s.config = config

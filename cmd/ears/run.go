@@ -21,6 +21,7 @@ import (
 	"github.com/xmidt-org/ears/internal/pkg/app"
 	"github.com/xmidt-org/ears/internal/pkg/fx/pluginmanagerfx"
 	"github.com/xmidt-org/ears/internal/pkg/fx/routestorerfx"
+	"github.com/xmidt-org/ears/internal/pkg/fx/routetablesyncerfx"
 	"github.com/xmidt-org/ears/pkg/cli"
 	"github.com/xmidt-org/ears/pkg/panics"
 	"go.uber.org/fx"
@@ -49,6 +50,7 @@ var runCmd = &cobra.Command{
 		earsApp := fx.New(
 			pluginmanagerfx.Module,
 			routestorerfx.Module,
+			routetablesyncerfx.Module,
 			fx.Provide(
 				ViperConfig,
 				app.ProvideLogger,
