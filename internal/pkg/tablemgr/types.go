@@ -57,6 +57,8 @@ type (
 		GetAllReceivers(ctx context.Context) (map[string]receiver.Receiver, error)
 		// GetAllFilters gets all filters currently present in the system
 		GetAllFilters(ctx context.Context) (map[string]filter.Filterer, error)
+		// GetInstanceId
+		GetInstanceId() string
 	}
 
 	RoutingTableGlobalSyncer interface {
@@ -75,22 +77,22 @@ type (
 	RoutingTableLocalSyncer interface {
 		// SyncRoute
 		SyncRoute(ctx context.Context, routeId string, add bool) error
+		// GetInstanceId
+		GetInstanceId() string
 	}
 
 	RoutingTableDeltaSyncer interface {
 		// StartListeningForSyncRequests
-		StartListeningForSyncRequests() // do we need this still?
+		StartListeningForSyncRequests(instanceId string) // do we need this still?
 		// StopListeningForSyncRequests
-		StopListeningForSyncRequests() // do we need this still?
+		StopListeningForSyncRequests(instanceId string) // do we need this still?
 		// RegisterLocalTableSyncer
 		RegisterLocalTableSyncer(localTableSyncer RoutingTableLocalSyncer)
 		// UnregisterLocalTableSyncer
 		UnregisterLocalTableSyncer(localTableSyncer RoutingTableLocalSyncer)
 		// PublishSyncRequest
-		PublishSyncRequest(ctx context.Context, routeId string, add bool)
+		PublishSyncRequest(ctx context.Context, routeId string, instanceId string, add bool)
 		// GetInstanceCount
 		GetInstanceCount(ctx context.Context) int
-		// GetInstanceId
-		GetInstanceId() string
 	}
 )

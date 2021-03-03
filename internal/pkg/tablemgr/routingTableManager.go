@@ -19,6 +19,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/google/uuid"
 	"github.com/rs/zerolog"
 	"github.com/xmidt-org/ears/internal/pkg/plugin"
 	"github.com/xmidt-org/ears/pkg/filter"
@@ -26,12 +27,14 @@ import (
 	"github.com/xmidt-org/ears/pkg/route"
 	"github.com/xmidt-org/ears/pkg/sender"
 	"go.uber.org/fx"
+	"os"
 	"sync"
 	"time"
 )
 
 type DefaultRoutingTableManager struct {
 	sync.Mutex
+	instanceId   string
 	pluginMgr    plugin.Manager
 	storageMgr   route.RouteStorer
 	rtSyncer     RoutingTableDeltaSyncer
@@ -56,14 +59,14 @@ func SetupRoutingManager(lifecycle fx.Lifecycle, config Config, logger *zerolog.
 	lifecycle.Append(
 		fx.Hook{
 			OnStart: func(context.Context) error {
-				routingTableMgr.StartListeningForSyncRequests()
+				routingTableMgr.StartListeningForSyncRequests("")
 				routingTableMgr.RegisterAllRoutes()
 				routingTableMgr.StartGlobalSyncChecker()
 				logger.Info().Msg("Routing Manager Service Started")
 				return nil
 			},
 			OnStop: func(ctx context.Context) error {
-				routingTableMgr.StopListeningForSyncRequests()
+				routingTableMgr.StopListeningForSyncRequests("")
 				routingTableMgr.UnregisterAllRoutes()
 				logger.Info().Msg("Routing Manager Stopped")
 				return nil
@@ -83,6 +86,8 @@ func NewRoutingTableManager(pluginMgr plugin.Manager, storageMgr route.RouteStor
 		logger:       logger,
 		config:       config}
 	rtm.RegisterLocalTableSyncer(rtm)
+	hostname, _ := os.Hostname()
+	rtm.instanceId = hostname + "_" + uuid.New().String()
 	return rtm
 }
 
@@ -94,16 +99,16 @@ func (r *DefaultRoutingTableManager) UnregisterLocalTableSyncer(localTableSyncer
 	r.rtSyncer.UnregisterLocalTableSyncer(localTableSyncer)
 }
 
-func (r *DefaultRoutingTableManager) StartListeningForSyncRequests() {
-	r.rtSyncer.StartListeningForSyncRequests()
+func (r *DefaultRoutingTableManager) StartListeningForSyncRequests(instanceId string) {
+	r.rtSyncer.StartListeningForSyncRequests(r.instanceId)
 }
 
-func (r *DefaultRoutingTableManager) StopListeningForSyncRequests() {
-	r.rtSyncer.StopListeningForSyncRequests()
+func (r *DefaultRoutingTableManager) StopListeningForSyncRequests(instanceId string) {
+	r.rtSyncer.StopListeningForSyncRequests(r.instanceId)
 }
 
-func (r *DefaultRoutingTableManager) PublishSyncRequest(ctx context.Context, routeId string, add bool) {
-	r.rtSyncer.PublishSyncRequest(ctx, routeId, add)
+func (r *DefaultRoutingTableManager) PublishSyncRequest(ctx context.Context, routeId string, instanceId string, add bool) {
+	r.rtSyncer.PublishSyncRequest(ctx, routeId, r.instanceId, add)
 }
 
 func (r *DefaultRoutingTableManager) GetInstanceCount(ctx context.Context) int {
@@ -111,7 +116,7 @@ func (r *DefaultRoutingTableManager) GetInstanceCount(ctx context.Context) int {
 }
 
 func (r *DefaultRoutingTableManager) GetInstanceId() string {
-	return r.rtSyncer.GetInstanceId()
+	return r.instanceId
 }
 
 func (r *DefaultRoutingTableManager) unregisterAndStopRoute(ctx context.Context, routeId string) error {
@@ -218,7 +223,7 @@ func (r *DefaultRoutingTableManager) RemoveRoute(ctx context.Context, routeId st
 		r.logger.Info().Str("op", "RemoveRoute").Str("routeId", routeId).Msg("could not delete route from storage layer")
 		//return err
 	}
-	r.rtSyncer.PublishSyncRequest(ctx, routeId, false)
+	r.rtSyncer.PublishSyncRequest(ctx, routeId, r.instanceId, false)
 	return r.unregisterAndStopRoute(ctx, routeId)
 }
 
@@ -241,7 +246,7 @@ func (r *DefaultRoutingTableManager) AddRoute(ctx context.Context, routeConfig *
 	if err != nil {
 		return err
 	}
-	r.rtSyncer.PublishSyncRequest(ctx, routeConfig.Id, true)
+	r.rtSyncer.PublishSyncRequest(ctx, routeConfig.Id, r.instanceId, true)
 	return r.registerAndRunRoute(ctx, routeConfig)
 }
 

@@ -77,6 +77,7 @@ type (
 )
 
 var cachedInMemoryDeltaSyncer tablemgr.RoutingTableDeltaSyncer
+var cachedInMemoryStorageLayer route.RouteStorer
 
 func stringify(data interface{}) string {
 	if data == nil {
@@ -137,7 +138,7 @@ func TestRouteTable(t *testing.T) {
 	if err != nil {
 		t.Fatalf("cannot create ears runtime: %s\n", err.Error())
 	}
-	runtime.routingTableManager.StartListeningForSyncRequests()
+	runtime.routingTableManager.StartListeningForSyncRequests("")
 	// add passive ears instances if any
 	passiveRuntimes := make([]*EarsRuntime, 0)
 	if table.NumInstances < 2 {
@@ -148,7 +149,7 @@ func TestRouteTable(t *testing.T) {
 		if err != nil {
 			t.Fatalf("cannot create passive ears runtime: %s\n", err.Error())
 		}
-		rt.routingTableManager.StartListeningForSyncRequests()
+		rt.routingTableManager.StartListeningForSyncRequests("")
 		t.Logf("started passive ears runtime %d", i)
 		passiveRuntimes = append(passiveRuntimes, rt)
 	}
@@ -270,9 +271,9 @@ func TestRouteTable(t *testing.T) {
 		})
 	}
 	// tear down ears runtime
-	runtime.routingTableManager.StopListeningForSyncRequests()
+	runtime.routingTableManager.StopListeningForSyncRequests("")
 	for _, rt := range passiveRuntimes {
-		rt.routingTableManager.StopListeningForSyncRequests()
+		rt.routingTableManager.StopListeningForSyncRequests("")
 	}
 }
 
@@ -336,7 +337,12 @@ func getStorageLayer(config Config, storageType string) (route.RouteStorer, erro
 	var err error
 	switch storageType {
 	case "inmemory":
-		storageMgr = db.NewInMemoryRouteStorer(config)
+		if cachedInMemoryStorageLayer != nil {
+			storageMgr = cachedInMemoryStorageLayer
+		} else {
+			storageMgr = db.NewInMemoryRouteStorer(config)
+			cachedInMemoryStorageLayer = storageMgr
+		}
 	case "dynamodb":
 		storageMgr, err = dynamo.NewDynamoDbStorer(config)
 		if err != nil {
