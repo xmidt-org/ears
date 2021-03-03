@@ -22,6 +22,14 @@ import (
 	"github.com/xmidt-org/ears/pkg/sender"
 )
 
+const (
+	EARS_ADD_ROUTE_CMD = "add"
+
+	EARS_REMOVE_ROUTE_CMD = "rem"
+
+	EARS_STOP_LISTENING_CMD = "stop"
+)
+
 type (
 
 	// A RoutingTableManager supports modifying and querying an EARS routing table
@@ -65,9 +73,13 @@ type (
 
 	RoutingTableDeltaSyncer interface {
 		// StartListeningForSyncRequests
-		StartListeningForSyncRequests()
+		StartListeningForSyncRequests() // do we need this still?
 		// StopListeningForSyncRequests
-		StopListeningForSyncRequests()
+		StopListeningForSyncRequests() // do we need this still?
+		// RegisterLocalTableSyncer
+		RegisterLocalTableSyncer(localTableSyncer RoutingTableLocalSyncer)
+		// UnregisterLocalTableSyncer
+		UnregisterLocalTableSyncer(localTableSyncer RoutingTableLocalSyncer)
 		// PublishSyncRequest
 		PublishSyncRequest(ctx context.Context, routeId string, add bool)
 		// GetInstanceCount
