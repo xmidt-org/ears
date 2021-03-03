@@ -52,13 +52,13 @@ const (
 type (
 	RedisTableSyncer struct {
 		sync.Mutex
-		redisEndpoint   string
-		active          bool
-		instanceId      string
-		client          *redis.Client
-		routingTableMgr RoutingTableManager
-		logger          *zerolog.Logger
-		config          Config
+		redisEndpoint    string
+		active           bool
+		instanceId       string
+		client           *redis.Client
+		localTableSyncer RoutingTableLocalSyncer
+		logger           *zerolog.Logger
+		config           Config
 	}
 )
 
@@ -91,12 +91,12 @@ type (
 //DONE: need local shared storage (boltdb, redis)
 //DONE: ability to turn syncing on and off
 
-func NewRedisTableSyncer(routingTableMgr RoutingTableManager, logger *zerolog.Logger, config Config) RoutingTableDeltaSyncer {
+func NewRedisTableSyncer(localTableSyncer RoutingTableLocalSyncer, logger *zerolog.Logger, config Config) RoutingTableDeltaSyncer {
 	s := new(RedisTableSyncer)
 	s.logger = logger
 	s.config = config
 	s.redisEndpoint = config.GetString("ears.synchronization.endpoint")
-	s.routingTableMgr = routingTableMgr
+	s.localTableSyncer = localTableSyncer
 	hostname, _ := os.Hostname()
 	s.instanceId = hostname + "_" + uuid.New().String()
 	s.active = config.GetBool("ears.synchronization.active")
@@ -257,11 +257,11 @@ func (s *RedisTableSyncer) StartListeningForSyncRequests() {
 					s.GetInstanceCount(ctx) // just for logging
 					if elems[0] == EARS_REDIS_ADD_ROUTE_CMD {
 						s.logger.Info().Str("op", "ListenForSyncRequests").Str("instanceId", s.instanceId).Str("routeId", elems[1]).Str("sid", elems[3]).Msg("received message to add route")
-						err = s.routingTableMgr.SyncRouteAdded(ctx, elems[1])
+						err = s.localTableSyncer.SyncRoute(ctx, elems[1], true)
 						s.publishAckMessage(ctx, elems[0], elems[1], elems[2], elems[3])
 					} else if elems[0] == EARS_REDIS_REMOVE_ROUTE_CMD {
 						s.logger.Info().Str("op", "ListenForSyncRequests").Str("instanceId", s.instanceId).Str("routeId", elems[1]).Str("sid", elems[3]).Msg("received message to remove route")
-						err = s.routingTableMgr.SyncRouteRemoved(ctx, elems[1])
+						err = s.localTableSyncer.SyncRoute(ctx, elems[1], false)
 						s.publishAckMessage(ctx, elems[0], elems[1], elems[2], elems[3])
 					} else if elems[0] == EARS_REDIS_STOP_LISTENING_CMD {
 						s.logger.Info().Str("op", "ListenForSyncRequests").Str("instanceId", s.instanceId).Msg("stop message ignored")

@@ -258,23 +258,23 @@ func (r *DefaultRoutingTableManager) GetAllFilters(ctx context.Context) (map[str
 	return filterers, nil
 }
 
-func (r *DefaultRoutingTableManager) SyncRouteAdded(ctx context.Context, routeId string) error {
-	routeConfig, err := r.storageMgr.GetRoute(ctx, routeId)
-	if err != nil {
-		return err
+func (r *DefaultRoutingTableManager) SyncRoute(ctx context.Context, routeId string, add bool) error {
+	if add {
+		routeConfig, err := r.storageMgr.GetRoute(ctx, routeId)
+		if err != nil {
+			return err
+		}
+		return r.registerAndRunRoute(ctx, &routeConfig)
+	} else {
+		return r.unregisterAndStopRoute(ctx, routeId)
 	}
-	return r.registerAndRunRoute(ctx, &routeConfig)
-}
-
-func (r *DefaultRoutingTableManager) SyncRouteRemoved(ctx context.Context, routeId string) error {
-	return r.unregisterAndStopRoute(ctx, routeId)
 }
 
 func (r *DefaultRoutingTableManager) StartGlobalSyncChecker() {
 	go func() {
 		time.Sleep(5 * time.Second)
 		for {
-			cnt, err := r.Synchronize()
+			cnt, err := r.SynchronizeAllRoutes()
 			if err != nil {
 				r.logger.Error().Str("op", "StartGlobalSyncChecker").Msg(err.Error())
 			}
@@ -312,7 +312,7 @@ func (r *DefaultRoutingTableManager) IsSynchronized() (bool, error) {
 	return true, nil
 }
 
-/*func (r *DefaultRoutingTableManager) Synchronize() (int, error) {
+/*func (r *DefaultRoutingTableManager) SynchronizeAllRoutes() (int, error) {
 	ok, err := r.IsSynchronized()
 	if err != nil {
 		return 0, err
@@ -325,7 +325,7 @@ func (r *DefaultRoutingTableManager) IsSynchronized() (bool, error) {
 	return 0, nil
 }*/
 
-func (r *DefaultRoutingTableManager) Synchronize() (int, error) {
+func (r *DefaultRoutingTableManager) SynchronizeAllRoutes() (int, error) {
 	ctx := context.Background()
 	storedRoutes, err := r.storageMgr.GetAllRoutes(ctx)
 	if err != nil {
