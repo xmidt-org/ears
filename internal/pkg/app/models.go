@@ -26,8 +26,9 @@ type (
 
 	// A RoutingTableManager supports modifying and querying an EARS routing table
 	RoutingTableManager interface {
-		RoutingTableDeltaSyncer  // routing table manager delegates to routing table delta syncer
-		RoutingTableGlobalSyncer // routing table manager delegates to routing table global syncer
+		RoutingTableDeltaSyncer  // routing table manager delegates to routing table delta syncer for fanning out changes
+		RoutingTableGlobalSyncer // routing table manager delegates to routing table global syncer for startup and tear down
+		RoutingTableLocalSyncer  // to sync routing table upon receipt of an update notification for a single route
 		// AddRoute adds a route to live routing table and runs it and also stores the route in the persistence layer
 		AddRoute(ctx context.Context, route *route.Config) error
 		// RemoveRoute removes a route from a live routing table and stops it and also removes the route from the persistence layer
@@ -42,23 +43,24 @@ type (
 		GetAllReceivers(ctx context.Context) (map[string]receiver.Receiver, error)
 		// GetAllFilters gets all filters currently present in the system
 		GetAllFilters(ctx context.Context) (map[string]filter.Filterer, error)
-		// SyncRouteAdded
-		SyncRouteAdded(ctx context.Context, routeId string) error
-		// SyncRouteRemoved
-		SyncRouteRemoved(ctx context.Context, routeId string) error
+	}
+
+	RoutingTableLocalSyncer interface {
+		// SyncRoute
+		SyncRoute(ctx context.Context, routeId string, add bool) error
 	}
 
 	RoutingTableGlobalSyncer interface {
+		// StartGlobalSyncChecker
+		StartGlobalSyncChecker()
 		// RegisterAllRoutes
 		RegisterAllRoutes() error
 		// UnregisterAllRoutes
 		UnregisterAllRoutes() error
-		// StartGlobalSyncChecker
-		StartGlobalSyncChecker()
+		// SynchronizeAllRoutes
+		SynchronizeAllRoutes() (int, error)
 		// IsSynchronized
 		IsSynchronized() (bool, error)
-		// Synchronize
-		Synchronize() (int, error)
 	}
 
 	RoutingTableDeltaSyncer interface {
