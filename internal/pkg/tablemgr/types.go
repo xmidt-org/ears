@@ -47,9 +47,9 @@ type (
 		AddRoute(ctx context.Context, route *route.Config) error
 		// RemoveRoute removes a route from a live routing table and stops it and also removes the route from the persistence layer
 		RemoveRoute(ctx context.Context, routeId string) error
-		// GetRoute gets a single route by its ID
+		// GetRoute gets a single route by its ID from persistence layer
 		GetRoute(ctx context.Context, routeId string) (*route.Config, error)
-		// GetAllRoutes gets all live routes from persistence layer
+		// GetAllRoutes gets all routes from persistence layer
 		GetAllRoutes(ctx context.Context) ([]route.Config, error)
 		// GetAllSenders gets all senders currently present in the system
 		GetAllSenders(ctx context.Context) (map[string]sender.Sender, error)
@@ -72,6 +72,8 @@ type (
 		SynchronizeAllRoutes() (int, error)
 		// IsSynchronized
 		IsSynchronized() (bool, error)
+		// GetAllRegisteredRoutes gets all routes that are currently registered and running on ears instance
+		GetAllRegisteredRoutes() ([]route.Config, error)
 	}
 
 	RoutingTableLocalSyncer interface {

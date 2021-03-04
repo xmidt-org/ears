@@ -424,3 +424,11 @@ func (r *DefaultRoutingTableManager) RegisterAllRoutes() error {
 	r.logger.Info().Str("op", "RegisterAllRoutes").Msg("done registering all routes")
 	return nil
 }
+
+func (r *DefaultRoutingTableManager) GetAllRegisteredRoutes() ([]route.Config, error) {
+	routes := make([]route.Config, 0)
+	for _, route := range r.liveRouteMap {
+		routes = append(routes, route.Config)
+	}
+	return routes, nil
+}
