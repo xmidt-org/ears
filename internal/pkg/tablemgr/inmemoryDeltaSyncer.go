@@ -112,38 +112,36 @@ func (s *InmemoryDeltaSyncer) StartListeningForSyncRequests(instanceId string) {
 			// leave sync loop if asked
 			if elems[0] == EARS_STOP_LISTENING_CMD {
 				if elems[2] == instanceId || elems[2] == "" {
-					s.logger.Info().Str("op", "ListenForSyncRequests").Str("instanceId", instanceId).Msg("received stop listening message")
+					s.logger.Info().Str("op", "ListenForSyncRequests").Str("instanceId", elems[2]).Msg("received stop listening message")
 					return
 				}
 			}
-			// sync only whats needed
-			if elems[2] != instanceId { // need to manage instance IDs better
-				s.GetInstanceCount(ctx) // just for logging
-				var err error
-				if elems[0] == EARS_ADD_ROUTE_CMD {
-					s.logger.Info().Str("op", "ListenForSyncRequests").Str("instanceId", instanceId).Str("routeId", elems[1]).Str("sid", elems[3]).Msg("received message to add route")
-					for localTableSyncer, _ := range s.localTableSyncers {
+			var err error
+			if elems[0] == EARS_ADD_ROUTE_CMD {
+				s.logger.Info().Str("op", "ListenForSyncRequests").Str("instanceId", elems[2]).Str("routeId", elems[1]).Str("sid", elems[3]).Msg("received message to add route")
+				for localTableSyncer, _ := range s.localTableSyncers {
+					if elems[2] != localTableSyncer.GetInstanceId() {
 						err = localTableSyncer.SyncRoute(ctx, elems[1], true)
 						if err != nil {
-							s.logger.Error().Str("op", "ListenForSyncRequests").Str("instanceId", instanceId).Str("routeId", elems[1]).Str("sid", elems[3]).Msg("failed to sync route: " + err.Error())
+							s.logger.Error().Str("op", "ListenForSyncRequests").Str("instanceId", elems[2]).Str("routeId", elems[1]).Str("sid", elems[3]).Msg("failed to sync route: " + err.Error())
 						}
 					}
-				} else if elems[0] == EARS_REMOVE_ROUTE_CMD {
-					s.logger.Info().Str("op", "ListenForSyncRequests").Str("instanceId", instanceId).Str("routeId", elems[1]).Str("sid", elems[3]).Msg("received message to remove route")
-					for localTableSyncer, _ := range s.localTableSyncers {
+				}
+			} else if elems[0] == EARS_REMOVE_ROUTE_CMD {
+				s.logger.Info().Str("op", "ListenForSyncRequests").Str("instanceId", elems[2]).Str("routeId", elems[1]).Str("sid", elems[3]).Msg("received message to remove route")
+				for localTableSyncer, _ := range s.localTableSyncers {
+					if elems[2] != localTableSyncer.GetInstanceId() {
 						err = localTableSyncer.SyncRoute(ctx, elems[1], false)
 						if err != nil {
-							s.logger.Error().Str("op", "ListenForSyncRequests").Str("instanceId", instanceId).Str("routeId", elems[1]).Str("sid", elems[3]).Msg("failed to sync route: " + err.Error())
+							s.logger.Error().Str("op", "ListenForSyncRequests").Str("instanceId", elems[2]).Str("routeId", elems[1]).Str("sid", elems[3]).Msg("failed to sync route: " + err.Error())
 						}
 					}
-				} else if elems[0] == EARS_STOP_LISTENING_CMD {
-					s.logger.Info().Str("op", "ListenForSyncRequests").Str("instanceId", instanceId).Msg("stop message ignored")
-					// already handled above
-				} else {
-					s.logger.Error().Str("op", "ListenForSyncRequests").Str("instanceId", instanceId).Str("routeId", elems[1]).Str("sid", elems[3]).Msg("bad command " + elems[0])
 				}
+			} else if elems[0] == EARS_STOP_LISTENING_CMD {
+				s.logger.Info().Str("op", "ListenForSyncRequests").Str("instanceId", elems[2]).Msg("stop message ignored")
+				// already handled above
 			} else {
-				s.logger.Info().Str("op", "ListenForSyncRequests").Str("instanceId", instanceId).Msg("no need to sync just myself")
+				s.logger.Error().Str("op", "ListenForSyncRequests").Str("instanceId", elems[2]).Str("routeId", elems[1]).Str("sid", elems[3]).Msg("bad command " + elems[0])
 			}
 		}
 	}()

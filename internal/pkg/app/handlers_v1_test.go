@@ -149,7 +149,11 @@ func TestRouteTable(t *testing.T) {
 		if err != nil {
 			t.Fatalf("cannot create passive ears runtime: %s\n", err.Error())
 		}
-		rt.routingTableManager.StartListeningForSyncRequests("")
+		if getTableSyncerType(config, "") != "inmemory" {
+			rt.routingTableManager.StartListeningForSyncRequests("")
+		} else {
+			runtime.routingTableManager.RegisterLocalTableSyncer(rt.routingTableManager)
+		}
 		t.Logf("started passive ears runtime %d", i)
 		passiveRuntimes = append(passiveRuntimes, rt)
 	}
@@ -383,6 +387,13 @@ func getTableSyncer(config Config, syncType string) (tablemgr.RoutingTableDeltaS
 		return nil, errors.New("unsupported syncer type '" + syncType + "'")
 	}
 	return syncer, nil
+}
+
+func getTableSyncerType(config Config, syncType string) string {
+	if syncType == "" {
+		syncType = config.GetString("ears.synchronization.type")
+	}
+	return syncType
 }
 
 func setupRestApi(config Config, storageMgr route.RouteStorer) (*EarsRuntime, error) {

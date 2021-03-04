@@ -73,6 +73,7 @@ func NewRedisDeltaSyncer(logger *zerolog.Logger, config Config) RoutingTableDelt
 }
 
 func (s *RedisDeltaSyncer) RegisterLocalTableSyncer(localTableSyncer RoutingTableLocalSyncer) {
+	// the redis implementation should only ever register itself
 	s.Lock()
 	defer s.Unlock()
 	s.localTableSyncers[localTableSyncer] = struct{}{}
