@@ -129,15 +129,11 @@ func (r *DefaultRoutingTableManager) unregisterAndStopRoute(ctx context.Context,
 		// no error to make this idempotent
 		//return errors.New("no live route exists with ID " + routeId)
 	} else {
-		//r.Lock()
 		delete(r.liveRouteMap, routeId)
-		//r.Unlock()
-		numRefs := liveRoute.RemoveRouteId(routeId)
+		numRefs := liveRoute.RemoveRouteReference()
 		r.logger.Info().Str("op", "unregisterAndStopRoute").Str("routeId", routeId).Int("numRefs", numRefs).Str("routeHash", liveRoute.Config.Hash(ctx)).Msg("number references")
 		if numRefs == 0 {
-			//r.Lock()
 			delete(r.routeHashMap, liveRoute.Config.Hash(ctx))
-			//r.Unlock()
 			err = liveRoute.Route.Stop(ctx)
 			if err != nil {
 				r.logger.Error().Str("op", "unregisterAndStopRoute").Msg("could not stop route: " + err.Error())
@@ -160,13 +156,13 @@ func (r *DefaultRoutingTableManager) registerAndRunRoute(ctx context.Context, ro
 	// check if route already exists, check if this is an update etc.
 	existingLiveRoute, ok := r.liveRouteMap[routeConfig.Id]
 	if ok && existingLiveRoute.Config.Hash(ctx) == routeConfig.Hash(ctx) {
-		r.logger.Info().Str("op", "registerAndRunRoute").Str("routeId", routeConfig.Id).Msg("identical route exists with same ID")
+		r.logger.Info().Str("op", "registerAndRunRoute").Str("routeId", routeConfig.Id).Msg("identical route exists with same hash and same ID")
 		return nil
 	}
-	// it's an update
+	// it's an update, so we first need to decrement thhe reference counter on the existing route and possibly stop it
 	if ok && existingLiveRoute.Config.Hash(ctx) != routeConfig.Hash(ctx) {
 		r.logger.Info().Str("op", "registerAndRunRoute").Str("routeId", routeConfig.Id).Msg("existing route needs to be updated")
-		err = r.unregisterAndStopRoute(ctx, routeConfig.Id)
+		err = r.unregisterAndStopRoute(ctx, routeConfig.Id) // unregister will only truly decommission the route if this was th elast referecne
 		if err != nil {
 			r.logger.Error().Str("op", "registerAndRunRoute").Str("routeId", routeConfig.Id).Msg(err.Error())
 		}
@@ -174,22 +170,21 @@ func (r *DefaultRoutingTableManager) registerAndRunRoute(ctx context.Context, ro
 	// An identical route already exists under a different ID.
 	// It would be ok to simply create another route here because plugin manager will ensure we share receiver and sender
 	// plugin for performance. However, simply creating another route would cause event duplication. Instead we need to
-	// have a route level reference counter - or maybe more slightly more robust, the live route wrapper needs to hold
-	// a map of current route IDs sharing this route. Need to performance test this approach with large number of routes.
-	// While this approach will work functionally it will not scale in practice. Remember: We will have millions of identical
-	// routes (with different route IDs!) in Xfi. This will lead to millions of entries in the internal hashmaps and worse yet,
-	// millions of entries in the storage layer. I still believe it would be much simpler and faster to force the route ID to be
+	// have a route level reference counter. Need to performance test this approach with large number of routes.
+	// While this approach will work functionally it may not scale well in practice. Remember: We will have millions of identical
+	// routes (with different route IDs!) in Xfi. This will lead to millions of entries in the internal hashmap and worse yet,
+	// millions of entries in the storage layer. I still believe it may be simpler and faster to force the route ID to be
 	// the route hash, use an internal reference counter and give up on idempotency. An alternative would be to take route creation
 	// out of the flow and use a dedicated route management UI.
 	existingLiveRoute, ok = r.routeHashMap[routeConfig.Hash(ctx)]
 	if ok {
+		// we simply increment the reference count of an already existing route and are done here
 		r.logger.Info().Str("op", "registerAndRunRoute").Str("routeId", routeConfig.Id).Msg("adding route ID to identical route which already exists under different ID " + existingLiveRoute.Config.Id)
-		existingLiveRoute.AddRouteId(routeConfig.Id)
-		//r.Lock()
+		existingLiveRoute.AddRouteReference()
 		r.liveRouteMap[routeConfig.Id] = existingLiveRoute
-		//r.Unlock()
 		return nil
 	}
+	// otherwise we create a brand-new route
 	// set up filter chain
 	lrw := NewLiveRouteWrapper(*routeConfig)
 	err = lrw.Register(ctx, r)
@@ -198,10 +193,8 @@ func (r *DefaultRoutingTableManager) registerAndRunRoute(ctx context.Context, ro
 	}
 	// create live route
 	lrw.Route = &route.Route{}
-	//r.Lock()
 	r.liveRouteMap[routeConfig.Id] = lrw
 	r.routeHashMap[routeConfig.Hash(ctx)] = lrw
-	//r.Unlock()
 	r.logger.Info().Str("op", "registerAndRunRoute").Str("routeId", routeConfig.Id).Msg("starting route")
 	go func() {
 		sctx := context.Background()

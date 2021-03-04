@@ -30,31 +30,28 @@ type LiveRouteWrapper struct {
 	Receiver    receiver.Receiver
 	FilterChain *filter.Chain
 	Config      route.Config
-	RouteIdMap  map[string]struct{} // map of route IDs who share this route - a simple counter would cause issues with idempotency of AddRoute / RemoveRoute APIs
+	RefCnt      int
 }
 
 func NewLiveRouteWrapper(routeConfig route.Config) *LiveRouteWrapper {
 	lrw := new(LiveRouteWrapper)
 	lrw.Config = routeConfig
-	lrw.Lock()
-	defer lrw.Unlock()
-	lrw.RouteIdMap = make(map[string]struct{})
-	lrw.RouteIdMap[routeConfig.Id] = struct{}{}
+	lrw.RefCnt++
 	return lrw
 }
 
-func (lrw *LiveRouteWrapper) AddRouteId(routeId string) int {
-	lrw.Lock()
-	defer lrw.Unlock()
-	lrw.RouteIdMap[routeId] = struct{}{}
-	return len(lrw.RouteIdMap)
+func (lrw *LiveRouteWrapper) GetReferenceCount() int {
+	return lrw.RefCnt
 }
 
-func (lrw *LiveRouteWrapper) RemoveRouteId(routeId string) int {
-	lrw.Lock()
-	defer lrw.Unlock()
-	delete(lrw.RouteIdMap, routeId)
-	return len(lrw.RouteIdMap)
+func (lrw *LiveRouteWrapper) AddRouteReference() int {
+	lrw.RefCnt++
+	return lrw.RefCnt
+}
+
+func (lrw *LiveRouteWrapper) RemoveRouteReference() int {
+	lrw.RefCnt--
+	return lrw.RefCnt
 }
 
 func (lrw *LiveRouteWrapper) Unregister(ctx context.Context, r *DefaultRoutingTableManager) error {
