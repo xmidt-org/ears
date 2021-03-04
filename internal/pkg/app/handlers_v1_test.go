@@ -222,7 +222,7 @@ func TestRouteTable(t *testing.T) {
 			}
 			// sleep
 			time.Sleep(time.Duration(currentTest.WaitMs) * time.Millisecond)
-			// check number of routes in system
+			// check number of routes in persistence layer
 			err = checkNumRoutes(runtime.apiManager, currentTestName, len(routeIds))
 			if err != nil {
 				t.Fatalf("%s test: route count issue: %s", currentTestName, err.Error())
@@ -231,6 +231,17 @@ func TestRouteTable(t *testing.T) {
 				err = checkNumRoutes(rt.apiManager, currentTestName, len(routeIds))
 				if err != nil {
 					t.Fatalf("%s test: synchronized route count issue: %s", currentTestName, err.Error())
+				}
+			}
+			// check number of registered / running routes
+			registeredRoutes, _ := runtime.routingTableManager.GetAllRegisteredRoutes()
+			if len(registeredRoutes) != len(routeIds) {
+				t.Fatalf("%s test: registered route count mismatch: %d (%d)", currentTestName, len(registeredRoutes), len(routeIds))
+			}
+			for _, rt := range passiveRuntimes {
+				registeredRoutes, _ = rt.routingTableManager.GetAllRegisteredRoutes()
+				if len(registeredRoutes) != len(routeIds) {
+					t.Fatalf("%s test: synchronized registered route count mismatch: %d (%d)", currentTestName, len(registeredRoutes), len(routeIds))
 				}
 			}
 			// sleep
@@ -259,7 +270,7 @@ func TestRouteTable(t *testing.T) {
 			}
 			// sleep
 			time.Sleep(time.Duration(currentTest.WaitMs) * time.Millisecond)
-			// check number of routes in system
+			// check number of routes in persistence layer
 			err = checkNumRoutes(runtime.apiManager, currentTestName, 0)
 			if err != nil {
 				t.Fatalf("%s test: zero route count issue: %s", currentTestName, err.Error())
@@ -268,6 +279,17 @@ func TestRouteTable(t *testing.T) {
 				err = checkNumRoutes(rt.apiManager, currentTestName, 0)
 				if err != nil {
 					t.Fatalf("%s test: synchronized route count issue: %s", currentTestName, err.Error())
+				}
+			}
+			// check number of registered / running routes
+			registeredRoutes, _ = runtime.routingTableManager.GetAllRegisteredRoutes()
+			if len(registeredRoutes) != 0 {
+				t.Fatalf("%s test: registered route count mismatch: %d (%d)", currentTestName, len(registeredRoutes), len(routeIds))
+			}
+			for _, rt := range passiveRuntimes {
+				registeredRoutes, _ = rt.routingTableManager.GetAllRegisteredRoutes()
+				if len(registeredRoutes) != 0 {
+					t.Fatalf("%s test: synchronized registered route count mismatch: %d (%d)", currentTestName, len(registeredRoutes), len(routeIds))
 				}
 			}
 			// sleep
