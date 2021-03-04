@@ -8,12 +8,12 @@ ears:
   storage:
     type: inmemory
 #    type: redis
-#    endpoint: localhost:6379
+    endpoint: localhost:6379
 
   synchronization:
     type: inmemory
 #    type: redis
-#    endpoint: localhost:6379
+    endpoint: localhost:6379
     active: yes
 
 

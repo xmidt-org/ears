@@ -76,7 +76,8 @@ type (
 	}
 )
 
-var cachedInMemoryDeltaSyncer tablemgr.RoutingTableDeltaSyncer
+// should in memory storer also be implemented as singleton?
+
 var cachedInMemoryStorageLayer route.RouteStorer
 
 func stringify(data interface{}) string {
@@ -149,6 +150,7 @@ func TestRouteTable(t *testing.T) {
 		if err != nil {
 			t.Fatalf("cannot create passive ears runtime: %s\n", err.Error())
 		}
+		// should review this
 		if getTableSyncerType(config, "") != "inmemory" {
 			rt.routingTableManager.StartListeningForSyncRequests("")
 		} else {
@@ -398,11 +400,7 @@ func getTableSyncer(config Config, syncType string) (tablemgr.RoutingTableDeltaS
 	var syncer tablemgr.RoutingTableDeltaSyncer
 	switch syncType {
 	case "inmemory":
-		if cachedInMemoryDeltaSyncer != nil {
-			return cachedInMemoryDeltaSyncer, nil
-		}
 		syncer = tablemgr.NewInMemoryDeltaSyncer(&log.Logger, config)
-		cachedInMemoryDeltaSyncer = syncer
 	case "redis":
 		syncer = tablemgr.NewRedisDeltaSyncer(&log.Logger, config)
 	default:
