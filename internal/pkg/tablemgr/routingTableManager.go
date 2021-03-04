@@ -85,7 +85,7 @@ func NewRoutingTableManager(pluginMgr plugin.Manager, storageMgr route.RouteStor
 		routeHashMap: make(map[string]*LiveRouteWrapper, 0),
 		logger:       logger,
 		config:       config}
-	rtm.RegisterLocalTableSyncer(rtm)
+	rtm.RegisterLocalTableSyncer(rtm) // register self as observer
 	hostname, _ := os.Hostname()
 	rtm.instanceId = hostname + "_" + uuid.New().String()
 	return rtm
