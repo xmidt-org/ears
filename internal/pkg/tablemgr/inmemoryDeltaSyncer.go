@@ -23,6 +23,11 @@ import (
 	"sync"
 )
 
+var (
+	lock                         = &sync.Mutex{}
+	inmemoryDeltaSyncerSingleton *InmemoryDeltaSyncer
+)
+
 type (
 	InmemoryDeltaSyncer struct {
 		sync.Mutex
@@ -38,19 +43,24 @@ type (
 func NewInMemoryDeltaSyncer(logger *zerolog.Logger, config Config) RoutingTableDeltaSyncer {
 	// This delta syncer is mainly for testing purposes. For it to work, multiple ears runtimes
 	// should run within the same process and share the same instance of the in memory delta
-	// syncer.
-	s := new(InmemoryDeltaSyncer)
-	s.logger = logger
-	s.config = config
-	s.localTableSyncers = make(map[RoutingTableLocalSyncer]struct{}, 0)
-	s.instanceCnt = 0
-	s.active = config.GetBool("ears.synchronization.active")
-	if !s.active {
-		logger.Info().Msg("InMemory Delta Syncer Not Activated")
-	} else {
-		s.notify = make(chan string, 0)
+	// syncer - we are forcing this here with a singleton
+	lock.Lock()
+	defer lock.Unlock()
+	if inmemoryDeltaSyncerSingleton == nil {
+		s := new(InmemoryDeltaSyncer)
+		s.logger = logger
+		s.config = config
+		s.localTableSyncers = make(map[RoutingTableLocalSyncer]struct{}, 0)
+		s.instanceCnt = 0
+		s.active = config.GetBool("ears.synchronization.active")
+		if !s.active {
+			logger.Info().Msg("InMemory Delta Syncer Not Activated")
+		} else {
+			s.notify = make(chan string, 0)
+		}
+		inmemoryDeltaSyncerSingleton = s
 	}
-	return s
+	return inmemoryDeltaSyncerSingleton
 }
 
 func (s *InmemoryDeltaSyncer) RegisterLocalTableSyncer(localTableSyncer RoutingTableLocalSyncer) {
