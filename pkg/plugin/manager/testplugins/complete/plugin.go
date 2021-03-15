@@ -72,7 +72,7 @@ func NewReceiver(config interface{}) (receiver.Receiver, error) {
 	return &plugin{}, nil
 }
 
-func (p *plugin) Receive(ctx context.Context, next receiver.NextFn) error {
+func (p *plugin) Receive(next receiver.NextFn) error {
 	return nil
 }
 
@@ -86,8 +86,8 @@ func NewFilterer(config interface{}) (filter.Filterer, error) {
 	return &plugin{}, nil
 }
 
-func (p *plugin) Filter(e event.Event) ([]event.Event, error) {
-	return nil, nil
+func (p *plugin) Filter(e event.Event) []event.Event {
+	return nil
 }
 
 // Sender ============================================================
@@ -96,8 +96,7 @@ func NewSender(config interface{}) (sender.Sender, error) {
 	return &plugin{}, nil
 }
 
-func (p *plugin) Send(event event.Event) error {
-	return nil
+func (p *plugin) Send(event event.Event) {
 }
 
 func (p *plugin) Unwrap() sender.Sender {

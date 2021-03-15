@@ -397,8 +397,7 @@ func TestReceiverLifecycle(t *testing.T) {
 	rMap = m.Receivers()
 	a.Expect(len(rMap)).To(Equal(2))
 
-	next := func(e pkgevent.Event) error {
-		return nil
+	next := func(e pkgevent.Event) {
 	}
 
 	done := make(chan struct{})
@@ -424,7 +423,7 @@ func TestReceiverLifecycle(t *testing.T) {
 	for i, r := range []pkgreceiver.Receiver{r1, r2} {
 		wg.Add(1)
 		go func(r pkgreceiver.Receiver, i int) {
-			r.Receive(ctx, next)
+			r.Receive(next)
 			wg.Done()
 		}(r, i)
 	}
@@ -465,7 +464,7 @@ func newPluginManager(t *testing.T) pkgmanager.Manager {
 
 // === FILTERER ==========================================================
 
-type filterFn func(e pkgevent.Event) ([]pkgevent.Event, error)
+type filterFn func(e pkgevent.Event) []pkgevent.Event
 type newFiltererPluginMock struct {
 	sync.Mutex
 
@@ -491,8 +490,8 @@ func (m *newFiltererPluginMock) SetFilter(fn filterFn) {
 func newFiltererPlugin(t *testing.T) pkgplugin.Pluginer {
 	mock := newFiltererPluginMock{
 		events: []pkgevent.Event{},
-		filterFn: func(e pkgevent.Event) ([]pkgevent.Event, error) {
-			return []pkgevent.Event{e}, nil
+		filterFn: func(e pkgevent.Event) []pkgevent.Event {
+			return []pkgevent.Event{e}
 		},
 	}
 
@@ -502,7 +501,7 @@ func newFiltererPlugin(t *testing.T) pkgplugin.Pluginer {
 
 	mock.NewFiltererFunc = func(config interface{}) (pkgfilter.Filterer, error) {
 		return &pkgfilter.FiltererMock{
-			FilterFunc: func(e pkgevent.Event) ([]pkgevent.Event, error) {
+			FilterFunc: func(e pkgevent.Event) []pkgevent.Event {
 				fmt.Printf("FILTER EVENT: %+v\n", e)
 
 				mock.Lock()
@@ -542,13 +541,12 @@ func newSenderPlugin(t *testing.T) pkgplugin.Pluginer {
 
 	mock.NewSenderFunc = func(config interface{}) (pkgsender.Sender, error) {
 		return &pkgsender.SenderMock{
-			SendFunc: func(e pkgevent.Event) error {
+			SendFunc: func(e pkgevent.Event) {
 				defer e.Ack()
 				fmt.Printf("EVENT SENT: %+v\n", e)
 				mock.Lock()
 				defer mock.Unlock()
 				mock.events = append(mock.events, e)
-				return nil
 			},
 		}, nil
 	}
@@ -574,8 +572,8 @@ func (m *newReceivererPluginMock) SupportedTypes() bit.Mask {
 	return pkgplugin.TypeReceiver | pkgplugin.TypePluginer
 }
 
-func (m *newReceivererPluginMock) ReceiveEvent(ctx context.Context, e pkgevent.Event) error {
-	return m.nextFn(e)
+func (m *newReceivererPluginMock) ReceiveEvent(e pkgevent.Event) {
+	m.nextFn(e)
 }
 
 func newReceiverPlugin(t *testing.T) pkgplugin.Pluginer {
@@ -584,17 +582,13 @@ func newReceiverPlugin(t *testing.T) pkgplugin.Pluginer {
 	}
 
 	receiverMock := pkgreceiver.ReceiverMock{}
-	receiverMock.ReceiveFunc = func(ctx context.Context, next receiver.NextFn) error {
+	receiverMock.ReceiveFunc = func(next receiver.NextFn) error {
 		plugMock.Lock()
 
 		plugMock.nextFn = next
 		plugMock.Unlock()
 
-		select {
-		case <-ctx.Done():
-			return ctx.Err()
-		case <-plugMock.done:
-		}
+		<-plugMock.done
 
 		return nil
 	}

@@ -17,10 +17,13 @@
 
 package event
 
-import "context"
+import (
+	"context"
+	"github.com/xmidt-org/ears/pkg/errs"
+)
 
 //go:generate rm -f testing_mock.go
-//go:generate moq -out testing_mock.go . Event NewEventerer
+//go:generate moq -out testing_mock.go . Event
 
 type Event interface {
 	//Get the event payload
@@ -50,20 +53,9 @@ type Event interface {
 	Clone(ctx context.Context) (Event, error)
 }
 
-type NewEventerer interface {
+type NoAckHandlersError struct {
+}
 
-	//Create a new event given a context and a payload
-	NewEvent(ctx context.Context, payload interface{}) (Event, error)
-
-	//Create a new event given a context and a payload, and two completion functions,
-	//handledFn and errFn. An event constructed this way will be notified through
-	//the handledFn when an event is handled, or through the errFn when there is an
-	//error handling it.
-	//An event is considered handled when it and all its child events (derived from the
-	//Clone function) have called the Ack function.
-	//An event is considered to have an error if it or any of its child events (derived from
-	//the Clone function) has called the Nack function.
-	//An event can also error out if it does not receive all the acknowledgements before
-	//the context timeout/cancellation.
-	NewEventWithAck(ctx context.Context, payload interface{}, handledFn func(), errFn func(error)) (Event, error)
+func (e *NoAckHandlersError) Error() string {
+	return errs.String("NoAckHandlersError", nil, nil)
 }

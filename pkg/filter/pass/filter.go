@@ -28,6 +28,6 @@ func NewFilter(config interface{}) (*Filter, error) {
 type Filter struct{}
 
 // Filter lets any event pass
-func (f *Filter) Filter(evt event.Event) ([]event.Event, error) {
-	return []event.Event{evt}, nil
+func (f *Filter) Filter(evt event.Event) []event.Event {
+	return []event.Event{evt}
 }
