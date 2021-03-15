@@ -47,12 +47,12 @@ type NewReceiverer interface {
 
 // NextFn defines the signature of a function that can take in an
 // event and process it
-type NextFn func(e event.Event) error
+type NextFn func(e event.Event)
 
 // Receiver is a plugin that will receive messages and will
 // send them to `NextFn`
 type Receiver interface {
-	Receive(ctx context.Context, next NextFn) error
+	Receive(next NextFn) error
 
 	// StopReceiving will stop the receiver from receiving events.
 	// This will cause Receive to return.

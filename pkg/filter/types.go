@@ -56,7 +56,7 @@ type NewFilterer interface {
 // Filterer defines the interface that a filterer must implement
 // TODO: https://github.com/xmidt-org/ears/issues/74
 type Filterer interface {
-	Filter(e event.Event) ([]event.Event, error)
+	Filter(e event.Event) []event.Event
 }
 
 // Chainer

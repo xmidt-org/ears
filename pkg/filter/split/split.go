@@ -52,13 +52,13 @@ func NewFilter(config interface{}) (*Filter, error) {
 }
 
 // Filter splits an event containing an array into multiple events
-func (f *Filter) Filter(evt event.Event) ([]event.Event, error) {
+func (f *Filter) Filter(evt event.Event) []event.Event {
 	//TODO: add validation logic to filter
 	//TODO: maybe replace with jq filter
 	if f == nil {
-		return nil, &filter.InvalidConfigError{
-			Err: fmt.Errorf("<nil> pointer filter"),
-		}
+		evt.Nack(&filter.InvalidConfigError{
+			Err: fmt.Errorf("<nil> pointer filter")})
+		return nil
 	}
 	events := []event.Event{}
 	if f.config.SplitPath == "" {
@@ -69,17 +69,20 @@ func (f *Filter) Filter(evt event.Event) ([]event.Event, error) {
 			for _, p := range evt.Payload().([]interface{}) {
 				nevt, err := evt.Clone(evt.Context())
 				if err != nil {
-					return events, err
+					evt.Nack(err)
+					return nil
 				}
 				err = nevt.SetPayload(p)
 				if err != nil {
-					return events, err
+					evt.Nack(err)
+					return nil
 				}
 				events = append(events, nevt)
 			}
 			evt.Ack()
 		default:
-			return events, errors.New("split on non array type")
+			evt.Nack(errors.New("split on non array type"))
+			return nil
 		}
 	} else {
 		path := strings.Split(f.config.SplitPath, ".")
@@ -88,27 +91,31 @@ func (f *Filter) Filter(evt event.Event) ([]event.Event, error) {
 			var ok bool
 			obj, ok = obj.(map[string]interface{})[p]
 			if !ok {
-				return events, errors.New("invalid object in filter path")
+				evt.Nack(errors.New("invalid object in filter path"))
+				return nil
 			}
 		}
 		arr, ok := obj.([]interface{})
 		if !ok {
-			return events, errors.New("split on non array type")
+			evt.Nack(errors.New("split on non array type"))
+			return nil
 		}
 		for _, p := range arr {
 			nevt, err := evt.Clone(evt.Context())
 			if err != nil {
-				return events, err
+				evt.Nack(err)
+				return nil
 			}
 			err = nevt.SetPayload(p)
 			if err != nil {
-				return events, err
+				evt.Nack(err)
+				return nil
 			}
 			events = append(events, nevt)
 		}
 		evt.Ack()
 	}
-	return events, nil
+	return events
 }
 
 func (f *Filter) Config() Config {

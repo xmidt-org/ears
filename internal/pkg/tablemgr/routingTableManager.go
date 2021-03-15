@@ -197,9 +197,7 @@ func (r *DefaultRoutingTableManager) registerAndRunRoute(ctx context.Context, ro
 	r.routeHashMap[routeConfig.Hash(ctx)] = lrw
 	r.logger.Info().Str("op", "registerAndRunRoute").Str("routeId", routeConfig.Id).Msg("starting route")
 	go func() {
-		sctx := context.Background()
-		//TODO: use application context here? see issue #51
-		err = lrw.Route.Run(sctx, lrw.Receiver, lrw.FilterChain, lrw.Sender) // run is blocking
+		err = lrw.Route.Run(lrw.Receiver, lrw.FilterChain, lrw.Sender) // run is blocking
 		if err != nil {
 			r.logger.Error().Str("op", "registerAndRunRoute").Msg(err.Error())
 		}

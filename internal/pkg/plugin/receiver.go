@@ -40,7 +40,7 @@ type receiver struct {
 	done chan struct{}
 }
 
-func (r *receiver) Receive(ctx context.Context, next pkgreceiver.NextFn) error {
+func (r *receiver) Receive(next pkgreceiver.NextFn) error {
 	if r == nil {
 		return &pkgmanager.NilPluginError{}
 	}
@@ -61,7 +61,7 @@ func (r *receiver) Receive(ctx context.Context, next pkgreceiver.NextFn) error {
 	}
 
 	// Block
-	return r.manager.receive(ctx, r, next)
+	return r.manager.receive(r, next)
 }
 
 func (r *receiver) StopReceiving(ctx context.Context) error {

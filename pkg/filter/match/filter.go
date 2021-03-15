@@ -74,11 +74,12 @@ func NewFilter(config interface{}) (*Filter, error) {
 	return f, nil
 }
 
-func (f *Filter) Filter(evt event.Event) ([]event.Event, error) {
+func (f *Filter) Filter(evt event.Event) []event.Event {
 	if f == nil {
-		return nil, &filter.InvalidConfigError{
+		evt.Nack(&filter.InvalidConfigError{
 			Err: fmt.Errorf("<nil> pointer filter"),
-		}
+		})
+		return nil
 	}
 
 	// passes if event matches
@@ -93,7 +94,7 @@ func (f *Filter) Filter(evt event.Event) ([]event.Event, error) {
 		events = []event.Event{evt}
 	}
 
-	return events, nil
+	return events
 }
 
 func (f *Filter) Config() Config {
