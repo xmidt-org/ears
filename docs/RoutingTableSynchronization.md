@@ -104,19 +104,85 @@ a route ID can be identical with the route hash but it doesn't have to be.
 
 ![architecture](img/sync/routeconfig.png)
 
+The RTM's in-memory routing table needs to store more information in addition to the RouteConfig it exchanges
+with the persistence layer. This data structure is the LiveRouteWrapper (LRW).
 
+* reference to the running route (for running and stopping the route)
+* reference to receiver plugin (for registering and unregistering) 
+* reference to sender plugin
+* reference to filter chain
+* reference counter (to count how many routes / route IDs sahre the same route hash)
 
 ![architecture](img/sync/liveroutewrapper.png)
+
+The RTM's in-memory routing table consists of two hash maps, one maps route config hashes to LRWs,
+the other maps route IDs to LRWs. As long as all hashes and IDs are unique the two maps are somewhat 
+redundant.
 
 ![architecture](img/sync/table1.png)
 
 ![architecture](img/sync/table2.png)
 
+A more interesting case arises when we have to deal with multiple route IDs that all share the same hash
+and are therefore all pointing to the same LRW. This is where the reference counter comes into play to
+keep track of how many route IDs are sharing the same route.
+
 ![architecture](img/sync/table4.png)
+
+I the wild we will probably encounter a mix of both cases described above such that some routes are shared 
+and others are unique.
 
 ![architecture](img/sync/table3.png)
 
+Take note of that fact that live route sharing and live route reference counting is a layer above and separate from
+plugin sharing and plugin reference counting. For example three unique live routes with reference count 1 that
+all share the same sender plugin with reference count 3.
+
 ![architecture](img/sync/table5.png)
 
-## Adding Routes, Updating Routes, Deleting Routes
+## Case Scenarios: Adding Routes, Updating Routes, Deleting Routes
 
+By carefully utilizing the Hash-to-LRW and the ID-to-LRW hash maps we can support user defined route IDs
+with idempotency and resource sharing!
+
+Remove Route:
+
+* ID does not exist -> idempotent, do nothing
+* ID exists -> decrement refCnt, if refCnt == 0 delete route
+
+Add Route:
+
+* ID does not exist, hash does not exist -> add new route
+* ID exists, hash identical -> idempotent, do nothing
+* ID exists, hash different -> update existing route(s) (see below)
+* ID does not exist, same hash under different ID -> increment reference counter
+
+Update Route:
+
+* Decrement RefCnt on original live route, if RefCnt==0, then delete route
+* If new hash does not exist, create new route with RefCnt 1
+* If new hash already exists, then increment RefCnt on that route
+
+## Design Considerations
+
+`Map[RouteId]*LRW` may get very large. For example, if many home automations subscribe to the same type of event 
+but all choose different (random?) route IDs. Choosing identical (deterministic) IDs would cause other problems
+because then our reference counting would not be accurate.
+
+If we give up on idempotency, we could enforce the use of hashes as route IDs. Therefore, we would not 
+need `Map[RouteId]*LRW`.
+
+If we give up on managing routes via _DeployFlow()_ / _UndeployFlow()_, but rather use a dedicated UI to 
+add and remove routes as needed, then `Map[RouteId]*LRW` may not grow large. If we want to avoid having to 
+build and manage a new UI, we may also choose to use a dedicated flow to manage all EARS subscriptions for 
+a given app.
+
+Instead of managing the reference counting in EARS, we could also place the burden on Gears to manage 
+the mapping from flows ID to route IDs using a helper service with a mapping database. This is probably a 
+bad idea. Adding yet another layer of middleware doesn't simplify anything and we believe reference counting
+should be one of thhe competencies of the EARS service.
+
+To help manage large data structures, use IDs shorter than UUIDs that are unique enough.
+
+If we do allow many identical routes that only differ in their ID we should optimize the persistence layer 
+to avoid redundant storage of identical route configs.
