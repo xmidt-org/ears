@@ -1,5 +1,12 @@
 # Routing Table Synchronization
 
+A key aspect of horizontal scalability of the EARS service is its ability to synchronize the 
+routing table across all EARS instances in a cluster. All instances are read-write instances   
+able to perform CRUD operations on the routing table. All EARS instances share a central
+persistence storage as their source of truth. In addition each instance holds its own local copy 
+of the routing table which must be constantly synchronized with the persisted version of the
+table.
+
 ## Architecture
 
 There are four main concerns:
@@ -88,7 +95,7 @@ and register and run those. This process initializes all routes in the RTM's in 
 
 ![architecture](img/sync/startup.png)
 
-## Shhutdonw
+## Shutdown
 
 On shutdown the Routing Table Manager (RTM) will iterate over all the live routes in its in-memory routing
 table and will stop and unregister all of them.
@@ -140,7 +147,7 @@ all share the same sender plugin with reference count 3.
 
 ![architecture](img/sync/table5.png)
 
-## Case Scenarios: Adding Routes, Updating Routes, Deleting Routes
+## Use Cases: Adding Routes, Updating Routes, Deleting Routes
 
 By carefully utilizing the Hash-to-LRW and the ID-to-LRW hash maps we can support user defined route IDs
 with idempotency and resource sharing!
