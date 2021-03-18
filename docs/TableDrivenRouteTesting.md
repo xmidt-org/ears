@@ -33,7 +33,7 @@ the test runner should wait before collecting results.
 The names of route configuration and event payloads refer to json files by the same
 name in the _testdata_ folder.
 
-###simpleRouteA.json
+### [simpleRouteA.json](../internal/pkg/app/testdata/simpleRouteA.json)
 
 ```
 {
@@ -66,7 +66,7 @@ name in the _testdata_ folder.
 }
 ```
 
-### event1.json
+### [event1.json](../internal/pkg/app/testdata/event1.json)
 
 ```
 {
