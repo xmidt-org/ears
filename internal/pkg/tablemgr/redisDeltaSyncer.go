@@ -209,12 +209,14 @@ func (s *RedisDeltaSyncer) StartListeningForSyncRequests(instanceId string) {
 			if err != nil {
 				s.logger.Error().Str("op", "ListenForSyncRequests").Msg(err.Error())
 				time.Sleep(EARS_REDIS_RETRY_INTERVAL_SECONDS)
+				continue
 			} else {
 				//s.logger.Info().Str("op", "ListenForSyncRequests").Msg("received message on channel " + EARS_REDIS_SYNC_CHANNEL)
 				// parse message
 				elems := strings.Split(msg.Payload, ",")
 				if len(elems) != 4 {
 					s.logger.Error().Str("op", "ListenForSyncRequests").Msg("bad message structure: " + msg.Payload)
+					continue
 				}
 				// leave sync loop if asked
 				if elems[0] == EARS_STOP_LISTENING_CMD {
@@ -234,7 +236,7 @@ func (s *RedisDeltaSyncer) StartListeningForSyncRequests(instanceId string) {
 								s.logger.Error().Str("op", "ListenForSyncRequests").Str("instanceId", instanceId).Str("routeId", elems[1]).Str("sid", elems[3]).Msg("failed to sync route: " + err.Error())
 							}
 						}
-						s.publishAckMessage(ctx, elems[0], elems[1], elems[2], elems[3])
+						s.publishAckMessage(ctx, elems[0], elems[1], instanceId, elems[3])
 					} else if elems[0] == EARS_REMOVE_ROUTE_CMD {
 						s.logger.Info().Str("op", "ListenForSyncRequests").Str("instanceId", instanceId).Str("routeId", elems[1]).Str("sid", elems[3]).Msg("received message to remove route")
 						for localTableSyncer, _ := range s.localTableSyncers {
@@ -243,7 +245,7 @@ func (s *RedisDeltaSyncer) StartListeningForSyncRequests(instanceId string) {
 								s.logger.Error().Str("op", "ListenForSyncRequests").Str("instanceId", instanceId).Str("routeId", elems[1]).Str("sid", elems[3]).Msg("failed to sync route: " + err.Error())
 							}
 						}
-						s.publishAckMessage(ctx, elems[0], elems[1], elems[2], elems[3])
+						s.publishAckMessage(ctx, elems[0], elems[1], instanceId, elems[3])
 					} else if elems[0] == EARS_STOP_LISTENING_CMD {
 						s.logger.Info().Str("op", "ListenForSyncRequests").Str("instanceId", instanceId).Msg("stop message ignored")
 						// already handled above
