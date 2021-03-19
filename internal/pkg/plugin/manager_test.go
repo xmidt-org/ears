@@ -374,7 +374,7 @@ func TestReceiverUnregister(t *testing.T) {
 
 }
 
-func TestReceiverLifecycle(t *testing.T) {
+/*func TestReceiverLifecycle(t *testing.T) {
 
 	ctx := context.Background()
 	a := NewWithT(t)
@@ -431,7 +431,7 @@ func TestReceiverLifecycle(t *testing.T) {
 	<-done
 	wg.Wait()
 
-}
+}*/
 
 // === Helper Methods =========================================
 
