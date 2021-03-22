@@ -78,13 +78,15 @@ func SetupRoutingManager(lifecycle fx.Lifecycle, config Config, logger *zerolog.
 
 func NewRoutingTableManager(pluginMgr plugin.Manager, storageMgr route.RouteStorer, tableSyncer RoutingTableDeltaSyncer, logger *zerolog.Logger, config Config) RoutingTableManager {
 	rtm := &DefaultRoutingTableManager{
-		pluginMgr:    pluginMgr,
-		storageMgr:   storageMgr,
-		rtSyncer:     tableSyncer,
-		liveRouteMap: make(map[string]*LiveRouteWrapper, 0),
-		routeHashMap: make(map[string]*LiveRouteWrapper, 0),
-		logger:       logger,
-		config:       config}
+		pluginMgr:  pluginMgr,
+		storageMgr: storageMgr,
+		rtSyncer:   tableSyncer,
+		logger:     logger,
+		config:     config}
+	rtm.Lock()
+	defer rtm.Unlock()
+	rtm.liveRouteMap = make(map[string]*LiveRouteWrapper, 0)
+	rtm.routeHashMap = make(map[string]*LiveRouteWrapper, 0)
 	rtm.RegisterLocalTableSyncer(rtm) // register self as observer
 	hostname, _ := os.Hostname()
 	rtm.instanceId = hostname + "_" + uuid.New().String()
@@ -100,15 +102,15 @@ func (r *DefaultRoutingTableManager) UnregisterLocalTableSyncer(localTableSyncer
 }
 
 func (r *DefaultRoutingTableManager) StartListeningForSyncRequests(instanceId string) {
-	r.rtSyncer.StartListeningForSyncRequests(r.instanceId)
+	r.rtSyncer.StartListeningForSyncRequests(r.GetInstanceId())
 }
 
 func (r *DefaultRoutingTableManager) StopListeningForSyncRequests(instanceId string) {
-	r.rtSyncer.StopListeningForSyncRequests(r.instanceId)
+	r.rtSyncer.StopListeningForSyncRequests(r.GetInstanceId())
 }
 
 func (r *DefaultRoutingTableManager) PublishSyncRequest(ctx context.Context, routeId string, instanceId string, add bool) {
-	r.rtSyncer.PublishSyncRequest(ctx, routeId, r.instanceId, add)
+	r.rtSyncer.PublishSyncRequest(ctx, routeId, r.GetInstanceId(), add)
 }
 
 func (r *DefaultRoutingTableManager) GetInstanceCount(ctx context.Context) int {
@@ -116,6 +118,8 @@ func (r *DefaultRoutingTableManager) GetInstanceCount(ctx context.Context) int {
 }
 
 func (r *DefaultRoutingTableManager) GetInstanceId() string {
+	r.Lock()
+	defer r.Unlock()
 	return r.instanceId
 }
 
@@ -152,7 +156,7 @@ func (r *DefaultRoutingTableManager) unregisterAndStopRoute(ctx context.Context,
 func (r *DefaultRoutingTableManager) registerAndRunRoute(ctx context.Context, routeConfig *route.Config) error {
 	var err error
 	r.Lock()
-	r.Unlock()
+	defer r.Unlock()
 	// check if route already exists, check if this is an update etc.
 	existingLiveRoute, ok := r.liveRouteMap[routeConfig.Id]
 	if ok && existingLiveRoute.Config.Hash(ctx) == routeConfig.Hash(ctx) {
@@ -341,6 +345,8 @@ func (r *DefaultRoutingTableManager) IsSynchronized() (bool, error) {
 }*/
 
 func (r *DefaultRoutingTableManager) SynchronizeAllRoutes() (int, error) {
+	r.Lock()
+	defer r.Unlock()
 	ctx := context.Background()
 	storedRoutes, err := r.storageMgr.GetAllRoutes(ctx)
 	if err != nil {
@@ -379,6 +385,8 @@ func (r *DefaultRoutingTableManager) SynchronizeAllRoutes() (int, error) {
 }
 
 func (r *DefaultRoutingTableManager) UnregisterAllRoutes() error {
+	r.Lock()
+	defer r.Unlock()
 	ctx := context.Background()
 	r.logger.Info().Str("op", "UnregisterAllRoutes").Msg("starting to unregister all routes")
 	var err error
@@ -417,6 +425,8 @@ func (r *DefaultRoutingTableManager) RegisterAllRoutes() error {
 }
 
 func (r *DefaultRoutingTableManager) GetAllRegisteredRoutes() ([]route.Config, error) {
+	r.Lock()
+	defer r.Unlock()
 	routes := make([]route.Config, 0)
 	for _, route := range r.liveRouteMap {
 		routes = append(routes, route.Config)
