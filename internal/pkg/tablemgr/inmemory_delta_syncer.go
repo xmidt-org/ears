@@ -101,9 +101,6 @@ func (s *InmemoryDeltaSyncer) PublishSyncRequest(ctx context.Context, routeId st
 
 // StopListeningForSyncRequests stops listening for sync requests
 func (s *InmemoryDeltaSyncer) StopListeningForSyncRequests(instanceId string) {
-	if !s.active {
-		return
-	}
 }
 
 // ListenForSyncRequests listens for sync request
@@ -129,6 +126,7 @@ func (s *InmemoryDeltaSyncer) StartListeningForSyncRequests(instanceId string) {
 			var err error
 			if elems[0] == EARS_ADD_ROUTE_CMD {
 				s.logger.Info().Str("op", "ListenForSyncRequests").Str("instanceId", elems[2]).Str("routeId", elems[1]).Str("sid", elems[3]).Msg("received message to add route")
+				s.Lock()
 				for localTableSyncer, _ := range s.localTableSyncers {
 					if elems[2] != localTableSyncer.GetInstanceId() {
 						err = localTableSyncer.SyncRoute(ctx, elems[1], true)
@@ -137,8 +135,10 @@ func (s *InmemoryDeltaSyncer) StartListeningForSyncRequests(instanceId string) {
 						}
 					}
 				}
+				s.Unlock()
 			} else if elems[0] == EARS_REMOVE_ROUTE_CMD {
 				s.logger.Info().Str("op", "ListenForSyncRequests").Str("instanceId", elems[2]).Str("routeId", elems[1]).Str("sid", elems[3]).Msg("received message to remove route")
+				s.Lock()
 				for localTableSyncer, _ := range s.localTableSyncers {
 					if elems[2] != localTableSyncer.GetInstanceId() {
 						err = localTableSyncer.SyncRoute(ctx, elems[1], false)
@@ -147,6 +147,7 @@ func (s *InmemoryDeltaSyncer) StartListeningForSyncRequests(instanceId string) {
 						}
 					}
 				}
+				s.Unlock()
 			} else if elems[0] == EARS_STOP_LISTENING_CMD {
 				s.logger.Info().Str("op", "ListenForSyncRequests").Str("instanceId", elems[2]).Msg("stop message ignored")
 				// already handled above
@@ -163,5 +164,7 @@ func (s *InmemoryDeltaSyncer) GetInstanceCount(ctx context.Context) int {
 	if !s.active {
 		return 0
 	}
+	s.Lock()
+	defer s.Unlock()
 	return len(s.localTableSyncers)
 }

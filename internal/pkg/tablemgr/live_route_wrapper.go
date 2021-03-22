@@ -41,20 +41,28 @@ func NewLiveRouteWrapper(routeConfig route.Config) *LiveRouteWrapper {
 }
 
 func (lrw *LiveRouteWrapper) GetReferenceCount() int {
+	lrw.Lock()
+	defer lrw.Unlock()
 	return lrw.RefCnt
 }
 
 func (lrw *LiveRouteWrapper) AddRouteReference() int {
+	lrw.Lock()
+	defer lrw.Unlock()
 	lrw.RefCnt++
 	return lrw.RefCnt
 }
 
 func (lrw *LiveRouteWrapper) RemoveRouteReference() int {
+	lrw.Lock()
+	defer lrw.Unlock()
 	lrw.RefCnt--
 	return lrw.RefCnt
 }
 
 func (lrw *LiveRouteWrapper) Unregister(ctx context.Context, r *DefaultRoutingTableManager) error {
+	lrw.Lock()
+	defer lrw.Unlock()
 	var e, err error
 	if lrw.Receiver != nil {
 		err = r.pluginMgr.UnregisterReceiver(ctx, lrw.Receiver)
@@ -79,6 +87,8 @@ func (lrw *LiveRouteWrapper) Unregister(ctx context.Context, r *DefaultRoutingTa
 	return e
 }
 func (lrw *LiveRouteWrapper) Register(ctx context.Context, r *DefaultRoutingTableManager) error {
+	lrw.Lock()
+	defer lrw.Unlock()
 	var err error
 	lrw.FilterChain = &filter.Chain{}
 	if lrw.Config.FilterChain != nil {
