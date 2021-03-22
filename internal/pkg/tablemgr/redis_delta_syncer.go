@@ -220,21 +220,25 @@ func (s *RedisDeltaSyncer) StartListeningForSyncRequests(instanceId string) {
 					s.GetInstanceCount(ctx) // just for logging
 					if elems[0] == EARS_ADD_ROUTE_CMD {
 						s.logger.Info().Str("op", "ListenForSyncRequests").Str("instanceId", instanceId).Str("routeId", elems[1]).Str("sid", elems[3]).Msg("received message to add route")
+						s.Lock()
 						for localTableSyncer, _ := range s.localTableSyncers {
 							err = localTableSyncer.SyncRoute(ctx, elems[1], true)
 							if err != nil {
 								s.logger.Error().Str("op", "ListenForSyncRequests").Str("instanceId", instanceId).Str("routeId", elems[1]).Str("sid", elems[3]).Msg("failed to sync route: " + err.Error())
 							}
 						}
+						s.Unlock()
 						s.publishAckMessage(ctx, elems[0], elems[1], instanceId, elems[3])
 					} else if elems[0] == EARS_REMOVE_ROUTE_CMD {
 						s.logger.Info().Str("op", "ListenForSyncRequests").Str("instanceId", instanceId).Str("routeId", elems[1]).Str("sid", elems[3]).Msg("received message to remove route")
+						s.Lock()
 						for localTableSyncer, _ := range s.localTableSyncers {
 							err = localTableSyncer.SyncRoute(ctx, elems[1], false)
 							if err != nil {
 								s.logger.Error().Str("op", "ListenForSyncRequests").Str("instanceId", instanceId).Str("routeId", elems[1]).Str("sid", elems[3]).Msg("failed to sync route: " + err.Error())
 							}
 						}
+						s.Unlock()
 						s.publishAckMessage(ctx, elems[0], elems[1], instanceId, elems[3])
 					} else if elems[0] == EARS_STOP_LISTENING_CMD {
 						s.logger.Info().Str("op", "ListenForSyncRequests").Str("instanceId", instanceId).Msg("stop message ignored")
