@@ -66,7 +66,6 @@ func NewRedisDeltaSyncer(logger *zerolog.Logger, config Config) RoutingTableDelt
 			Password: "",
 			DB:       0,
 		})
-		//s.ListenForSyncRequests()
 		//logger.Info().Msg("Redis Syncer Started")
 	}
 	return s
@@ -103,7 +102,7 @@ func (s *RedisDeltaSyncer) PublishSyncRequest(ctx context.Context, routeId strin
 		s.logger.Info().Str("op", "PublishSyncRequest").Msg("no subscribers but me - no need to wait for ack")
 		return
 	}
-	// outer go func is so that PublishSyncRequest returns immediately despite the 10 ms wait below
+	// outer go func is so that PublishSyncRequest returns immediately
 	// this primarily cause issues when multi route unit tests share the same debug receiver
 	// in practice this may not be an issue
 	go func() {
@@ -162,7 +161,6 @@ func (s *RedisDeltaSyncer) PublishSyncRequest(ctx context.Context, routeId strin
 			s.logger.Info().Str("op", "PublishSyncRequest").Msg("no subscribers but me - no need to publish sync")
 		} else {
 			// wait for listener to be ready
-			//time.Sleep(10 * time.Millisecond)
 			wg.Wait()
 			// ... then request all flow apis to sync
 			msg := cmd + "," + routeId + "," + instanceId + "," + sid
