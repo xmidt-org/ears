@@ -1,6 +1,8 @@
 {
   "sharePluginsAcrossTests": false,
   "testToRunAllIfBlank": "",
+  "numInstances": 3,
+  "storageType": "",
   "table": {
     "simpleRouteA": {
       "id": 0,

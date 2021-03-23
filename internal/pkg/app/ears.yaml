@@ -1,0 +1,19 @@
+ears:
+  env: qa
+  logLevel: debug
+
+  api:
+    port: 3000
+
+  storage:
+    type: inmemory
+#    type: redis
+    endpoint: localhost:6379
+
+  synchronization:
+    type: inmemory
+#    type: redis
+    endpoint: localhost:6379
+    active: yes
+
+

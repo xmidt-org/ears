@@ -57,6 +57,7 @@ type Config struct {
 	AppId        string         `json:"appId,omitempty"`        // app ID for quota and rate limiting
 	UserId       string         `json:"userId,omitempty"`       // user ID / author of route
 	Name         string         `json:"name,omitempty"`         // optional unique name for route
+	Origin       string         `json:"origin,omitempty"`       // optional reference to route owner, e.g. Flow ID in case of Gears
 	Receiver     PluginConfig   `json:"receiver,omitempty"`     // source plugin configuration
 	Sender       PluginConfig   `json:"sender,omitempty"`       // destination plugin configuration
 	FilterChain  []PluginConfig `json:"filterChain,omitempty"`  // filter chain configuration
@@ -136,7 +137,8 @@ func (pc *PluginConfig) Hash(ctx context.Context) string {
 
 //Hash returns the md5 hash of a route config
 func (pc *Config) Hash(ctx context.Context) string {
-	str := pc.OrgId + pc.AppId
+	// notably the route id is not part of the hash as the id might be the hash itself
+	str := pc.OrgId + pc.AppId + pc.Name + pc.DeliveryMode + pc.UserId
 	str += pc.Receiver.Hash(ctx)
 	str += pc.Sender.Hash(ctx)
 	if pc.FilterChain != nil {

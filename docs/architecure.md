@@ -24,6 +24,7 @@ The routing table manager creates a route as following:
 2. persist the route in storageManager.
 3. instantiate route plugins through pluginManager.
 4. construct and run the route.
+5. trigger propagation of changes to all other EARS instances (if any).
 
 In the future, the routing table manager will also propagate any route changes to other nodes in an EARS cluster.
 
