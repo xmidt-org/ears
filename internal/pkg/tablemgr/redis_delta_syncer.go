@@ -66,7 +66,6 @@ func NewRedisDeltaSyncer(logger *zerolog.Logger, config Config) RoutingTableDelt
 			Password: "",
 			DB:       0,
 		})
-		//s.ListenForSyncRequests()
 		//logger.Info().Msg("Redis Syncer Started")
 	}
 	return s
@@ -107,19 +106,22 @@ func (s *RedisDeltaSyncer) PublishSyncRequest(ctx context.Context, routeId strin
 	// this primarily cause issues when multi route unit tests share the same debug receiver
 	// in practice this may not be an issue
 	go func() {
+		var wg sync.WaitGroup
+		wg.Add(1)
 		// listen for ACKs first ...
-		lrc := redis.NewClient(&redis.Options{
-			Addr:     s.redisEndpoint,
-			Password: "",
-			DB:       0,
-		})
-		defer lrc.Close()
-		pubsub := lrc.Subscribe(EARS_REDIS_ACK_CHANNEL)
-		defer pubsub.Close()
 		go func() {
 			received := make(map[string]bool, 0)
+			lrc := redis.NewClient(&redis.Options{
+				Addr:     s.redisEndpoint,
+				Password: "",
+				DB:       0,
+			})
+			defer lrc.Close()
+			pubsub := lrc.Subscribe(EARS_REDIS_ACK_CHANNEL)
+			defer pubsub.Close()
 			// 30 sec timeout on collecting acks
 			done := make(chan bool, 1)
+			wg.Done()
 			go func() {
 				for {
 					msg, err := pubsub.ReceiveMessage()
@@ -155,13 +157,19 @@ func (s *RedisDeltaSyncer) PublishSyncRequest(ctx context.Context, routeId strin
 			}
 			// at this point the delta has been fully synchronized - may want to publish something about that here
 		}()
-		// ... then request all flow apis to sync
-		msg := cmd + "," + routeId + "," + instanceId + "," + sid
-		err := s.client.Publish(EARS_REDIS_SYNC_CHANNEL, msg).Err()
-		if err != nil {
-			s.logger.Error().Str("op", "PublishSyncRequest").Msg(err.Error())
+		if numSubscribers <= 1 {
+			s.logger.Info().Str("op", "PublishSyncRequest").Msg("no subscribers but me - no need to publish sync")
 		} else {
-			//s.logger.Info().Str("op", "PublishSyncRequest").Msg("publish on channel " + EARS_REDIS_SYNC_CHANNEL)
+			// wait for listener to be ready
+			wg.Wait()
+			// ... then request all flow apis to sync
+			msg := cmd + "," + routeId + "," + instanceId + "," + sid
+			err := s.client.Publish(EARS_REDIS_SYNC_CHANNEL, msg).Err()
+			if err != nil {
+				s.logger.Error().Str("op", "PublishSyncRequest").Msg(err.Error())
+			} else {
+				//s.logger.Info().Str("op", "PublishSyncRequest").Msg("publish on channel " + EARS_REDIS_SYNC_CHANNEL)
+			}
 		}
 	}()
 }
@@ -201,7 +209,7 @@ func (s *RedisDeltaSyncer) StartListeningForSyncRequests(instanceId string) {
 				time.Sleep(EARS_REDIS_RETRY_INTERVAL_SECONDS)
 				continue
 			} else {
-				//s.logger.Info().Str("op", "ListenForSyncRequests").Msg("received message on channel " + EARS_REDIS_SYNC_CHANNEL)
+				s.logger.Info().Str("op", "ListenForSyncRequests").Msg("received message on channel " + EARS_REDIS_SYNC_CHANNEL)
 				// parse message
 				elems := strings.Split(msg.Payload, ",")
 				if len(elems) != 4 {
@@ -265,7 +273,7 @@ func (s *RedisDeltaSyncer) publishAckMessage(ctx context.Context, cmd string, ro
 	if err != nil {
 		s.logger.Error().Str("op", "PublishAckMessage").Msg(err.Error())
 	} else {
-		//s.logger.Info().Str("op", "PublishAckMessage").Msg("published ack message")
+		s.logger.Info().Str("op", "PublishAckMessage").Msg("published ack message on " + EARS_REDIS_ACK_CHANNEL + ": " + msg)
 	}
 	return err
 }
