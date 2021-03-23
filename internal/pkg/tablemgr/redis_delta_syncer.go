@@ -108,41 +108,43 @@ func (s *RedisDeltaSyncer) PublishSyncRequest(ctx context.Context, routeId strin
 	// in practice this may not be an issue
 	go func() {
 		// listen for ACKs first ...
-		lrc := redis.NewClient(&redis.Options{
-			Addr:     s.redisEndpoint,
-			Password: "",
-			DB:       0,
-		})
-		defer lrc.Close()
-		pubsub := lrc.Subscribe(EARS_REDIS_ACK_CHANNEL)
-		defer pubsub.Close()
+		received := make(map[string]bool, 0)
+		// 30 sec timeout on collecting acks
+		done := make(chan bool, 1)
 		go func() {
-			received := make(map[string]bool, 0)
-			// 30 sec timeout on collecting acks
-			done := make(chan bool, 1)
+			lrc := redis.NewClient(&redis.Options{
+				Addr:     s.redisEndpoint,
+				Password: "",
+				DB:       0,
+			})
+			defer lrc.Close()
 			go func() {
+				pubsub := lrc.Subscribe(EARS_REDIS_ACK_CHANNEL)
+				defer pubsub.Close()
 				for {
+					s.logger.Info().Str("op", "PublishSyncRequest").Msg("listen on ack channel " + EARS_REDIS_ACK_CHANNEL)
 					msg, err := pubsub.ReceiveMessage()
 					if err != nil {
 						s.logger.Error().Str("op", "PublishSyncRequest").Msg(err.Error())
-						break
+						return
 					} else {
-						//s.logger.Info().Str("op", "PublishSyncRequest").Msg("receive ack on channel " + EARS_REDIS_ACK_CHANNEL)
+						s.logger.Info().Str("op", "PublishSyncRequest").Msg("receive ack on channel " + EARS_REDIS_ACK_CHANNEL + ": " + msg.Payload)
 					}
 					elems := strings.Split(msg.Payload, ",")
 					if len(elems) != 4 {
 						s.logger.Error().Str("op", "PublishSyncRequest").Msg("bad ack message structure: " + msg.Payload)
-						break
+						continue
 					}
 					// only collect acks for this session
 					if cmd == elems[0] && routeId == elems[1] && elems[3] == sid {
+						s.logger.Info().Str("op", "PublishSyncRequest").Msg("counting ack: " + msg.Payload)
 						received[elems[2]] = true
 						// wait until we received an ack from each subscriber (except the one originating the request)
 						if len(received) >= numSubscribers-1 {
 							break
 						}
 					} else {
-						//s.logger.Info().Str("op", "PublishSyncRequest").Msg("ignoring unrelated ack: " + msg.Payload)
+						s.logger.Info().Str("op", "PublishSyncRequest").Msg("ignoring unrelated ack: " + msg.Payload)
 					}
 				}
 				done <- true
@@ -161,7 +163,7 @@ func (s *RedisDeltaSyncer) PublishSyncRequest(ctx context.Context, routeId strin
 		if err != nil {
 			s.logger.Error().Str("op", "PublishSyncRequest").Msg(err.Error())
 		} else {
-			//s.logger.Info().Str("op", "PublishSyncRequest").Msg("publish on channel " + EARS_REDIS_SYNC_CHANNEL)
+			s.logger.Info().Str("op", "PublishSyncRequest").Msg("publish on sync request on channel " + EARS_REDIS_SYNC_CHANNEL + ": " + msg)
 		}
 	}()
 }
@@ -201,7 +203,7 @@ func (s *RedisDeltaSyncer) StartListeningForSyncRequests(instanceId string) {
 				time.Sleep(EARS_REDIS_RETRY_INTERVAL_SECONDS)
 				continue
 			} else {
-				//s.logger.Info().Str("op", "ListenForSyncRequests").Msg("received message on channel " + EARS_REDIS_SYNC_CHANNEL)
+				s.logger.Info().Str("op", "ListenForSyncRequests").Msg("received message on channel " + EARS_REDIS_SYNC_CHANNEL)
 				// parse message
 				elems := strings.Split(msg.Payload, ",")
 				if len(elems) != 4 {
@@ -265,7 +267,7 @@ func (s *RedisDeltaSyncer) publishAckMessage(ctx context.Context, cmd string, ro
 	if err != nil {
 		s.logger.Error().Str("op", "PublishAckMessage").Msg(err.Error())
 	} else {
-		//s.logger.Info().Str("op", "PublishAckMessage").Msg("published ack message")
+		s.logger.Info().Str("op", "PublishAckMessage").Msg("published ack message on " + EARS_REDIS_ACK_CHANNEL + ": " + msg)
 	}
 	return err
 }
