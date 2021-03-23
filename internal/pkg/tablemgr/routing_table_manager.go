@@ -345,8 +345,7 @@ func (r *DefaultRoutingTableManager) IsSynchronized() (bool, error) {
 }*/
 
 func (r *DefaultRoutingTableManager) SynchronizeAllRoutes() (int, error) {
-	r.Lock()
-	defer r.Unlock()
+	//TODO: lock properly
 	ctx := context.Background()
 	storedRoutes, err := r.storageMgr.GetAllRoutes(ctx)
 	if err != nil {
@@ -385,8 +384,6 @@ func (r *DefaultRoutingTableManager) SynchronizeAllRoutes() (int, error) {
 }
 
 func (r *DefaultRoutingTableManager) UnregisterAllRoutes() error {
-	r.Lock()
-	defer r.Unlock()
 	ctx := context.Background()
 	r.logger.Info().Str("op", "UnregisterAllRoutes").Msg("starting to unregister all routes")
 	var err error
