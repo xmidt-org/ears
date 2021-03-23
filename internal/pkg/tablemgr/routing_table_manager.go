@@ -345,8 +345,6 @@ func (r *DefaultRoutingTableManager) IsSynchronized() (bool, error) {
 }*/
 
 func (r *DefaultRoutingTableManager) SynchronizeAllRoutes() (int, error) {
-	r.Lock()
-	defer r.Unlock()
 	ctx := context.Background()
 	storedRoutes, err := r.storageMgr.GetAllRoutes(ctx)
 	if err != nil {
@@ -357,8 +355,14 @@ func (r *DefaultRoutingTableManager) SynchronizeAllRoutes() (int, error) {
 		storedRouteMap[storedRoute.Id] = storedRoute
 	}
 	mutated := 0
+	r.Lock()
+	lrm := make(map[string]*LiveRouteWrapper, 0)
+	for k, v := range r.liveRouteMap {
+		lrm[k] = v
+	}
+	r.Unlock()
 	// stop all inconsistent or deleted routes
-	for _, liveRoute := range r.liveRouteMap {
+	for _, liveRoute := range lrm {
 		storedRoute, ok := storedRouteMap[liveRoute.Config.Id]
 		if !ok {
 			r.logger.Info().Str("op", "Synchronize").Str("routeId", liveRoute.Config.Id).Msg("route stopped")
@@ -372,7 +376,7 @@ func (r *DefaultRoutingTableManager) SynchronizeAllRoutes() (int, error) {
 	}
 	// start all missing routes
 	for _, storedRoute := range storedRoutes {
-		_, ok := r.liveRouteMap[storedRoute.Id]
+		_, ok := lrm[storedRoute.Id]
 		if !ok {
 			r.logger.Info().Str("op", "Synchronize").Str("routeId", storedRoute.Id).Msg("route started")
 			var rc route.Config
@@ -385,8 +389,6 @@ func (r *DefaultRoutingTableManager) SynchronizeAllRoutes() (int, error) {
 }
 
 func (r *DefaultRoutingTableManager) UnregisterAllRoutes() error {
-	r.Lock()
-	defer r.Unlock()
 	ctx := context.Background()
 	r.logger.Info().Str("op", "UnregisterAllRoutes").Msg("starting to unregister all routes")
 	var err error
