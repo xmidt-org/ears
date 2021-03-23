@@ -21,6 +21,8 @@ import (
 	"github.com/xmidt-org/ears/internal/pkg/app"
 	"github.com/xmidt-org/ears/internal/pkg/fx/pluginmanagerfx"
 	"github.com/xmidt-org/ears/internal/pkg/fx/routestorerfx"
+	"github.com/xmidt-org/ears/internal/pkg/fx/routetablesyncerfx"
+	"github.com/xmidt-org/ears/internal/pkg/tablemgr"
 	"github.com/xmidt-org/ears/pkg/cli"
 	"github.com/xmidt-org/ears/pkg/panics"
 	"go.uber.org/fx"
@@ -41,7 +43,7 @@ var runCmd = &cobra.Command{
 			}
 		}()
 
-		logger, err := app.ProvideLogger(ViperConfig())
+		logger, err := app.ProvideLogger(AppConfig())
 		if err != nil {
 			log.Logger.Fatal().Str("op", "InitLogger").Str("error", "panic").
 				Msg("Error initialize logger")
@@ -49,22 +51,29 @@ var runCmd = &cobra.Command{
 		earsApp := fx.New(
 			pluginmanagerfx.Module,
 			routestorerfx.Module,
+			routetablesyncerfx.Module,
 			fx.Provide(
-				ViperConfig,
+				AppConfig,
+				TableMgrConfig,
 				app.ProvideLogger,
-				app.NewRoutingTableManager,
+				tablemgr.NewRoutingTableManager,
 				app.NewAPIManager,
 				app.NewMiddleware,
 				app.NewMux,
 			),
 			fx.Logger(logger),
 			fx.Invoke(app.SetupAPIServer),
+			fx.Invoke(tablemgr.SetupRoutingManager),
 		)
 		earsApp.Run()
 	},
 }
 
-func ViperConfig() app.Config {
+func AppConfig() app.Config {
+	return viper.GetViper()
+}
+
+func TableMgrConfig() tablemgr.Config {
 	return viper.GetViper()
 }
 
@@ -97,6 +106,11 @@ func init() {
 				Name: "storageDynamoTable", Shorthand: "", Type: cli.ArgTypeString,
 				Default: "gears.dev.ears", LookupKey: "ears.storage.table",
 				Description: "dynamodb table name",
+			},
+			cli.Argument{
+				Name: "redisEndpoint", Shorthand: "", Type: cli.ArgTypeString,
+				Default: "gears-redis-qa-001.6bteey.0001.usw2.cache.amazonaws.com:6379", LookupKey: "ears.synchronization.endpoint",
+				Description: "redis endpoint for routing table synchronization",
 			},
 		},
 	)

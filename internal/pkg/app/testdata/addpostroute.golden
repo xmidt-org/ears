@@ -6,19 +6,8 @@
   "item": {
     "appId": "xfi",
     "deliveryMode": "whoCares",
-    "filterChain": [
-      {
-        "config": {
-          "matcher": "regex",
-          "mode": "deny",
-          "pattern": "^.*$"
-        },
-        "name": "simpleFilterMatchDenyRouteMatcher",
-        "plugin": "match"
-      }
-    ],
-    "id": "f103",
-    "name": "tbltstmatchFilterDenysimpleFilterRoute",
+    "id": "r100",
+    "name": "simpleRoute",
     "orgId": "comcast",
     "receiver": {
       "config": {
@@ -29,7 +18,7 @@
         },
         "rounds": 5
       },
-      "name": "tbltstmatchFilterDenysimpleFilterMatchDenyRouteReceiver",
+      "name": "mydebug",
       "plugin": "debug"
     },
     "sender": {
@@ -37,7 +26,7 @@
         "destination": "stdout",
         "maxHistory": 100
       },
-      "name": "tbltstmatchFilterDenysimpleFilterMatchDenyRouteSender",
+      "name": "simpleRouteSender",
       "plugin": "debug"
     },
     "userId": "boris"

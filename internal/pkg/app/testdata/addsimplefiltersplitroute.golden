@@ -1,4 +1,8 @@
 {
+  "status": {
+    "code": 200,
+    "message": "OK"
+  },
   "item": {
     "appId": "xfi",
     "deliveryMode": "whoCares",
@@ -11,7 +15,7 @@
         "plugin": "split"
       }
     ],
-    "id": "f104",
+    "id": "f108",
     "name": "simpleFilterSplitRoute",
     "orgId": "comcast",
     "receiver": {
@@ -40,9 +44,5 @@
       "plugin": "debug"
     },
     "userId": "boris"
-  },
-  "status": {
-    "code": 200,
-    "message": "OK"
   }
 }

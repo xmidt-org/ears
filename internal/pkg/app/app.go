@@ -51,7 +51,7 @@ func SetupAPIServer(lifecycle fx.Lifecycle, config Config, logger *zerolog.Logge
 		fx.Hook{
 			OnStart: func(context.Context) error {
 				go server.ListenAndServe()
-				logger.Info().Msg("API Server Started")
+				logger.Info().Str("port", fmt.Sprintf("%d", port)).Msg("API Server Started")
 				return nil
 			},
 			OnStop: func(ctx context.Context) error {

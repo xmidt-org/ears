@@ -1,6 +1,6 @@
 # Ears Plugins Proposal
 
-![](Ears%20Plugins.png)
+![](img/plugins.png)
 
 Legends:
 * Blue: Input Plugins

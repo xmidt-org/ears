@@ -17,6 +17,7 @@ package app
 import (
 	"encoding/json"
 	"errors"
+	"github.com/xmidt-org/ears/internal/pkg/tablemgr"
 	"io/ioutil"
 	"net/http"
 
@@ -28,10 +29,10 @@ import (
 
 type APIManager struct {
 	muxRouter       *mux.Router
-	routingTableMgr RoutingTableManager
+	routingTableMgr tablemgr.RoutingTableManager
 }
 
-func NewAPIManager(routingMgr RoutingTableManager) (*APIManager, error) {
+func NewAPIManager(routingMgr tablemgr.RoutingTableManager) (*APIManager, error) {
 	api := &APIManager{
 		muxRouter:       mux.NewRouter(),
 		routingTableMgr: routingMgr,
