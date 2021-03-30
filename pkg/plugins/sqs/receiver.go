@@ -18,6 +18,7 @@ import (
 	"context"
 	"encoding/json"
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/endpoints"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/sqs"
 	"sync"
@@ -31,7 +32,7 @@ import (
 	"github.com/xmidt-org/ears/pkg/receiver"
 )
 
-var sqsMaxTimeout = time.Second * 10 //Default acknowledge timeout (10 seconds)
+var sqsMaxTimeout = time.Second * 10 // default acknowledge timeout (10 seconds)
 
 func (r *Receiver) Receive(next receiver.NextFn) error {
 	if r == nil {
@@ -50,7 +51,7 @@ func (r *Receiver) Receive(next receiver.NextFn) error {
 	r.Unlock()
 	// create sqs session
 	sess, err := session.NewSession(&aws.Config{
-		Region: aws.String("us-west-2"),
+		Region: aws.String(endpoints.UsWest2RegionID),
 	})
 	if nil != err {
 		return err
@@ -75,10 +76,10 @@ func (r *Receiver) Receive(next receiver.NextFn) error {
 				VisibilityTimeout:   aws.Int64(10),
 				WaitTimeSeconds:     aws.Int64(10),
 			}
-			sqsResp, err := svc.ReceiveMessage(sqsParams)
+			sqsResp, err := svc.ReceiveMessage(sqsParams) // close session to leave this clean?
 			if err != nil {
 				fmt.Println("RECEIVER ERROR", err.Error())
-				return // pause and continue?
+				return // pause and continue? logging?
 			}
 			var entries []*sqs.DeleteMessageBatchRequestEntry
 			ids := make(map[string]bool)
@@ -94,7 +95,7 @@ func (r *Receiver) Receive(next receiver.NextFn) error {
 				err = json.Unmarshal([]byte(*(message.Body)), &payload)
 				if err != nil {
 					fmt.Println("RECEIVER ERROR", err.Error())
-					return // continue?
+					return // continue? logging?
 				}
 				ctx, _ := context.WithTimeout(context.Background(), sqsMaxTimeout)
 				e, err := event.New(ctx, payload, event.WithAck(
@@ -105,7 +106,7 @@ func (r *Receiver) Receive(next receiver.NextFn) error {
 						batchDone.Done()
 					}))
 				if err != nil {
-					return // continue?
+					return // continue? logging?
 				}
 				r.Trigger(e)
 			}
@@ -118,7 +119,7 @@ func (r *Receiver) Receive(next receiver.NextFn) error {
 				_, err = svc.DeleteMessageBatch(deleteParams)
 				if err != nil {
 					fmt.Println("RECEIVER ERROR", err.Error())
-					return // continue?
+					return // continue? logging?
 				}
 			}
 		}
