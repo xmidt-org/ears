@@ -111,8 +111,8 @@ func (r *AdaptiveRateLimiter) tuneRqs() error {
 			newRqs = newRqs * 2
 		}
 	} else if r.takeCount < newRqs {
-		//aggressively shrink
-		newRqs = r.takeCount
+		takeCount := float32(r.takeCount)
+		newRqs = int(takeCount * 1.2)
 	}
 	ctx := context.Background()
 
@@ -150,7 +150,7 @@ func (r *AdaptiveRateLimiter) tuneRqs() error {
 		return nil
 	}
 
-	fmt.Printf("(%s) new rqs: %d, old rqs: %d\n", r.workerName, newRqs, r.currentRqs)
+	fmt.Printf("(%s) %s new rqs: %d, old rqs: %d\n", r.workerName, ts(time.Now()), target, r.currentRqs)
 
 	r.limiter.SetLimit(rate.Limit(newRqs))
 	r.currentRqs = newRqs
