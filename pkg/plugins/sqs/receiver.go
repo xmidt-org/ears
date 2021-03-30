@@ -53,28 +53,27 @@ func (r *Receiver) Receive(next receiver.NextFn) error {
 			r.Unlock()
 		}()
 		eventsDone := &sync.WaitGroup{}
-		for count := 10; count != 0; {
+		rounds := 10
+		eventsDone.Add(rounds)
+		for count := 0; count < rounds; count++ {
 			select {
 			case <-r.done:
-				//fmt.Printf("RECEIVER DONE BY ROUTE\n")
+				fmt.Printf("RECEIVER DONE BY ROUTE\n")
 				return
 			case <-time.After(time.Duration(1000) * time.Millisecond):
-				//fmt.Printf("RECEIVER NEW EVENT\n")
+				fmt.Printf("RECEIVER NEW EVENT\n")
 				ctx, _ := context.WithTimeout(context.Background(), sqsMaxTimeout)
 				e, err := event.New(ctx, "foo", event.WithAck(
 					func() {
 						eventsDone.Done()
 					}, func(err error) {
-						//fmt.Println("Debug error", err.Error())
+						fmt.Println("RECEIVER ERROR", err.Error())
 						eventsDone.Done()
 					}))
 				if err != nil {
 					return
 				}
 				r.Trigger(e)
-				if count > 0 {
-					count--
-				}
 			}
 		}
 		eventsDone.Wait()
