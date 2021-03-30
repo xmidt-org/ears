@@ -53,7 +53,7 @@ func NewSender(config interface{}) (sender.Sender, error) {
 }
 
 func (s *Sender) Send(e event.Event) {
-	fmt.Printf("SEND: %p\n", e)
+	fmt.Printf("SEND: %v\n", e.Payload())
 	var err error
 	if err != nil {
 		e.Nack(err)
