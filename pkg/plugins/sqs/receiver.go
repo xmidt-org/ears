@@ -16,6 +16,10 @@ package sqs
 
 import (
 	"context"
+	"encoding/json"
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/aws-sdk-go/service/sqs"
 	"sync"
 
 	"fmt"
@@ -44,6 +48,18 @@ func (r *Receiver) Receive(next receiver.NextFn) error {
 	r.done = make(chan struct{})
 	r.next = next
 	r.Unlock()
+	// create sqs session
+	sess, err := session.NewSession(&aws.Config{
+		Region: aws.String("us-west-2"),
+	})
+	if nil != err {
+		return err
+	}
+	_, err = sess.Config.Credentials.Get()
+	if nil != err {
+		return err
+	}
+	svc := sqs.New(sess)
 	go func() {
 		defer func() {
 			r.Lock()
@@ -52,31 +68,60 @@ func (r *Receiver) Receive(next receiver.NextFn) error {
 			}
 			r.Unlock()
 		}()
-		eventsDone := &sync.WaitGroup{}
-		rounds := 10
-		eventsDone.Add(rounds)
-		for count := 0; count < rounds; count++ {
-			select {
-			case <-r.done:
-				fmt.Printf("RECEIVER DONE BY ROUTE\n")
-				return
-			case <-time.After(time.Duration(1000) * time.Millisecond):
-				fmt.Printf("RECEIVER NEW EVENT\n")
+		for {
+			sqsParams := &sqs.ReceiveMessageInput{
+				QueueUrl:            aws.String(r.config.QueueUrl),
+				MaxNumberOfMessages: aws.Int64(10),
+				VisibilityTimeout:   aws.Int64(10),
+				WaitTimeSeconds:     aws.Int64(10),
+			}
+			sqsResp, err := svc.ReceiveMessage(sqsParams)
+			if err != nil {
+				fmt.Println("RECEIVER ERROR", err.Error())
+				return // pause and continue?
+			}
+			var entries []*sqs.DeleteMessageBatchRequestEntry
+			ids := make(map[string]bool)
+			batchDone := &sync.WaitGroup{}
+			batchDone.Add(len(sqsResp.Messages))
+			for _, message := range sqsResp.Messages {
+				if !ids[*message.MessageId] {
+					entry := &sqs.DeleteMessageBatchRequestEntry{Id: message.MessageId, ReceiptHandle: message.ReceiptHandle}
+					entries = append(entries, entry)
+				}
+				ids[*message.MessageId] = true
+				var payload interface{}
+				err = json.Unmarshal([]byte(*(message.Body)), &payload)
+				if err != nil {
+					fmt.Println("RECEIVER ERROR", err.Error())
+					return // continue?
+				}
 				ctx, _ := context.WithTimeout(context.Background(), sqsMaxTimeout)
-				e, err := event.New(ctx, "foo", event.WithAck(
+				e, err := event.New(ctx, payload, event.WithAck(
 					func() {
-						eventsDone.Done()
+						batchDone.Done()
 					}, func(err error) {
 						fmt.Println("RECEIVER ERROR", err.Error())
-						eventsDone.Done()
+						batchDone.Done()
 					}))
 				if err != nil {
-					return
+					return // continue?
 				}
 				r.Trigger(e)
 			}
+			batchDone.Wait()
+			if len(entries) > 0 {
+				deleteParams := &sqs.DeleteMessageBatchInput{
+					Entries:  entries,
+					QueueUrl: aws.String(r.config.QueueUrl),
+				}
+				_, err = svc.DeleteMessageBatch(deleteParams)
+				if err != nil {
+					fmt.Println("RECEIVER ERROR", err.Error())
+					return // continue?
+				}
+			}
 		}
-		eventsDone.Wait()
 	}()
 	<-r.done
 	return nil
@@ -84,7 +129,10 @@ func (r *Receiver) Receive(next receiver.NextFn) error {
 
 func (r *Receiver) StopReceiving(ctx context.Context) error {
 	r.Lock()
-	defer r.Unlock()
+	if r.done != nil {
+		r.done <- struct{}{}
+	}
+	r.Unlock()
 	return nil
 }
 
