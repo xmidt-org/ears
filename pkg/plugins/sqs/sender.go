@@ -15,7 +15,12 @@
 package sqs
 
 import (
+	"encoding/json"
 	"fmt"
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/endpoints"
+	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/aws-sdk-go/service/sqs"
 
 	"github.com/goccy/go-yaml"
 	"github.com/xmidt-org/ears/pkg/event"
@@ -49,15 +54,42 @@ func NewSender(config interface{}) (sender.Sender, error) {
 	s := &Sender{
 		config: cfg,
 	}
+	s.initSQSServiceSession()
 	return s, nil
+}
+
+func (s *Sender) initSQSServiceSession() error {
+	s.Lock()
+	defer s.Unlock()
+	sess, err := session.NewSession(&aws.Config{
+		Region: aws.String(endpoints.UsWest2RegionID),
+	})
+	if nil != err {
+		return err
+	}
+	_, err = sess.Config.Credentials.Get()
+	if nil != err {
+		return err
+	}
+	s.sqsService = sqs.New(sess)
+	return nil
 }
 
 func (s *Sender) Send(e event.Event) {
 	fmt.Printf("SEND: %v\n", e.Payload())
-	var err error
+	buf, err := json.Marshal(e.Payload())
 	if err != nil {
 		e.Nack(err)
-	} else {
-		e.Ack()
+		return
 	}
+	sqsSendParams := &sqs.SendMessageInput{
+		MessageBody: aws.String(string(buf)),
+		QueueUrl:    aws.String(s.config.QueueUrl),
+	}
+	_, err = s.sqsService.SendMessage(sqsSendParams)
+	if err != nil {
+		e.Nack(err)
+		return
+	}
+	e.Ack()
 }

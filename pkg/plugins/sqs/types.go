@@ -15,6 +15,7 @@
 package sqs
 
 import (
+	"github.com/aws/aws-sdk-go/service/sqs"
 	"sync"
 
 	pkgplugin "github.com/xmidt-org/ears/pkg/plugin"
@@ -73,7 +74,8 @@ type SenderConfig struct {
 
 type Sender struct {
 	sync.Mutex
-	config SenderConfig
+	sqsService *sqs.SQS
+	config     SenderConfig
 }
 
 func (s *Sender) Unwrap() sender.Sender {
