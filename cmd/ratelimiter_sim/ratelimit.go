@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"github.com/go-redis/redis/v8"
 	"golang.org/x/time/rate"
+	"math"
 	"math/rand"
 	"strconv"
 	"sync"
@@ -113,6 +114,12 @@ func (r *AdaptiveRateLimiter) tuneRqs() error {
 	} else if r.takeCount < newRqs {
 		takeCount := float32(r.takeCount)
 		newRqs = int(takeCount * 1.2)
+
+		diffPercentage := math.Abs(float64(newRqs-r.currentRqs)) / float64(newRqs)
+		if diffPercentage < 0.05 {
+			//not much difference between the new rqs vs older one. Don't bother update
+			newRqs = r.currentRqs
+		}
 	}
 	ctx := context.Background()
 
