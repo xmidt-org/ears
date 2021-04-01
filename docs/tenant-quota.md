@@ -12,7 +12,23 @@ Rate limiting are enforced when a receiver calls its [next function](../pkg/rece
 
 This also means that the events at the receiver side may pile up if a receiver is ingesting at a rate over the limit. It is up to the receiver to decide how they want to handle the pile up events (discard, prioritize, etc)
 
+### Tenant Quota API
+```
+PUT    /ears/v1/org/{orgId}/applications/{appId}/quota  //set an tenant quota
+GET    /ears/v1/org/{orgId}/applications/{appId}/quota  //get an tenant quota
+DELETE /ears/v1/org/{orgId}/applications/{appId}/quota  //delete an tenant quota
+```
 
+Tenant Quota JSON body
+```json
+{
+  "orgId": "YourOrgId",
+  "appId": "YourAppId",
+  "eventsPerSec": 10
+}
+```
+
+If quota does not exist for a tenant or is deleted, the tenant's routes are disabled.
 
 ## Distributed Rate Limiting
 
@@ -57,4 +73,3 @@ Con:
 * Added complexity
 
 
-Manual update per-instance quota?
