@@ -72,9 +72,9 @@ func (r *Receiver) Receive(next receiver.NextFn) error {
 		for {
 			sqsParams := &sqs.ReceiveMessageInput{
 				QueueUrl:            aws.String(r.config.QueueUrl),
-				MaxNumberOfMessages: aws.Int64(10),
-				VisibilityTimeout:   aws.Int64(10),
-				WaitTimeSeconds:     aws.Int64(10),
+				MaxNumberOfMessages: aws.Int64(int64(*r.config.MaxNumberOfMessages)),
+				VisibilityTimeout:   aws.Int64(int64(*r.config.VisibilityTimeout)),
+				WaitTimeSeconds:     aws.Int64(int64(*r.config.WaitTimeSeconds)),
 			}
 			sqsResp, err := svc.ReceiveMessage(sqsParams) // close session to leave this clean?
 			if err != nil {

@@ -24,6 +24,15 @@ import (
 // of the unset (nil) values filled in.
 func (rc *ReceiverConfig) WithDefaults() ReceiverConfig {
 	cfg := *rc
+	if cfg.MaxNumberOfMessages == nil {
+		cfg.MaxNumberOfMessages = DefaultReceiverConfig.MaxNumberOfMessages
+	}
+	if cfg.VisibilityTimeout == nil {
+		cfg.VisibilityTimeout = DefaultReceiverConfig.VisibilityTimeout
+	}
+	if cfg.WaitTimeSeconds == nil {
+		cfg.WaitTimeSeconds = DefaultReceiverConfig.WaitTimeSeconds
+	}
 	return cfg
 }
 
@@ -52,7 +61,19 @@ const receiverSchema = `
             "properties": {
                 "queueUrl": {
                     "type": "string"
-                }
+                },
+				"maxNumberOfMessages": {
+                    "type": "integer", 
+					"minimum": 1
+				},
+				"visibilityTimeout": {
+                    "type": "integer", 
+					"minimum": 1
+				},
+				"waitTimeSeconds": {
+                    "type": "integer", 
+					"minimum": 1
+				}
             },
             "required": [
                 "queueUrl"
