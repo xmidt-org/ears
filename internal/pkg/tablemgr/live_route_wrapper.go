@@ -87,8 +87,6 @@ func (lrw *LiveRouteWrapper) Unregister(ctx context.Context, r *DefaultRoutingTa
 	return e
 }
 func (lrw *LiveRouteWrapper) Register(ctx context.Context, r *DefaultRoutingTableManager) error {
-	lrw.Lock()
-	defer lrw.Unlock()
 	var err error
 	lrw.FilterChain = &filter.Chain{}
 	if lrw.Config.FilterChain != nil {
