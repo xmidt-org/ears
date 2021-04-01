@@ -194,6 +194,7 @@ func (r *DefaultRoutingTableManager) registerAndRunRoute(ctx context.Context, ro
 	err = lrw.Register(ctx, r)
 	if err != nil {
 		r.logger.Error().Str("op", "registerAndRunRoute").Str("routeId", routeConfig.Id).Msg("failed to register new route: " + err.Error())
+		return err
 	}
 	// create live route
 	lrw.Route = &route.Route{}
