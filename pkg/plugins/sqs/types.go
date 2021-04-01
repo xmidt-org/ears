@@ -16,6 +16,7 @@ package sqs
 
 import (
 	"github.com/aws/aws-sdk-go/service/sqs"
+	"github.com/xorcare/pointer"
 	"sync"
 
 	pkgplugin "github.com/xmidt-org/ears/pkg/plugin"
@@ -48,11 +49,17 @@ func NewPluginVersion(name string, version string, commitID string) (*pkgplugin.
 }
 
 var DefaultReceiverConfig = ReceiverConfig{
-	QueueUrl: "",
+	QueueUrl:            "",
+	MaxNumberOfMessages: pointer.Int(10),
+	VisibilityTimeout:   pointer.Int(10),
+	WaitTimeSeconds:     pointer.Int(10),
 }
 
 type ReceiverConfig struct {
-	QueueUrl string `json:"queueUrl,omitempty"`
+	QueueUrl            string `json:"queueUrl,omitempty"`
+	MaxNumberOfMessages *int   `json:"maxNumberOfMessages,omitempty"`
+	VisibilityTimeout   *int   `json:"visibilityTimeout,omitempty"`
+	WaitTimeSeconds     *int   `json:"waitTimeSeconds,omitempty"`
 }
 
 type Receiver struct {
