@@ -79,7 +79,8 @@ func (r *Receiver) Receive(next receiver.NextFn) error {
 			sqsResp, err := svc.ReceiveMessage(sqsParams) // close session to leave this clean?
 			if err != nil {
 				fmt.Println("RECEIVER ERROR", err.Error())
-				return // pause and continue? logging?
+				time.Sleep(1 * time.Second)
+				continue
 			}
 			var entries []*sqs.DeleteMessageBatchRequestEntry
 			ids := make(map[string]bool)
@@ -95,13 +96,15 @@ func (r *Receiver) Receive(next receiver.NextFn) error {
 				err = json.Unmarshal([]byte(*(message.Body)), &payload)
 				if err != nil {
 					fmt.Println("RECEIVER ERROR", err.Error())
-					return // continue? logging?
+					batchDone.Done()
+					continue
 				}
 				ctx, _ := context.WithTimeout(context.Background(), sqsMaxTimeout)
 				e, err := event.New(ctx, payload, event.WithAck(
 					func() {
 						batchDone.Done()
-					}, func(err error) {
+					},
+					func(err error) {
 						fmt.Println("RECEIVER ERROR", err.Error())
 						batchDone.Done()
 					}))
@@ -119,7 +122,7 @@ func (r *Receiver) Receive(next receiver.NextFn) error {
 				_, err = svc.DeleteMessageBatch(deleteParams)
 				if err != nil {
 					fmt.Println("RECEIVER ERROR", err.Error())
-					return // continue? logging?
+					continue
 				}
 			}
 		}
