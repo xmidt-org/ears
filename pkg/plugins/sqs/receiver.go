@@ -21,6 +21,8 @@ import (
 	"github.com/aws/aws-sdk-go/aws/endpoints"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/sqs"
+	"github.com/rs/zerolog"
+	"os"
 	"sync"
 
 	"fmt"
@@ -69,6 +71,8 @@ func (r *Receiver) Receive(next receiver.NextFn) error {
 			}
 			r.Unlock()
 		}()
+		logger := zerolog.New(os.Stdout).Level(zerolog.DebugLevel)
+		zerolog.LevelFieldName = "log.level"
 		for {
 			sqsParams := &sqs.ReceiveMessageInput{
 				QueueUrl:            aws.String(r.config.QueueUrl),
@@ -78,7 +82,7 @@ func (r *Receiver) Receive(next receiver.NextFn) error {
 			}
 			sqsResp, err := svc.ReceiveMessage(sqsParams) // close session to leave this clean?
 			if err != nil {
-				fmt.Println("RECEIVER ERROR", err.Error())
+				logger.Error().Str("op", "SQS.Receive").Msg(err.Error())
 				time.Sleep(1 * time.Second)
 				continue
 			}
@@ -87,25 +91,27 @@ func (r *Receiver) Receive(next receiver.NextFn) error {
 			batchDone := &sync.WaitGroup{}
 			batchDone.Add(len(sqsResp.Messages))
 			for _, message := range sqsResp.Messages {
+				//logger.Debug().Str("op", "SQS.Receive").Msg(*message.Body)
 				if !ids[*message.MessageId] {
 					entry := &sqs.DeleteMessageBatchRequestEntry{Id: message.MessageId, ReceiptHandle: message.ReceiptHandle}
 					entries = append(entries, entry)
 				}
 				ids[*message.MessageId] = true
 				var payload interface{}
-				err = json.Unmarshal([]byte(*(message.Body)), &payload)
+				err = json.Unmarshal([]byte(*message.Body), &payload)
 				if err != nil {
-					fmt.Println("RECEIVER ERROR", err.Error())
+					// get global logger
+					logger.Error().Str("op", "SQS.Receive").Msg(err.Error())
 					batchDone.Done()
 					continue
 				}
-				ctx, _ := context.WithTimeout(context.Background(), sqsMaxTimeout)
+				ctx, _ := context.WithTimeout(context.Background(), sqsMaxTimeout) // make config
 				e, err := event.New(ctx, payload, event.WithAck(
 					func() {
 						batchDone.Done()
 					},
 					func(err error) {
-						fmt.Println("RECEIVER ERROR", err.Error())
+						logger.Error().Str("op", "SQS.Receive").Msg(err.Error())
 						batchDone.Done()
 					}))
 				if err != nil {
@@ -113,7 +119,7 @@ func (r *Receiver) Receive(next receiver.NextFn) error {
 				}
 				r.Trigger(e)
 			}
-			batchDone.Wait()
+			batchDone.Wait() // dont wait, delete independently
 			if len(entries) > 0 {
 				deleteParams := &sqs.DeleteMessageBatchInput{
 					Entries:  entries,
@@ -121,7 +127,7 @@ func (r *Receiver) Receive(next receiver.NextFn) error {
 				}
 				_, err = svc.DeleteMessageBatch(deleteParams)
 				if err != nil {
-					fmt.Println("RECEIVER ERROR", err.Error())
+					logger.Error().Str("op", "SQS.Receive").Msg(err.Error())
 					continue
 				}
 			}
