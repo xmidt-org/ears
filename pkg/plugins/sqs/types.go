@@ -53,6 +53,7 @@ var DefaultReceiverConfig = ReceiverConfig{
 	MaxNumberOfMessages: pointer.Int(10),
 	VisibilityTimeout:   pointer.Int(10),
 	WaitTimeSeconds:     pointer.Int(10),
+	AcknowledgeTimeout:  pointer.Int(10),
 }
 
 type ReceiverConfig struct {
@@ -60,6 +61,7 @@ type ReceiverConfig struct {
 	MaxNumberOfMessages *int   `json:"maxNumberOfMessages,omitempty"`
 	VisibilityTimeout   *int   `json:"visibilityTimeout,omitempty"`
 	WaitTimeSeconds     *int   `json:"waitTimeSeconds,omitempty"`
+	AcknowledgeTimeout  *int   `json:"acknowledgeTimeout,omitempty"`
 }
 
 type Receiver struct {

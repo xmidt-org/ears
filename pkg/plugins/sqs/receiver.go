@@ -34,11 +34,8 @@ import (
 	"github.com/xmidt-org/ears/pkg/receiver"
 )
 
-//TODO: unit tests
 //TODO: test updating an sqs route
 //TODO: need CreateEventContext helper function
-
-var sqsMaxTimeout = time.Second * 10 // default acknowledge timeout (10 seconds)
 
 func (r *Receiver) Receive(next receiver.NextFn) error {
 	if r == nil {
@@ -112,7 +109,7 @@ func (r *Receiver) Receive(next receiver.NextFn) error {
 					batchDone.Done()
 					continue
 				}
-				ctx, _ := context.WithTimeout(context.Background(), sqsMaxTimeout) // make config
+				ctx, _ := context.WithTimeout(context.Background(), time.Duration(*r.config.AcknowledgeTimeout)*time.Second)
 				e, err := event.New(ctx, payload, event.WithAck(
 					func() {
 						batchDone.Done()

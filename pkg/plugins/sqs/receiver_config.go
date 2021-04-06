@@ -73,6 +73,10 @@ const receiverSchema = `
 				"waitTimeSeconds": {
                     "type": "integer", 
 					"minimum": 1
+				},
+				"acknowledgeTimeout": {
+                    "type": "integer", 
+					"minimum": 1
 				}
             },
             "required": [
