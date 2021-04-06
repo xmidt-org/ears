@@ -61,6 +61,7 @@ func TestSender(t *testing.T) {
 			tc.receiverConfig.MaxNumberOfMessages = &one
 			tc.receiverConfig.WaitTimeSeconds = &one
 			tc.receiverConfig.VisibilityTimeout = &one
+			tc.receiverConfig.AcknowledgeTimeout = &one
 			tc.receiverConfig = tc.receiverConfig.WithDefaults()
 			sender, err := sqsPlugin.NewSender(tc.senderConfig)
 			a.Expect(err).To(BeNil())
