@@ -67,6 +67,7 @@ type Receiver struct {
 	done   chan struct{}
 	config ReceiverConfig
 	next   receiver.NextFn
+	count  int
 }
 
 var DefaultSenderConfig = SenderConfig{
@@ -83,6 +84,7 @@ type Sender struct {
 	sync.Mutex
 	sqsService *sqs.SQS
 	config     SenderConfig
+	count      int
 }
 
 func (s *Sender) Unwrap() sender.Sender {

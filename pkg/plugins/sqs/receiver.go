@@ -34,6 +34,10 @@ import (
 	"github.com/xmidt-org/ears/pkg/receiver"
 )
 
+//TODO: unit tests
+//TODO: test updating an sqs route
+//TODO: need CreateEventContext helper function
+
 var sqsMaxTimeout = time.Second * 10 // default acknowledge timeout (10 seconds)
 
 func (r *Receiver) Receive(next receiver.NextFn) error {
@@ -71,6 +75,7 @@ func (r *Receiver) Receive(next receiver.NextFn) error {
 			}
 			r.Unlock()
 		}()
+		// local logger for now
 		logger := zerolog.New(os.Stdout).Level(zerolog.DebugLevel)
 		zerolog.LevelFieldName = "log.level"
 		for {
@@ -92,6 +97,9 @@ func (r *Receiver) Receive(next receiver.NextFn) error {
 			batchDone.Add(len(sqsResp.Messages))
 			for _, message := range sqsResp.Messages {
 				//logger.Debug().Str("op", "SQS.Receive").Msg(*message.Body)
+				r.Lock()
+				r.count++
+				r.Unlock()
 				if !ids[*message.MessageId] {
 					entry := &sqs.DeleteMessageBatchRequestEntry{Id: message.MessageId, ReceiptHandle: message.ReceiptHandle}
 					entries = append(entries, entry)
@@ -100,7 +108,6 @@ func (r *Receiver) Receive(next receiver.NextFn) error {
 				var payload interface{}
 				err = json.Unmarshal([]byte(*message.Body), &payload)
 				if err != nil {
-					// get global logger
 					logger.Error().Str("op", "SQS.Receive").Msg(err.Error())
 					batchDone.Done()
 					continue
@@ -119,7 +126,8 @@ func (r *Receiver) Receive(next receiver.NextFn) error {
 				}
 				r.Trigger(e)
 			}
-			batchDone.Wait() // dont wait, delete independently
+			//TODO: dont wait, delete independently to improve throughput, maybe using a buffered channel?
+			batchDone.Wait()
 			if len(entries) > 0 {
 				deleteParams := &sqs.DeleteMessageBatchInput{
 					Entries:  entries,
@@ -135,6 +143,12 @@ func (r *Receiver) Receive(next receiver.NextFn) error {
 	}()
 	<-r.done
 	return nil
+}
+
+func (r *Receiver) Count() int {
+	r.Lock()
+	defer r.Unlock()
+	return r.count
 }
 
 func (r *Receiver) StopReceiving(ctx context.Context) error {

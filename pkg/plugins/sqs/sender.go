@@ -75,6 +75,12 @@ func (s *Sender) initSQSServiceSession() error {
 	return nil
 }
 
+func (s *Sender) Count() int {
+	s.Lock()
+	defer s.Unlock()
+	return s.count
+}
+
 func (s *Sender) Send(e event.Event) {
 	fmt.Printf("SEND: %v\n", e.Payload())
 	buf, err := json.Marshal(e.Payload())
@@ -91,5 +97,8 @@ func (s *Sender) Send(e event.Event) {
 		e.Nack(err)
 		return
 	}
+	s.Lock()
+	s.count++
+	s.Unlock()
 	e.Ack()
 }
