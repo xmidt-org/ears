@@ -75,6 +75,7 @@ func (r *Receiver) Receive(next receiver.NextFn) error {
 		// local logger for now
 		logger := zerolog.New(os.Stdout).Level(zerolog.DebugLevel)
 		zerolog.LevelFieldName = "log.level"
+		messageRetries := make(map[string]int)
 		for {
 			sqsParams := &sqs.ReceiveMessageInput{
 				QueueUrl:            aws.String(r.config.QueueUrl),
@@ -89,7 +90,6 @@ func (r *Receiver) Receive(next receiver.NextFn) error {
 				continue
 			}
 			var entries []*sqs.DeleteMessageBatchRequestEntry
-			ids := make(map[string]bool)
 			batchDone := &sync.WaitGroup{}
 			batchDone.Add(len(sqsResp.Messages))
 			for _, message := range sqsResp.Messages {
@@ -97,25 +97,43 @@ func (r *Receiver) Receive(next receiver.NextFn) error {
 				r.Lock()
 				r.count++
 				r.Unlock()
-				if !ids[*message.MessageId] {
+				retryAttempt, ok := messageRetries[*message.MessageId]
+				if !ok {
+					messageRetries[*message.MessageId] = 0
+				} else {
+					messageRetries[*message.MessageId] += 1
+				}
+				retryAttempt = messageRetries[*message.MessageId]
+				if retryAttempt > *(r.config.NumRetries) {
+					logger.Error().Str("op", "SQS.Receive").Msg("max retries reached for " + (*message.MessageId))
 					entry := &sqs.DeleteMessageBatchRequestEntry{Id: message.MessageId, ReceiptHandle: message.ReceiptHandle}
 					entries = append(entries, entry)
+					delete(messageRetries, *message.MessageId)
+					batchDone.Done()
+					continue
 				}
-				ids[*message.MessageId] = true
 				var payload interface{}
 				err = json.Unmarshal([]byte(*message.Body), &payload)
 				if err != nil {
-					logger.Error().Str("op", "SQS.Receive").Msg(err.Error())
+					logger.Error().Str("op", "SQS.Receive").Msg("cannot parse message " + (*message.MessageId) + err.Error())
+					entry := &sqs.DeleteMessageBatchRequestEntry{Id: message.MessageId, ReceiptHandle: message.ReceiptHandle}
+					entries = append(entries, entry)
+					delete(messageRetries, *message.MessageId)
 					batchDone.Done()
 					continue
 				}
 				ctx, _ := context.WithTimeout(context.Background(), time.Duration(*r.config.AcknowledgeTimeout)*time.Second)
 				e, err := event.New(ctx, payload, event.WithAck(
 					func() {
+						logger.Info().Str("op", "SQS.Receive").Msg("processed message " + (*message.MessageId))
+						entry := &sqs.DeleteMessageBatchRequestEntry{Id: message.MessageId, ReceiptHandle: message.ReceiptHandle}
+						entries = append(entries, entry)
+						delete(messageRetries, *message.MessageId)
 						batchDone.Done()
 					},
 					func(err error) {
-						logger.Error().Str("op", "SQS.Receive").Msg(err.Error())
+						logger.Error().Str("op", "SQS.Receive").Msg("failed to process message " + (*message.MessageId) + ": " + err.Error())
+						// a nack below max retries - this is the only case where we do not delete the message yet
 						batchDone.Done()
 					}))
 				if err != nil {
@@ -123,8 +141,8 @@ func (r *Receiver) Receive(next receiver.NextFn) error {
 				}
 				r.Trigger(e)
 			}
-			//TODO: dont wait, delete independently to improve throughput, maybe using a buffered channel?
 			batchDone.Wait()
+			// delete what's deletable
 			if len(entries) > 0 {
 				deleteParams := &sqs.DeleteMessageBatchInput{
 					Entries:  entries,

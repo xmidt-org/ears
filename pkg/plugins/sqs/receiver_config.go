@@ -33,6 +33,12 @@ func (rc *ReceiverConfig) WithDefaults() ReceiverConfig {
 	if cfg.WaitTimeSeconds == nil {
 		cfg.WaitTimeSeconds = DefaultReceiverConfig.WaitTimeSeconds
 	}
+	if cfg.AcknowledgeTimeout == nil {
+		cfg.AcknowledgeTimeout = DefaultReceiverConfig.AcknowledgeTimeout
+	}
+	if cfg.NumRetries == nil {
+		cfg.NumRetries = DefaultReceiverConfig.NumRetries
+	}
 	return cfg
 }
 
@@ -77,6 +83,10 @@ const receiverSchema = `
 				"acknowledgeTimeout": {
                     "type": "integer", 
 					"minimum": 1
+				},
+				"numRetries": {
+                    "type": "integer", 
+					"minimum": 0
 				}
             },
             "required": [
