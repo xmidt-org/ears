@@ -17,15 +17,13 @@ package sqs
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/endpoints"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/sqs"
 	"github.com/rs/zerolog"
 	"os"
-	"sync"
-
-	"fmt"
 	"time"
 
 	"github.com/goccy/go-yaml"
@@ -76,6 +74,32 @@ func (r *Receiver) Receive(next receiver.NextFn) error {
 		logger := zerolog.New(os.Stdout).Level(zerolog.DebugLevel)
 		zerolog.LevelFieldName = "log.level"
 		messageRetries := make(map[string]int)
+		entries := make(chan *sqs.DeleteMessageBatchRequestEntry, 1000)
+		// delete messages
+		go func() {
+			for {
+				deleteBatch := make([]*sqs.DeleteMessageBatchRequestEntry, 0)
+				//TODO: case with done and timeout
+				delEntry := <-entries
+				deleteBatch = append(deleteBatch, delEntry)
+				//TODO: delete in batches
+				if len(deleteBatch) > 0 {
+					deleteParams := &sqs.DeleteMessageBatchInput{
+						Entries:  deleteBatch,
+						QueueUrl: aws.String(r.config.QueueUrl),
+					}
+					_, err = svc.DeleteMessageBatch(deleteParams)
+					if err != nil {
+						logger.Error().Str("op", "SQS.Receive").Msg(err.Error())
+						continue
+					}
+					for _, entry := range deleteBatch {
+						logger.Info().Str("op", "SQS.Receive").Msg("deleted message " + (*entry.Id))
+					}
+				}
+			}
+		}()
+		// receive messages
 		for {
 			sqsParams := &sqs.ReceiveMessageInput{
 				QueueUrl:            aws.String(r.config.QueueUrl),
@@ -89,9 +113,6 @@ func (r *Receiver) Receive(next receiver.NextFn) error {
 				time.Sleep(1 * time.Second)
 				continue
 			}
-			var entries []*sqs.DeleteMessageBatchRequestEntry
-			batchDone := &sync.WaitGroup{}
-			batchDone.Add(len(sqsResp.Messages))
 			for _, message := range sqsResp.Messages {
 				//logger.Debug().Str("op", "SQS.Receive").Msg(*message.Body)
 				r.Lock()
@@ -107,9 +128,8 @@ func (r *Receiver) Receive(next receiver.NextFn) error {
 				if retryAttempt > *(r.config.NumRetries) {
 					logger.Error().Str("op", "SQS.Receive").Msg("max retries reached for " + (*message.MessageId))
 					entry := &sqs.DeleteMessageBatchRequestEntry{Id: message.MessageId, ReceiptHandle: message.ReceiptHandle}
-					entries = append(entries, entry)
+					entries <- entry
 					delete(messageRetries, *message.MessageId)
-					batchDone.Done()
 					continue
 				}
 				var payload interface{}
@@ -117,9 +137,8 @@ func (r *Receiver) Receive(next receiver.NextFn) error {
 				if err != nil {
 					logger.Error().Str("op", "SQS.Receive").Msg("cannot parse message " + (*message.MessageId) + err.Error())
 					entry := &sqs.DeleteMessageBatchRequestEntry{Id: message.MessageId, ReceiptHandle: message.ReceiptHandle}
-					entries = append(entries, entry)
+					entries <- entry
 					delete(messageRetries, *message.MessageId)
-					batchDone.Done()
 					continue
 				}
 				ctx, _ := context.WithTimeout(context.Background(), time.Duration(*r.config.AcknowledgeTimeout)*time.Second)
@@ -127,35 +146,17 @@ func (r *Receiver) Receive(next receiver.NextFn) error {
 					func() {
 						logger.Info().Str("op", "SQS.Receive").Msg("processed message " + (*message.MessageId))
 						entry := &sqs.DeleteMessageBatchRequestEntry{Id: message.MessageId, ReceiptHandle: message.ReceiptHandle}
-						entries = append(entries, entry)
+						entries <- entry
 						delete(messageRetries, *message.MessageId)
-						batchDone.Done()
 					},
 					func(err error) {
 						logger.Error().Str("op", "SQS.Receive").Msg("failed to process message " + (*message.MessageId) + ": " + err.Error())
 						// a nack below max retries - this is the only case where we do not delete the message yet
-						batchDone.Done()
 					}))
 				if err != nil {
 					return // continue? logging?
 				}
 				r.Trigger(e)
-			}
-			batchDone.Wait()
-			// delete what's deletable
-			if len(entries) > 0 {
-				deleteParams := &sqs.DeleteMessageBatchInput{
-					Entries:  entries,
-					QueueUrl: aws.String(r.config.QueueUrl),
-				}
-				_, err = svc.DeleteMessageBatch(deleteParams)
-				if err != nil {
-					logger.Error().Str("op", "SQS.Receive").Msg(err.Error())
-					continue
-				}
-				for _, entry := range entries {
-					logger.Info().Str("op", "SQS.Receive").Msg("deleted message " + (*entry.Id))
-				}
 			}
 		}
 	}()
