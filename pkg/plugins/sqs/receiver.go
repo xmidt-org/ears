@@ -153,6 +153,9 @@ func (r *Receiver) Receive(next receiver.NextFn) error {
 					logger.Error().Str("op", "SQS.Receive").Msg(err.Error())
 					continue
 				}
+				for _, entry := range entries {
+					logger.Info().Str("op", "SQS.Receive").Msg("deleted message " + (*entry.Id))
+				}
 			}
 		}
 	}()
