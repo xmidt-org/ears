@@ -58,10 +58,12 @@ func TestSender(t *testing.T) {
 			tc.senderConfig = tc.senderConfig.WithDefaults()
 			tc.receiverConfig.QueueUrl = "https://sqs.us-west-2.amazonaws.com/447701116110/ears-test"
 			one := 1
+			zero := 0
 			tc.receiverConfig.MaxNumberOfMessages = &one
 			tc.receiverConfig.WaitTimeSeconds = &one
 			tc.receiverConfig.VisibilityTimeout = &one
 			tc.receiverConfig.AcknowledgeTimeout = &one
+			tc.receiverConfig.NumRetries = &zero
 			tc.receiverConfig = tc.receiverConfig.WithDefaults()
 			sender, err := sqsPlugin.NewSender(tc.senderConfig)
 			a.Expect(err).To(BeNil())
