@@ -25,14 +25,15 @@ import (
 )
 
 type event struct {
-	payload interface{}
-	ctx     context.Context
-	ack     ack.SubTree
+	metadata interface{}
+	payload  interface{}
+	ctx      context.Context
+	ack      ack.SubTree
 }
 
 type EventOption func(*event) error
 
-//Create a new event given a context, a payload, and other event optsion
+//Create a new event given a context, a payload, and other event options
 func New(ctx context.Context, payload interface{}, options ...EventOption) (Event, error) {
 	e := &event{
 		payload: payload,
@@ -70,6 +71,21 @@ func WithAck(handledFn func(), errFn func(error)) EventOption {
 	}
 }
 
+func WithMetadata(metadata interface{}) EventOption {
+	return func(e *event) error {
+		e.SetMetadata(metadata)
+		return nil
+	}
+}
+
+func (e *event) SetAck(handledFn func(), errFn func(error)) error {
+	if handledFn == nil || errFn == nil {
+		return &NoAckHandlersError{}
+	}
+	e.ack = ack.NewAckTree(e.ctx, handledFn, errFn)
+	return nil
+}
+
 func (e *event) Payload() interface{} {
 	return e.payload
 }
@@ -82,6 +98,17 @@ func (e *event) SetPayload(payload interface{}) error {
 	return nil
 }
 
+func (e *event) Metadata() interface{} {
+	return e.metadata
+}
+
+func (e *event) SetMetadata(metadata interface{}) error {
+	if e.ack != nil && e.ack.IsAcked() {
+		return &ack.AlreadyAckedError{}
+	}
+	e.metadata = metadata
+	return nil
+}
 func (e *event) Context() context.Context {
 	return e.ctx
 }
