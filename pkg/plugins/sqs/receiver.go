@@ -73,8 +73,8 @@ func (r *Receiver) Receive(next receiver.NextFn) error {
 		entries := make(chan *sqs.DeleteMessageBatchRequestEntry, 1000)
 		// delete messages
 		go func() {
+			deleteBatch := make([]*sqs.DeleteMessageBatchRequestEntry, 0)
 			for {
-				deleteBatch := make([]*sqs.DeleteMessageBatchRequestEntry, 0)
 				var delEntry *sqs.DeleteMessageBatchRequestEntry
 				select {
 				case e := <-entries:
@@ -85,9 +85,7 @@ func (r *Receiver) Receive(next receiver.NextFn) error {
 				if delEntry != nil {
 					deleteBatch = append(deleteBatch, delEntry)
 				}
-				//TODO: delete in batches
-				//if len(deleteBatch) >= *r.config.MaxNumberOfMessages || (delEntry == nil && len(deleteBatch) > 0) {
-				if len(deleteBatch) > 0 {
+				if len(deleteBatch) >= *r.config.MaxNumberOfMessages || (delEntry == nil && len(deleteBatch) > 0) {
 					deleteParams := &sqs.DeleteMessageBatchInput{
 						Entries:  deleteBatch,
 						QueueUrl: aws.String(r.config.QueueUrl),
@@ -97,9 +95,13 @@ func (r *Receiver) Receive(next receiver.NextFn) error {
 						logger.Error().Str("op", "SQS.Receive").Msg("delete error: " + err.Error())
 						continue
 					}
+					r.Lock()
+					r.deleteCount += len(deleteBatch)
+					r.Unlock()
 					for _, entry := range deleteBatch {
-						logger.Info().Str("op", "SQS.Receive").Int("batchSize", len(deleteBatch)).Msg("deleted message" + (*entry.Id))
+						logger.Info().Str("op", "SQS.Receive").Int("batchSize", len(deleteBatch)).Msg("deleted message " + (*entry.Id))
 					}
+					deleteBatch = make([]*sqs.DeleteMessageBatchRequestEntry, 0)
 				}
 				r.Lock()
 				stopNow := r.stop
@@ -134,7 +136,7 @@ func (r *Receiver) Receive(next receiver.NextFn) error {
 			for _, message := range sqsResp.Messages {
 				//logger.Debug().Str("op", "SQS.Receive").Msg(*message.Body)
 				r.Lock()
-				r.count++
+				r.receiveCount++
 				r.Unlock()
 				retryAttempt, ok := messageRetries[*message.MessageId]
 				if !ok {
@@ -182,16 +184,19 @@ func (r *Receiver) Receive(next receiver.NextFn) error {
 	<-r.done
 	r.Lock()
 	elapsedMs := time.Now().Sub(r.startTime).Milliseconds()
-	throughput := 1000 * r.count / int(elapsedMs)
+	receiveThroughput := 1000 * r.receiveCount / int(elapsedMs)
+	deleteThroughput := 1000 * r.deleteCount / int(elapsedMs)
+	receiveCnt := r.receiveCount
+	deleteCnt := r.deleteCount
 	r.Unlock()
-	logger.Info().Str("op", "SQS.Receive").Int("elapsedMs", int(elapsedMs)).Int("throughput", throughput).Msg("receive done")
+	logger.Info().Str("op", "SQS.Receive").Int("elapsedMs", int(elapsedMs)).Int("deleteCount", deleteCnt).Int("receiveCount", receiveCnt).Int("receiveThroughput", receiveThroughput).Int("deleteThroughput", deleteThroughput).Msg("receive done")
 	return nil
 }
 
 func (r *Receiver) Count() int {
 	r.Lock()
 	defer r.Unlock()
-	return r.count
+	return r.receiveCount
 }
 
 func (r *Receiver) StopReceiving(ctx context.Context) error {

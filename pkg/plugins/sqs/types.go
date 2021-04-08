@@ -54,7 +54,7 @@ var DefaultReceiverConfig = ReceiverConfig{
 	MaxNumberOfMessages: pointer.Int(10),
 	VisibilityTimeout:   pointer.Int(10),
 	WaitTimeSeconds:     pointer.Int(10),
-	AcknowledgeTimeout:  pointer.Int(10),
+	AcknowledgeTimeout:  pointer.Int(5),
 	NumRetries:          pointer.Int(0),
 }
 
@@ -69,12 +69,13 @@ type ReceiverConfig struct {
 
 type Receiver struct {
 	sync.Mutex
-	done      chan struct{}
-	stop      bool
-	config    ReceiverConfig
-	next      receiver.NextFn
-	count     int
-	startTime time.Time
+	done         chan struct{}
+	stop         bool
+	config       ReceiverConfig
+	next         receiver.NextFn
+	receiveCount int
+	deleteCount  int
+	startTime    time.Time
 }
 
 var DefaultSenderConfig = SenderConfig{
