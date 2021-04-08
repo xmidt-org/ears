@@ -46,7 +46,11 @@ func (r *Receiver) Receive(next receiver.NextFn) error {
 			Err: fmt.Errorf("next cannot be nil"),
 		}
 	}
+	// local logger for now
+	logger := zerolog.New(os.Stdout).Level(zerolog.DebugLevel)
+	zerolog.LevelFieldName = "log.level"
 	r.Lock()
+	r.stop = false
 	r.done = make(chan struct{})
 	r.next = next
 	r.Unlock()
@@ -63,26 +67,24 @@ func (r *Receiver) Receive(next receiver.NextFn) error {
 	}
 	svc := sqs.New(sess)
 	go func() {
-		defer func() {
-			r.Lock()
-			if r.done != nil {
-				r.done <- struct{}{}
-			}
-			r.Unlock()
-		}()
-		// local logger for now
-		logger := zerolog.New(os.Stdout).Level(zerolog.DebugLevel)
-		zerolog.LevelFieldName = "log.level"
 		messageRetries := make(map[string]int)
 		entries := make(chan *sqs.DeleteMessageBatchRequestEntry, 1000)
 		// delete messages
 		go func() {
 			for {
 				deleteBatch := make([]*sqs.DeleteMessageBatchRequestEntry, 0)
-				//TODO: case with done and timeout
-				delEntry := <-entries
-				deleteBatch = append(deleteBatch, delEntry)
+				var delEntry *sqs.DeleteMessageBatchRequestEntry
+				select {
+				case e := <-entries:
+					delEntry = e
+				case <-time.After(1 * time.Second):
+					delEntry = nil
+				}
+				if delEntry != nil {
+					deleteBatch = append(deleteBatch, delEntry)
+				}
 				//TODO: delete in batches
+				//if len(deleteBatch) >= *r.config.MaxNumberOfMessages || (delEntry == nil && len(deleteBatch) > 0) {
 				if len(deleteBatch) > 0 {
 					deleteParams := &sqs.DeleteMessageBatchInput{
 						Entries:  deleteBatch,
@@ -90,12 +92,19 @@ func (r *Receiver) Receive(next receiver.NextFn) error {
 					}
 					_, err = svc.DeleteMessageBatch(deleteParams)
 					if err != nil {
-						logger.Error().Str("op", "SQS.Receive").Msg(err.Error())
+						logger.Error().Str("op", "SQS.Receive").Msg("delete error: " + err.Error())
 						continue
 					}
 					for _, entry := range deleteBatch {
-						logger.Info().Str("op", "SQS.Receive").Msg("deleted message " + (*entry.Id))
+						logger.Info().Str("op", "SQS.Receive").Msg("deleted message" + (*entry.Id))
 					}
+				}
+				r.Lock()
+				stopNow := r.stop
+				r.Unlock()
+				if stopNow {
+					logger.Info().Str("op", "SQS.Receive").Msg("deleted loop done")
+					return
 				}
 			}
 		}()
@@ -107,7 +116,14 @@ func (r *Receiver) Receive(next receiver.NextFn) error {
 				VisibilityTimeout:   aws.Int64(int64(*r.config.VisibilityTimeout)),
 				WaitTimeSeconds:     aws.Int64(int64(*r.config.WaitTimeSeconds)),
 			}
-			sqsResp, err := svc.ReceiveMessage(sqsParams) // close session to leave this clean?
+			sqsResp, err := svc.ReceiveMessage(sqsParams)
+			r.Lock()
+			stopNow := r.stop
+			r.Unlock()
+			if stopNow {
+				logger.Info().Str("op", "SQS.Receive").Msg("receive loop done")
+				return
+			}
 			if err != nil {
 				logger.Error().Str("op", "SQS.Receive").Msg(err.Error())
 				time.Sleep(1 * time.Second)
@@ -160,7 +176,9 @@ func (r *Receiver) Receive(next receiver.NextFn) error {
 			}
 		}
 	}()
+	logger.Info().Str("op", "SQS.Receive").Msg("wait for receive done")
 	<-r.done
+	logger.Info().Str("op", "SQS.Receive").Msg("receive done")
 	return nil
 }
 
@@ -172,6 +190,7 @@ func (r *Receiver) Count() int {
 
 func (r *Receiver) StopReceiving(ctx context.Context) error {
 	r.Lock()
+	r.stop = true
 	if r.done != nil {
 		r.done <- struct{}{}
 	}

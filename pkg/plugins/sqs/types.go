@@ -69,6 +69,7 @@ type ReceiverConfig struct {
 type Receiver struct {
 	sync.Mutex
 	done   chan struct{}
+	stop   bool
 	config ReceiverConfig
 	next   receiver.NextFn
 	count  int
