@@ -34,6 +34,7 @@ import (
 
 //TODO: test updating an sqs route
 //TODO: need CreateEventContext helper function
+//TODO: measure throughput
 
 func (r *Receiver) Receive(next receiver.NextFn) error {
 	if r == nil {
@@ -50,6 +51,7 @@ func (r *Receiver) Receive(next receiver.NextFn) error {
 	logger := zerolog.New(os.Stdout).Level(zerolog.DebugLevel)
 	zerolog.LevelFieldName = "log.level"
 	r.Lock()
+	r.startTime = time.Now()
 	r.stop = false
 	r.done = make(chan struct{})
 	r.next = next
@@ -96,7 +98,7 @@ func (r *Receiver) Receive(next receiver.NextFn) error {
 						continue
 					}
 					for _, entry := range deleteBatch {
-						logger.Info().Str("op", "SQS.Receive").Msg("deleted message" + (*entry.Id))
+						logger.Info().Str("op", "SQS.Receive").Int("batchSize", len(deleteBatch)).Msg("deleted message" + (*entry.Id))
 					}
 				}
 				r.Lock()
@@ -160,7 +162,7 @@ func (r *Receiver) Receive(next receiver.NextFn) error {
 				ctx, _ := context.WithTimeout(context.Background(), time.Duration(*r.config.AcknowledgeTimeout)*time.Second)
 				e, err := event.New(ctx, payload, event.WithAck(
 					func() {
-						logger.Info().Str("op", "SQS.Receive").Msg("processed message " + (*message.MessageId))
+						logger.Info().Str("op", "SQS.Receive").Int("batchSize", len(sqsResp.Messages)).Msg("processed message " + (*message.MessageId))
 						entry := &sqs.DeleteMessageBatchRequestEntry{Id: message.MessageId, ReceiptHandle: message.ReceiptHandle}
 						entries <- entry
 						delete(messageRetries, *message.MessageId)
@@ -178,7 +180,11 @@ func (r *Receiver) Receive(next receiver.NextFn) error {
 	}()
 	logger.Info().Str("op", "SQS.Receive").Msg("wait for receive done")
 	<-r.done
-	logger.Info().Str("op", "SQS.Receive").Msg("receive done")
+	r.Lock()
+	elapsedMs := time.Now().Sub(r.startTime).Milliseconds()
+	throughput := 1000 * r.count / int(elapsedMs)
+	r.Unlock()
+	logger.Info().Str("op", "SQS.Receive").Int("elapsedMs", int(elapsedMs)).Int("throughput", throughput).Msg("receive done")
 	return nil
 }
 
