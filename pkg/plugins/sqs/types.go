@@ -18,6 +18,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/sqs"
 	"github.com/xorcare/pointer"
 	"sync"
+	"time"
 
 	pkgplugin "github.com/xmidt-org/ears/pkg/plugin"
 
@@ -68,11 +69,12 @@ type ReceiverConfig struct {
 
 type Receiver struct {
 	sync.Mutex
-	done   chan struct{}
-	stop   bool
-	config ReceiverConfig
-	next   receiver.NextFn
-	count  int
+	done      chan struct{}
+	stop      bool
+	config    ReceiverConfig
+	next      receiver.NextFn
+	count     int
+	startTime time.Time
 }
 
 var DefaultSenderConfig = SenderConfig{
