@@ -28,6 +28,8 @@ import (
 	"github.com/xmidt-org/ears/pkg/sender"
 )
 
+//TODO: support batch sending wit htimeout
+
 func NewSender(config interface{}) (sender.Sender, error) {
 	var cfg SenderConfig
 	var err error
