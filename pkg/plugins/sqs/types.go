@@ -16,6 +16,8 @@ package sqs
 
 import (
 	"github.com/aws/aws-sdk-go/service/sqs"
+	"github.com/rs/zerolog"
+	"github.com/xmidt-org/ears/pkg/event"
 	"github.com/xorcare/pointer"
 	"sync"
 	"time"
@@ -81,13 +83,15 @@ type Receiver struct {
 }
 
 var DefaultSenderConfig = SenderConfig{
-	QueueUrl: "",
+	QueueUrl:  "",
+	BatchSize: pointer.Int(10),
 }
 
 // SenderConfig can be passed into NewSender() in order to configure
 // the behavior of the sender.
 type SenderConfig struct {
-	QueueUrl string `json:"queueUrl,omitempty"`
+	QueueUrl  string `json:"queueUrl,omitempty"`
+	BatchSize *int   `json:"batchSize,omitempty"`
 }
 
 type Sender struct {
@@ -95,6 +99,8 @@ type Sender struct {
 	sqsService *sqs.SQS
 	config     SenderConfig
 	count      int
+	logger     zerolog.Logger
+	eventBatch []event.Event
 }
 
 func (s *Sender) Unwrap() sender.Sender {

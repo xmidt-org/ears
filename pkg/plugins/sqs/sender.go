@@ -16,11 +16,13 @@ package sqs
 
 import (
 	"encoding/json"
-	"fmt"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/endpoints"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/sqs"
+	"github.com/google/uuid"
+	"github.com/rs/zerolog"
+	"os"
 
 	"github.com/goccy/go-yaml"
 	"github.com/xmidt-org/ears/pkg/event"
@@ -28,7 +30,7 @@ import (
 	"github.com/xmidt-org/ears/pkg/sender"
 )
 
-//TODO: support batch sending wit htimeout
+//TODO: support batch sending with timeout
 
 func NewSender(config interface{}) (sender.Sender, error) {
 	var cfg SenderConfig
@@ -53,8 +55,11 @@ func NewSender(config interface{}) (sender.Sender, error) {
 	if err != nil {
 		return nil, err
 	}
+	logger := zerolog.New(os.Stdout).Level(zerolog.DebugLevel)
+	zerolog.LevelFieldName = "log.level"
 	s := &Sender{
 		config: cfg,
+		logger: logger,
 	}
 	s.initSQSServiceSession()
 	return s, nil
@@ -84,23 +89,65 @@ func (s *Sender) Count() int {
 }
 
 func (s *Sender) Send(e event.Event) {
-	fmt.Printf("SEND: %v\n", e.Payload())
-	buf, err := json.Marshal(e.Payload())
-	if err != nil {
-		e.Nack(err)
-		return
+	if *s.config.BatchSize == 1 {
+		s.logger.Info().Str("op", "SQS.Send").Int("batchSize", *s.config.BatchSize).Msg("send message")
+		buf, err := json.Marshal(e.Payload())
+		if err != nil {
+			e.Nack(err)
+			return
+		}
+		sqsSendParams := &sqs.SendMessageInput{
+			MessageBody: aws.String(string(buf)),
+			QueueUrl:    aws.String(s.config.QueueUrl),
+		}
+		_, err = s.sqsService.SendMessage(sqsSendParams)
+		if err != nil {
+			s.logger.Error().Str("op", "SQS.Send").Msg("send error: " + err.Error())
+			e.Nack(err)
+		} else {
+			s.Lock()
+			s.count++
+			s.Unlock()
+			e.Ack()
+		}
+	} else {
+		s.Lock()
+		if s.eventBatch == nil {
+			s.eventBatch = make([]event.Event, 0)
+		}
+		s.eventBatch = append(s.eventBatch, e)
+		if len(s.eventBatch) >= *s.config.BatchSize {
+			s.logger.Info().Str("op", "SQS.Send").Int("batchSize", *s.config.BatchSize).Msg("send message batch")
+			entries := make([]*sqs.SendMessageBatchRequestEntry, 0)
+			for _, evt := range s.eventBatch {
+				buf, err := json.Marshal(evt.Payload())
+				if err != nil {
+					continue
+				}
+				entry := &sqs.SendMessageBatchRequestEntry{
+					Id:          aws.String(uuid.New().String()),
+					MessageBody: aws.String(string(buf)),
+				}
+				entries = append(entries, entry)
+			}
+			sqsSendBatchParams := &sqs.SendMessageBatchInput{
+				Entries:  entries,
+				QueueUrl: aws.String(s.config.QueueUrl),
+			}
+			_, err := s.sqsService.SendMessageBatch(sqsSendBatchParams)
+			for idx, evt := range s.eventBatch {
+				if err != nil {
+					if idx == 0 {
+						s.logger.Error().Str("op", "SQS.Send").Msg("batch send error: " + err.Error())
+					}
+					evt.Nack(err)
+				} else {
+					s.count++
+					evt.Ack()
+				}
+			}
+			s.eventBatch = make([]event.Event, 0)
+		}
+		s.Unlock()
 	}
-	sqsSendParams := &sqs.SendMessageInput{
-		MessageBody: aws.String(string(buf)),
-		QueueUrl:    aws.String(s.config.QueueUrl),
-	}
-	_, err = s.sqsService.SendMessage(sqsSendParams)
-	if err != nil {
-		e.Nack(err)
-		return
-	}
-	s.Lock()
-	s.count++
-	s.Unlock()
-	e.Ack()
 }
