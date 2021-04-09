@@ -22,6 +22,9 @@ import (
 // WithDefaults
 func (sc SenderConfig) WithDefaults() SenderConfig {
 	cfg := sc
+	if cfg.BatchSize == nil {
+		cfg.BatchSize = DefaultSenderConfig.BatchSize
+	}
 	return cfg
 }
 
@@ -50,7 +53,12 @@ const senderSchema = `
             "properties": {
                 "queueUrl": {
                     "type": "string"
-                }
+                },
+				"batchSize": {
+                    "type": "integer", 
+					"minimum": 0,
+					"maximum": 100
+				}
             },
             "required": [
                 "queueUrl"
