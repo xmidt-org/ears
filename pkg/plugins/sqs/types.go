@@ -84,7 +84,7 @@ type Receiver struct {
 
 var DefaultSenderConfig = SenderConfig{
 	QueueUrl:  "",
-	BatchSize: pointer.Int(10),
+	BatchSize: pointer.Int(3),
 }
 
 // SenderConfig can be passed into NewSender() in order to configure
