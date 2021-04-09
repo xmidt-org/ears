@@ -87,6 +87,11 @@ const receiverSchema = `
 				"numRetries": {
                     "type": "integer", 
 					"minimum": 0
+				},
+				"receiverQueueDepth": {
+                    "type": "integer", 
+					"minimum": 0,
+					"maximum": 1000
 				}
             },
             "required": [

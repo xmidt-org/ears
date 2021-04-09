@@ -32,9 +32,13 @@ import (
 	"github.com/xmidt-org/ears/pkg/receiver"
 )
 
+//DISCUSS: add metadata to event
+//DISCUSS: need CreateEventContext helper function
+//DISCUSS: give Ack() / Nack() access to even
+
+//TODO: make receiver queue depth configurable
 //TODO: test updating an sqs route
-//TODO: need CreateEventContext helper function
-//TODO: measure throughput
+//TODO: dead letter queue support
 
 func (r *Receiver) Receive(next receiver.NextFn) error {
 	if r == nil {
@@ -70,7 +74,7 @@ func (r *Receiver) Receive(next receiver.NextFn) error {
 	svc := sqs.New(sess)
 	go func() {
 		messageRetries := make(map[string]int)
-		entries := make(chan *sqs.DeleteMessageBatchRequestEntry, 1000)
+		entries := make(chan *sqs.DeleteMessageBatchRequestEntry, *r.config.MaxNumberOfMessages)
 		// delete messages
 		go func() {
 			deleteBatch := make([]*sqs.DeleteMessageBatchRequestEntry, 0)
@@ -107,7 +111,7 @@ func (r *Receiver) Receive(next receiver.NextFn) error {
 				stopNow := r.stop
 				r.Unlock()
 				if stopNow {
-					logger.Info().Str("op", "SQS.Receive").Msg("deleted loop done")
+					logger.Info().Str("op", "SQS.Receive").Msg("delete loop done")
 					return
 				}
 			}
