@@ -37,7 +37,6 @@ import (
 //DISCUSS: need CreateEventContext helper function
 //DISCUSS: give Ack() / Nack() access to even
 
-//TODO: make receiver queue depth configurable
 //TODO: test updating an sqs route
 //TODO: dead letter queue support
 
@@ -163,7 +162,7 @@ func (r *Receiver) Receive(next receiver.NextFn) error {
 				var payload interface{}
 				err = json.Unmarshal([]byte(*message.Body), &payload)
 				if err != nil {
-					logger.Error().Str("op", "SQS.Receive").Msg("cannot parse message " + (*message.MessageId) + err.Error())
+					logger.Error().Str("op", "SQS.Receive").Msg("cannot parse message " + (*message.MessageId) + ": " + err.Error())
 					var entry sqs.DeleteMessageBatchRequestEntry
 					entry = sqs.DeleteMessageBatchRequestEntry{Id: message.MessageId, ReceiptHandle: message.ReceiptHandle}
 					entries <- &entry
