@@ -24,6 +24,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/sqs"
 	"github.com/rs/zerolog"
 	"os"
+	"strconv"
 	"time"
 
 	"github.com/goccy/go-yaml"
@@ -73,7 +74,7 @@ func (r *Receiver) Receive(next receiver.NextFn) error {
 	}
 	svc := sqs.New(sess)
 	go func() {
-		messageRetries := make(map[string]int)
+		//messageRetries := make(map[string]int)
 		entries := make(chan *sqs.DeleteMessageBatchRequestEntry, *r.config.MaxNumberOfMessages)
 		// delete messages
 		go func() {
@@ -118,11 +119,13 @@ func (r *Receiver) Receive(next receiver.NextFn) error {
 		}()
 		// receive messages
 		for {
+			approximateReceiveCount := "ApproximateReceiveCount"
 			sqsParams := &sqs.ReceiveMessageInput{
 				QueueUrl:            aws.String(r.config.QueueUrl),
 				MaxNumberOfMessages: aws.Int64(int64(*r.config.MaxNumberOfMessages)),
 				VisibilityTimeout:   aws.Int64(int64(*r.config.VisibilityTimeout)),
 				WaitTimeSeconds:     aws.Int64(int64(*r.config.WaitTimeSeconds)),
+				AttributeNames:      []*string{&approximateReceiveCount},
 			}
 			sqsResp, err := svc.ReceiveMessage(sqsParams)
 			r.Lock()
@@ -141,20 +144,20 @@ func (r *Receiver) Receive(next receiver.NextFn) error {
 				//logger.Debug().Str("op", "SQS.Receive").Msg(*message.Body)
 				r.Lock()
 				r.receiveCount++
-				retryAttempt, ok := messageRetries[*message.MessageId]
-				if !ok {
-					messageRetries[*message.MessageId] = 0
-				} else {
-					messageRetries[*message.MessageId] += 1
-				}
 				r.Unlock()
-				retryAttempt = messageRetries[*message.MessageId]
+				retryAttempt := 0
+				if message.Attributes[approximateReceiveCount] != nil {
+					retryAttempt, err = strconv.Atoi(*message.Attributes[approximateReceiveCount])
+					if err != nil {
+						logger.Error().Str("op", "SQS.Receive").Msg("error parsing receive count: " + err.Error())
+					}
+					retryAttempt--
+				}
 				if retryAttempt > *(r.config.NumRetries) {
 					logger.Error().Str("op", "SQS.Receive").Msg("max retries reached for " + (*message.MessageId))
 					var entry sqs.DeleteMessageBatchRequestEntry
 					entry = sqs.DeleteMessageBatchRequestEntry{Id: message.MessageId, ReceiptHandle: message.ReceiptHandle}
 					entries <- &entry
-					delete(messageRetries, *message.MessageId)
 					continue
 				}
 				var payload interface{}
@@ -164,13 +167,13 @@ func (r *Receiver) Receive(next receiver.NextFn) error {
 					var entry sqs.DeleteMessageBatchRequestEntry
 					entry = sqs.DeleteMessageBatchRequestEntry{Id: message.MessageId, ReceiptHandle: message.ReceiptHandle}
 					entries <- &entry
-					delete(messageRetries, *message.MessageId)
 					continue
 				}
 				ctx, _ := context.WithTimeout(context.Background(), time.Duration(*r.config.AcknowledgeTimeout)*time.Second)
 				e, err := event.New(ctx, payload, event.WithMetadata(*message))
 				if err != nil {
-					return // continue? logging?
+					logger.Error().Str("op", "SQS.Receive").Msg("cannot create event: " + err.Error())
+					return
 				}
 				err = e.SetAck(
 					func() {
@@ -179,9 +182,6 @@ func (r *Receiver) Receive(next receiver.NextFn) error {
 						logger.Info().Str("op", "SQS.Receive").Int("batchSize", len(sqsResp.Messages)).Msg("processed message " + (*msg.MessageId))
 						entry = sqs.DeleteMessageBatchRequestEntry{Id: msg.MessageId, ReceiptHandle: msg.ReceiptHandle}
 						entries <- &entry
-						r.Lock()
-						delete(messageRetries, *msg.MessageId)
-						r.Unlock()
 					},
 					func(err error) {
 						msg := e.Metadata().(sqs.Message) // get metadata associated with this event
@@ -189,9 +189,9 @@ func (r *Receiver) Receive(next receiver.NextFn) error {
 						// a nack below max retries - this is the only case where we do not delete the message yet
 					})
 				if err != nil {
-					return // continue? logging?
+					logger.Error().Str("op", "SQS.Receive").Msg("cannot set ack on event: " + err.Error())
+					return
 				}
-
 				/*e, err := event.New(ctx, payload, event.WithMetadata(*message), event.WithAck(
 				func() {
 					logger.Info().Str("op", "SQS.Receive").Int("batchSize", len(sqsResp.Messages)).Msg("processed message " + (*message.MessageId))
@@ -199,21 +199,18 @@ func (r *Receiver) Receive(next receiver.NextFn) error {
 					msg := e.Metadata().(sqs.Message) // get metadata associated with this event
 					entry = sqs.DeleteMessageBatchRequestEntry{Id: msg.MessageId, ReceiptHandle: msg.ReceiptHandle}
 					entries <- &entry
-					delete(messageRetries, *msg.MessageId)
 				},
 				func(err error) {
 					msg := e.Metadata().(sqs.Message) // get metadata associated with this event
 					logger.Error().Str("op", "SQS.Receive").Msg("failed to process message " + (*msg.MessageId) + ": " + err.Error())
 					// a nack below max retries - this is the only case where we do not delete the message yet
 				}))*/
-
 				/*e, err := event.New(ctx, payload, event.WithAck(
 				func() {
 					logger.Info().Str("op", "SQS.Receive").Int("batchSize", len(sqsResp.Messages)).Msg("processed message " + (*message.MessageId))
 					var entry sqs.DeleteMessageBatchRequestEntry
 					entry = sqs.DeleteMessageBatchRequestEntry{Id: message.MessageId, ReceiptHandle: message.ReceiptHandle}
 					entries <- &entry
-					delete(messageRetries, *message.MessageId)
 				},
 				func(err error) {
 					logger.Error().Str("op", "SQS.Receive").Msg("failed to process message " + (*message.MessageId) + ": " + err.Error())
