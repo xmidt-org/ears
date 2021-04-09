@@ -20,14 +20,13 @@ import (
 	"github.com/aws/aws-sdk-go/aws/endpoints"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/sqs"
+	"github.com/goccy/go-yaml"
 	"github.com/google/uuid"
 	"github.com/rs/zerolog"
-	"os"
-
-	"github.com/goccy/go-yaml"
 	"github.com/xmidt-org/ears/pkg/event"
 	pkgplugin "github.com/xmidt-org/ears/pkg/plugin"
 	"github.com/xmidt-org/ears/pkg/sender"
+	"os"
 )
 
 //TODO: support batch sending with timeout
@@ -90,7 +89,7 @@ func (s *Sender) Count() int {
 
 func (s *Sender) Send(e event.Event) {
 	if *s.config.BatchSize == 1 {
-		s.logger.Info().Str("op", "SQS.Send").Int("batchSize", *s.config.BatchSize).Msg("send message")
+		s.logger.Info().Str("op", "SQS.Send").Int("batchSize", *s.config.BatchSize).Int("sendCount", s.count).Msg("send message")
 		buf, err := json.Marshal(e.Payload())
 		if err != nil {
 			e.Nack(err)
@@ -117,7 +116,7 @@ func (s *Sender) Send(e event.Event) {
 		}
 		s.eventBatch = append(s.eventBatch, e)
 		if len(s.eventBatch) >= *s.config.BatchSize {
-			s.logger.Info().Str("op", "SQS.Send").Int("batchSize", *s.config.BatchSize).Msg("send message batch")
+			s.logger.Info().Str("op", "SQS.Send").Int("batchSize", *s.config.BatchSize).Int("sendCount", s.count).Msg("send message batch")
 			entries := make([]*sqs.SendMessageBatchRequestEntry, 0)
 			for _, evt := range s.eventBatch {
 				buf, err := json.Marshal(evt.Payload())
