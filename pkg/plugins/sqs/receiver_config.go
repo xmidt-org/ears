@@ -70,7 +70,8 @@ const receiverSchema = `
                 },
 				"maxNumberOfMessages": {
                     "type": "integer", 
-					"minimum": 1
+					"minimum": 1,
+					"maximum": 10
 				},
 				"visibilityTimeout": {
                     "type": "integer", 

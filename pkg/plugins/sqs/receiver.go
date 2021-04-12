@@ -34,7 +34,7 @@ import (
 )
 
 //DISCUSS: add metadata to event
-//DISCUSS: need CreateEventContext helper function
+//DISCUSS: consider CreateEventContext helper function
 //DISCUSS: give Ack() / Nack() access to even
 
 //TODO: test updating an sqs route
@@ -202,17 +202,6 @@ func (r *Receiver) Receive(next receiver.NextFn) error {
 				func(err error) {
 					msg := e.Metadata().(sqs.Message) // get metadata associated with this event
 					logger.Error().Str("op", "SQS.Receive").Msg("failed to process message " + (*msg.MessageId) + ": " + err.Error())
-					// a nack below max retries - this is the only case where we do not delete the message yet
-				}))*/
-				/*e, err := event.New(ctx, payload, event.WithAck(
-				func() {
-					logger.Info().Str("op", "SQS.Receive").Int("batchSize", len(sqsResp.Messages)).Msg("processed message " + (*message.MessageId))
-					var entry sqs.DeleteMessageBatchRequestEntry
-					entry = sqs.DeleteMessageBatchRequestEntry{Id: message.MessageId, ReceiptHandle: message.ReceiptHandle}
-					entries <- &entry
-				},
-				func(err error) {
-					logger.Error().Str("op", "SQS.Receive").Msg("failed to process message " + (*message.MessageId) + ": " + err.Error())
 					// a nack below max retries - this is the only case where we do not delete the message yet
 				}))*/
 				r.Trigger(e)

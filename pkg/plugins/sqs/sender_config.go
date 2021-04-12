@@ -45,9 +45,9 @@ func (sc *SenderConfig) Validate() error {
 const senderSchema = `
 {
     "$schema": "http://json-schema.org/draft-06/schema#",
-    "$ref": "#/definitions/ReceiverConfig",
+    "$ref": "#/definitions/SenderConfig",
     "definitions": {
-        "ReceiverConfig": {
+        "SenderConfig": {
             "type": "object",
             "additionalProperties": false,
             "properties": {
@@ -56,14 +56,14 @@ const senderSchema = `
                 },
 				"batchSize": {
                     "type": "integer", 
-					"minimum": 0,
-					"maximum": 100
+					"minimum": 1,
+					"maximum": 10
 				}
             },
             "required": [
                 "queueUrl"
             ],
-            "title": "ReceiverConfig"
+            "title": "SenderConfig"
         }
     }
 }
