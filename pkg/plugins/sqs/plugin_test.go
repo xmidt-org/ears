@@ -26,7 +26,7 @@ import (
 	"github.com/xmidt-org/ears/pkg/plugins/sqs"
 )
 
-func TestSender(t *testing.T) {
+func TestSQSSenderReceiver(t *testing.T) {
 	totalTimeout := 10 * time.Second
 	caseTimeout := 5 * time.Second
 	testCases := []struct {
