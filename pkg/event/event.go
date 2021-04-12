@@ -59,13 +59,17 @@ func New(ctx context.Context, payload interface{}, options ...EventOption) (Even
 //the Clone function) has called the Nack function.
 //An event can also error out if it does not receive all the acknowledgements before
 //the context timeout/cancellation.
-func WithAck(handledFn func(), errFn func(error)) EventOption {
+func WithAck(handledFn func(Event), errFn func(Event, error)) EventOption {
 	return func(e *event) error {
 		if handledFn == nil || errFn == nil {
 			return &NoAckHandlersError{}
 		}
 
-		e.ack = ack.NewAckTree(e.ctx, handledFn, errFn)
+		e.ack = ack.NewAckTree(e.ctx, func() {
+			handledFn(e)
+		}, func(err error) {
+			errFn(e, err)
+		})
 		return nil
 	}
 }
