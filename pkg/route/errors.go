@@ -14,7 +14,10 @@
 
 package route
 
-import "github.com/xmidt-org/ears/pkg/errs"
+import (
+	"github.com/xmidt-org/ears/pkg/errs"
+	"github.com/xmidt-org/ears/pkg/tenant"
+)
 
 func (e *InvalidRouteError) Unwrap() error {
 	return e.Err
@@ -30,4 +33,12 @@ type RouteNotFoundError struct {
 
 func (e *RouteNotFoundError) Error() string {
 	return errs.String("RouteNotFoundError", map[string]interface{}{"routeId": e.RouteId}, nil)
+}
+
+type TenantNotFound struct {
+	TenantId tenant.Id
+}
+
+func (e *TenantNotFound) Error() string {
+	return errs.String("TenantNotFoundError", map[string]interface{}{"tenant": e.tenant.String()}, nil)
 }

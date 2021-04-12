@@ -16,16 +16,16 @@ package route
 
 import (
 	"context"
-	"crypto/md5"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"regexp"
 	"sync"
 
 	"github.com/xmidt-org/ears/pkg/filter"
+	"github.com/xmidt-org/ears/pkg/hasher"
 	"github.com/xmidt-org/ears/pkg/receiver"
 	"github.com/xmidt-org/ears/pkg/sender"
+	"github.com/xmidt-org/ears/pkg/tenant"
 )
 
 type Router interface {
@@ -53,8 +53,7 @@ type PluginConfig struct {
 
 type Config struct {
 	Id           string         `json:"id,omitempty"`           // route ID
-	OrgId        string         `json:"orgId,omitempty"`        // org ID for quota and rate limiting
-	AppId        string         `json:"appId,omitempty"`        // app ID for quota and rate limiting
+	TenantId     tenant.Id      `json:"-"`                      // TenantId. Derived from URL path. Should not be marshalled
 	UserId       string         `json:"userId,omitempty"`       // user ID / author of route
 	Name         string         `json:"name,omitempty"`         // optional unique name for route
 	Origin       string         `json:"origin,omitempty"`       // optional reference to route owner, e.g. Flow ID in case of Gears
@@ -109,10 +108,10 @@ func (rc *Config) Validate(ctx context.Context) error {
 			return errors.New("invalid route name " + rc.Name)
 		}
 	}
-	if rc.OrgId == "" {
+	if rc.TenantId.OrgId == "" {
 		return errors.New("missing org ID for plugin configuration")
 	}
-	if rc.AppId == "" {
+	if rc.TenantId.AppId == "" {
 		return errors.New("missing app ID for plugin configuration")
 	}
 	if rc.UserId == "" {
@@ -131,14 +130,14 @@ func (pc *PluginConfig) Hash(ctx context.Context) string {
 		}
 	}
 	str := pc.Name + pc.Plugin + cfg
-	hash := fmt.Sprintf("%x", md5.Sum([]byte(str)))
+	hash := hasher.String(str)
 	return hash
 }
 
 //Hash returns the md5 hash of a route config
 func (pc *Config) Hash(ctx context.Context) string {
 	// notably the route id is not part of the hash as the id might be the hash itself
-	str := pc.OrgId + pc.AppId + pc.Name + pc.DeliveryMode + pc.UserId
+	str := pc.TenantId.OrgId + pc.TenantId.AppId + pc.Name + pc.DeliveryMode + pc.UserId
 	str += pc.Receiver.Hash(ctx)
 	str += pc.Sender.Hash(ctx)
 	if pc.FilterChain != nil {
@@ -146,16 +145,20 @@ func (pc *Config) Hash(ctx context.Context) string {
 			str += f.Hash(ctx)
 		}
 	}
-	hash := fmt.Sprintf("%x", md5.Sum([]byte(str)))
+	hash := hasher.String(str)
 	return hash
 }
 
 //All route operations are synchronous. The storer should respect the cancellation
 //from the context and cancel its operation gracefully when desired.
 type RouteStorer interface {
-	//If route is not found, the function should return a item not found error
-	GetRoute(context.Context, string) (Config, error)
+	//Get all routes of all tenants
 	GetAllRoutes(context.Context) ([]Config, error)
+
+	//If route is not found, the function should return a item not found error
+	GetRoute(context.Context, tenant.Id, string) (Config, error)
+
+	GetAllTenantRoutes(ctx context.Context, id tenant.Id) ([]Config, error)
 
 	//SetRoute will add the route if it new or update the route if
 	//it is an existing one. It will also update the create time and
@@ -164,7 +167,7 @@ type RouteStorer interface {
 
 	SetRoutes(context.Context, []Config) error
 
-	DeleteRoute(context.Context, string) error
+	DeleteRoute(context.Context, tenant.Id, string) error
 
-	DeleteRoutes(context.Context, []string) error
+	DeleteRoutes(context.Context, tenant.Id, []string) error
 }

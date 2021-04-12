@@ -209,16 +209,16 @@ func (r *DefaultRoutingTableManager) registerAndRunRoute(ctx context.Context, ro
 	return nil
 }
 
-func (r *DefaultRoutingTableManager) RemoveRoute(ctx context.Context, routeId string) error {
+func (r *DefaultRoutingTableManager) RemoveRoute(ctx context.Context, tid route.TenantId, routeId string) error {
 	if routeId == "" {
 		return errors.New("missing route ID")
 	}
-	err := r.storageMgr.DeleteRoute(ctx, routeId)
+	err := r.storageMgr.DeleteRoute(ctx, tid, routeId)
 	if err != nil {
 		r.logger.Info().Str("op", "RemoveRoute").Str("routeId", routeId).Msg("could not delete route from storage layer")
 		//return err
 	}
-	r.rtSyncer.PublishSyncRequest(ctx, routeId, r.instanceId, false)
+	r.rtSyncer.PublishSyncRequest(ctx, tid, routeId, r.instanceId, false)
 	return r.unregisterAndStopRoute(ctx, routeId)
 }
 
@@ -241,12 +241,12 @@ func (r *DefaultRoutingTableManager) AddRoute(ctx context.Context, routeConfig *
 	if err != nil {
 		return err
 	}
-	r.rtSyncer.PublishSyncRequest(ctx, routeConfig.Id, r.instanceId, true)
+	r.rtSyncer.PublishSyncRequest(ctx, routeConfig.TenantId, routeConfig.Id, r.instanceId, true)
 	return r.registerAndRunRoute(ctx, routeConfig)
 }
 
-func (r *DefaultRoutingTableManager) GetRoute(ctx context.Context, routeId string) (*route.Config, error) {
-	route, err := r.storageMgr.GetRoute(ctx, routeId)
+func (r *DefaultRoutingTableManager) GetRoute(ctx context.Context, tid route.TenantId, routeId string) (*route.Config, error) {
+	route, err := r.storageMgr.GetRoute(ctx, tid, routeId)
 	if err != nil {
 		return nil, err
 	}
@@ -277,9 +277,9 @@ func (r *DefaultRoutingTableManager) GetAllFilters(ctx context.Context) (map[str
 	return filterers, nil
 }
 
-func (r *DefaultRoutingTableManager) SyncRoute(ctx context.Context, routeId string, add bool) error {
+func (r *DefaultRoutingTableManager) SyncRoute(ctx context.Context, tid route.TenantId, routeId string, add bool) error {
 	if add {
-		routeConfig, err := r.storageMgr.GetRoute(ctx, routeId)
+		routeConfig, err := r.storageMgr.GetRoute(ctx, tid, routeId)
 		if err != nil {
 			return err
 		}
