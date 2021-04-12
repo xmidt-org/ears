@@ -68,9 +68,9 @@ func (r *Receiver) Receive(next receiver.NextFn) error {
 				//fmt.Printf("RECEIVER NEW EVENT\n")
 				ctx, _ := context.WithTimeout(context.Background(), debugMaxTO)
 				e, err := event.New(ctx, r.config.Payload, event.WithAck(
-					func() {
+					func(evt event.Event) {
 						eventsDone.Done()
-					}, func(err error) {
+					}, func(evt event.Event, err error) {
 						//fmt.Println("Debug error", err.Error())
 						eventsDone.Done()
 					}))
