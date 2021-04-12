@@ -11,6 +11,7 @@
 * need to figure out how to access event from Ack() and Nack()
 * for now using plugin-local logger, consider CreateEventContext helper function to start trace in receiver
 * measure start time and total event code at plugin level for throughput measurements
+* for now plugin picks up AWS credentials from environment variables
 
 ## Code Review
 
