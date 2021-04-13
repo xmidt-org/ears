@@ -41,7 +41,7 @@ func TestSQSSenderReceiver(t *testing.T) {
 			timeout:        caseTimeout,
 			senderConfig:   sqs.SenderConfig{},
 			receiverConfig: sqs.ReceiverConfig{},
-			numMessages:    3,
+			numMessages:    5,
 		},
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), totalTimeout)
@@ -72,6 +72,7 @@ func TestSQSSenderReceiver(t *testing.T) {
 				a.Expect(err).To(BeNil())
 				sender.Send(e)
 			}
+			time.Sleep(2 * time.Second)
 			sqsSender, ok := sender.(*sqs.Sender)
 			a.Expect(ok).To(BeTrue())
 			a.Expect(sqsSender.Count()).To(BeIdenticalTo(tc.numMessages))
