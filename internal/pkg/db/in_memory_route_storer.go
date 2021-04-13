@@ -61,7 +61,7 @@ func (s *InMemoryRouteStorer) GetRoute(ctx context.Context, tid tenant.Id, id st
 
 	t, ok := s.tenants[tid.String()]
 	if !ok {
-		return empty, &route.TenantNotFound{tid}
+		return empty, &route.TenantNotFoundError{tid}
 	}
 
 	r, ok := t[id]
@@ -79,7 +79,7 @@ func (s *InMemoryRouteStorer) GetAllTenantRoutes(ctx context.Context, id tenant.
 
 	t, ok := s.tenants[id.String()]
 	if !ok {
-		return nil, &route.TenantNotFound{id}
+		return nil, &route.TenantNotFoundError{id}
 	}
 	routes := make([]route.Config, 0)
 	for _, r := range t {
@@ -129,7 +129,7 @@ func (s *InMemoryRouteStorer) DeleteRoute(ctx context.Context, tid tenant.Id, id
 
 	t, ok := s.tenants[tid.String()]
 	if !ok {
-		return &route.TenantNotFound{tid}
+		return &route.TenantNotFoundError{tid}
 	}
 
 	delete(t, id)
@@ -142,7 +142,7 @@ func (s *InMemoryRouteStorer) DeleteRoutes(ctx context.Context, tid tenant.Id, i
 
 	t, ok := s.tenants[tid.String()]
 	if !ok {
-		return &route.TenantNotFound{tid}
+		return &route.TenantNotFoundError{tid}
 	}
 
 	for _, id := range ids {
