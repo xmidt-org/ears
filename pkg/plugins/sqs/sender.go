@@ -31,6 +31,7 @@ import (
 	"time"
 )
 
+//TODO: stop sender timer loop when route is updated or deleted
 //TODO: fix updating an sqs route (or any route for that matter)
 //TODO: tool to send and receive sqs messages
 //TODO: MessageAttributes
