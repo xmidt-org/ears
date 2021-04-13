@@ -83,17 +83,19 @@ type Receiver struct {
 }
 
 var DefaultSenderConfig = SenderConfig{
-	QueueUrl:    "",
-	BatchSize:   pointer.Int(3),
-	SendTimeout: pointer.Int(1),
+	QueueUrl:     "",
+	BatchSize:    pointer.Int(3),
+	SendTimeout:  pointer.Int(1),
+	DelaySeconds: pointer.Int(0),
 }
 
 // SenderConfig can be passed into NewSender() in order to configure
 // the behavior of the sender.
 type SenderConfig struct {
-	QueueUrl    string `json:"queueUrl,omitempty"`
-	BatchSize   *int   `json:"batchSize,omitempty"`
-	SendTimeout *int   `json:"sendTimeout,omitempty"`
+	QueueUrl     string `json:"queueUrl,omitempty"`
+	BatchSize    *int   `json:"batchSize,omitempty"`
+	SendTimeout  *int   `json:"sendTimeout,omitempty"`
+	DelaySeconds *int   `json:"delaySeconds,omitempty"`
 }
 
 type Sender struct {

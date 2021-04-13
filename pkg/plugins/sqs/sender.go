@@ -117,6 +117,9 @@ func (s *Sender) timedSender() {
 						Id:          aws.String(uuid.New().String()),
 						MessageBody: aws.String(string(buf)),
 					}
+					if *s.config.DelaySeconds > 0 {
+						entry.DelaySeconds = aws.Int64(int64(*s.config.DelaySeconds))
+					}
 					entries = append(entries, entry)
 				}
 				sqsSendBatchParams := &sqs.SendMessageBatchInput{
@@ -169,6 +172,9 @@ func (s *Sender) Send(e event.Event) {
 			MessageBody: aws.String(string(buf)),
 			QueueUrl:    aws.String(s.config.QueueUrl),
 		}
+		if *s.config.DelaySeconds > 0 {
+			sqsSendParams.DelaySeconds = aws.Int64(int64(*s.config.DelaySeconds))
+		}
 		_, err = s.sqsService.SendMessage(sqsSendParams)
 		if err != nil {
 			s.logger.Error().Str("op", "SQS.Send").Msg("send error: " + err.Error())
@@ -196,6 +202,9 @@ func (s *Sender) Send(e event.Event) {
 				entry := &sqs.SendMessageBatchRequestEntry{
 					Id:          aws.String(uuid.New().String()),
 					MessageBody: aws.String(string(buf)),
+				}
+				if *s.config.DelaySeconds > 0 {
+					entry.DelaySeconds = aws.Int64(int64(*s.config.DelaySeconds))
 				}
 				entries = append(entries, entry)
 			}

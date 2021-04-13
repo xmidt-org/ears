@@ -28,6 +28,9 @@ func (sc SenderConfig) WithDefaults() SenderConfig {
 	if cfg.SendTimeout == nil {
 		cfg.SendTimeout = DefaultSenderConfig.SendTimeout
 	}
+	if cfg.DelaySeconds == nil {
+		cfg.DelaySeconds = DefaultSenderConfig.DelaySeconds
+	}
 	return cfg
 }
 
@@ -66,6 +69,11 @@ const senderSchema = `
                     "type": "integer", 
 					"minimum": 1,
 					"maximum": 60
+				},
+				"delaySeconds": {
+                    "type": "integer", 
+					"minimum": 0,
+					"maximum": 3600
 				}
             },
             "required": [
