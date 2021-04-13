@@ -133,7 +133,6 @@ func (r *Receiver) Receive(next receiver.NextFn) error {
 				continue
 			}
 			for _, message := range sqsResp.Messages {
-				//localMsg := message
 				//logger.Debug().Str("op", "SQS.Receive").Msg(*message.Body)
 				r.Lock()
 				r.receiveCount++
@@ -163,42 +162,23 @@ func (r *Receiver) Receive(next receiver.NextFn) error {
 					continue
 				}
 				ctx, _ := context.WithTimeout(context.Background(), time.Duration(*r.config.AcknowledgeTimeout)*time.Second)
-				e, err := event.New(ctx, payload, event.WithMetadata(*message))
-				if err != nil {
-					logger.Error().Str("op", "SQS.Receive").Msg("cannot create event: " + err.Error())
-					return
-				}
-				err = e.SetAck(
-					func() {
-						//localMsg
+				e, err := event.New(ctx, payload, event.WithMetadata(*message), event.WithAck(
+					func(e event.Event) {
 						var entry sqs.DeleteMessageBatchRequestEntry
 						msg := e.Metadata().(sqs.Message) // get metadata associated with this event
 						logger.Info().Str("op", "SQS.Receive").Int("batchSize", len(sqsResp.Messages)).Msg("processed message " + (*msg.MessageId))
 						entry = sqs.DeleteMessageBatchRequestEntry{Id: msg.MessageId, ReceiptHandle: msg.ReceiptHandle}
 						entries <- &entry
 					},
-					func(err error) {
+					func(e event.Event, err error) {
 						msg := e.Metadata().(sqs.Message) // get metadata associated with this event
 						logger.Error().Str("op", "SQS.Receive").Msg("failed to process message " + (*msg.MessageId) + ": " + err.Error())
 						// a nack below max retries - this is the only case where we do not delete the message yet
-					})
+					}))
 				if err != nil {
-					logger.Error().Str("op", "SQS.Receive").Msg("cannot set ack on event: " + err.Error())
+					logger.Error().Str("op", "SQS.Receive").Msg("cannot create event: " + err.Error())
 					return
 				}
-				/*e, err := event.New(ctx, payload, event.WithMetadata(*message), event.WithAck(
-				func() {
-					logger.Info().Str("op", "SQS.Receive").Int("batchSize", len(sqsResp.Messages)).Msg("processed message " + (*message.MessageId))
-					var entry sqs.DeleteMessageBatchRequestEntry
-					msg := e.Metadata().(sqs.Message) // get metadata associated with this event
-					entry = sqs.DeleteMessageBatchRequestEntry{Id: msg.MessageId, ReceiptHandle: msg.ReceiptHandle}
-					entries <- &entry
-				},
-				func(err error) {
-					msg := e.Metadata().(sqs.Message) // get metadata associated with this event
-					logger.Error().Str("op", "SQS.Receive").Msg("failed to process message " + (*msg.MessageId) + ": " + err.Error())
-					// a nack below max retries - this is the only case where we do not delete the message yet
-				}))*/
 				r.Trigger(e)
 			}
 		}
