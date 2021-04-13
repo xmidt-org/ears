@@ -29,12 +29,19 @@ type Event interface {
 	//Get the event payload
 	Payload() interface{}
 
+	//Get the event metadata
+	Metadata() interface{}
+
 	//Get the event context
 	Context() context.Context
 
 	//Set the event payload
 	//Will return an error if the event is done
 	SetPayload(payload interface{}) error
+
+	//Set the event metadata
+	//Will return an error if the event is done
+	SetMetadata(metadata interface{}) error
 
 	//Replace the current event context
 	//Will return an error if the event is done
@@ -47,6 +54,9 @@ type Event interface {
 	//Acknowledge that there is an error handling the event
 	//Further actions on the event are no longer possible
 	Nack(err error)
+
+	//SetAck set ack when needed
+	SetAck(handledFn func(), errFn func(error)) error
 
 	//Create a child the event with payload deep-copied
 	//Clone fails and return an error if the event is already acknowledged

@@ -38,6 +38,10 @@ curl -X POST http://localhost:3000/ears/v1/routes --data @simpleFilterMatchDenyR
 
 curl -X POST http://localhost:3000/ears/v1/routes --data @simpleFilterUnwrapRoute.json | jq .
 
+curl -X POST http://localhost:3000/ears/v1/routes --data @sqsReceiverRoute.json | jq .
+
+curl -X POST http://localhost:3000/ears/v1/routes --data @sqsSenderRoute.json | jq .
+
 # idempotency test
 
 # curl -X POST http://localhost:3000/ears/v1/routes --data @simpleRoute.json | jq .
