@@ -31,13 +31,13 @@ import (
 	"time"
 )
 
-//TODO: sender thread pool
-//TODO: receiver thread pool
+//TODO: consider sender thread pool
 //TODO: rename sender BatchSize config
-//TODO: use ears routes to fill or drain an sqs queue
 //TODO: MessageAttributes
-//TODO: increase code coverage
 //TODO: improve graceful shutdown
+//TODO: increase code coverage
+//DONE: use ears routes to fill or drain an sqs queue
+//DONE: receiver thread pool
 //DONE: stop sender timer loop when route is updated or deleted
 //DONE: fix updating an sqs route (or any route for that matter)
 
