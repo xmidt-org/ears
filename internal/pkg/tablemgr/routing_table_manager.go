@@ -155,10 +155,10 @@ func (r *DefaultRoutingTableManager) unregisterAndStopRoute(ctx context.Context,
 
 func (r *DefaultRoutingTableManager) registerAndRunRoute(ctx context.Context, routeConfig *route.Config) error {
 	var err error
-	r.Lock()
-	defer r.Unlock()
 	// check if route already exists, check if this is an update etc.
+	r.Lock()
 	existingLiveRoute, ok := r.liveRouteMap[routeConfig.Id]
+	r.Unlock()
 	if ok && existingLiveRoute.Config.Hash(ctx) == routeConfig.Hash(ctx) {
 		r.logger.Info().Str("op", "registerAndRunRoute").Str("routeId", routeConfig.Id).Msg("identical route exists with same hash and same ID")
 		return nil
@@ -180,6 +180,8 @@ func (r *DefaultRoutingTableManager) registerAndRunRoute(ctx context.Context, ro
 	// millions of entries in the storage layer. I still believe it may be simpler and faster to force the route ID to be
 	// the route hash, use an internal reference counter and give up on idempotency. An alternative would be to take route creation
 	// out of the flow and use a dedicated route management UI.
+	r.Lock()
+	defer r.Unlock()
 	existingLiveRoute, ok = r.routeHashMap[routeConfig.Hash(ctx)]
 	if ok {
 		// we simply increment the reference count of an already existing route and are done here
