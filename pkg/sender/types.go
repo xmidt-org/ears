@@ -15,6 +15,7 @@
 package sender
 
 import (
+	"context"
 	"github.com/xmidt-org/ears/pkg/event"
 )
 
@@ -32,7 +33,6 @@ type Hasher interface {
 
 type NewSenderer interface {
 	Hasher
-
 	// Returns an objec that implements the Sender interface
 	NewSender(config interface{}) (Sender, error)
 }
@@ -41,5 +41,9 @@ type NewSenderer interface {
 type Sender interface {
 	// Send consumes and event and sends it to the target
 	Send(e event.Event)
+	// Unwrap
 	Unwrap() Sender
+	// StopSending will stop any long running maintenance threads in the sender plugin.
+	// Often this function does nothing.
+	StopSending(ctx context.Context)
 }

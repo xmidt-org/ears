@@ -15,6 +15,7 @@
 package main
 
 import (
+	"context"
 	pkgplugin "github.com/xmidt-org/ears/pkg/plugin"
 
 	"github.com/xmidt-org/ears/pkg/event"
@@ -67,4 +68,7 @@ func (p *plugin) Send(e event.Event) {
 
 func (p *plugin) Unwrap() sender.Sender {
 	return p
+}
+
+func (p *plugin) StopSending(ctx context.Context) {
 }

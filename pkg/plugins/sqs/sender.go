@@ -31,9 +31,11 @@ import (
 	"time"
 )
 
+//TODO: duplicate filter
+//TODO: rename sender BatchSize config
 //TODO: stop sender timer loop when route is updated or deleted
 //TODO: fix updating an sqs route (or any route for that matter)
-//TODO: tool to send and receive sqs messages
+//TODO: tool to send and receive sqs messages (use ears)
 //TODO: MessageAttributes
 //TODO: increase code coverage
 //TODO: sender thread pool
@@ -98,6 +100,7 @@ func (s *Sender) timedSender() {
 			case <-s.done:
 				return
 			case <-time.After(time.Duration(*s.config.SendTimeout) * time.Second):
+				s.logger.Info().Str("op", "SQS.timedSender").Int("sendCount", s.count).Msg("stopping sqs sender")
 			}
 			s.Lock()
 			if s.eventBatch == nil {
@@ -150,13 +153,12 @@ func (s *Sender) Count() int {
 	return s.count
 }
 
-func (s *Sender) StopSending(ctx context.Context) error {
+func (s *Sender) StopSending(ctx context.Context) {
 	s.Lock()
 	if s.done != nil {
 		s.done <- struct{}{}
 	}
 	s.Unlock()
-	return nil
 }
 
 func (s *Sender) Send(e event.Event) {
