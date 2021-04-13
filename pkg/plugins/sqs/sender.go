@@ -37,6 +37,7 @@ import (
 //TODO: use ears routes to fill or drain an sqs queue
 //TODO: MessageAttributes
 //TODO: increase code coverage
+//TODO: improve graceful shutdown
 //DONE: stop sender timer loop when route is updated or deleted
 //DONE: fix updating an sqs route (or any route for that matter)
 

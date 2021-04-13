@@ -39,6 +39,12 @@ func (rc *ReceiverConfig) WithDefaults() ReceiverConfig {
 	if cfg.NumRetries == nil {
 		cfg.NumRetries = DefaultReceiverConfig.NumRetries
 	}
+	if cfg.ReceiverQueueDepth == nil {
+		cfg.ReceiverQueueDepth = DefaultReceiverConfig.ReceiverQueueDepth
+	}
+	if cfg.ReceiverPoolSize == nil {
+		cfg.ReceiverPoolSize = DefaultReceiverConfig.ReceiverPoolSize
+	}
 	return cfg
 }
 
@@ -95,6 +101,11 @@ const receiverSchema = `
                     "type": "integer", 
 					"minimum": 0,
 					"maximum": 1000
+				},
+				"receiverPoolSize": {
+                    "type": "integer", 
+					"minimum": 1,
+					"maximum": 100
 				}
             },
             "required": [

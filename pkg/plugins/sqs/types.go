@@ -59,6 +59,7 @@ var DefaultReceiverConfig = ReceiverConfig{
 	AcknowledgeTimeout:  pointer.Int(5),
 	NumRetries:          pointer.Int(0),
 	ReceiverQueueDepth:  pointer.Int(100),
+	ReceiverPoolSize:    pointer.Int(1),
 }
 
 type ReceiverConfig struct {
@@ -69,6 +70,7 @@ type ReceiverConfig struct {
 	AcknowledgeTimeout  *int   `json:"acknowledgeTimeout,omitempty"`
 	NumRetries          *int   `json:"numRetries,omitempty"`
 	ReceiverQueueDepth  *int   `json:"receiverQueueDepth,omitempty"`
+	ReceiverPoolSize    *int   `json:"receiverPoolSize,omitempty"`
 }
 
 type Receiver struct {

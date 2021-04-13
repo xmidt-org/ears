@@ -68,7 +68,7 @@ func NewReceiver(config interface{}) (receiver.Receiver, error) {
 func (r *Receiver) startReceiveWorker(svc *sqs.SQS) {
 	go func() {
 		//messageRetries := make(map[string]int)
-		entries := make(chan *sqs.DeleteMessageBatchRequestEntry, *r.config.MaxNumberOfMessages)
+		entries := make(chan *sqs.DeleteMessageBatchRequestEntry, *r.config.ReceiverQueueDepth)
 		// delete messages
 		go func() {
 			deleteBatch := make([]*sqs.DeleteMessageBatchRequestEntry, 0)
@@ -214,8 +214,11 @@ func (r *Receiver) Receive(next receiver.NextFn) error {
 	if nil != err {
 		return err
 	}
-	r.startReceiveWorker(sqs.New(sess))
-	r.logger.Info().Str("op", "SQS.Receive").Msg("wait for receive done")
+	for i := 0; i < *r.config.ReceiverPoolSize; i++ {
+		r.logger.Info().Str("op", "SQS.Receive").Msg("launching receiver pool thread")
+		r.startReceiveWorker(sqs.New(sess))
+	}
+	r.logger.Info().Str("op", "SQS.Receive").Msg("waiting for receive done")
 	<-r.done
 	r.Lock()
 	elapsedMs := time.Now().Sub(r.startTime).Milliseconds()
