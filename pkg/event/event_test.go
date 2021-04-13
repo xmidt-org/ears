@@ -126,11 +126,15 @@ func TestEventAck(t *testing.T) {
 
 	done := make(chan bool)
 	e1, err := event.New(ctx, payload, event.WithAck(
-		func() {
+		func(evt event.Event) {
+			if !reflect.DeepEqual(payload, evt.Payload()) {
+				t.Errorf("Event payload does not match")
+			}
+
 			fmt.Println("success")
 			done <- true
 		},
-		func(err error) {
+		func(evt event.Event, err error) {
 			t.Errorf("Fail to receive all acknowledgements %s\n", err.Error())
 			done <- true
 		}))
@@ -208,11 +212,15 @@ func TestEventNack(t *testing.T) {
 
 	done := make(chan bool)
 	e1, err := event.New(ctx, payload, event.WithAck(
-		func() {
+		func(evt event.Event) {
 			t.Errorf("Expect error function to be called")
 			done <- true
 		},
-		func(err error) {
+		func(evt event.Event, err error) {
+			if !reflect.DeepEqual(payload, evt.Payload()) {
+				t.Errorf("Event payload does not match")
+			}
+
 			var nackErr *ack.NackError
 			if !errors.As(err, &nackErr) {
 				t.Errorf("Expect nackError but get +%v\n", err)
@@ -251,11 +259,15 @@ func TestEventTimeout(t *testing.T) {
 
 	done := make(chan bool)
 	e1, err := event.New(ctx, payload, event.WithAck(
-		func() {
+		func(evt event.Event) {
 			t.Errorf("Expect error function to be called")
 			done <- true
 		},
-		func(err error) {
+		func(evt event.Event, err error) {
+			if !reflect.DeepEqual(payload, evt.Payload()) {
+				t.Errorf("Event payload does not match")
+			}
+
 			var toErr *ack.TimeoutError
 			if !errors.As(err, &toErr) {
 				t.Errorf("Expect toErr but get +%v\n", err)

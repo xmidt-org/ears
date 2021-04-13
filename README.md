@@ -10,7 +10,18 @@
 
 ## Summary
 
-Summary should be a small paragraph explanation of what this project does.
+A simple scalable routing service to usher events from an input plugin (for example, Kafka) to an output plugin (for example, AWS SQS).
+As an event passes through EARS, it may be filtered or transformed depending on the configuration details of the route and the 
+event payload. Routes can be dynamically added and removed using a simple REST API and modifications to the routing table are 
+quickly synchronized across an EARS cluster.
+
+EARS is designed to eventually replace EEL, offering new features such as quotas and rate limiting as well as highly
+dynamic routes while still supporting filtering and transformation capabilities similar to EEL. 
+
+EARS comes with a set of standard plugins to support some of the most common message protocols including Webhook, Kafka, SQS, 
+Kinesis etc. but also makes the development of third party plugins easy.  
+
+Our Kanban Board can be found [here](https://github.com/orgs/xmidt-org/projects/3).
 
 ## Table of Contents
 
