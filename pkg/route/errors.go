@@ -35,10 +35,10 @@ func (e *RouteNotFoundError) Error() string {
 	return errs.String("RouteNotFoundError", map[string]interface{}{"routeId": e.RouteId}, nil)
 }
 
-type TenantNotFound struct {
+type TenantNotFoundError struct {
 	TenantId tenant.Id
 }
 
-func (e *TenantNotFound) Error() string {
-	return errs.String("TenantNotFoundError", map[string]interface{}{"tenant": e.tenant.String()}, nil)
+func (e *TenantNotFoundError) Error() string {
+	return errs.String("TenantNotFoundError", map[string]interface{}{"tenant": e.TenantId.String()}, nil)
 }

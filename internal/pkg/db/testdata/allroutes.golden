@@ -1,8 +1,6 @@
 [
   {
     "id": "test",
-    "orgId": "myOrg",
-    "appId": "myApp",
     "userId": "mchiang",
     "name": "differentName",
     "receiver": {},
@@ -11,8 +9,6 @@
   },
   {
     "id": "test2",
-    "orgId": "myOrg2",
-    "appId": "myApp2",
     "userId": "bwolf",
     "name": "myName2",
     "receiver": {},
