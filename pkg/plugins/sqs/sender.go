@@ -31,16 +31,12 @@ import (
 	"time"
 )
 
-//TODO: fix updating an sqs route
+//TODO: fix updating an sqs route (or any route for that matter)
 //TODO: tool to send and receive sqs messages
 //TODO: MessageAttributes
 //TODO: increase code coverage
 //TODO: sender thread pool
 //TODO: receiver thread pool
-
-//MAYBE: MessageDeduplicationId
-//MAYBE: MessageGroupId
-//MAYBE: MessageSystemAttributes
 
 func NewSender(config interface{}) (sender.Sender, error) {
 	var cfg SenderConfig
