@@ -31,15 +31,14 @@ import (
 	"time"
 )
 
-//TODO: duplicate filter
-//TODO: rename sender BatchSize config
-//TODO: stop sender timer loop when route is updated or deleted
-//TODO: fix updating an sqs route (or any route for that matter)
-//TODO: tool to send and receive sqs messages (use ears)
-//TODO: MessageAttributes
-//TODO: increase code coverage
 //TODO: sender thread pool
 //TODO: receiver thread pool
+//TODO: rename sender BatchSize config
+//TODO: use ears routes to fill or drain an sqs queue
+//TODO: MessageAttributes
+//TODO: increase code coverage
+//DONE: stop sender timer loop when route is updated or deleted
+//DONE: fix updating an sqs route (or any route for that matter)
 
 func NewSender(config interface{}) (sender.Sender, error) {
 	var cfg SenderConfig

@@ -77,6 +77,7 @@ type Receiver struct {
 	stop         bool
 	config       ReceiverConfig
 	next         receiver.NextFn
+	logger       zerolog.Logger
 	receiveCount int
 	deleteCount  int
 	startTime    time.Time
