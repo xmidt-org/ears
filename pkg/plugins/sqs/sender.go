@@ -31,10 +31,12 @@ import (
 	"time"
 )
 
-//TODO: sender thread pool
-//TODO: DelaySeconds
-//TODO: MessageAttributes
+//TODO: fix updating an sqs route
 //TODO: tool to send and receive sqs messages
+//TODO: MessageAttributes
+//TODO: increase code coverage
+//TODO: sender thread pool
+//TODO: receiver thread pool
 
 //MAYBE: MessageDeduplicationId
 //MAYBE: MessageGroupId

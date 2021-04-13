@@ -33,14 +33,6 @@ import (
 	"github.com/xmidt-org/ears/pkg/receiver"
 )
 
-//DISCUSS: add metadata to event
-//DISCUSS: consider CreateEventContext helper function
-//DISCUSS: give Ack() / Nack() access to even
-
-//TODO: test updating an sqs route
-//TODO: increase code coverage
-//TODO: receiver thread pool
-
 func (r *Receiver) Receive(next receiver.NextFn) error {
 	if r == nil {
 		return &pkgplugin.Error{
