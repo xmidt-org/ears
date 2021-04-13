@@ -38,7 +38,8 @@ import (
 //DISCUSS: give Ack() / Nack() access to even
 
 //TODO: test updating an sqs route
-//TODO: dead letter queue support
+//TODO: increase code coverage
+//TODO: receiver thread pool
 
 func (r *Receiver) Receive(next receiver.NextFn) error {
 	if r == nil {
@@ -140,6 +141,7 @@ func (r *Receiver) Receive(next receiver.NextFn) error {
 				continue
 			}
 			for _, message := range sqsResp.Messages {
+				//localMsg := message
 				//logger.Debug().Str("op", "SQS.Receive").Msg(*message.Body)
 				r.Lock()
 				r.receiveCount++
@@ -176,6 +178,7 @@ func (r *Receiver) Receive(next receiver.NextFn) error {
 				}
 				err = e.SetAck(
 					func() {
+						//localMsg
 						var entry sqs.DeleteMessageBatchRequestEntry
 						msg := e.Metadata().(sqs.Message) // get metadata associated with this event
 						logger.Info().Str("op", "SQS.Receive").Int("batchSize", len(sqsResp.Messages)).Msg("processed message " + (*msg.MessageId))

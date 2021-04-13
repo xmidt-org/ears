@@ -83,15 +83,17 @@ type Receiver struct {
 }
 
 var DefaultSenderConfig = SenderConfig{
-	QueueUrl:  "",
-	BatchSize: pointer.Int(3),
+	QueueUrl:    "",
+	BatchSize:   pointer.Int(3),
+	SendTimeout: pointer.Int(1),
 }
 
 // SenderConfig can be passed into NewSender() in order to configure
 // the behavior of the sender.
 type SenderConfig struct {
-	QueueUrl  string `json:"queueUrl,omitempty"`
-	BatchSize *int   `json:"batchSize,omitempty"`
+	QueueUrl    string `json:"queueUrl,omitempty"`
+	BatchSize   *int   `json:"batchSize,omitempty"`
+	SendTimeout *int   `json:"sendTimeout,omitempty"`
 }
 
 type Sender struct {
@@ -101,6 +103,7 @@ type Sender struct {
 	count      int
 	logger     zerolog.Logger
 	eventBatch []event.Event
+	done       chan struct{}
 }
 
 func (s *Sender) Unwrap() sender.Sender {

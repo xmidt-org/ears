@@ -83,11 +83,13 @@ const receiverSchema = `
 				},
 				"acknowledgeTimeout": {
                     "type": "integer", 
-					"minimum": 1
+					"minimum": 1,
+					"maximum": 60
 				},
 				"numRetries": {
                     "type": "integer", 
-					"minimum": 0
+					"minimum": 0,
+					"maximum": 10
 				},
 				"receiverQueueDepth": {
                     "type": "integer", 

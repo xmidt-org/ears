@@ -25,6 +25,9 @@ func (sc SenderConfig) WithDefaults() SenderConfig {
 	if cfg.BatchSize == nil {
 		cfg.BatchSize = DefaultSenderConfig.BatchSize
 	}
+	if cfg.SendTimeout == nil {
+		cfg.SendTimeout = DefaultSenderConfig.SendTimeout
+	}
 	return cfg
 }
 
@@ -58,6 +61,11 @@ const senderSchema = `
                     "type": "integer", 
 					"minimum": 1,
 					"maximum": 10
+				},
+				"sendTimeout": {
+                    "type": "integer", 
+					"minimum": 1,
+					"maximum": 60
 				}
             },
             "required": [
