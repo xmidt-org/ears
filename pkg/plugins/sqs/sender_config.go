@@ -22,8 +22,8 @@ import (
 // WithDefaults
 func (sc SenderConfig) WithDefaults() SenderConfig {
 	cfg := sc
-	if cfg.BatchSize == nil {
-		cfg.BatchSize = DefaultSenderConfig.BatchSize
+	if cfg.MaxNumberOfMessages == nil {
+		cfg.MaxNumberOfMessages = DefaultSenderConfig.MaxNumberOfMessages
 	}
 	if cfg.SendTimeout == nil {
 		cfg.SendTimeout = DefaultSenderConfig.SendTimeout
@@ -60,7 +60,7 @@ const senderSchema = `
                 "queueUrl": {
                     "type": "string"
                 },
-				"batchSize": {
+				"maxNumberOfMessages": {
                     "type": "integer", 
 					"minimum": 1,
 					"maximum": 10

@@ -32,10 +32,10 @@ import (
 )
 
 //TODO: consider sender thread pool
-//TODO: rename sender BatchSize config
 //TODO: MessageAttributes
 //TODO: improve graceful shutdown
 //TODO: increase code coverage
+//DONE: rename sender BatchSize config
 //DONE: use ears routes to fill or drain an sqs queue
 //DONE: receiver thread pool
 //DONE: stop sender timer loop when route is updated or deleted
@@ -162,8 +162,8 @@ func (s *Sender) StopSending(ctx context.Context) {
 }
 
 func (s *Sender) Send(e event.Event) {
-	if *s.config.BatchSize == 1 {
-		s.logger.Info().Str("op", "SQS.Send").Int("batchSize", *s.config.BatchSize).Int("sendCount", s.count).Msg("send message")
+	if *s.config.MaxNumberOfMessages == 1 {
+		s.logger.Info().Str("op", "SQS.Send").Int("batchSize", *s.config.MaxNumberOfMessages).Int("sendCount", s.count).Msg("send message")
 		buf, err := json.Marshal(e.Payload())
 		if err != nil {
 			e.Nack(err)
@@ -192,8 +192,8 @@ func (s *Sender) Send(e event.Event) {
 			s.eventBatch = make([]event.Event, 0)
 		}
 		s.eventBatch = append(s.eventBatch, e)
-		if len(s.eventBatch) >= *s.config.BatchSize {
-			s.logger.Info().Str("op", "SQS.Send").Int("batchSize", *s.config.BatchSize).Int("sendCount", s.count).Msg("send message batch")
+		if len(s.eventBatch) >= *s.config.MaxNumberOfMessages {
+			s.logger.Info().Str("op", "SQS.Send").Int("batchSize", *s.config.MaxNumberOfMessages).Int("sendCount", s.count).Msg("send message batch")
 			entries := make([]*sqs.SendMessageBatchRequestEntry, 0)
 			for _, evt := range s.eventBatch {
 				buf, err := json.Marshal(evt.Payload())
