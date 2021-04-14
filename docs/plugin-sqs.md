@@ -148,7 +148,57 @@ Using batch operations for receive, delete and send improves throughput
 compared to trivial implementation. Independent threads for receive and 
 delete further increases throughput. Throughput is balanced.
 
-### Batch Size 10
+### Batch Size 10 Pool Size 10
+
+`curl -X POST http://localhost:3000/ears/v1/routes --data @sqsRouteBatch10Threads10.json `
+
+```
+{
+  "status": {
+    "code": 200,
+    "message": "OK"
+  },
+  "item": {
+    "id": "sqs102",
+    "orgId": "comcast",
+    "appId": "xfi",
+    "userId": "boris",
+    "name": "sqsRoute",
+    "receiver": {
+      "plugin": "sqs",
+      "name": "mySqsReceiver",
+      "config": {
+        "queueUrl": "https://sqs.us-west-2.amazonaws.com/447701116110/earsSender",
+        "receiverPoolSize": 10
+      }
+    },
+    "sender": {
+      "plugin": "sqs",
+      "name": "mySqsSender",
+      "config": {
+        "queueUrl": "https://sqs.us-west-2.amazonaws.com/447701116110/earsSender",
+        "senderPoolSize": 10
+      }
+    },
+    "deliveryMode": "whoCares"
+  }
+}
+```
+
+```
+Message Size: 10 bytes
+
+Receive Count: 21150
+Receive Throughput: 684 msg/sec
+
+Delete Count: 16540
+Delete Throughput: 534 msg/sec
+
+Send Count: 21030
+Send Throughput: 684 msg/sec
+```
+
+### Batch Size 10 Pool Size 1
 
 `curl -X POST http://localhost:3000/ears/v1/routes --data @sqsRouteBatch10.json`
 
@@ -190,7 +240,7 @@ Send Count: 597
 Send Throughput: 24 msg/sec
 ```
 
-### Batch Size 1
+### Batch Size 1 Pool Size 1
 
 `curl -X POST http://localhost:3000/ears/v1/routes --data @sqsRouteBatch1.json`
 

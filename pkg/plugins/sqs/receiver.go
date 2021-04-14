@@ -65,7 +65,7 @@ func NewReceiver(config interface{}) (receiver.Receiver, error) {
 	return r, nil
 }
 
-func (r *Receiver) startReceiveWorker(svc *sqs.SQS) {
+func (r *Receiver) startReceiveWorker(svc *sqs.SQS, n int) {
 	go func() {
 		//messageRetries := make(map[string]int)
 		entries := make(chan *sqs.DeleteMessageBatchRequestEntry, *r.config.ReceiverQueueDepth)
@@ -90,14 +90,15 @@ func (r *Receiver) startReceiveWorker(svc *sqs.SQS) {
 					}
 					_, err := svc.DeleteMessageBatch(deleteParams)
 					if err != nil {
-						r.logger.Error().Str("op", "SQS.Receive").Msg("delete error: " + err.Error())
+						r.logger.Error().Str("op", "SQS.receiveWorker").Msg("delete error: " + err.Error())
 					} else {
 						r.Lock()
 						r.deleteCount += len(deleteBatch)
 						r.Unlock()
-						for _, entry := range deleteBatch {
-							r.logger.Info().Str("op", "SQS.Receive").Int("batchSize", len(deleteBatch)).Msg("deleted message " + (*entry.Id))
-						}
+						r.logger.Info().Str("op", "SQS.receiveWorker").Int("batchSize", len(deleteBatch)).Int("workerNum", n).Msg("deleted message batch")
+						/*for _, entry := range deleteBatch {
+							r.logger.Info().Str("op", "SQS.receiveWorker").Int("batchSize", len(deleteBatch)).Int("workerNum", n).Msg("deleted message " + (*entry.Id))
+						}*/
 					}
 					deleteBatch = make([]*sqs.DeleteMessageBatchRequestEntry, 0)
 				}
@@ -105,7 +106,7 @@ func (r *Receiver) startReceiveWorker(svc *sqs.SQS) {
 				stopNow := r.stop
 				r.Unlock()
 				if stopNow {
-					r.logger.Info().Str("op", "SQS.Receive").Msg("delete loop done")
+					r.logger.Info().Str("op", "SQS.receiveWorker").Int("workerNum", n).Msg("delete loop stopped")
 					return
 				}
 			}
@@ -125,13 +126,16 @@ func (r *Receiver) startReceiveWorker(svc *sqs.SQS) {
 			stopNow := r.stop
 			r.Unlock()
 			if stopNow {
-				r.logger.Info().Str("op", "SQS.Receive").Msg("receive loop done")
+				r.logger.Info().Str("op", "SQS.receiveWorker").Int("workerNum", n).Msg("receive loop stopped")
 				return
 			}
 			if err != nil {
-				r.logger.Error().Str("op", "SQS.Receive").Msg(err.Error())
+				r.logger.Error().Str("op", "SQS.receiveWorker").Int("workerNum", n).Msg(err.Error())
 				time.Sleep(1 * time.Second)
 				continue
+			}
+			if len(sqsResp.Messages) > 0 {
+				r.logger.Info().Str("op", "SQS.receiveWorker").Int("batchSize", len(sqsResp.Messages)).Int("workerNum", n).Msg("received message batch")
 			}
 			for _, message := range sqsResp.Messages {
 				//logger.Debug().Str("op", "SQS.Receive").Msg(*message.Body)
@@ -142,12 +146,12 @@ func (r *Receiver) startReceiveWorker(svc *sqs.SQS) {
 				if message.Attributes[approximateReceiveCount] != nil {
 					retryAttempt, err = strconv.Atoi(*message.Attributes[approximateReceiveCount])
 					if err != nil {
-						r.logger.Error().Str("op", "SQS.Receive").Msg("error parsing receive count: " + err.Error())
+						r.logger.Error().Str("op", "SQS.receiveWorker").Int("workerNum", n).Msg("error parsing receive count: " + err.Error())
 					}
 					retryAttempt--
 				}
 				if retryAttempt > *(r.config.NumRetries) {
-					r.logger.Error().Str("op", "SQS.Receive").Msg("max retries reached for " + (*message.MessageId))
+					r.logger.Error().Str("op", "SQS.receiveWorker").Int("workerNum", n).Msg("max retries reached for " + (*message.MessageId))
 					var entry sqs.DeleteMessageBatchRequestEntry
 					entry = sqs.DeleteMessageBatchRequestEntry{Id: message.MessageId, ReceiptHandle: message.ReceiptHandle}
 					entries <- &entry
@@ -156,7 +160,7 @@ func (r *Receiver) startReceiveWorker(svc *sqs.SQS) {
 				var payload interface{}
 				err = json.Unmarshal([]byte(*message.Body), &payload)
 				if err != nil {
-					r.logger.Error().Str("op", "SQS.Receive").Msg("cannot parse message " + (*message.MessageId) + ": " + err.Error())
+					r.logger.Error().Str("op", "SQS.receiveWorker").Int("workerNum", n).Msg("cannot parse message " + (*message.MessageId) + ": " + err.Error())
 					var entry sqs.DeleteMessageBatchRequestEntry
 					entry = sqs.DeleteMessageBatchRequestEntry{Id: message.MessageId, ReceiptHandle: message.ReceiptHandle}
 					entries <- &entry
@@ -167,17 +171,17 @@ func (r *Receiver) startReceiveWorker(svc *sqs.SQS) {
 					func(e event.Event) {
 						var entry sqs.DeleteMessageBatchRequestEntry
 						msg := e.Metadata().(sqs.Message) // get metadata associated with this event
-						r.logger.Info().Str("op", "SQS.Receive").Int("batchSize", len(sqsResp.Messages)).Msg("processed message " + (*msg.MessageId))
+						//r.logger.Info().Str("op", "SQS.receiveWorker").Int("batchSize", len(sqsResp.Messages)).Int("workerNum", n).Msg("processed message " + (*msg.MessageId))
 						entry = sqs.DeleteMessageBatchRequestEntry{Id: msg.MessageId, ReceiptHandle: msg.ReceiptHandle}
 						entries <- &entry
 					},
 					func(e event.Event, err error) {
 						msg := e.Metadata().(sqs.Message) // get metadata associated with this event
-						r.logger.Error().Str("op", "SQS.Receive").Msg("failed to process message " + (*msg.MessageId) + ": " + err.Error())
+						r.logger.Error().Str("op", "SQS.receiveWorker").Int("workerNum", n).Msg("failed to process message " + (*msg.MessageId) + ": " + err.Error())
 						// a nack below max retries - this is the only case where we do not delete the message yet
 					}))
 				if err != nil {
-					r.logger.Error().Str("op", "SQS.Receive").Msg("cannot create event: " + err.Error())
+					r.logger.Error().Str("op", "SQS.receiveWorker").Int("workerNum", n).Msg("cannot create event: " + err.Error())
 					return
 				}
 				r.Trigger(e)
@@ -215,8 +219,8 @@ func (r *Receiver) Receive(next receiver.NextFn) error {
 		return err
 	}
 	for i := 0; i < *r.config.ReceiverPoolSize; i++ {
-		r.logger.Info().Str("op", "SQS.Receive").Msg("launching receiver pool thread")
-		r.startReceiveWorker(sqs.New(sess))
+		r.logger.Info().Str("op", "SQS.Receive").Int("workerNum", i).Msg("launching receiver pool thread")
+		r.startReceiveWorker(sqs.New(sess), i)
 	}
 	r.logger.Info().Str("op", "SQS.Receive").Msg("waiting for receive done")
 	<-r.done
