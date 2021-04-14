@@ -17,7 +17,7 @@
     "name": "mySqsSender",
     "config": {
       "queueUrl": "https://sqs.us-west-2.amazonaws.com/447701116110/earsSender",
-      "batchSize": 1
+      "maxNumberOfMessages": 1
     }
   },
   "deliveryMode": "whoCares"
