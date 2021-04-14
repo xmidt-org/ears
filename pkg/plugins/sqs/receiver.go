@@ -152,8 +152,7 @@ func (r *Receiver) startReceiveWorker(svc *sqs.SQS, n int) {
 				}
 				if retryAttempt > *(r.config.NumRetries) {
 					r.logger.Error().Str("op", "SQS.receiveWorker").Int("workerNum", n).Msg("max retries reached for " + (*message.MessageId))
-					var entry sqs.DeleteMessageBatchRequestEntry
-					entry = sqs.DeleteMessageBatchRequestEntry{Id: message.MessageId, ReceiptHandle: message.ReceiptHandle}
+					entry := sqs.DeleteMessageBatchRequestEntry{Id: message.MessageId, ReceiptHandle: message.ReceiptHandle}
 					entries <- &entry
 					continue
 				}
@@ -161,18 +160,16 @@ func (r *Receiver) startReceiveWorker(svc *sqs.SQS, n int) {
 				err = json.Unmarshal([]byte(*message.Body), &payload)
 				if err != nil {
 					r.logger.Error().Str("op", "SQS.receiveWorker").Int("workerNum", n).Msg("cannot parse message " + (*message.MessageId) + ": " + err.Error())
-					var entry sqs.DeleteMessageBatchRequestEntry
-					entry = sqs.DeleteMessageBatchRequestEntry{Id: message.MessageId, ReceiptHandle: message.ReceiptHandle}
+					entry := sqs.DeleteMessageBatchRequestEntry{Id: message.MessageId, ReceiptHandle: message.ReceiptHandle}
 					entries <- &entry
 					continue
 				}
 				ctx, _ := context.WithTimeout(context.Background(), time.Duration(*r.config.AcknowledgeTimeout)*time.Second)
 				e, err := event.New(ctx, payload, event.WithMetadata(*message), event.WithAck(
 					func(e event.Event) {
-						var entry sqs.DeleteMessageBatchRequestEntry
 						msg := e.Metadata().(sqs.Message) // get metadata associated with this event
 						//r.logger.Info().Str("op", "SQS.receiveWorker").Int("batchSize", len(sqsResp.Messages)).Int("workerNum", n).Msg("processed message " + (*msg.MessageId))
-						entry = sqs.DeleteMessageBatchRequestEntry{Id: msg.MessageId, ReceiptHandle: msg.ReceiptHandle}
+						entry := sqs.DeleteMessageBatchRequestEntry{Id: msg.MessageId, ReceiptHandle: msg.ReceiptHandle}
 						entries <- &entry
 					},
 					func(e event.Event, err error) {
