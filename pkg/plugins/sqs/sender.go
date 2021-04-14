@@ -92,8 +92,8 @@ func (s *Sender) initPlugin() error {
 	for i := 0; i < *s.config.SenderPoolSize; i++ {
 		s.startSendWorker(i)
 	}
-	//s.done = make(chan struct{})
-	//s.startTimedSender() this operation is rather expensive due to lock requirements
+	s.done = make(chan struct{})
+	s.startTimedSender()
 	return nil
 }
 
@@ -110,11 +110,15 @@ func (s *Sender) startTimedSender() {
 			if s.eventBatch == nil {
 				s.eventBatch = make([]event.Event, 0)
 			}
+			evtBatch := s.eventBatch
+			s.eventBatch = make([]event.Event, 0)
+			cnt := s.count
+			s.Unlock()
 			//s.logger.Info().Str("op", "SQS.timedSender").Int("batchSize", len(s.eventBatch)).Int("sendCount", s.count).Msg("check message batch")
-			if len(s.eventBatch) > 0 {
-				s.logger.Info().Str("op", "SQS.timedSender").Int("batchSize", len(s.eventBatch)).Int("sendCount", s.count).Msg("send message batch")
+			if len(evtBatch) > 0 {
+				s.logger.Info().Str("op", "SQS.timedSender").Int("batchSize", len(evtBatch)).Int("sendCount", cnt).Msg("send message batch")
 				entries := make([]*sqs.SendMessageBatchRequestEntry, 0)
-				for _, evt := range s.eventBatch {
+				for _, evt := range evtBatch {
 					buf, err := json.Marshal(evt.Payload())
 					if err != nil {
 						continue
@@ -134,19 +138,19 @@ func (s *Sender) startTimedSender() {
 				}
 				_, err := s.sqsService.SendMessageBatch(sqsSendBatchParams)
 				if err != nil {
-					s.logger.Error().Str("op", "SQS.timedSender").Int("batchSize", len(s.eventBatch)).Int("sendCount", s.count).Msg("batch send error: " + err.Error())
+					s.logger.Error().Str("op", "SQS.timedSender").Int("batchSize", len(evtBatch)).Msg("batch send error: " + err.Error())
 				}
-				for _, evt := range s.eventBatch {
+				s.Lock()
+				s.count += len(evtBatch)
+				s.Unlock()
+				for _, evt := range evtBatch {
 					if err != nil {
 						evt.Nack(err)
 					} else {
-						s.count++
 						evt.Ack()
 					}
 				}
-				s.eventBatch = make([]event.Event, 0)
 			}
-			s.Unlock()
 		}
 	}()
 }
