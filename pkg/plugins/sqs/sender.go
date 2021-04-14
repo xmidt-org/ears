@@ -32,9 +32,9 @@ import (
 )
 
 //TODO: MessageAttributes
-//DONE: consider sender thread pool
 //TODO: improve graceful shutdown
 //TODO: increase code coverage
+//DONE: consider sender thread pool
 //DONE: rename sender BatchSize config
 //DONE: use ears routes to fill or drain an sqs queue
 //DONE: receiver thread pool
