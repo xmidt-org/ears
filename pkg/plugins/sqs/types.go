@@ -90,6 +90,7 @@ var DefaultSenderConfig = SenderConfig{
 	MaxNumberOfMessages: pointer.Int(10),
 	SendTimeout:         pointer.Int(1),
 	DelaySeconds:        pointer.Int(0),
+	SenderPoolSize:      pointer.Int(1),
 }
 
 // SenderConfig can be passed into NewSender() in order to configure
@@ -99,6 +100,7 @@ type SenderConfig struct {
 	MaxNumberOfMessages *int   `json:"maxNumberOfMessages,omitempty"`
 	SendTimeout         *int   `json:"sendTimeout,omitempty"`
 	DelaySeconds        *int   `json:"delaySeconds,omitempty"`
+	SenderPoolSize      *int   `json:"senderPoolSize,omitempty"`
 }
 
 type Sender struct {
@@ -109,6 +111,7 @@ type Sender struct {
 	logger     zerolog.Logger
 	eventBatch []event.Event
 	done       chan struct{}
+	work       chan []event.Event
 }
 
 func (s *Sender) Unwrap() sender.Sender {
