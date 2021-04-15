@@ -55,10 +55,10 @@ func TestSQSSenderReceiver(t *testing.T) {
 			defer cancel()
 			a := NewWithT(t)
 			tc.senderConfig.Endpoint = "localhost:6379"
-			tc.senderConfig.Topic = "ears_plugin_test"
+			tc.senderConfig.Channel = "ears_plugin_test"
 			tc.senderConfig = tc.senderConfig.WithDefaults()
 			tc.receiverConfig.Endpoint = "localhost:6379"
-			tc.receiverConfig.Topic = "ears_plugin_test"
+			tc.receiverConfig.Channel = "ears_plugin_test"
 			tc.receiverConfig = tc.receiverConfig.WithDefaults()
 			redisReceiver, err := redisPlugin.NewReceiver(tc.receiverConfig)
 			a.Expect(err).To(BeNil())

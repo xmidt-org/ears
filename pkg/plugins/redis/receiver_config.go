@@ -27,8 +27,8 @@ func (rc *ReceiverConfig) WithDefaults() ReceiverConfig {
 	if cfg.Endpoint == "" {
 		cfg.Endpoint = DefaultReceiverConfig.Endpoint
 	}
-	if cfg.Topic == "" {
-		cfg.Topic = DefaultReceiverConfig.Topic
+	if cfg.Channel == "" {
+		cfg.Channel = DefaultReceiverConfig.Channel
 	}
 	return cfg
 }
@@ -59,12 +59,12 @@ const receiverSchema = `
                 "endpoint": {
                     "type": "string"
                 },
-                "topic": {
+                "channel": {
                     "type": "string"
                 }
             },
             "required": [
-                "endpoint", "topic"
+                "endpoint", "channel"
             ],
             "title": "ReceiverConfig"
         }

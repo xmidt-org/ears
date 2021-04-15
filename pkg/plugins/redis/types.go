@@ -51,12 +51,12 @@ func NewPluginVersion(name string, version string, commitID string) (*pkgplugin.
 
 var DefaultReceiverConfig = ReceiverConfig{
 	Endpoint: "localhost:6379",
-	Topic:    "ears",
+	Channel:  "ears",
 }
 
 type ReceiverConfig struct {
 	Endpoint string `json:"endpoint,omitempty"`
-	Topic    string `json:"topic,omitempty"`
+	Channel  string `json:"channel,omitempty"`
 }
 
 type Receiver struct {
@@ -71,14 +71,14 @@ type Receiver struct {
 
 var DefaultSenderConfig = SenderConfig{
 	Endpoint: "localhost:6379",
-	Topic:    "ears",
+	Channel:  "ears",
 }
 
 // SenderConfig can be passed into NewSender() in order to configure
 // the behavior of the sender.
 type SenderConfig struct {
 	Endpoint string `json:"endpoint,omitempty"`
-	Topic    string `json:"topic,omitempty"`
+	Channel  string `json:"channel,omitempty"`
 }
 
 type Sender struct {

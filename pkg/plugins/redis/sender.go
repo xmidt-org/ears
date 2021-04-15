@@ -89,7 +89,7 @@ func (s *Sender) Send(e event.Event) {
 		e.Nack(err)
 		return
 	}
-	err = s.client.Publish(s.config.Topic, string(buf)).Err()
+	err = s.client.Publish(s.config.Channel, string(buf)).Err()
 	if err != nil {
 		s.logger.Error().Str("op", "redis.Send").Msg("failed to send message on redis topic: " + err.Error())
 		e.Nack(err)

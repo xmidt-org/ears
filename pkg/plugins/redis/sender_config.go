@@ -25,8 +25,8 @@ func (sc SenderConfig) WithDefaults() SenderConfig {
 	if cfg.Endpoint == "" {
 		cfg.Endpoint = DefaultReceiverConfig.Endpoint
 	}
-	if cfg.Topic == "" {
-		cfg.Topic = DefaultReceiverConfig.Topic
+	if cfg.Channel == "" {
+		cfg.Channel = DefaultReceiverConfig.Channel
 	}
 	return cfg
 }
@@ -57,12 +57,12 @@ const senderSchema = `
                 "endpoint": {
                     "type": "string"
                 },
-                "topic": {
+                "channel": {
                     "type": "string"
                 }
             },
             "required": [
-                "endpoint", "topic"
+                "endpoint", "channel"
             ],
             "title": "SenderConfig"
         }
