@@ -91,11 +91,11 @@ func (s *Sender) Send(e event.Event) {
 	}
 	err = s.client.Publish(s.config.Channel, string(buf)).Err()
 	if err != nil {
-		s.logger.Error().Str("op", "redis.Send").Msg("failed to send message on redis topic: " + err.Error())
+		s.logger.Error().Str("op", "redis.Send").Msg("failed to send message on redis channel: " + err.Error())
 		e.Nack(err)
 		return
 	}
-	s.logger.Info().Str("op", "redis.Send").Msg("sent message on redis topic")
+	s.logger.Info().Str("op", "redis.Send").Msg("sent message on redis channel")
 	s.Lock()
 	s.count++
 	s.Unlock()

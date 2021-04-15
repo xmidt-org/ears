@@ -91,7 +91,7 @@ func (r *Receiver) Receive(next receiver.NextFn) error {
 				r.logger.Error().Str("op", "redis.Receive").Msg(err.Error())
 				break
 			} else {
-				r.logger.Info().Str("op", "redis.Receive").Msg("received message on redis topic")
+				r.logger.Info().Str("op", "redis.Receive").Msg("received message on redis channel")
 				r.Lock()
 				r.count++
 				r.Unlock()
