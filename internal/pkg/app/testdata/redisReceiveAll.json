@@ -1,21 +1,21 @@
 {
-  "id": "redis102",
+  "id": "redis109",
   "orgId": "comcast",
   "appId": "xfi",
   "userId": "boris",
-  "name": "redisRoute",
+  "name": "redisReceiveAllRoute",
   "receiver": {
     "plugin": "redis",
     "name": "myRedisReceiver",
     "config": {
-      "channel" : "ears_redis_route"
     }
   },
   "sender": {
-    "plugin": "redis",
-    "name": "myRedisSender",
+    "plugin": "debug",
+    "name": "myDebug",
     "config": {
-      "channel" : "ears_redis_route"
+      "destination": "stdout",
+      "maxHistory": 1000
     }
   },
   "deliveryMode": "whoCares"
