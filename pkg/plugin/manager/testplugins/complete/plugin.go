@@ -99,6 +99,9 @@ func NewSender(config interface{}) (sender.Sender, error) {
 func (p *plugin) Send(event event.Event) {
 }
 
+func (p *plugin) StopSending(ctx context.Context) {
+}
+
 func (p *plugin) Unwrap() sender.Sender {
 	return p
 }

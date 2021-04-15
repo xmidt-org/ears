@@ -59,6 +59,7 @@ var DefaultReceiverConfig = ReceiverConfig{
 	AcknowledgeTimeout:  pointer.Int(5),
 	NumRetries:          pointer.Int(0),
 	ReceiverQueueDepth:  pointer.Int(100),
+	ReceiverPoolSize:    pointer.Int(1),
 }
 
 type ReceiverConfig struct {
@@ -69,6 +70,7 @@ type ReceiverConfig struct {
 	AcknowledgeTimeout  *int   `json:"acknowledgeTimeout,omitempty"`
 	NumRetries          *int   `json:"numRetries,omitempty"`
 	ReceiverQueueDepth  *int   `json:"receiverQueueDepth,omitempty"`
+	ReceiverPoolSize    *int   `json:"receiverPoolSize,omitempty"`
 }
 
 type Receiver struct {
@@ -77,25 +79,28 @@ type Receiver struct {
 	stop         bool
 	config       ReceiverConfig
 	next         receiver.NextFn
+	logger       zerolog.Logger
 	receiveCount int
 	deleteCount  int
 	startTime    time.Time
 }
 
 var DefaultSenderConfig = SenderConfig{
-	QueueUrl:     "",
-	BatchSize:    pointer.Int(3),
-	SendTimeout:  pointer.Int(1),
-	DelaySeconds: pointer.Int(0),
+	QueueUrl:            "",
+	MaxNumberOfMessages: pointer.Int(10),
+	SendTimeout:         pointer.Int(1),
+	DelaySeconds:        pointer.Int(0),
+	SenderPoolSize:      pointer.Int(1),
 }
 
 // SenderConfig can be passed into NewSender() in order to configure
 // the behavior of the sender.
 type SenderConfig struct {
-	QueueUrl     string `json:"queueUrl,omitempty"`
-	BatchSize    *int   `json:"batchSize,omitempty"`
-	SendTimeout  *int   `json:"sendTimeout,omitempty"`
-	DelaySeconds *int   `json:"delaySeconds,omitempty"`
+	QueueUrl            string `json:"queueUrl,omitempty"`
+	MaxNumberOfMessages *int   `json:"maxNumberOfMessages,omitempty"`
+	SendTimeout         *int   `json:"sendTimeout,omitempty"`
+	DelaySeconds        *int   `json:"delaySeconds,omitempty"`
+	SenderPoolSize      *int   `json:"senderPoolSize,omitempty"`
 }
 
 type Sender struct {
@@ -106,6 +111,7 @@ type Sender struct {
 	logger     zerolog.Logger
 	eventBatch []event.Event
 	done       chan struct{}
+	work       chan []event.Event
 }
 
 func (s *Sender) Unwrap() sender.Sender {

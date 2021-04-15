@@ -4,6 +4,7 @@
 package sender
 
 import (
+	"context"
 	"github.com/xmidt-org/ears/pkg/event"
 	"sync"
 )
@@ -239,6 +240,9 @@ func (mock *SenderMock) Send(e event.Event) {
 	mock.calls.Send = append(mock.calls.Send, callInfo)
 	mock.lockSend.Unlock()
 	mock.SendFunc(e)
+}
+
+func (mock *SenderMock) StopSending(ctx context.Context) {
 }
 
 // SendCalls gets all the calls that were made to Send.
