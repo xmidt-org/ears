@@ -65,9 +65,9 @@ func (rte *Route) Stop(ctx context.Context) error {
 	if rte.r == nil {
 		return nil
 	}
+	err := rte.r.StopReceiving(ctx)
 	rte.s.StopSending(ctx)
-	//TODO: check why stop receiving can be blocking
-	return rte.r.StopReceiving(ctx)
+	return err
 }
 
 func fanOut(events []event.Event, next receiver.NextFn) error {
