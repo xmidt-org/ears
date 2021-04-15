@@ -83,7 +83,7 @@ func (r *Receiver) Receive(next receiver.NextFn) error {
 			DB:       0,
 		})
 		defer lrc.Close()
-		pubsub := lrc.Subscribe(r.config.Topic)
+		pubsub := lrc.Subscribe(r.config.Channel)
 		defer pubsub.Close()
 		for {
 			msg, err := pubsub.ReceiveMessage()
