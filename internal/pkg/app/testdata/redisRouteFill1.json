@@ -1,0 +1,26 @@
+{
+  "id": "redis105",
+  "orgId": "comcast",
+  "appId": "xfi",
+  "userId": "boris",
+  "name": "redisRouteFillOne",
+  "receiver": {
+    "plugin": "debug",
+    "name": "mydebug",
+    "config": {
+      "intervalMs": 1,
+      "maxHistory": 100,
+      "payload": {
+        "foo": "bar"
+      },
+      "rounds": 1
+    }
+  },
+  "sender": {
+    "plugin": "redis",
+    "name": "myRedisSender",
+    "config": {
+    }
+  },
+  "deliveryMode": "whoCares"
+}
