@@ -1,0 +1,38 @@
+{
+  "id" : "f999",
+  "orgId" : "comcast",
+  "appId" : "xfi",
+  "userId" : "boris",
+  "name" : "simpleFilterJsRoute",
+  "receiver" : {
+    "plugin" : "debug",
+    "name" : "simpleFilterJsRouteReceiver",
+    "config" :
+    {
+      "rounds" : 5,
+      "intervalMs" : 10,
+      "payload" : {
+        "foo" : "bar"
+      },
+      "maxHistory": 100
+    }
+  },
+  "sender" : {
+    "plugin" : "debug",
+    "name" : "simpleFilterJsRouteSender",
+    "config" : {
+      "destination" : "stdout",
+      "maxHistory": 100
+    }
+  },
+  "filterChain" : [
+    {
+      "plugin" : "js",
+      "name" : "simpleFilterJsRouteFilter",
+      "config" : {
+        "source" : ""
+      }
+    }
+  ],
+  "deliveryMode" : "whoCares"
+}

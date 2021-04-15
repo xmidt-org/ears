@@ -243,6 +243,21 @@
           "expectedEventPayloadFile": "event6"
         }
       ]
+    },
+    "simpleFilterJsRoute": {
+      "seq": 15,
+      "routeFiles": [
+        "simpleFilterJsRoute"
+      ],
+      "waitMs": 100,
+      "events": [
+        {
+          "senderRouteFiles": "simpleFilterJsRoute",
+          "expectedEventCount": 5,
+          "expectedEventIndex": 0,
+          "expectedEventPayloadFile": "event1"
+        }
+      ]
     }
   }
 }
