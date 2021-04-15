@@ -66,7 +66,7 @@ func (s *Sender) initPlugin() error {
 		Password: "",
 		DB:       0,
 	})
-	defer s.Unlock()
+	s.Unlock()
 	return nil
 }
 

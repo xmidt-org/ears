@@ -16,6 +16,7 @@ package redis
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"github.com/go-redis/redis"
 	"github.com/rs/zerolog"
@@ -97,8 +98,17 @@ func (r *Receiver) Receive(next receiver.NextFn) error {
 				r.Unlock()
 			}
 			ctx, _ := context.WithTimeout(context.Background(), time.Duration(5)*time.Second)
-			e, err := event.New(ctx, msg.Payload, event.WithAck(
+			var pl interface{}
+			err = json.Unmarshal([]byte(msg.Payload), &pl)
+			if err != nil {
+				r.logger.Error().Str("op", "redis.Receive").Msg("cannot parse payload: " + err.Error())
+				return
+			}
+			// note: if we just pass msg.Payload into event, redis will blow up with an out of memory error within a
+			// few seconds - possibly a bug in the client library
+			e, err := event.New(ctx, pl, event.WithAck(
 				func(e event.Event) {
+					r.logger.Info().Str("op", "redis.Receive").Msg("processed message from redis channel")
 				},
 				func(e event.Event, err error) {
 					r.logger.Error().Str("op", "redis.Receive").Msg("failed to process message: " + err.Error())
