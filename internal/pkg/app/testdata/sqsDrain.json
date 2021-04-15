@@ -1,5 +1,5 @@
 {
-  "id": "sqs102",
+  "id": "sqs106",
   "orgId": "comcast",
   "appId": "xfi",
   "userId": "boris",
@@ -9,15 +9,15 @@
     "name": "mySqsReceiver",
     "config": {
       "queueUrl": "https://sqs.us-west-2.amazonaws.com/447701116110/earsSender",
-      "maxNumberOfMessages": 1
+      "receiverPoolSize": 10
     }
   },
   "sender": {
-    "plugin": "sqs",
-    "name": "mySqsSender",
+    "plugin": "debug",
+    "name": "myDebug",
     "config": {
-      "queueUrl": "https://sqs.us-west-2.amazonaws.com/447701116110/earsSender",
-      "maxNumberOfMessages": 1
+      "destination": "stdout",
+      "maxHistory": 1000
     }
   },
   "deliveryMode": "whoCares"

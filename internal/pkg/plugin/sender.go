@@ -27,15 +27,12 @@ var _ pkgsender.Sender = (*sender)(nil)
 
 type sender struct {
 	sync.Mutex
-
-	id   string
-	name string
-	hash string
-
+	id      string
+	name    string
+	hash    string
 	manager *manager
 	active  bool
-
-	sender pkgsender.Sender
+	sender  pkgsender.Sender
 }
 
 func (s *sender) Unwrap() pkgsender.Sender {
@@ -47,7 +44,6 @@ func (s *sender) Send(e event.Event) {
 		e.Nack(&pkgmanager.NilPluginError{})
 		return
 	}
-
 	{
 		s.Lock()
 		if s.sender == nil || !s.active {
@@ -57,15 +53,17 @@ func (s *sender) Send(e event.Event) {
 		}
 		s.Unlock()
 	}
-
 	s.sender.Send(e)
+}
+
+func (s *sender) StopSending(ctx context.Context) {
+	s.sender.StopSending(ctx)
 }
 
 func (s *sender) Unregister(ctx context.Context) error {
 	if s == nil {
 		return &pkgmanager.NilPluginError{}
 	}
-
 	{
 		s.Lock()
 		if s.manager == nil || !s.active {
@@ -74,6 +72,5 @@ func (s *sender) Unregister(ctx context.Context) error {
 		}
 		s.Unlock()
 	}
-
 	return s.manager.UnregisterSender(ctx, s)
 }

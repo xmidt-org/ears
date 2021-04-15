@@ -1,15 +1,19 @@
 {
-  "id": "sqs102",
+  "id": "sqs105",
   "orgId": "comcast",
   "appId": "xfi",
   "userId": "boris",
   "name": "sqsRoute",
   "receiver": {
-    "plugin": "sqs",
-    "name": "mySqsReceiver",
+    "plugin": "debug",
+    "name": "mydebug",
     "config": {
-      "queueUrl": "https://sqs.us-west-2.amazonaws.com/447701116110/earsSender",
-      "maxNumberOfMessages": 1
+      "intervalMs": 1,
+      "maxHistory": 100,
+      "payload": {
+        "foo": "bar"
+      },
+      "rounds": 1000
     }
   },
   "sender": {
@@ -17,7 +21,7 @@
     "name": "mySqsSender",
     "config": {
       "queueUrl": "https://sqs.us-west-2.amazonaws.com/447701116110/earsSender",
-      "maxNumberOfMessages": 1
+      "senderPoolSize": 10
     }
   },
   "deliveryMode": "whoCares"

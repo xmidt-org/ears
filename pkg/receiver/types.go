@@ -39,7 +39,6 @@ type Hasher interface {
 
 type NewReceiverer interface {
 	Hasher
-
 	// NewReceiver returns an object that implements the
 	// Receiver interface
 	NewReceiver(config interface{}) (Receiver, error)
@@ -53,7 +52,6 @@ type NextFn func(e event.Event)
 // send them to `NextFn`
 type Receiver interface {
 	Receive(next NextFn) error
-
 	// StopReceiving will stop the receiver from receiving events.
 	// This will cause Receive to return.
 	StopReceiving(ctx context.Context) error

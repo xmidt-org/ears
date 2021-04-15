@@ -88,7 +88,9 @@ func TestSQSSenderReceiver(t *testing.T) {
 			}()
 			time.Sleep(2 * time.Second)
 			a.Expect(events).To(HaveLen(tc.numMessages))
-			sqsReceiver.StopReceiving(ctx)
+			err = sqsReceiver.StopReceiving(ctx)
+			a.Expect(err).To(BeNil())
+			sqsSender.StopSending(ctx)
 		})
 	}
 }

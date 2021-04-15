@@ -9,7 +9,7 @@
     "name": "mySqsReceiver",
     "config": {
       "queueUrl": "https://sqs.us-west-2.amazonaws.com/447701116110/earsSender",
-      "maxNumberOfMessages": 1
+      "receiverPoolSize": 100
     }
   },
   "sender": {
@@ -17,7 +17,7 @@
     "name": "mySqsSender",
     "config": {
       "queueUrl": "https://sqs.us-west-2.amazonaws.com/447701116110/earsSender",
-      "maxNumberOfMessages": 1
+      "senderPoolSize": 100
     }
   },
   "deliveryMode": "whoCares"

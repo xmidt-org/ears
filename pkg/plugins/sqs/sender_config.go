@@ -22,14 +22,17 @@ import (
 // WithDefaults
 func (sc SenderConfig) WithDefaults() SenderConfig {
 	cfg := sc
-	if cfg.BatchSize == nil {
-		cfg.BatchSize = DefaultSenderConfig.BatchSize
+	if cfg.MaxNumberOfMessages == nil {
+		cfg.MaxNumberOfMessages = DefaultSenderConfig.MaxNumberOfMessages
 	}
 	if cfg.SendTimeout == nil {
 		cfg.SendTimeout = DefaultSenderConfig.SendTimeout
 	}
 	if cfg.DelaySeconds == nil {
 		cfg.DelaySeconds = DefaultSenderConfig.DelaySeconds
+	}
+	if cfg.SenderPoolSize == nil {
+		cfg.SenderPoolSize = DefaultSenderConfig.SenderPoolSize
 	}
 	return cfg
 }
@@ -60,7 +63,7 @@ const senderSchema = `
                 "queueUrl": {
                     "type": "string"
                 },
-				"batchSize": {
+				"maxNumberOfMessages": {
                     "type": "integer", 
 					"minimum": 1,
 					"maximum": 10
@@ -74,6 +77,11 @@ const senderSchema = `
                     "type": "integer", 
 					"minimum": 0,
 					"maximum": 3600
+				},
+				"senderPoolSize": {
+                    "type": "integer", 
+					"minimum": 1,
+					"maximum": 100
 				}
             },
             "required": [
