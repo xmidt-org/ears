@@ -21,7 +21,7 @@ const (
 )
 
 //DONE: yaml support for routes
-//TODO: filtering and splitting capabilities
+//DONE: filtering and splitting capabilities
 //TODO: error handling
 //TODO: canonical method to pass event(s) back and forth
 //TODO: deep copy where needed
@@ -30,7 +30,6 @@ const (
 //TODO: logging in filter
 //TODO: logging from JS
 //TODO: support libraries
-//TODO: remove setAck()
 
 var (
 	// InterruptedMessage is the string value of Interrupted.
@@ -350,8 +349,9 @@ func (interpreter *Interpreter) Exec(evt event.Event, code string, compiled inte
 		//TODO: log
 	}
 	var v goja.Value
-	//var lastProgram *Program
 	var err error
+	var wg sync.WaitGroup
+	wg.Add(1)
 	func() {
 		defer func() {
 			// to avoid panic from goja
@@ -363,12 +363,11 @@ func (interpreter *Interpreter) Exec(evt event.Event, code string, compiled inte
 				if maxStackSize < len(trace) {
 					trace = trace[:maxStackSize]
 				}
-				//csvCtx.Log.Error("op", "Interpreter.Exec", "panicError", err, "panicStackTrace", trace)
+				wg.Done()
 			}
 		}()
 		for _, p := range programs {
 			if has := o.progCache[p.name]; !has {
-				//lastProgram = p
 				if v, err = o.RunProgram(p.Program); nil != err {
 					break
 				}
@@ -377,14 +376,15 @@ func (interpreter *Interpreter) Exec(evt event.Event, code string, compiled inte
 				}
 			}
 		}
+		wg.Done()
 	}()
+	wg.Wait()
 	if nil != err {
 		switch err.(type) {
 		case *goja.InterruptedError:
 			err = Interrupted
 		case *goja.Exception:
 		}
-		//csvCtx.Log.Error("op", "Interpreter.Exec", "error", err, "program", lastProgram.name)
 		return nil, err
 	}
 	x := v.Export()
@@ -394,8 +394,6 @@ func (interpreter *Interpreter) Exec(evt event.Event, code string, compiled inte
 	case *goja.InterruptedError:
 		return nil, nil
 	case nil:
-		return nil, nil
-	case string:
 		return nil, nil
 	case []interface{}:
 		events := make([]event.Event, 0)
@@ -431,6 +429,8 @@ func (interpreter *Interpreter) Exec(evt event.Event, code string, compiled inte
 			return nil, err
 		}
 		return []event.Event{evt}, nil
+	default:
+		return nil, errors.New("script returns unsupported type")
 	}
 	return []event.Event{evt}, nil
 }
