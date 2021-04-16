@@ -20,6 +20,17 @@ const (
 	RuntimeTTL = 5 * time.Minute
 )
 
+//DONE: yaml support for routes
+//TODO: filtering and splitting capabilities
+//TODO: error handling
+//TODO: canonical method to pass event(s) back and forth
+//TODO: deep copy where needed
+//TODO: cleanup built-in functions
+//TODO: precompile where possible
+//TODO: logging in filter
+//TODO: logging from JS
+//TODO: support libraries
+
 var (
 	// InterruptedMessage is the string value of Interrupted.
 	InterruptedMessage = "RuntimeError: timeout"
@@ -148,7 +159,6 @@ func MakeFileLibraryProvider(dir string) func(*Interpreter, string) (string, err
 		}
 		switch parts[0] {
 		case "file":
-			// ToDo: Maybe protest any ".."?
 			filename := parts[1]
 			bs, err := ioutil.ReadFile(dir + "/" + filename)
 			if err != nil {
@@ -323,7 +333,6 @@ func (interpreter *Interpreter) Exec(event event.Event, code string, compiled in
 	}()
 	env := o.Get("_").Export().(map[string]interface{})
 	//env["ctx"] = ctx
-	//TODO: deep copy
 	if event.Payload() == nil {
 		payload := map[string]interface{}{}
 		env["payload"] = payload
@@ -337,7 +346,7 @@ func (interpreter *Interpreter) Exec(event event.Event, code string, compiled in
 		env["metadata"] = event.Metadata()
 	}
 	env["log"] = func(x interface{}) {
-		//TODO: log event
+		//TODO: log
 	}
 	var v goja.Value
 	//var lastProgram *Program
@@ -377,8 +386,6 @@ func (interpreter *Interpreter) Exec(event event.Event, code string, compiled in
 		//csvCtx.Log.Error("op", "Interpreter.Exec", "error", err, "program", lastProgram.name)
 		return nil, err
 	}
-	//TODO: figure out how to export results for various cases
-	//TODO: deep copy
 	x := v.Export()
 	switch x.(type) {
 	case goja.Value:
@@ -388,6 +395,8 @@ func (interpreter *Interpreter) Exec(event event.Event, code string, compiled in
 	case nil:
 		return nil, nil
 	case string:
+		return nil, nil
+	case []interface{}:
 		return nil, nil
 	case map[string]interface{}:
 		m := x.(map[string]interface{})
