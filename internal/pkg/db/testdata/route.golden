@@ -1,5 +1,9 @@
 {
   "id": "test",
+  "tenant": {
+    "orgId": "myOrg",
+    "appId": "myApp"
+  },
   "userId": "mchiang",
   "name": "myName",
   "receiver": {},

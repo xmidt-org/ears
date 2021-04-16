@@ -1,10 +1,8 @@
 {
   "item": {
-    "appId": "xfi",
     "deliveryMode": "whoCares",
     "id": "x101",
     "name": "simpleRoute",
-    "orgId": "comcast",
     "receiver": {
       "config": {
         "intervalMs": 10,
@@ -24,6 +22,10 @@
       },
       "name": "mydebug",
       "plugin": "debug"
+    },
+    "tenant": {
+      "appId": "xfi",
+      "orgId": "comcast"
     },
     "userId": "boris"
   },

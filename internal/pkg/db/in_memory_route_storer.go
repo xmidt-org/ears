@@ -16,6 +16,7 @@ package db
 
 import (
 	"context"
+	"github.com/xmidt-org/ears/internal/pkg/config"
 	"github.com/xmidt-org/ears/pkg/route"
 	"github.com/xmidt-org/ears/pkg/tenant"
 	"sync"
@@ -27,13 +28,7 @@ type InMemoryRouteStorer struct {
 	lock    *sync.RWMutex
 }
 
-type Config interface {
-	GetString(key string) string
-	GetInt(key string) int
-	GetBool(key string) bool
-}
-
-func NewInMemoryRouteStorer(config Config) *InMemoryRouteStorer {
+func NewInMemoryRouteStorer(config config.Config) *InMemoryRouteStorer {
 	return &InMemoryRouteStorer{
 		tenants: make(map[string]map[string]*route.Config),
 		lock:    &sync.RWMutex{},
@@ -61,12 +56,12 @@ func (s *InMemoryRouteStorer) GetRoute(ctx context.Context, tid tenant.Id, id st
 
 	t, ok := s.tenants[tid.String()]
 	if !ok {
-		return empty, &route.TenantNotFoundError{tid}
+		return empty, &route.RouteNotFoundError{tid, id}
 	}
 
 	r, ok := t[id]
 	if !ok {
-		return empty, &route.RouteNotFoundError{id}
+		return empty, &route.RouteNotFoundError{tid, id}
 	}
 
 	newCopy := *r
@@ -77,11 +72,12 @@ func (s *InMemoryRouteStorer) GetAllTenantRoutes(ctx context.Context, id tenant.
 	s.lock.RLock()
 	defer s.lock.RUnlock()
 
+	routes := make([]route.Config, 0)
 	t, ok := s.tenants[id.String()]
 	if !ok {
-		return nil, &route.TenantNotFoundError{id}
+		return routes, nil
 	}
-	routes := make([]route.Config, 0)
+
 	for _, r := range t {
 		routes = append(routes, *r)
 	}
@@ -129,7 +125,7 @@ func (s *InMemoryRouteStorer) DeleteRoute(ctx context.Context, tid tenant.Id, id
 
 	t, ok := s.tenants[tid.String()]
 	if !ok {
-		return &route.TenantNotFoundError{tid}
+		return nil
 	}
 
 	delete(t, id)
@@ -142,7 +138,7 @@ func (s *InMemoryRouteStorer) DeleteRoutes(ctx context.Context, tid tenant.Id, i
 
 	t, ok := s.tenants[tid.String()]
 	if !ok {
-		return &route.TenantNotFoundError{tid}
+		return nil
 	}
 
 	for _, id := range ids {

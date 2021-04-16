@@ -20,6 +20,7 @@ import (
 	"github.com/xmidt-org/ears/pkg/receiver"
 	"github.com/xmidt-org/ears/pkg/route"
 	"github.com/xmidt-org/ears/pkg/sender"
+	"github.com/xmidt-org/ears/pkg/tenant"
 )
 
 const (
@@ -29,12 +30,6 @@ const (
 
 	EARS_STOP_LISTENING_CMD = "stop"
 )
-
-type Config interface {
-	GetString(key string) string
-	GetInt(key string) int
-	GetBool(key string) bool
-}
 
 type (
 
@@ -46,9 +41,11 @@ type (
 		// AddRoute adds a route to live routing table and runs it and also stores the route in the persistence layer
 		AddRoute(ctx context.Context, route *route.Config) error
 		// RemoveRoute removes a route from a live routing table and stops it and also removes the route from the persistence layer
-		RemoveRoute(ctx context.Context, tenantId route.TenantId, routeId string) error
+		RemoveRoute(ctx context.Context, tenantId tenant.Id, routeId string) error
 		// GetRoute gets a single route by its ID from persistence layer
-		GetRoute(ctx context.Context, tenantId route.TenantId, routeId string) (*route.Config, error)
+		GetRoute(ctx context.Context, tenantId tenant.Id, routeId string) (*route.Config, error)
+		// GetAllTenantRoutes gets all routes for a tenant from persistence layer
+		GetAllTenantRoutes(ctx context.Context, tenantId tenant.Id) ([]route.Config, error)
 		// GetAllRoutes gets all routes from persistence layer
 		GetAllRoutes(ctx context.Context) ([]route.Config, error)
 		// GetAllSenders gets all senders currently present in the system
@@ -78,7 +75,7 @@ type (
 
 	RoutingTableLocalSyncer interface {
 		// SyncRoute
-		SyncRoute(ctx context.Context, routeId string, add bool) error
+		SyncRoute(ctx context.Context, tid tenant.Id, routeId string, add bool) error
 		// GetInstanceId
 		GetInstanceId() string
 	}
@@ -93,7 +90,7 @@ type (
 		// UnregisterLocalTableSyncer
 		UnregisterLocalTableSyncer(localTableSyncer RoutingTableLocalSyncer)
 		// PublishSyncRequest
-		PublishSyncRequest(ctx context.Context, tenantId route.TenantId, routeId string, instanceId string, add bool)
+		PublishSyncRequest(ctx context.Context, tenantId tenant.Id, routeId string, instanceId string, add bool)
 		// GetInstanceCount
 		GetInstanceCount(ctx context.Context) int
 	}

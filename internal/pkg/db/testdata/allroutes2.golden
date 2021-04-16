@@ -1,6 +1,10 @@
 [
   {
     "id": "test",
+    "tenant": {
+      "orgId": "myOrg",
+      "appId": "myApp"
+    },
     "userId": "mchiang",
     "name": "differentName",
     "receiver": {},
@@ -9,6 +13,10 @@
   },
   {
     "id": "test2",
+    "tenant": {
+      "orgId": "myOrg2",
+      "appId": "myApp2"
+    },
     "userId": "bwolf",
     "name": "anotherName",
     "receiver": {},
@@ -23,6 +31,10 @@
   },
   {
     "id": "test3",
+    "tenant": {
+      "orgId": "myOrg3",
+      "appId": "myApp3"
+    },
     "userId": "tgattis",
     "name": "myName3",
     "receiver": {},
@@ -37,6 +49,10 @@
   },
   {
     "id": "test4",
+    "tenant": {
+      "orgId": "myOrg3",
+      "appId": "myApp3"
+    },
     "userId": "tgattis",
     "name": "myName4",
     "receiver": {},

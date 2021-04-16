@@ -1,7 +1,5 @@
 {
   "id" : "f110",
-  "orgId" : "comcast",
-  "appId" : "xfi",
   "userId" : "boris",
   "name" : "simpleFilterUnwrapRoute",
   "receiver" : {

@@ -4,11 +4,9 @@
     "message": "OK"
   },
   "item": {
-    "appId": "xfi",
     "deliveryMode": "whoCares",
     "id": "r101",
     "name": "tbltstsimpleRouteAsimpleRouteA",
-    "orgId": "comcast",
     "receiver": {
       "config": {
         "intervalMs": 10,
@@ -28,6 +26,10 @@
       },
       "name": "tbltstsimpleRouteAsimpleRouteSenderA",
       "plugin": "debug"
+    },
+    "tenant": {
+      "appId": "xfi",
+      "orgId": "comcast"
     },
     "userId": "boris"
   }

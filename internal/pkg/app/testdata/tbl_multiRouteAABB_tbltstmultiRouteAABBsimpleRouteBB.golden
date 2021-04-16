@@ -4,11 +4,9 @@
     "message": "OK"
   },
   "item": {
-    "appId": "xfi",
     "deliveryMode": "whoCares",
     "id": "x102",
     "name": "tbltstmultiRouteAABBsimpleRouteBB",
-    "orgId": "comcast",
     "receiver": {
       "config": {
         "intervalMs": 10,
@@ -28,6 +26,10 @@
       },
       "name": "tbltstmultiRouteAABBmydebugSenderB",
       "plugin": "debug"
+    },
+    "tenant": {
+      "appId": "xfi",
+      "orgId": "comcast"
     },
     "userId": "boris"
   }

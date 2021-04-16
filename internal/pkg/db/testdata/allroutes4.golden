@@ -1,6 +1,10 @@
 [
   {
     "id": "test3",
+    "tenant": {
+      "orgId": "myOrg3",
+      "appId": "myApp3"
+    },
     "userId": "tgattis",
     "name": "myName3",
     "receiver": {},
@@ -15,6 +19,10 @@
   },
   {
     "id": "test4",
+    "tenant": {
+      "orgId": "myOrg3",
+      "appId": "myApp3"
+    },
     "userId": "tgattis",
     "name": "myName4",
     "receiver": {},

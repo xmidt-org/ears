@@ -23,6 +23,7 @@ import (
 	"github.com/rs/zerolog/log"
 	goldie "github.com/sebdah/goldie/v2"
 	"github.com/spf13/viper"
+	"github.com/xmidt-org/ears/internal/pkg/config"
 	"github.com/xmidt-org/ears/internal/pkg/db"
 	"github.com/xmidt-org/ears/internal/pkg/db/bolt"
 	"github.com/xmidt-org/ears/internal/pkg/db/dynamo"
@@ -68,13 +69,15 @@ type (
 		ExpectedEventPayloadFile string `json:"expectedEventPayloadFile,omitempty"`
 	}
 	EarsRuntime struct {
-		config              Config
+		config              config.Config
 		apiManager          *APIManager
 		pluginManger        plugin.Manager
 		storageLayer        route.RouteStorer
 		routingTableManager tablemgr.RoutingTableManager
 	}
 )
+
+const tenantPath = "/orgs/comcast/applications/xfi"
 
 // should in memory storer also be implemented as singleton?
 
@@ -192,7 +195,7 @@ func TestRouteTable(t *testing.T) {
 					t.Fatalf("%s test: cannot serialize route: %s", currentTestName, err.Error())
 				}
 				// add route
-				r := httptest.NewRequest(http.MethodPost, "/ears/v1/routes", bytes.NewReader(buf))
+				r := httptest.NewRequest(http.MethodPost, "/ears/v1"+tenantPath+"/routes", bytes.NewReader(buf))
 				w := httptest.NewRecorder()
 				runtime.apiManager.muxRouter.ServeHTTP(w, r)
 				g := goldie.New(t)
@@ -220,7 +223,7 @@ func TestRouteTable(t *testing.T) {
 					t.Fatalf("%s test: route has blank ID", currentTestName)
 				}
 				routeIds = append(routeIds, rt.Id)
-				t.Logf("added route with id: %s", rt.Id)
+				t.Logf("added route with tid: %s, id: %s", rt.TenantId.String(), rt.Id)
 			}
 			// sleep
 			time.Sleep(time.Duration(currentTest.WaitMs) * time.Millisecond)
@@ -265,7 +268,7 @@ func TestRouteTable(t *testing.T) {
 			}
 			// delete all routes
 			for _, rtId := range routeIds {
-				r := httptest.NewRequest(http.MethodDelete, "/ears/v1/routes/"+rtId, nil)
+				r := httptest.NewRequest(http.MethodDelete, "/ears/v1"+tenantPath+"/routes/"+rtId, nil)
 				w := httptest.NewRecorder()
 				runtime.apiManager.muxRouter.ServeHTTP(w, r)
 				t.Logf("deleted route with id: %s", rtId)
@@ -306,7 +309,7 @@ func TestRouteTable(t *testing.T) {
 }
 
 func checkNumRoutes(api *APIManager, currentTestName string, numExpected int) error {
-	r := httptest.NewRequest(http.MethodGet, "/ears/v1/routes", nil)
+	r := httptest.NewRequest(http.MethodGet, "/ears/v1"+tenantPath+"/routes", nil)
 	w := httptest.NewRecorder()
 	api.muxRouter.ServeHTTP(w, r)
 	var data Response
@@ -343,7 +346,7 @@ func setupSimpleApi(t *testing.T, storageType string) *EarsRuntime {
 	return runtime
 }
 
-func getConfig() (Config, error) {
+func getConfig() (config.Config, error) {
 	viper.AddConfigPath(".")
 	viper.SetConfigName("ears")
 	viper.SetConfigType("yaml")
@@ -357,7 +360,7 @@ func getConfig() (Config, error) {
 }
 
 // if storageType is blank choose storag elayer specified in ears.yaml
-func getStorageLayer(config Config, storageType string) (route.RouteStorer, error) {
+func getStorageLayer(config config.Config, storageType string) (route.RouteStorer, error) {
 	if storageType == "" {
 		storageType = config.GetString("ears.storage.type")
 	}
@@ -393,7 +396,7 @@ func getStorageLayer(config Config, storageType string) (route.RouteStorer, erro
 }
 
 // if storageType is blank choose storag elayer specified in ears.yaml
-func getTableSyncer(config Config, syncType string) (tablemgr.RoutingTableDeltaSyncer, error) {
+func getTableSyncer(config config.Config, syncType string) (tablemgr.RoutingTableDeltaSyncer, error) {
 	if syncType == "" {
 		syncType = config.GetString("ears.synchronization.type")
 	}
@@ -409,14 +412,14 @@ func getTableSyncer(config Config, syncType string) (tablemgr.RoutingTableDeltaS
 	return syncer, nil
 }
 
-func getTableSyncerType(config Config, syncType string) string {
+func getTableSyncerType(config config.Config, syncType string) string {
 	if syncType == "" {
 		syncType = config.GetString("ears.synchronization.type")
 	}
 	return syncType
 }
 
-func setupRestApi(config Config, storageMgr route.RouteStorer) (*EarsRuntime, error) {
+func setupRestApi(config config.Config, storageMgr route.RouteStorer) (*EarsRuntime, error) {
 	mgr, err := manager.New()
 	if err != nil {
 		return &EarsRuntime{config, nil, nil, storageMgr, nil}, err
@@ -600,7 +603,7 @@ func TestRestPostSimpleRouteHandler(t *testing.T) {
 		t.Fatalf("cannot read file: %s", err.Error())
 	}
 	runtime := setupSimpleApi(t, "inmemory")
-	r := httptest.NewRequest(http.MethodPost, "/ears/v1/routes", simpleRouteReader)
+	r := httptest.NewRequest(http.MethodPost, "/ears/v1"+tenantPath+"/routes", simpleRouteReader)
 	runtime.apiManager.muxRouter.ServeHTTP(w, r)
 	g := goldie.New(t)
 	var data Response
@@ -633,7 +636,7 @@ func TestRestPostSimpleRouteHandler(t *testing.T) {
 		t.Fatalf("route has blank ID")
 	}
 	// delete route
-	r = httptest.NewRequest(http.MethodDelete, "/ears/v1/routes/"+rt.Id, nil)
+	r = httptest.NewRequest(http.MethodDelete, "/ears/v1"+tenantPath+"/routes/"+rt.Id, nil)
 	w = httptest.NewRecorder()
 	runtime.apiManager.muxRouter.ServeHTTP(w, r)
 	t.Logf("deleted route with id: %s", rt.Id)
@@ -648,7 +651,7 @@ func TestRestPutSimpleRouteHandler(t *testing.T) {
 		t.Fatalf("cannot read file: %s", err.Error())
 	}
 	runtime := setupSimpleApi(t, "inmemory")
-	r := httptest.NewRequest(http.MethodPut, "/ears/v1/routes/r100", simpleRouteReader)
+	r := httptest.NewRequest(http.MethodPut, "/ears/v1"+tenantPath+"/routes/r100", simpleRouteReader)
 	runtime.apiManager.muxRouter.ServeHTTP(w, r)
 	g := goldie.New(t)
 	var data Response
@@ -675,7 +678,7 @@ func TestRestPutSimpleRouteHandler(t *testing.T) {
 		t.Fatalf("route has blank ID")
 	}
 	// delete route
-	r = httptest.NewRequest(http.MethodDelete, "/ears/v1/routes/"+rt.Id, nil)
+	r = httptest.NewRequest(http.MethodDelete, "/ears/v1"+tenantPath+"/routes/"+rt.Id, nil)
 	w = httptest.NewRecorder()
 	runtime.apiManager.muxRouter.ServeHTTP(w, r)
 	t.Logf("deleted route with id: %s", rt.Id)
@@ -690,7 +693,7 @@ func TestRestPostFilterMatchAllowRouteHandler(t *testing.T) {
 		t.Fatalf("cannot read file: %s", err.Error())
 	}
 	runtime := setupSimpleApi(t, "inmemory")
-	r := httptest.NewRequest(http.MethodPost, "/ears/v1/routes", simpleRouteReader)
+	r := httptest.NewRequest(http.MethodPost, "/ears/v1"+tenantPath+"/routes", simpleRouteReader)
 	runtime.apiManager.muxRouter.ServeHTTP(w, r)
 	g := goldie.New(t)
 	var data Response
@@ -723,7 +726,7 @@ func TestRestPostFilterMatchAllowRouteHandler(t *testing.T) {
 		t.Fatalf("route has blank ID")
 	}
 	// delete route
-	r = httptest.NewRequest(http.MethodDelete, "/ears/v1/routes/"+rt.Id, nil)
+	r = httptest.NewRequest(http.MethodDelete, "/ears/v1"+tenantPath+"/routes/"+rt.Id, nil)
 	w = httptest.NewRecorder()
 	runtime.apiManager.muxRouter.ServeHTTP(w, r)
 	t.Logf("deleted route with id: %s", rt.Id)
@@ -738,7 +741,7 @@ func TestRestPostFilterMatchDenyRouteHandler(t *testing.T) {
 		t.Fatalf("cannot read file: %s", err.Error())
 	}
 	runtime := setupSimpleApi(t, "inmemory")
-	r := httptest.NewRequest(http.MethodPost, "/ears/v1/routes", simpleRouteReader)
+	r := httptest.NewRequest(http.MethodPost, "/ears/v1"+tenantPath+"/routes", simpleRouteReader)
 	runtime.apiManager.muxRouter.ServeHTTP(w, r)
 	g := goldie.New(t)
 	var data Response
@@ -771,7 +774,7 @@ func TestRestPostFilterMatchDenyRouteHandler(t *testing.T) {
 		t.Fatalf("route has blank ID")
 	}
 	// delete route
-	r = httptest.NewRequest(http.MethodDelete, "/ears/v1/routes/"+rt.Id, nil)
+	r = httptest.NewRequest(http.MethodDelete, "/ears/v1"+tenantPath+"/routes/"+rt.Id, nil)
 	w = httptest.NewRecorder()
 	runtime.apiManager.muxRouter.ServeHTTP(w, r)
 	t.Logf("deleted route with id: %s", rt.Id)
@@ -786,7 +789,7 @@ func TestRestPostFilterChainMatchRouteHandler(t *testing.T) {
 		t.Fatalf("cannot read file: %s", err.Error())
 	}
 	runtime := setupSimpleApi(t, "inmemory")
-	r := httptest.NewRequest(http.MethodPost, "/ears/v1/routes", simpleRouteReader)
+	r := httptest.NewRequest(http.MethodPost, "/ears/v1"+tenantPath+"/routes", simpleRouteReader)
 	runtime.apiManager.muxRouter.ServeHTTP(w, r)
 	g := goldie.New(t)
 	var data Response
@@ -819,7 +822,7 @@ func TestRestPostFilterChainMatchRouteHandler(t *testing.T) {
 		t.Fatalf("route has blank ID")
 	}
 	// delete route
-	r = httptest.NewRequest(http.MethodDelete, "/ears/v1/routes/"+rt.Id, nil)
+	r = httptest.NewRequest(http.MethodDelete, "/ears/v1"+tenantPath+"/routes/"+rt.Id, nil)
 	w = httptest.NewRecorder()
 	runtime.apiManager.muxRouter.ServeHTTP(w, r)
 	t.Logf("deleted route with id: %s", rt.Id)
@@ -834,7 +837,7 @@ func TestRestPostFilterSplitRouteHandler(t *testing.T) {
 		t.Fatalf("cannot read file: %s", err.Error())
 	}
 	runtime := setupSimpleApi(t, "inmemory")
-	r := httptest.NewRequest(http.MethodPost, "/ears/v1/routes", simpleRouteReader)
+	r := httptest.NewRequest(http.MethodPost, "/ears/v1"+tenantPath+"/routes", simpleRouteReader)
 	runtime.apiManager.muxRouter.ServeHTTP(w, r)
 	g := goldie.New(t)
 	var data Response
@@ -867,7 +870,7 @@ func TestRestPostFilterSplitRouteHandler(t *testing.T) {
 		t.Fatalf("route has blank ID")
 	}
 	// delete route
-	r = httptest.NewRequest(http.MethodDelete, "/ears/v1/routes/"+rt.Id, nil)
+	r = httptest.NewRequest(http.MethodDelete, "/ears/v1"+tenantPath+"/routes/"+rt.Id, nil)
 	w = httptest.NewRecorder()
 	runtime.apiManager.muxRouter.ServeHTTP(w, r)
 	t.Logf("deleted route with id: %s", rt.Id)
@@ -882,7 +885,7 @@ func TestRestPostFilterDeepSplitRouteHandler(t *testing.T) {
 		t.Fatalf("cannot read file: %s", err.Error())
 	}
 	runtime := setupSimpleApi(t, "inmemory")
-	r := httptest.NewRequest(http.MethodPost, "/ears/v1/routes", simpleRouteReader)
+	r := httptest.NewRequest(http.MethodPost, "/ears/v1"+tenantPath+"/routes", simpleRouteReader)
 	runtime.apiManager.muxRouter.ServeHTTP(w, r)
 	g := goldie.New(t)
 	var data Response
@@ -915,7 +918,7 @@ func TestRestPostFilterDeepSplitRouteHandler(t *testing.T) {
 		t.Fatalf("route has blank ID")
 	}
 	// delete route
-	r = httptest.NewRequest(http.MethodDelete, "/ears/v1/routes/"+rt.Id, nil)
+	r = httptest.NewRequest(http.MethodDelete, "/ears/v1"+tenantPath+"/routes/"+rt.Id, nil)
 	w = httptest.NewRecorder()
 	runtime.apiManager.muxRouter.ServeHTTP(w, r)
 	t.Logf("deleted route with id: %s", rt.Id)
@@ -932,10 +935,10 @@ func TestRestGetRouteHandler(t *testing.T) {
 	}
 	runtime := setupSimpleApi(t, "inmemory")
 	w := httptest.NewRecorder()
-	r := httptest.NewRequest(http.MethodPost, "/ears/v1/routes", simpleRouteReader)
+	r := httptest.NewRequest(http.MethodPost, "/ears/v1"+tenantPath+"/routes", simpleRouteReader)
 	runtime.apiManager.muxRouter.ServeHTTP(w, r)
 	w = httptest.NewRecorder()
-	r = httptest.NewRequest(http.MethodGet, "/ears/v1/routes/r100", nil)
+	r = httptest.NewRequest(http.MethodGet, "/ears/v1"+tenantPath+"/routes/r100", nil)
 	runtime.apiManager.muxRouter.ServeHTTP(w, r)
 	g := goldie.New(t)
 	var data map[string]interface{}
@@ -949,7 +952,7 @@ func TestRestGetRouteHandler(t *testing.T) {
 	g.AssertJson(t, "getroute", data)
 	// delete routes
 	rtId := "r100"
-	r = httptest.NewRequest(http.MethodDelete, "/ears/v1/routes/"+rtId, nil)
+	r = httptest.NewRequest(http.MethodDelete, "/ears/v1"+tenantPath+"/routes/"+rtId, nil)
 	w = httptest.NewRecorder()
 	runtime.apiManager.muxRouter.ServeHTTP(w, r)
 	t.Logf("deleted route with id: %s", rtId)
@@ -964,10 +967,10 @@ func TestRestGetMultipleRoutesHandler(t *testing.T) {
 	}
 	runtime := setupSimpleApi(t, "inmemory")
 	w := httptest.NewRecorder()
-	r := httptest.NewRequest(http.MethodPost, "/ears/v1/routes", simpleRouteReader)
+	r := httptest.NewRequest(http.MethodPost, "/ears/v1"+tenantPath+"/routes", simpleRouteReader)
 	runtime.apiManager.muxRouter.ServeHTTP(w, r)
 	w = httptest.NewRecorder()
-	r = httptest.NewRequest(http.MethodGet, "/ears/v1/routes", nil)
+	r = httptest.NewRequest(http.MethodGet, "/ears/v1"+tenantPath+"/routes", nil)
 	runtime.apiManager.muxRouter.ServeHTTP(w, r)
 	g := goldie.New(t)
 	var data map[string]interface{}
@@ -983,7 +986,7 @@ func TestRestGetMultipleRoutesHandler(t *testing.T) {
 	g.AssertJson(t, "getmultipleroutes", data)
 	// delete routes
 	rtId := "r100"
-	r = httptest.NewRequest(http.MethodDelete, "/ears/v1/routes/"+rtId, nil)
+	r = httptest.NewRequest(http.MethodDelete, "/ears/v1"+tenantPath+"/routes/"+rtId, nil)
 	w = httptest.NewRecorder()
 	runtime.apiManager.muxRouter.ServeHTTP(w, r)
 	t.Logf("deleted route with id: %s", rtId)
@@ -1003,16 +1006,16 @@ func TestRestDeleteRouteHandler(t *testing.T) {
 	}
 	runtime := setupSimpleApi(t, "inmemory")
 	w := httptest.NewRecorder()
-	r := httptest.NewRequest(http.MethodPost, "/ears/v1/routes", simpleRouteReader)
+	r := httptest.NewRequest(http.MethodPost, "/ears/v1"+tenantPath+"/routes", simpleRouteReader)
 	runtime.apiManager.muxRouter.ServeHTTP(w, r)
 	w = httptest.NewRecorder()
-	r = httptest.NewRequest(http.MethodPost, "/ears/v1/routes", simpleFilterRouteReader)
+	r = httptest.NewRequest(http.MethodPost, "/ears/v1"+tenantPath+"/routes", simpleFilterRouteReader)
 	runtime.apiManager.muxRouter.ServeHTTP(w, r)
 	w = httptest.NewRecorder()
-	r = httptest.NewRequest(http.MethodDelete, "/ears/v1/routes/r100", simpleRouteReader)
+	r = httptest.NewRequest(http.MethodDelete, "/ears/v1"+tenantPath+"/routes/r100", simpleRouteReader)
 	runtime.apiManager.muxRouter.ServeHTTP(w, r)
 	w = httptest.NewRecorder()
-	r = httptest.NewRequest(http.MethodGet, "/ears/v1/routes", nil)
+	r = httptest.NewRequest(http.MethodGet, "/ears/v1"+tenantPath+"/routes", nil)
 	runtime.apiManager.muxRouter.ServeHTTP(w, r)
 	g := goldie.New(t)
 	var data map[string]interface{}
@@ -1028,7 +1031,7 @@ func TestRestDeleteRouteHandler(t *testing.T) {
 	g.AssertJson(t, "deleteroute", data)
 	// delete remaining routes
 	rtId := "f103"
-	r = httptest.NewRequest(http.MethodDelete, "/ears/v1/routes/"+rtId, nil)
+	r = httptest.NewRequest(http.MethodDelete, "/ears/v1"+tenantPath+"/routes/"+rtId, nil)
 	w = httptest.NewRecorder()
 	runtime.apiManager.muxRouter.ServeHTTP(w, r)
 	t.Logf("deleted route with id: %s", rtId)
@@ -1045,7 +1048,7 @@ func TestRestRouteHandlerIdMismatch(t *testing.T) {
 		t.Fatalf("cannot read file: %s", err.Error())
 	}
 	runtime := setupSimpleApi(t, "inmemory")
-	r := httptest.NewRequest(http.MethodPut, "/ears/v1/routes/badid", simpleRouteReader)
+	r := httptest.NewRequest(http.MethodPut, "/ears/v1"+tenantPath+"/routes/badid", simpleRouteReader)
 	runtime.apiManager.muxRouter.ServeHTTP(w, r)
 	g := goldie.New(t)
 	var data interface{}
@@ -1060,7 +1063,7 @@ func TestRestMissingRouteHandler(t *testing.T) {
 	Version = "v1.0.2"
 	runtime := setupSimpleApi(t, "inmemory")
 	w := httptest.NewRecorder()
-	r := httptest.NewRequest(http.MethodGet, "/ears/v1/routes/fakeid", nil)
+	r := httptest.NewRequest(http.MethodGet, "/ears/v1"+tenantPath+"/routes/fakeid", nil)
 	runtime.apiManager.muxRouter.ServeHTTP(w, r)
 	g := goldie.New(t)
 	var data interface{}
@@ -1080,7 +1083,7 @@ func TestRestPostRouteHandlerBadName(t *testing.T) {
 		t.Fatalf("cannot read file: %s", err.Error())
 	}
 	runtime := setupSimpleApi(t, "inmemory")
-	r := httptest.NewRequest(http.MethodPost, "/ears/v1/routes", simpleRouteReader)
+	r := httptest.NewRequest(http.MethodPost, "/ears/v1"+tenantPath+"/routes", simpleRouteReader)
 	runtime.apiManager.muxRouter.ServeHTTP(w, r)
 	g := goldie.New(t)
 	var data interface{}
@@ -1100,7 +1103,7 @@ func TestRestPostRouteHandlerBadPluginName(t *testing.T) {
 		t.Fatalf("cannot read file: %s", err.Error())
 	}
 	runtime := setupSimpleApi(t, "inmemory")
-	r := httptest.NewRequest(http.MethodPost, "/ears/v1/routes", simpleRouteReader)
+	r := httptest.NewRequest(http.MethodPost, "/ears/v1"+tenantPath+"/routes", simpleRouteReader)
 	runtime.apiManager.muxRouter.ServeHTTP(w, r)
 	g := goldie.New(t)
 	var data interface{}
@@ -1109,46 +1112,6 @@ func TestRestPostRouteHandlerBadPluginName(t *testing.T) {
 		t.Fatalf("cannot unmarshal response %s into json %s", string(w.Body.Bytes()), err.Error())
 	}
 	g.AssertJson(t, "addroutebadpluginname", data)
-}
-
-func TestRestPostRouteHandlerNoApp(t *testing.T) {
-	Version = "v1.0.2"
-	w := httptest.NewRecorder()
-	routeFileName := "testdata/simpleRouteNoApp.json"
-	simpleRouteReader, err := os.Open(routeFileName)
-	if err != nil {
-		t.Fatalf("cannot read file: %s", err.Error())
-	}
-	runtime := setupSimpleApi(t, "inmemory")
-	r := httptest.NewRequest(http.MethodPost, "/ears/v1/routes", simpleRouteReader)
-	runtime.apiManager.muxRouter.ServeHTTP(w, r)
-	g := goldie.New(t)
-	var data interface{}
-	err = json.Unmarshal(w.Body.Bytes(), &data)
-	if err != nil {
-		t.Fatalf("cannot unmarshal response %s into json %s", string(w.Body.Bytes()), err.Error())
-	}
-	g.AssertJson(t, "addroutenoapp", data)
-}
-
-func TestRestPostRouteHandlerNoOrg(t *testing.T) {
-	Version = "v1.0.2"
-	w := httptest.NewRecorder()
-	routeFileName := "testdata/simpleRouteNoOrg.json"
-	simpleRouteReader, err := os.Open(routeFileName)
-	if err != nil {
-		t.Fatalf("cannot read file: %s", err.Error())
-	}
-	runtime := setupSimpleApi(t, "inmemory")
-	r := httptest.NewRequest(http.MethodPost, "/ears/v1/routes", simpleRouteReader)
-	runtime.apiManager.muxRouter.ServeHTTP(w, r)
-	g := goldie.New(t)
-	var data interface{}
-	err = json.Unmarshal(w.Body.Bytes(), &data)
-	if err != nil {
-		t.Fatalf("cannot unmarshal response %s into json %s", string(w.Body.Bytes()), err.Error())
-	}
-	g.AssertJson(t, "addroutenoorg", data)
 }
 
 func TestRestPostRouteHandlerNoSender(t *testing.T) {
@@ -1160,7 +1123,7 @@ func TestRestPostRouteHandlerNoSender(t *testing.T) {
 		t.Fatalf("cannot read file: %s", err.Error())
 	}
 	runtime := setupSimpleApi(t, "inmemory")
-	r := httptest.NewRequest(http.MethodPost, "/ears/v1/routes", simpleRouteReader)
+	r := httptest.NewRequest(http.MethodPost, "/ears/v1"+tenantPath+"/routes", simpleRouteReader)
 	runtime.apiManager.muxRouter.ServeHTTP(w, r)
 	g := goldie.New(t)
 	var data interface{}
@@ -1180,7 +1143,7 @@ func TestRestPostRouteHandlerNoReceiver(t *testing.T) {
 		t.Fatalf("cannot read file: %s", err.Error())
 	}
 	runtime := setupSimpleApi(t, "inmemory")
-	r := httptest.NewRequest(http.MethodPost, "/ears/v1/routes", simpleRouteReader)
+	r := httptest.NewRequest(http.MethodPost, "/ears/v1"+tenantPath+"/routes", simpleRouteReader)
 	runtime.apiManager.muxRouter.ServeHTTP(w, r)
 	g := goldie.New(t)
 	var data interface{}
@@ -1200,7 +1163,7 @@ func TestRestPostRouteHandlerNoUser(t *testing.T) {
 		t.Fatalf("cannot read file: %s", err.Error())
 	}
 	runtime := setupSimpleApi(t, "inmemory")
-	r := httptest.NewRequest(http.MethodPost, "/ears/v1/routes", simpleRouteReader)
+	r := httptest.NewRequest(http.MethodPost, "/ears/v1"+tenantPath+"/routes", simpleRouteReader)
 	runtime.apiManager.muxRouter.ServeHTTP(w, r)
 	g := goldie.New(t)
 	var data interface{}

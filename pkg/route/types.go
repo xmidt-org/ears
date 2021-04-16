@@ -53,7 +53,7 @@ type PluginConfig struct {
 
 type Config struct {
 	Id           string         `json:"id,omitempty"`           // route ID
-	TenantId     tenant.Id      `json:"-"`                      // TenantId. Derived from URL path. Should not be marshalled
+	TenantId     tenant.Id      `json:"tenant,omitempty"`       // TenantId. Derived from URL path. Should not be marshalled
 	UserId       string         `json:"userId,omitempty"`       // user ID / author of route
 	Name         string         `json:"name,omitempty"`         // optional unique name for route
 	Origin       string         `json:"origin,omitempty"`       // optional reference to route owner, e.g. Flow ID in case of Gears

@@ -4,7 +4,6 @@
     "message": "OK"
   },
   "item": {
-    "appId": "xfi",
     "deliveryMode": "whoCares",
     "filterChain": [
       {
@@ -17,7 +16,6 @@
     ],
     "id": "f110",
     "name": "tbltstsimpleFilterUnwrapRoutesimpleFilterUnwrapRoute",
-    "orgId": "comcast",
     "receiver": {
       "config": {
         "intervalMs": 10,
@@ -51,6 +49,10 @@
       },
       "name": "tbltstsimpleFilterUnwrapRoutesimpleFilterUnwrapRouteSender",
       "plugin": "debug"
+    },
+    "tenant": {
+      "appId": "xfi",
+      "orgId": "comcast"
     },
     "userId": "boris"
   }

@@ -1,7 +1,6 @@
 {
   "items": [
     {
-      "appId": "xfi",
       "deliveryMode": "whoCares",
       "filterChain": [
         {
@@ -16,7 +15,6 @@
       ],
       "id": "f103",
       "name": "simpleMatchAllowFilterRoute",
-      "orgId": "comcast",
       "receiver": {
         "config": {
           "intervalMs": 10,
@@ -36,6 +34,10 @@
         },
         "name": "simpleFilterMatchAllowRouteSender",
         "plugin": "debug"
+      },
+      "tenant": {
+        "appId": "xfi",
+        "orgId": "comcast"
       },
       "userId": "boris"
     }
