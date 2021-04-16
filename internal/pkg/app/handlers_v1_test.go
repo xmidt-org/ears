@@ -36,7 +36,9 @@ import (
 	"github.com/xmidt-org/ears/pkg/plugins/debug"
 	"github.com/xmidt-org/ears/pkg/plugins/match"
 	"github.com/xmidt-org/ears/pkg/plugins/pass"
+	goredis "github.com/xmidt-org/ears/pkg/plugins/redis"
 	"github.com/xmidt-org/ears/pkg/plugins/split"
+	"github.com/xmidt-org/ears/pkg/plugins/sqs"
 	"github.com/xmidt-org/ears/pkg/plugins/transform"
 	"github.com/xmidt-org/ears/pkg/plugins/unwrap"
 	"github.com/xmidt-org/ears/pkg/route"
@@ -436,6 +438,14 @@ func setupRestApi(config config.Config, storageMgr route.RouteStorer) (*EarsRunt
 		{
 			name:   "debug",
 			plugin: toArr(debug.NewPluginVersion("debug", "", ""))[0].(pkgplugin.Pluginer),
+		},
+		{
+			name:   "sqs",
+			plugin: toArr(sqs.NewPluginVersion("sqs", "", ""))[0].(pkgplugin.Pluginer),
+		},
+		{
+			name:   "redis",
+			plugin: toArr(goredis.NewPluginVersion("redis", "", ""))[0].(pkgplugin.Pluginer),
 		},
 		{
 			name:   "match",
