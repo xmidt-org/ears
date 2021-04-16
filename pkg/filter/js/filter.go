@@ -42,6 +42,7 @@ func (f *Filter) Filter(evt event.Event) []event.Event {
 	transformedEvts, err := defaultInterpreter.Exec(evt, f.config.Source, nil)
 	if err != nil {
 		//TODO: should i nack or should i not?
+		//TODO: how to log here
 		evt.Nack(err)
 		return []event.Event{}
 	}
