@@ -1,0 +1,22 @@
+{
+  "id": "sqs102",
+  "orgId": "comcast",
+  "appId": "xfi",
+  "userId": "boris",
+  "name": "sqsRoute",
+  "receiver": {
+    "plugin": "sqs",
+    "name": "mySqsReceiver",
+    "config": {
+      "queueUrl": "https://sqs.us-west-2.amazonaws.com/447701116110/earsSender"
+    }
+  },
+  "sender": {
+    "plugin": "sqs",
+    "name": "mySqsSender",
+    "config": {
+      "queueUrl": "https://sqs.us-west-2.amazonaws.com/447701116110/earsSender"
+    }
+  },
+  "deliveryMode": "whoCares"
+}

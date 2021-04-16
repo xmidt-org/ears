@@ -23,7 +23,9 @@ import (
 	"github.com/xmidt-org/ears/pkg/plugins/debug"
 	"github.com/xmidt-org/ears/pkg/plugins/match"
 	"github.com/xmidt-org/ears/pkg/plugins/pass"
+	"github.com/xmidt-org/ears/pkg/plugins/redis"
 	"github.com/xmidt-org/ears/pkg/plugins/split"
+	"github.com/xmidt-org/ears/pkg/plugins/sqs"
 	"github.com/xmidt-org/ears/pkg/plugins/transform"
 	"github.com/xmidt-org/ears/pkg/plugins/unwrap"
 
@@ -67,6 +69,14 @@ func ProvidePluginManager(in PluginIn) (PluginOut, error) {
 		{
 			name:   "debug",
 			plugin: toArr(debug.NewPluginVersion("debug", "", ""))[0].(pkgplugin.Pluginer),
+		},
+		{
+			name:   "sqs",
+			plugin: toArr(sqs.NewPluginVersion("sqs", "", ""))[0].(pkgplugin.Pluginer),
+		},
+		{
+			name:   "redis",
+			plugin: toArr(redis.NewPluginVersion("redis", "", ""))[0].(pkgplugin.Pluginer),
 		},
 		{
 			name:   "match",

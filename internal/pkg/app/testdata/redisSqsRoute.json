@@ -1,0 +1,23 @@
+{
+  "id": "redisSqs101",
+  "orgId": "comcast",
+  "appId": "xfi",
+  "userId": "boris",
+  "name": "redisSqsRoute",
+  "receiver": {
+    "plugin": "redis",
+    "name": "myRedisReceiver",
+    "config": {
+      "channel": "ears_redis_route"
+    }
+  },
+  "sender": {
+    "plugin": "sqs",
+    "name": "mySqsSender",
+    "config": {
+      "queueUrl": "https://sqs.us-west-2.amazonaws.com/447701116110/earsSender",
+      "maxNumberOfMessages": 1
+    }
+  },
+  "deliveryMode": "whoCares"
+}

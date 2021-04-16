@@ -32,19 +32,16 @@ func (rte *Route) Run(r receiver.Receiver, f filter.Filterer, s sender.Sender) e
 			Err: fmt.Errorf("receiver cannot be nil"),
 		}
 	}
-
 	if s == nil {
 		return &InvalidRouteError{
 			Err: fmt.Errorf("sender cannot be nil"),
 		}
 	}
-
 	rte.Lock()
 	rte.r = r
 	rte.f = f
 	rte.s = s
 	rte.Unlock()
-
 	var next receiver.NextFn
 	if f == nil {
 		next = s.Send
@@ -57,8 +54,7 @@ func (rte *Route) Run(r receiver.Receiver, f filter.Filterer, s sender.Sender) e
 			}
 		}
 	}
-
-	// TODO:  Deal with errors properly
+	//TODO: deal with errors properly
 	return rte.r.Receive(next)
 
 }
@@ -69,8 +65,9 @@ func (rte *Route) Stop(ctx context.Context) error {
 	if rte.r == nil {
 		return nil
 	}
-
-	return rte.r.StopReceiving(ctx)
+	err := rte.r.StopReceiving(ctx)
+	rte.s.StopSending(ctx)
+	return err
 }
 
 func fanOut(events []event.Event, next receiver.NextFn) error {
@@ -79,11 +76,9 @@ func fanOut(events []event.Event, next receiver.NextFn) error {
 			Err: fmt.Errorf("next cannot be nil"),
 		}
 	}
-
 	if len(events) == 0 {
 		return nil
 	}
-
 	for _, e := range events {
 		go func(evt event.Event) {
 			defer func() {

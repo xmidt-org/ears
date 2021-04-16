@@ -27,14 +27,23 @@ var _ Event = &EventMock{}
 // 			ContextFunc: func() context.Context {
 // 				panic("mock out the Context method")
 // 			},
+// 			MetadataFunc: func() interface{} {
+// 				panic("mock out the Metadata method")
+// 			},
 // 			NackFunc: func(err error)  {
 // 				panic("mock out the Nack method")
 // 			},
 // 			PayloadFunc: func() interface{} {
 // 				panic("mock out the Payload method")
 // 			},
+// 			SetAckFunc: func(handledFn func(), errFn func(error)) error {
+// 				panic("mock out the SetAck method")
+// 			},
 // 			SetContextFunc: func(ctx context.Context) error {
 // 				panic("mock out the SetContext method")
+// 			},
+// 			SetMetadataFunc: func(metadata interface{}) error {
+// 				panic("mock out the SetMetadata method")
 // 			},
 // 			SetPayloadFunc: func(payload interface{}) error {
 // 				panic("mock out the SetPayload method")
@@ -55,14 +64,23 @@ type EventMock struct {
 	// ContextFunc mocks the Context method.
 	ContextFunc func() context.Context
 
+	// MetadataFunc mocks the Metadata method.
+	MetadataFunc func() interface{}
+
 	// NackFunc mocks the Nack method.
 	NackFunc func(err error)
 
 	// PayloadFunc mocks the Payload method.
 	PayloadFunc func() interface{}
 
+	// SetAckFunc mocks the SetAck method.
+	SetAckFunc func(handledFn func(), errFn func(error)) error
+
 	// SetContextFunc mocks the SetContext method.
 	SetContextFunc func(ctx context.Context) error
+
+	// SetMetadataFunc mocks the SetMetadata method.
+	SetMetadataFunc func(metadata interface{}) error
 
 	// SetPayloadFunc mocks the SetPayload method.
 	SetPayloadFunc func(payload interface{}) error
@@ -80,6 +98,9 @@ type EventMock struct {
 		// Context holds details about calls to the Context method.
 		Context []struct {
 		}
+		// Metadata holds details about calls to the Metadata method.
+		Metadata []struct {
+		}
 		// Nack holds details about calls to the Nack method.
 		Nack []struct {
 			// Err is the err argument value.
@@ -88,10 +109,22 @@ type EventMock struct {
 		// Payload holds details about calls to the Payload method.
 		Payload []struct {
 		}
+		// SetAck holds details about calls to the SetAck method.
+		SetAck []struct {
+			// HandledFn is the handledFn argument value.
+			HandledFn func()
+			// ErrFn is the errFn argument value.
+			ErrFn func(error)
+		}
 		// SetContext holds details about calls to the SetContext method.
 		SetContext []struct {
 			// Ctx is the ctx argument value.
 			Ctx context.Context
+		}
+		// SetMetadata holds details about calls to the SetMetadata method.
+		SetMetadata []struct {
+			// Metadata is the metadata argument value.
+			Metadata interface{}
 		}
 		// SetPayload holds details about calls to the SetPayload method.
 		SetPayload []struct {
@@ -99,13 +132,16 @@ type EventMock struct {
 			Payload interface{}
 		}
 	}
-	lockAck        sync.RWMutex
-	lockClone      sync.RWMutex
-	lockContext    sync.RWMutex
-	lockNack       sync.RWMutex
-	lockPayload    sync.RWMutex
-	lockSetContext sync.RWMutex
-	lockSetPayload sync.RWMutex
+	lockAck         sync.RWMutex
+	lockClone       sync.RWMutex
+	lockContext     sync.RWMutex
+	lockMetadata    sync.RWMutex
+	lockNack        sync.RWMutex
+	lockPayload     sync.RWMutex
+	lockSetAck      sync.RWMutex
+	lockSetContext  sync.RWMutex
+	lockSetMetadata sync.RWMutex
+	lockSetPayload  sync.RWMutex
 }
 
 // Ack calls AckFunc.
@@ -191,6 +227,32 @@ func (mock *EventMock) ContextCalls() []struct {
 	return calls
 }
 
+// Metadata calls MetadataFunc.
+func (mock *EventMock) Metadata() interface{} {
+	if mock.MetadataFunc == nil {
+		panic("EventMock.MetadataFunc: method is nil but Event.Metadata was just called")
+	}
+	callInfo := struct {
+	}{}
+	mock.lockMetadata.Lock()
+	mock.calls.Metadata = append(mock.calls.Metadata, callInfo)
+	mock.lockMetadata.Unlock()
+	return mock.MetadataFunc()
+}
+
+// MetadataCalls gets all the calls that were made to Metadata.
+// Check the length with:
+//     len(mockedEvent.MetadataCalls())
+func (mock *EventMock) MetadataCalls() []struct {
+} {
+	var calls []struct {
+	}
+	mock.lockMetadata.RLock()
+	calls = mock.calls.Metadata
+	mock.lockMetadata.RUnlock()
+	return calls
+}
+
 // Nack calls NackFunc.
 func (mock *EventMock) Nack(err error) {
 	if mock.NackFunc == nil {
@@ -248,6 +310,41 @@ func (mock *EventMock) PayloadCalls() []struct {
 	return calls
 }
 
+// SetAck calls SetAckFunc.
+func (mock *EventMock) SetAck(handledFn func(), errFn func(error)) error {
+	if mock.SetAckFunc == nil {
+		panic("EventMock.SetAckFunc: method is nil but Event.SetAck was just called")
+	}
+	callInfo := struct {
+		HandledFn func()
+		ErrFn     func(error)
+	}{
+		HandledFn: handledFn,
+		ErrFn:     errFn,
+	}
+	mock.lockSetAck.Lock()
+	mock.calls.SetAck = append(mock.calls.SetAck, callInfo)
+	mock.lockSetAck.Unlock()
+	return mock.SetAckFunc(handledFn, errFn)
+}
+
+// SetAckCalls gets all the calls that were made to SetAck.
+// Check the length with:
+//     len(mockedEvent.SetAckCalls())
+func (mock *EventMock) SetAckCalls() []struct {
+	HandledFn func()
+	ErrFn     func(error)
+} {
+	var calls []struct {
+		HandledFn func()
+		ErrFn     func(error)
+	}
+	mock.lockSetAck.RLock()
+	calls = mock.calls.SetAck
+	mock.lockSetAck.RUnlock()
+	return calls
+}
+
 // SetContext calls SetContextFunc.
 func (mock *EventMock) SetContext(ctx context.Context) error {
 	if mock.SetContextFunc == nil {
@@ -276,6 +373,37 @@ func (mock *EventMock) SetContextCalls() []struct {
 	mock.lockSetContext.RLock()
 	calls = mock.calls.SetContext
 	mock.lockSetContext.RUnlock()
+	return calls
+}
+
+// SetMetadata calls SetMetadataFunc.
+func (mock *EventMock) SetMetadata(metadata interface{}) error {
+	if mock.SetMetadataFunc == nil {
+		panic("EventMock.SetMetadataFunc: method is nil but Event.SetMetadata was just called")
+	}
+	callInfo := struct {
+		Metadata interface{}
+	}{
+		Metadata: metadata,
+	}
+	mock.lockSetMetadata.Lock()
+	mock.calls.SetMetadata = append(mock.calls.SetMetadata, callInfo)
+	mock.lockSetMetadata.Unlock()
+	return mock.SetMetadataFunc(metadata)
+}
+
+// SetMetadataCalls gets all the calls that were made to SetMetadata.
+// Check the length with:
+//     len(mockedEvent.SetMetadataCalls())
+func (mock *EventMock) SetMetadataCalls() []struct {
+	Metadata interface{}
+} {
+	var calls []struct {
+		Metadata interface{}
+	}
+	mock.lockSetMetadata.RLock()
+	calls = mock.calls.SetMetadata
+	mock.lockSetMetadata.RUnlock()
 	return calls
 }
 
