@@ -18,7 +18,9 @@ import (
 	"github.com/rs/zerolog"
 	"github.com/xmidt-org/ears/internal/pkg/config"
 	"github.com/xmidt-org/ears/internal/pkg/db"
+	"github.com/xmidt-org/ears/internal/pkg/db/bolt"
 	"github.com/xmidt-org/ears/internal/pkg/db/dynamo"
+	"github.com/xmidt-org/ears/internal/pkg/db/redis"
 	"github.com/xmidt-org/ears/pkg/route"
 	"go.uber.org/fx"
 )
@@ -52,18 +54,18 @@ func ProvideRouteStorer(in StorageIn) (StorageOut, error) {
 			return out, err
 		}
 		out.RouteStorer = routeStorer
-	//case "boltdb":
-	//	routeStorer, err := bolt.NewBoltDbStorer(in.Config)
-	//	if err != nil {
-	//		return out, err
-	//	}
-	//	out.RouteStorer = routeStorer
-	//case "redis":
-	//	routeStorer, err := redis.NewRedisDbStorer(in.Config, in.Logger)
-	//	if err != nil {
-	//		return out, err
-	//	}
-	//	out.RouteStorer = routeStorer
+	case "boltdb":
+		routeStorer, err := bolt.NewBoltDbStorer(in.Config)
+		if err != nil {
+			return out, err
+		}
+		out.RouteStorer = routeStorer
+	case "redis":
+		routeStorer, err := redis.NewRedisDbStorer(in.Config, in.Logger)
+		if err != nil {
+			return out, err
+		}
+		out.RouteStorer = routeStorer
 	default:
 		return out, &UnsupportedStorageError{storageType}
 	}
