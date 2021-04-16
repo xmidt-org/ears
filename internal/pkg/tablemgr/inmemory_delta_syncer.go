@@ -18,7 +18,9 @@ import (
 	"context"
 	"github.com/google/uuid"
 	"github.com/rs/zerolog"
+	"github.com/xmidt-org/ears/internal/pkg/config"
 	"github.com/xmidt-org/ears/internal/pkg/logs"
+	"github.com/xmidt-org/ears/pkg/tenant"
 	"strings"
 	"sync"
 )
@@ -36,11 +38,11 @@ type (
 		instanceCnt       int
 		localTableSyncers map[RoutingTableLocalSyncer]struct{}
 		logger            *zerolog.Logger
-		config            Config
+		config            config.Config
 	}
 )
 
-func NewInMemoryDeltaSyncer(logger *zerolog.Logger, config Config) RoutingTableDeltaSyncer {
+func NewInMemoryDeltaSyncer(logger *zerolog.Logger, config config.Config) RoutingTableDeltaSyncer {
 	// This delta syncer is mainly for testing purposes. For it to work, multiple ears runtimes
 	// should run within the same process and share the same instance of the in memory delta
 	// syncer - we are forcing this here with a singleton
@@ -77,7 +79,7 @@ func (s *InmemoryDeltaSyncer) UnregisterLocalTableSyncer(localTableSyncer Routin
 
 // PublishSyncRequest asks others to sync their routing tables
 
-func (s *InmemoryDeltaSyncer) PublishSyncRequest(ctx context.Context, routeId string, instanceId string, add bool) {
+func (s *InmemoryDeltaSyncer) PublishSyncRequest(ctx context.Context, tid tenant.Id, routeId string, instanceId string, add bool) {
 	if !s.active {
 		return
 	}
@@ -93,7 +95,7 @@ func (s *InmemoryDeltaSyncer) PublishSyncRequest(ctx context.Context, routeId st
 		s.logger.Info().Str("op", "PublishSyncRequest").Msg("no subscribers but me - no need to publish sync")
 	} else {
 		go func() {
-			msg := cmd + "," + routeId + "," + instanceId + "," + sid
+			msg := cmd + "," + routeId + "," + instanceId + "," + sid + "," + tid.String()
 			s.notify <- msg
 		}()
 	}
@@ -113,7 +115,7 @@ func (s *InmemoryDeltaSyncer) StartListeningForSyncRequests(instanceId string) {
 		ctx = logs.SubLoggerCtx(ctx, s.logger)
 		for msg := range s.notify {
 			elems := strings.Split(msg, ",")
-			if len(elems) != 4 {
+			if len(elems) != 5 {
 				s.logger.Error().Str("op", "ListenForSyncRequests").Msg("bad message structure: " + msg)
 			}
 			// leave sync loop if asked
@@ -123,13 +125,18 @@ func (s *InmemoryDeltaSyncer) StartListeningForSyncRequests(instanceId string) {
 					return
 				}
 			}
-			var err error
 			if elems[0] == EARS_ADD_ROUTE_CMD {
 				s.logger.Info().Str("op", "ListenForSyncRequests").Str("instanceId", elems[2]).Str("routeId", elems[1]).Str("sid", elems[3]).Msg("received message to add route")
+
+				tid, err := tenant.FromString(elems[4])
+				if err != nil {
+					s.logger.Error().Str("op", "ListenForSyncRequests").Str("instanceId", elems[2]).Str("routeId", elems[1]).Str("sid", elems[3]).Msg("failed to sync route: " + err.Error())
+					continue
+				}
 				s.Lock()
 				for localTableSyncer, _ := range s.localTableSyncers {
 					if elems[2] != localTableSyncer.GetInstanceId() {
-						err = localTableSyncer.SyncRoute(ctx, elems[1], true)
+						err = localTableSyncer.SyncRoute(ctx, *tid, elems[1], true)
 						if err != nil {
 							s.logger.Error().Str("op", "ListenForSyncRequests").Str("instanceId", elems[2]).Str("routeId", elems[1]).Str("sid", elems[3]).Msg("failed to sync route: " + err.Error())
 						}
@@ -138,10 +145,16 @@ func (s *InmemoryDeltaSyncer) StartListeningForSyncRequests(instanceId string) {
 				s.Unlock()
 			} else if elems[0] == EARS_REMOVE_ROUTE_CMD {
 				s.logger.Info().Str("op", "ListenForSyncRequests").Str("instanceId", elems[2]).Str("routeId", elems[1]).Str("sid", elems[3]).Msg("received message to remove route")
+
+				tid, err := tenant.FromString(elems[4])
+				if err != nil {
+					s.logger.Error().Str("op", "ListenForSyncRequests").Str("instanceId", elems[2]).Str("routeId", elems[1]).Str("sid", elems[3]).Msg("failed to sync route: " + err.Error())
+					continue
+				}
 				s.Lock()
 				for localTableSyncer, _ := range s.localTableSyncers {
 					if elems[2] != localTableSyncer.GetInstanceId() {
-						err = localTableSyncer.SyncRoute(ctx, elems[1], false)
+						err = localTableSyncer.SyncRoute(ctx, *tid, elems[1], false)
 						if err != nil {
 							s.logger.Error().Str("op", "ListenForSyncRequests").Str("instanceId", elems[2]).Str("routeId", elems[1]).Str("sid", elems[3]).Msg("failed to sync route: " + err.Error())
 						}

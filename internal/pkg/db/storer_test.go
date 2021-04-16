@@ -151,16 +151,10 @@ var testCases = []RouteTestCase{
 func testRouteStorer(s route.RouteStorer, t *testing.T) {
 	ctx := context.Background()
 
-	var tenantNotFound *route.TenantNotFoundError
-
 	//start from a clean slate
 	for _, tc := range testCases {
 		err := s.DeleteRoutes(ctx, tc.tenantId, []string{tc.routeId})
 		if err != nil {
-			if errors.As(err, &tenantNotFound) {
-				//it is ok if we cannot find tenant
-				continue
-			}
 			t.Fatalf("DeleteAllRoutes error: %s\n", err.Error())
 		}
 	}
@@ -171,7 +165,8 @@ func testRouteStorer(s route.RouteStorer, t *testing.T) {
 	if err == nil {
 		t.Fatalf("Expect an error but instead get no error")
 	}
-	if !errors.As(err, &tenantNotFound) {
+	var routeNotFound *route.RouteNotFoundError
+	if !errors.As(err, &routeNotFound) {
 		t.Fatalf("GetRoute does_not_exist unexpected error: %s\n", err.Error())
 	}
 

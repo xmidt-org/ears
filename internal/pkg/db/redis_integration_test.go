@@ -17,23 +17,23 @@
 package db_test
 
 import (
+	"github.com/rs/zerolog/log"
 	"github.com/spf13/viper"
 	"github.com/xmidt-org/ears/internal/pkg/config"
-	"github.com/xmidt-org/ears/internal/pkg/db/dynamo"
+	"github.com/xmidt-org/ears/internal/pkg/db/redis"
 	"testing"
 )
 
-func dynamoDbConfig() config.Config {
+func redisConfig() config.Config {
 	v := viper.New()
-	v.Set("ears.db.region", "us-west-2")
-	v.Set("ears.db.tableName", "gears.dev.ears")
+	v.Set("ears.storage.endpoint", "127.0.0.1:6379")
 	return v
 }
 
-func TestDynamoRouteStorer(t *testing.T) {
-	s, err := dynamo.NewDynamoDbStorer(dynamoDbConfig())
+func TestRedisRouteStorer(t *testing.T) {
+	s, err := redis.NewRedisDbStorer(redisConfig(), &log.Logger)
 	if err != nil {
-		t.Fatalf("Error instantiate dynamodb %s\n", err.Error())
+		t.Fatalf("Error instantiate redisdb %s\n", err.Error())
 	}
 	testRouteStorer(s, t)
 }

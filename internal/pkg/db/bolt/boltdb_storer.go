@@ -19,7 +19,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/boltdb/bolt"
+	"github.com/xmidt-org/ears/internal/pkg/config"
 	"github.com/xmidt-org/ears/pkg/route"
+	"github.com/xmidt-org/ears/pkg/tenant"
+	"time"
 )
 
 type BoltDbStorer struct {
@@ -27,16 +30,10 @@ type BoltDbStorer struct {
 	db       *bolt.DB
 }
 
-type Config interface {
-	GetString(key string) string
-	GetInt(key string) int
-	GetBool(key string) bool
-}
-
 //TODO: configuration
 //TODO: clean shutdown of bolt db
 
-func NewBoltDbStorer(config Config) (*BoltDbStorer, error) {
+func NewBoltDbStorer(config config.Config) (*BoltDbStorer, error) {
 	bdb := &BoltDbStorer{
 		fileName: "bolt.dat",
 	}
@@ -63,26 +60,34 @@ func NewBoltDbStorer(config Config) (*BoltDbStorer, error) {
 	return bdb, nil
 }
 
-func (d *BoltDbStorer) GetRoute(ctx context.Context, id string) (route.Config, error) {
-	route := route.Config{}
+func (d *BoltDbStorer) GetRoute(ctx context.Context, tid tenant.Id, id string) (route.Config, error) {
+	r := route.Config{}
 	err := d.db.View(func(tx *bolt.Tx) error {
-		buf := tx.Bucket([]byte("ROUTES")).Get([]byte(id))
-		if buf == nil {
-			return fmt.Errorf("no data in bolt for key " + id)
+		b := tx.Bucket([]byte("DB")).Bucket([]byte("ROUTES"))
+		if b == nil {
+			return &route.RouteNotFoundError{tid, id}
 		}
-		err := json.Unmarshal(buf, &route)
+
+		buf := b.Get([]byte(tid.Key(id)))
+		if buf == nil {
+			return &route.RouteNotFoundError{tid, id}
+		}
+		err := json.Unmarshal(buf, &r)
 		if err != nil {
 			return err
 		}
 		return nil
 	})
-	return route, err
+	return r, err
 }
 
 func (d *BoltDbStorer) GetAllRoutes(ctx context.Context) ([]route.Config, error) {
 	routes := make([]route.Config, 0)
 	err := d.db.View(func(tx *bolt.Tx) error {
 		b := tx.Bucket([]byte("DB")).Bucket([]byte("ROUTES"))
+		if b == nil {
+			return nil
+		}
 		b.ForEach(func(k, v []byte) error {
 			var route route.Config
 			err := json.Unmarshal(v, &route)
@@ -97,7 +102,30 @@ func (d *BoltDbStorer) GetAllRoutes(ctx context.Context) ([]route.Config, error)
 	return routes, err
 }
 
+func (d *BoltDbStorer) GetAllTenantRoutes(ctx context.Context, tid tenant.Id) ([]route.Config, error) {
+	routes, err := d.GetAllRoutes(ctx)
+	if err != nil {
+		return nil, err
+	}
+	filterRoutes := make([]route.Config, 0)
+	for _, route := range routes {
+		if route.TenantId.Equal(tid) {
+			filterRoutes = append(filterRoutes, route)
+		}
+	}
+	return routes, err
+}
+
 func (d *BoltDbStorer) SetRoute(ctx context.Context, r route.Config) error {
+	r.Modified = time.Now().Unix()
+
+	oldRoute, err := d.GetRoute(ctx, r.TenantId, r.Id)
+	if err == nil {
+		r.Created = oldRoute.Created
+	} else {
+		r.Created = r.Modified
+	}
+
 	if r.Id == "" {
 		return fmt.Errorf("no route to store in bolt")
 	}
@@ -106,7 +134,7 @@ func (d *BoltDbStorer) SetRoute(ctx context.Context, r route.Config) error {
 		return err
 	}
 	err = d.db.Update(func(tx *bolt.Tx) error {
-		err := tx.Bucket([]byte("DB")).Bucket([]byte("ROUTES")).Put([]byte(r.Id), val)
+		err := tx.Bucket([]byte("DB")).Bucket([]byte("ROUTES")).Put([]byte(r.TenantId.Key(r.Id)), val)
 		if err != nil {
 			return fmt.Errorf("could not insert route: %v", err)
 		}
@@ -131,12 +159,12 @@ func (d *BoltDbStorer) SetRoutes(ctx context.Context, routes []route.Config) err
 	return nil
 }
 
-func (d *BoltDbStorer) DeleteRoute(ctx context.Context, id string) error {
+func (d *BoltDbStorer) DeleteRoute(ctx context.Context, tid tenant.Id, id string) error {
 	if id == "" {
 		return fmt.Errorf("no route to delete in bolt")
 	}
 	err := d.db.Update(func(tx *bolt.Tx) error {
-		err := tx.Bucket([]byte("DB")).Bucket([]byte("ROUTES")).Delete([]byte(id))
+		err := tx.Bucket([]byte("DB")).Bucket([]byte("ROUTES")).Delete([]byte(tid.Key(id)))
 		if err != nil {
 			return fmt.Errorf("could not insert route: %v", err)
 		}
@@ -148,9 +176,9 @@ func (d *BoltDbStorer) DeleteRoute(ctx context.Context, id string) error {
 	return nil
 }
 
-func (d *BoltDbStorer) DeleteRoutes(ctx context.Context, ids []string) error {
+func (d *BoltDbStorer) DeleteRoutes(ctx context.Context, tid tenant.Id, ids []string) error {
 	for _, id := range ids {
-		err := d.DeleteRoute(ctx, id)
+		err := d.DeleteRoute(ctx, tid, id)
 		if err != nil {
 			return err
 		}

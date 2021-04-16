@@ -20,7 +20,9 @@ import (
 	"github.com/go-redis/redis"
 	"github.com/google/uuid"
 	"github.com/rs/zerolog"
+	"github.com/xmidt-org/ears/internal/pkg/config"
 	"github.com/xmidt-org/ears/internal/pkg/logs"
+	"github.com/xmidt-org/ears/pkg/tenant"
 	"strings"
 	"sync"
 	"time"
@@ -47,11 +49,11 @@ type (
 		client            *redis.Client
 		localTableSyncers map[RoutingTableLocalSyncer]struct{}
 		logger            *zerolog.Logger
-		config            Config
+		config            config.Config
 	}
 )
 
-func NewRedisDeltaSyncer(logger *zerolog.Logger, config Config) RoutingTableDeltaSyncer {
+func NewRedisDeltaSyncer(logger *zerolog.Logger, config config.Config) RoutingTableDeltaSyncer {
 	s := new(RedisDeltaSyncer)
 	s.logger = logger
 	s.config = config
@@ -86,7 +88,7 @@ func (s *RedisDeltaSyncer) UnregisterLocalTableSyncer(localTableSyncer RoutingTa
 
 // PublishSyncRequest asks others to sync their routing tables
 
-func (s *RedisDeltaSyncer) PublishSyncRequest(ctx context.Context, routeId string, instanceId string, add bool) {
+func (s *RedisDeltaSyncer) PublishSyncRequest(ctx context.Context, tid tenant.Id, routeId string, instanceId string, add bool) {
 	if !s.active {
 		return
 	}
@@ -132,12 +134,19 @@ func (s *RedisDeltaSyncer) PublishSyncRequest(ctx context.Context, routeId strin
 						//s.logger.Info().Str("op", "PublishSyncRequest").Msg("receive ack on channel " + EARS_REDIS_ACK_CHANNEL)
 					}
 					elems := strings.Split(msg.Payload, ",")
-					if len(elems) != 4 {
+					if len(elems) != 5 {
 						s.logger.Error().Str("op", "PublishSyncRequest").Msg("bad ack message structure: " + msg.Payload)
 						break
 					}
+
+					ackTid, err := tenant.FromString(elems[4])
+					if err != nil {
+						s.logger.Error().Str("op", "PublishSyncRequest").Str("instanceId", elems[2]).Str("routeId", elems[1]).Str("sid", elems[3]).Msg("bad tenantId in ack message: " + err.Error())
+						break
+					}
+
 					// only collect acks for this session
-					if cmd == elems[0] && routeId == elems[1] && elems[3] == sid {
+					if cmd == elems[0] && routeId == elems[1] && elems[3] == sid && tid.Equal(*ackTid) {
 						received[elems[2]] = true
 						// wait until we received an ack from each subscriber (except the one originating the request)
 						if len(received) >= numSubscribers-1 {
@@ -163,7 +172,7 @@ func (s *RedisDeltaSyncer) PublishSyncRequest(ctx context.Context, routeId strin
 			// wait for listener to be ready
 			wg.Wait()
 			// ... then request all flow apis to sync
-			msg := cmd + "," + routeId + "," + instanceId + "," + sid
+			msg := cmd + "," + routeId + "," + instanceId + "," + sid + "," + tid.String()
 			err := s.client.Publish(EARS_REDIS_SYNC_CHANNEL, msg).Err()
 			if err != nil {
 				s.logger.Error().Str("op", "PublishSyncRequest").Msg(err.Error())
@@ -212,7 +221,7 @@ func (s *RedisDeltaSyncer) StartListeningForSyncRequests(instanceId string) {
 				s.logger.Info().Str("op", "ListenForSyncRequests").Msg("received message on channel " + EARS_REDIS_SYNC_CHANNEL)
 				// parse message
 				elems := strings.Split(msg.Payload, ",")
-				if len(elems) != 4 {
+				if len(elems) != 5 {
 					s.logger.Error().Str("op", "ListenForSyncRequests").Msg("bad message structure: " + msg.Payload)
 					continue
 				}
@@ -228,26 +237,40 @@ func (s *RedisDeltaSyncer) StartListeningForSyncRequests(instanceId string) {
 					s.GetInstanceCount(ctx) // just for logging
 					if elems[0] == EARS_ADD_ROUTE_CMD {
 						s.logger.Info().Str("op", "ListenForSyncRequests").Str("instanceId", instanceId).Str("routeId", elems[1]).Str("sid", elems[3]).Msg("received message to add route")
+
+						tid, err := tenant.FromString(elems[4])
+						if err != nil {
+							s.logger.Error().Str("op", "ListenForSyncRequests").Str("instanceId", elems[2]).Str("routeId", elems[1]).Str("sid", elems[3]).Msg("failed to sync route: " + err.Error())
+							continue
+						}
+
 						s.Lock()
 						for localTableSyncer, _ := range s.localTableSyncers {
-							err = localTableSyncer.SyncRoute(ctx, elems[1], true)
+							err = localTableSyncer.SyncRoute(ctx, *tid, elems[1], true)
 							if err != nil {
 								s.logger.Error().Str("op", "ListenForSyncRequests").Str("instanceId", instanceId).Str("routeId", elems[1]).Str("sid", elems[3]).Msg("failed to sync route: " + err.Error())
 							}
 						}
 						s.Unlock()
-						s.publishAckMessage(ctx, elems[0], elems[1], instanceId, elems[3])
+						s.publishAckMessage(ctx, elems[0], elems[1], instanceId, elems[3], *tid)
 					} else if elems[0] == EARS_REMOVE_ROUTE_CMD {
 						s.logger.Info().Str("op", "ListenForSyncRequests").Str("instanceId", instanceId).Str("routeId", elems[1]).Str("sid", elems[3]).Msg("received message to remove route")
+
+						tid, err := tenant.FromString(elems[4])
+						if err != nil {
+							s.logger.Error().Str("op", "ListenForSyncRequests").Str("instanceId", elems[2]).Str("routeId", elems[1]).Str("sid", elems[3]).Msg("failed to sync route: " + err.Error())
+							continue
+						}
+
 						s.Lock()
 						for localTableSyncer, _ := range s.localTableSyncers {
-							err = localTableSyncer.SyncRoute(ctx, elems[1], false)
+							err = localTableSyncer.SyncRoute(ctx, *tid, elems[1], false)
 							if err != nil {
 								s.logger.Error().Str("op", "ListenForSyncRequests").Str("instanceId", instanceId).Str("routeId", elems[1]).Str("sid", elems[3]).Msg("failed to sync route: " + err.Error())
 							}
 						}
 						s.Unlock()
-						s.publishAckMessage(ctx, elems[0], elems[1], instanceId, elems[3])
+						s.publishAckMessage(ctx, elems[0], elems[1], instanceId, elems[3], *tid)
 					} else if elems[0] == EARS_STOP_LISTENING_CMD {
 						s.logger.Info().Str("op", "ListenForSyncRequests").Str("instanceId", instanceId).Msg("stop message ignored")
 						// already handled above
@@ -264,11 +287,11 @@ func (s *RedisDeltaSyncer) StartListeningForSyncRequests(instanceId string) {
 
 // PublishAckMessage confirm successful syncing of routing table
 
-func (s *RedisDeltaSyncer) publishAckMessage(ctx context.Context, cmd string, routeId string, instanceId string, sid string) error {
+func (s *RedisDeltaSyncer) publishAckMessage(ctx context.Context, cmd string, routeId string, instanceId string, sid string, tid tenant.Id) error {
 	if !s.active {
 		return nil
 	}
-	msg := cmd + "," + routeId + "," + instanceId + "," + sid
+	msg := cmd + "," + routeId + "," + instanceId + "," + sid + "," + tid.String()
 	err := s.client.Publish(EARS_REDIS_ACK_CHANNEL, msg).Err()
 	if err != nil {
 		s.logger.Error().Str("op", "PublishAckMessage").Msg(err.Error())

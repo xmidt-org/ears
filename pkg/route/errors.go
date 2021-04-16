@@ -28,17 +28,10 @@ func (e *InvalidRouteError) Error() string {
 }
 
 type RouteNotFoundError struct {
-	RouteId string
+	TenantId tenant.Id
+	RouteId  string
 }
 
 func (e *RouteNotFoundError) Error() string {
-	return errs.String("RouteNotFoundError", map[string]interface{}{"routeId": e.RouteId}, nil)
-}
-
-type TenantNotFoundError struct {
-	TenantId tenant.Id
-}
-
-func (e *TenantNotFoundError) Error() string {
-	return errs.String("TenantNotFoundError", map[string]interface{}{"tenant": e.TenantId.String()}, nil)
+	return errs.String("RouteNotFoundError", map[string]interface{}{"routeId": e.RouteId, "tenantId": e.TenantId.String()}, nil)
 }
