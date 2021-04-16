@@ -16,7 +16,7 @@ package js
 
 import (
 	"github.com/xmidt-org/ears/pkg/filter"
-	pkgpass "github.com/xmidt-org/ears/pkg/filter/pass"
+	pkgjs "github.com/xmidt-org/ears/pkg/filter/js"
 	pkgplugin "github.com/xmidt-org/ears/pkg/plugin"
 )
 
@@ -40,5 +40,5 @@ func NewPluginVersion(name string, version string, commitID string) (*pkgplugin.
 }
 
 func NewFilterer(config interface{}) (filter.Filterer, error) {
-	return pkgpass.NewFilter(config)
+	return pkgjs.NewFilter(config)
 }

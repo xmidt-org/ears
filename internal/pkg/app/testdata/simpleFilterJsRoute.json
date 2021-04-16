@@ -30,7 +30,7 @@
       "plugin" : "js",
       "name" : "simpleFilterJsRouteFilter",
       "config" : {
-        "source" : ""
+        "source" : "var event = {};\nevent.payload = _.payload;\nevent.metadata =  _.metadata;\nevent.payload.a = \"b\";\nreturn event;"
       }
     }
   ],

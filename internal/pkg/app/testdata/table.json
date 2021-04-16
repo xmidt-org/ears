@@ -1,7 +1,7 @@
 {
   "sharePluginsAcrossTests": false,
   "testToRunAllIfBlank": "",
-  "numInstances": 3,
+  "numInstances": 1,
   "storageType": "",
   "table": {
     "simpleRouteA": {
@@ -255,7 +255,7 @@
           "senderRouteFiles": "simpleFilterJsRoute",
           "expectedEventCount": 5,
           "expectedEventIndex": 0,
-          "expectedEventPayloadFile": "event1"
+          "expectedEventPayloadFile": "event7"
         }
       ]
     }

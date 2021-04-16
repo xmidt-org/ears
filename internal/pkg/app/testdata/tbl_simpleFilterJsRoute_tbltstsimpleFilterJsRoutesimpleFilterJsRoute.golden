@@ -9,7 +9,7 @@
     "filterChain": [
       {
         "config": {
-          "source": ""
+          "source": "var event = {};\nevent.payload = _.payload;\nevent.metadata =  _.metadata;\nevent.payload.a = \"b\";\nreturn event;"
         },
         "name": "simpleFilterJsRouteFilter",
         "plugin": "js"
