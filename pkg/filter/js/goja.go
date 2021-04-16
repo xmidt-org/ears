@@ -3,6 +3,7 @@ package js
 import (
 	"bytes"
 	"fmt"
+	"github.com/mohae/deepcopy"
 	"github.com/xmidt-org/ears/pkg/event"
 	"io/ioutil"
 	"net/http"
@@ -20,16 +21,12 @@ const (
 	RuntimeTTL = 5 * time.Minute
 )
 
-//DONE: yaml support for routes
-//DONE: filtering and splitting capabilities
-//TODO: error handling
 //TODO: canonical method to pass event(s) back and forth
-//TODO: deep copy where needed
-//TODO: cleanup built-in functions
-//TODO: precompile where possible
 //TODO: logging in filter
 //TODO: logging from JS
 //TODO: support libraries
+
+//TODO: precompile where possible
 
 var (
 	// InterruptedMessage is the string value of Interrupted.
@@ -334,16 +331,14 @@ func (interpreter *Interpreter) Exec(evt event.Event, code string, compiled inte
 	env := o.Get("_").Export().(map[string]interface{})
 	//env["ctx"] = ctx
 	if evt.Payload() == nil {
-		payload := map[string]interface{}{}
-		env["payload"] = payload
+		env["payload"] = map[string]interface{}{}
 	} else {
-		env["payload"] = evt.Payload()
+		env["payload"] = deepcopy.Copy(evt.Payload())
 	}
 	if evt.Metadata() == nil {
-		metadata := map[string]interface{}{}
-		env["metadata"] = metadata
+		env["metadata"] = map[string]interface{}{}
 	} else {
-		env["metadata"] = evt.Metadata()
+		env["metadata"] = deepcopy.Copy(evt.Metadata())
 	}
 	env["log"] = func(x interface{}) {
 		//TODO: log
@@ -432,5 +427,4 @@ func (interpreter *Interpreter) Exec(evt event.Event, code string, compiled inte
 	default:
 		return nil, errors.New("script returns unsupported type")
 	}
-	return []event.Event{evt}, nil
 }
