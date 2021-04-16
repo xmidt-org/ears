@@ -82,14 +82,6 @@ func WithMetadata(metadata interface{}) EventOption {
 	}
 }
 
-func (e *event) SetAck(handledFn func(), errFn func(error)) error {
-	if handledFn == nil || errFn == nil {
-		return &NoAckHandlersError{}
-	}
-	e.ack = ack.NewAckTree(e.ctx, handledFn, errFn)
-	return nil
-}
-
 func (e *event) Payload() interface{} {
 	return e.payload
 }
