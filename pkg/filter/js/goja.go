@@ -2,7 +2,6 @@ package js
 
 import (
 	"bytes"
-	"context"
 	"fmt"
 	"github.com/xmidt-org/ears/pkg/event"
 	"io/ioutil"
@@ -19,7 +18,6 @@ import (
 
 const (
 	RuntimeTTL = 5 * time.Minute
-	JsCopyKey  = "_prev_bs_key_"
 )
 
 var (
@@ -29,17 +27,6 @@ var (
 	// Interrupted is returned by Exec if the execution is
 	// interrupted.
 	Interrupted = errors.New(InterruptedMessage)
-
-	// IgnoreExit will prevent the Goja function "exit" from
-	// terminating the process. Being able to halt the process
-	// from Goja is useful for some tests and utilities.  Maybe.
-	IgnoreExit = false
-
-	MessageSizeLimit = 400 * 1000 // in bytes
-	MessageSizeError = "Message size is over %dKB limit"
-
-	StateSizeLimit = 400 * 1000 // in bytes
-	StateSizeError = "State size is over %dKB limit"
 )
 
 var (
@@ -55,18 +42,13 @@ func init() {
 	defaultInterpreter = interpreter
 }
 
-// Interpreter implements core.Intepreter using Goja, which is a
+// Interpreter implements an interpreter based on Goja, which is a
 // Go implementation of ECMAScript 5.1+.
 //
 // See https://github.com/dop251/goja.
 type (
 	Interpreter struct {
 		sync.Mutex
-
-		// Testing is used to expose or hide some runtime
-		// capabilities.
-		Testing bool
-
 		// Provider is a pluggable library provider, which can be used
 		// instead of (or in addition to) the standard Provide method,
 		// which will just use DefaultProvider if this Provider is
@@ -79,7 +61,7 @@ type (
 		// carries the required data (something related to tenant
 		// name), but it's hard to provide something generic.  With
 		// trepidation, perhaps just use a Value in the ctx?
-		LibraryProvider func(ctx context.Context, i *Interpreter, libraryName string) (string, error)
+		LibraryProvider func(interpreter *Interpreter, libraryName string) (string, error)
 		EnvSetter       func(o *goja.Runtime, env map[string]interface{})
 		maxRuntimes     int
 		runtimePool     chan *Runtime
@@ -112,30 +94,29 @@ func WithMaxRuntimes(n int) func(*Interpreter) error {
 }
 
 func NewInterpreter(options ...func(*Interpreter) error) (*Interpreter, error) {
-	i := Interpreter{
+	interpreter := Interpreter{
 		progCache:   make(map[string]*Program),
 		maxRuntimes: 1,
 	}
 	var err error
 	for _, option := range options {
-		err = option(&i)
+		err = option(&interpreter)
 		if err != nil {
 			return nil, errors.Wrap(err, "Could not apply option")
 		}
 	}
-
-	i.runtimePool = make(chan *Runtime, i.maxRuntimes)
-	return &i, nil
+	interpreter.runtimePool = make(chan *Runtime, interpreter.maxRuntimes)
+	return &interpreter, nil
 
 }
 
 // CompileLibraries checks any libraries at LibrarySources.
 //
-// This method originally precompiled these libraries, but Goja can't
-// current support combining ast.Programs.  So we won't actually use
+// This method originally precompiled these libraries, but goja doesn't
+// currently support combining ast.Programs. So we won't actually use
 // anything we precompile!  Perhaps in the future.  But we can at
 // least check that the libraries do in fact compile.
-func (i *Interpreter) CompileLibrary(ctx context.Context, name, src string) (interface{}, error) {
+func (interpreter *Interpreter) CompileLibrary(name, src string) (interface{}, error) {
 	return goja.Compile(name, src, true)
 }
 
@@ -144,11 +125,11 @@ func (i *Interpreter) CompileLibrary(ctx context.Context, name, src string) (int
 // We experimented with other approaches including returning parsed
 // code and a struct representing a library.  Probably will want to
 // move back in that direction.
-func (i *Interpreter) ProvideLibrary(ctx context.Context, name string) (string, error) {
-	if i.LibraryProvider != nil {
-		return i.LibraryProvider(ctx, i, name)
+func (interpreter *Interpreter) ProvideLibrary(name string) (string, error) {
+	if interpreter.LibraryProvider != nil {
+		return interpreter.LibraryProvider(interpreter, name)
 	}
-	return DefaultLibraryProvider(ctx, i, name)
+	return DefaultLibraryProvider(interpreter, name)
 }
 
 var DefaultLibraryProvider = MakeFileLibraryProvider(".")
@@ -156,11 +137,11 @@ var DefaultLibraryProvider = MakeFileLibraryProvider(".")
 // DefaultProvider is a method that Provide will use if the
 // interpreter's Provider is nil.
 //
-// This method supports (barely) names that are URLs with protocols of
+// This method barely supports names that are URLs with protocols of
 // "file", "http", and "https". There currently is no additional
 // control when using HTTP/HTTPS.
-func MakeFileLibraryProvider(dir string) func(context.Context, *Interpreter, string) (string, error) {
-	return func(ctx context.Context, i *Interpreter, name string) (string, error) {
+func MakeFileLibraryProvider(dir string) func(*Interpreter, string) (string, error) {
+	return func(i *Interpreter, name string) (string, error) {
 		parts := strings.SplitN(name, "://", 2)
 		if 2 != len(parts) {
 			return "", fmt.Errorf("bad link '%s'", name)
@@ -179,7 +160,7 @@ func MakeFileLibraryProvider(dir string) func(context.Context, *Interpreter, str
 			if err != nil {
 				return "", err
 			}
-			req = req.WithContext(ctx)
+			//req = req.WithContext(ctx)
 			client := http.Client{}
 			resp, err := client.Do(req)
 			if err != nil {
@@ -202,140 +183,40 @@ func MakeFileLibraryProvider(dir string) func(context.Context, *Interpreter, str
 	}
 }
 
-func MakeMapLibraryProvider(srcs map[string]string) func(context.Context, *Interpreter, string) (string, error) {
-	return func(ctx context.Context, i *Interpreter, name string) (string, error) {
-		src, have := srcs[name]
-		if !have {
-			return "", fmt.Errorf("undefined library '%s'", name)
-		}
-		return src, nil
-	}
-}
-
 func wrapSrc(src string) string {
 	return fmt.Sprintf("(function(){%s}());", src)
 }
 
-// parseSource looks into the given map to try to find "requires" and
-// "code" properties.
-//
-// Background: The YAML parser https://github.com/go-yaml/yaml will
-// return map[interface{}]interface{}, which is correct but
-// inconvenient.  So this repo uses a fork at
-// https://github.com/jsccast/yaml, which will return
-// map[string]interface{}.  However, this parseSource function
-// supports map[interface{}]interface{} so that others don't need to
-// use that fork.
-func parseSource(vv map[string]interface{}) (code string, libs []string, err error) {
-	x, have := vv["code"]
-	if !have {
-		code = ""
-	}
-	if s, is := x.(string); is {
-		code = s
-	} else {
-		err = errors.New("bad Goja action code")
-		return
-	}
-	x, have = vv["requires"]
-	switch vv := x.(type) {
-	case string:
-		libs = []string{vv}
-	case []string:
-		libs = vv
-	case []interface{}:
-		libs = make([]string, 0, len(vv))
-		for _, x := range vv {
-			switch vv := x.(type) {
-			case string:
-				libs = append(libs, vv)
-			default:
-				err = errors.New("bad library")
-				return
-			}
-		}
-	}
-	return
-}
-
-func AsSource(src interface{}) (code string, libs []string, err error) {
-	switch vv := src.(type) {
-	case string:
-		code = vv
-		return
-	case map[interface{}]interface{}:
-		m := make(map[string]interface{})
-		for k, v := range vv {
-			str, ok := k.(string)
-			if !ok {
-				err = errors.New(fmt.Sprintf("bad src key (%T)", k))
-				return
-			}
-			m[str] = v
-		}
-		return parseSource(m)
-	case map[string]interface{}:
-		return parseSource(vv)
-	default:
-		err = errors.New(fmt.Sprintf("bad Goja source (%T)", src))
-		return
-	}
-}
-
-// Compile calls goja.Compile after calling InlineRequires.
-//
+// Compile calls goja.Compile after compiling libraries if any.
 // This method can block if the interpreter's library Provider blocks
 // in order to obtain external libraries.
-func (i *Interpreter) Compile(ctx context.Context, src interface{}) (interface{}, error) {
-	code, libs, err := AsSource(src)
-	if err != nil {
-		return nil, err
-	}
-
+func (interpreter *Interpreter) Compile(code string) (interface{}, error) {
 	code = wrapSrc(code)
-
-	// We no longer do InlineRequires.  Instead, we use an
-	// explicit "requires".
-	//
-	// Background: Since we now want an explicit `return` of
-	// bindings, we're in a block context, and in-lining code in a
-	// block context would -- I guess -- require that the inlined
-	// code (the libraries) also be blocks, which they might not
-	// be.  Maybe document, enforce, and support later.
-	//
-	// if code, err = InlineRequires(ctx, code, i.ProvideLibrary); err != nil {
-	//     return nil, err
-	// }
-
+	libs := make([]string, 0) // no libraries for now
 	programs := make([]*Program, len(libs)+1)
-
-	i.Lock()
+	interpreter.Lock()
 	for index, lib := range libs {
-		p, ok := i.progCache[lib]
+		p, ok := interpreter.progCache[lib]
 		if !ok {
-			libSrc, err := i.ProvideLibrary(ctx, lib)
+			libSrc, err := interpreter.ProvideLibrary(lib)
 			if err != nil {
-				i.Unlock()
+				interpreter.Unlock()
 				return nil, err
 			}
-
 			o, err := goja.Compile("", libSrc, true)
 			if err != nil {
-				i.Unlock()
+				interpreter.Unlock()
 				return nil, errors.New(err.Error() + ": " + code)
 			}
-
 			p = &Program{
 				name:    lib,
 				Program: o,
 			}
-			i.progCache[lib] = p
+			interpreter.progCache[lib] = p
 		}
-
 		programs[index] = p
 	}
-	i.Unlock()
-
+	interpreter.Unlock()
 	o, err := goja.Compile("", code, true)
 	if err != nil {
 		return nil, errors.New(err.Error() + ": " + code)
@@ -344,13 +225,11 @@ func (i *Interpreter) Compile(ctx context.Context, src interface{}) (interface{}
 		name:    "_code_",
 		Program: o,
 	}
-
 	return programs, nil
 }
 
 func protest(o *goja.Runtime, x interface{}) {
 	var err error
-
 	switch vv := x.(type) {
 	case string:
 		err = fmt.Errorf("%s", vv)
@@ -359,60 +238,46 @@ func protest(o *goja.Runtime, x interface{}) {
 	default:
 		err = fmt.Errorf("%#v", vv)
 	}
-
 	panic(o.NewGoError(err))
 }
 
-func (i *Interpreter) getRuntime(ctx context.Context) *Runtime {
+func (interpreter *Interpreter) getRuntime() *Runtime {
 	for {
 		select {
-		case rt := <-i.runtimePool:
+		case rt := <-interpreter.runtimePool:
 			return rt
 		default:
-			i.Lock()
-			if i.runtimeCount < i.maxRuntimes {
+			interpreter.Lock()
+			if interpreter.runtimeCount < interpreter.maxRuntimes {
 				o := goja.New()
-				if i.Testing {
-					o.Set("sleep", func(ms int) {
-						time.Sleep(time.Duration(ms) * time.Millisecond)
-					})
-				}
-
-				i.setEnv(ctx, o)
-
-				i.runtimePool <- &Runtime{
+				interpreter.setEnv(o)
+				interpreter.runtimePool <- &Runtime{
 					Runtime:   o,
 					progCache: make(map[string]bool),
 					expiresAt: time.Now().Add(RuntimeTTL),
 				}
-
-				i.runtimeCount++
+				interpreter.runtimeCount++
 			} else {
-				i.Unlock()
-				return <-i.runtimePool
+				interpreter.Unlock()
+				return <-interpreter.runtimePool
 			}
-			i.Unlock()
+			interpreter.Unlock()
 		}
 	}
 }
 
-func (i *Interpreter) setEnv(c context.Context, o *goja.Runtime) map[string]interface{} {
+func (interpreter *Interpreter) setEnv(o *goja.Runtime) map[string]interface{} {
 	env := make(map[string]interface{})
-
 	o.Set("_", env)
-
-	// nowms returns the current system time in UNIX epoch
-	// milliseconds.
+	// nowms returns the current system time in UNIX epoch in milliseconds
 	env["nowms"] = func() interface{} {
 		return float64(time.Now().UTC().UnixNano() / 1000 / 1000)
 	}
-
-	// now returns the current time formatted in time.RFC3339Nano
-	// (UTC).
+	// now returns the current time formatted in time.RFC3339Nano (UTC)
 	env["now"] = func() interface{} {
 		return time.Now().UTC().Format(time.RFC3339Nano)
 	}
-
+	// esc url escapes a string
 	env["esc"] = func(x interface{}) interface{} {
 		switch vv := x.(type) {
 		case goja.Value:
@@ -424,101 +289,64 @@ func (i *Interpreter) setEnv(c context.Context, o *goja.Runtime) map[string]inte
 		}
 		return url.QueryEscape(s)
 	}
-
-	if nil != i.EnvSetter {
-		i.EnvSetter(o, env)
+	if nil != interpreter.EnvSetter {
+		interpreter.EnvSetter(o, env)
 	}
-
 	return env
 }
 
-// Exec implements the Interpreter method of the same name.
-//
-// The following properties are available from the runtime at _.
-//
-// These two things are most important:
-//
-//    bindings: the map of the current bindings.
-//    out(obj): Add the given object as a message to emit.
-//
-// Some useful utilities:
-//
-//    gensym(): generate a random string.
-//    esc(s): URL query-escape the given string.
-//    match(pat, obj): Execute the pattern matcher.
-//
-// For testing only:
-//
-//    sleep(ms): sleep for the given number of milliseconds.  For testing.
-//    exit(msg): Terminate the process after printing the given message.
-//      For testing.
-//
-// The Testing flag must be set to see sleep().
-func (i *Interpreter) Exec(ctx context.Context, event event.Event, src interface{}, compiled interface{}) (event.Event, error) {
-	//exe = core.NewExecution(nil)
+func (interpreter *Interpreter) Exec(event event.Event, code string, compiled interface{}) (event.Event, error) {
 	if event == nil {
 		return nil, errors.New("no event to process")
 	}
-	var ps []*Program
+	var programs []*Program
 	if compiled == nil {
 		var err error
-		if compiled, err = i.Compile(ctx, src); err != nil {
+		if compiled, err = interpreter.Compile(code); err != nil {
 			return nil, err
 		}
 	}
 	var is bool
-	if ps, is = compiled.([]*Program); !is {
-		return nil, fmt.Errorf("Goja bad compilation: %T %#v", compiled, compiled)
+	if programs, is = compiled.([]*Program); !is {
+		return nil, fmt.Errorf("goja compilation failed: %T %#v", compiled, compiled)
 	}
-
-	o := i.getRuntime(ctx)
+	o := interpreter.getRuntime()
 	defer func() {
 		// expires runtime to avoid memory leak over time
 		if o.expiresAt.Before(time.Now()) {
-			i.Lock()
-			i.runtimeCount--
-			i.Unlock()
+			interpreter.Lock()
+			interpreter.runtimeCount--
+			interpreter.Unlock()
 		} else {
-			i.runtimePool <- o
+			interpreter.runtimePool <- o
 		}
 	}()
-
-	//	env := i.setEnv(o.Runtime)
 	env := o.Get("_").Export().(map[string]interface{})
-	env["ctx"] = ctx
-
+	//env["ctx"] = ctx
 	//TODO: deep copy
-
 	if event.Payload() == nil {
 		payload := map[string]interface{}{}
 		env["payload"] = payload
 	} else {
 		env["payload"] = event.Payload()
 	}
-
 	if event.Metadata() == nil {
 		metadata := map[string]interface{}{}
 		env["metadata"] = metadata
 	} else {
 		env["metadata"] = event.Metadata()
 	}
-
 	env["log"] = func(x interface{}) {
 		//TODO: log event
 	}
-
-	var (
-		v           goja.Value
-		lastProgram *Program
-	)
-
+	var v goja.Value
+	//var lastProgram *Program
 	var err error
-
 	func() {
 		defer func() {
 			// to avoid panic from goja
 			if r := recover(); r != nil {
-				err = fmt.Errorf("panic from code: %#v", src)
+				err = fmt.Errorf("panic from code: %s", code)
 				trace := bytes.NewBuffer(debug.Stack()).String()
 				//limit the stack track to 16k in case crash ES
 				maxStackSize := 16 * 1024
@@ -528,10 +356,9 @@ func (i *Interpreter) Exec(ctx context.Context, event event.Event, src interface
 				//csvCtx.Log.Error("op", "Interpreter.Exec", "panicError", err, "panicStackTrace", trace)
 			}
 		}()
-
-		for _, p := range ps {
+		for _, p := range programs {
 			if has := o.progCache[p.name]; !has {
-				lastProgram = p
+				//lastProgram = p
 				if v, err = o.RunProgram(p.Program); nil != err {
 					break
 				}
@@ -541,7 +368,6 @@ func (i *Interpreter) Exec(ctx context.Context, event event.Event, src interface
 			}
 		}
 	}()
-
 	if nil != err {
 		switch err.(type) {
 		case *goja.InterruptedError:
@@ -551,17 +377,23 @@ func (i *Interpreter) Exec(ctx context.Context, event event.Event, src interface
 		//csvCtx.Log.Error("op", "Interpreter.Exec", "error", err, "program", lastProgram.name)
 		return nil, err
 	}
-
+	//TODO: figure out how to export results for various cases
+	//TODO: deep copy
 	x := v.Export()
-
 	switch x.(type) {
+	case goja.Value:
+		return nil, nil
 	case *goja.InterruptedError:
 		return nil, nil
 	case nil:
 		return nil, nil
+	case string:
+		return nil, nil
+	case map[string]interface{}:
+		m := x.(map[string]interface{})
+		event.SetPayload(m["payload"])
+		event.SetMetadata(m["metadata"])
+		return event, nil
 	}
-
-	//TODO: figure out how to export results
-
 	return event, nil
 }
