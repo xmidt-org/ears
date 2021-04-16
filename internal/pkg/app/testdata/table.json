@@ -258,6 +258,32 @@
           "expectedEventPayloadFile": "event7"
         }
       ]
+    },
+    "simpleFilterJsDropRoute": {
+      "seq": 16,
+      "routeFiles": [
+        "simpleFilterJsDropRoute"
+      ],
+      "waitMs": 100,
+      "events": [
+        {
+          "senderRouteFiles": "simpleFilterJsDropRoute",
+          "expectedEventCount": 0
+        }
+      ]
+    },
+    "simpleFilterJsSplitRoute": {
+      "seq": 17,
+      "routeFiles": [
+        "simpleFilterJsSplitRoute"
+      ],
+      "waitMs": 100,
+      "events": [
+        {
+          "senderRouteFiles": "simpleFilterJsSplitRoute",
+          "expectedEventCount": 10
+        }
+      ]
     }
   }
 }

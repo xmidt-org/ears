@@ -30,6 +30,7 @@ const (
 //TODO: logging in filter
 //TODO: logging from JS
 //TODO: support libraries
+//TODO: remove setAck()
 
 var (
 	// InterruptedMessage is the string value of Interrupted.
@@ -305,8 +306,8 @@ func (interpreter *Interpreter) setEnv(o *goja.Runtime) map[string]interface{} {
 	return env
 }
 
-func (interpreter *Interpreter) Exec(event event.Event, code string, compiled interface{}) (event.Event, error) {
-	if event == nil {
+func (interpreter *Interpreter) Exec(evt event.Event, code string, compiled interface{}) ([]event.Event, error) {
+	if evt == nil {
 		return nil, errors.New("no event to process")
 	}
 	var programs []*Program
@@ -333,17 +334,17 @@ func (interpreter *Interpreter) Exec(event event.Event, code string, compiled in
 	}()
 	env := o.Get("_").Export().(map[string]interface{})
 	//env["ctx"] = ctx
-	if event.Payload() == nil {
+	if evt.Payload() == nil {
 		payload := map[string]interface{}{}
 		env["payload"] = payload
 	} else {
-		env["payload"] = event.Payload()
+		env["payload"] = evt.Payload()
 	}
-	if event.Metadata() == nil {
+	if evt.Metadata() == nil {
 		metadata := map[string]interface{}{}
 		env["metadata"] = metadata
 	} else {
-		env["metadata"] = event.Metadata()
+		env["metadata"] = evt.Metadata()
 	}
 	env["log"] = func(x interface{}) {
 		//TODO: log
@@ -397,12 +398,39 @@ func (interpreter *Interpreter) Exec(event event.Event, code string, compiled in
 	case string:
 		return nil, nil
 	case []interface{}:
-		return nil, nil
+		events := make([]event.Event, 0)
+		results := x.([]interface{})
+		for _, r := range results {
+			m, is := r.(map[string]interface{})
+			if !is {
+				return nil, errors.New("array element is not map")
+			}
+			nevt, err := evt.Clone(evt.Context())
+			if err != nil {
+				return nil, err
+			}
+			err = nevt.SetPayload(m["payload"])
+			if err != nil {
+				return nil, err
+			}
+			err = nevt.SetMetadata(m["metadata"])
+			if err != nil {
+				return nil, err
+			}
+			events = append(events, nevt)
+		}
+		return events, nil
 	case map[string]interface{}:
 		m := x.(map[string]interface{})
-		event.SetPayload(m["payload"])
-		event.SetMetadata(m["metadata"])
-		return event, nil
+		err = evt.SetPayload(m["payload"])
+		if err != nil {
+			return nil, err
+		}
+		err = evt.SetMetadata(m["metadata"])
+		if err != nil {
+			return nil, err
+		}
+		return []event.Event{evt}, nil
 	}
-	return event, nil
+	return []event.Event{evt}, nil
 }
