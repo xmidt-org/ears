@@ -39,13 +39,14 @@ func NewFilter(config interface{}) (*Filter, error) {
 
 // Filter executes javascript transformation
 func (f *Filter) Filter(evt event.Event) []event.Event {
-	transformedEvt, err := defaultInterpreter.Exec(evt, f.config.Source, nil)
+	transformedEvts, err := defaultInterpreter.Exec(evt, f.config.Source, nil)
 	if err != nil {
-		//evt.Nack(err) // should i nack or should i not?
+		//TODO: should i nack or should i not?
+		evt.Nack(err)
 		return []event.Event{}
 	}
-	if transformedEvt == nil {
+	if transformedEvts == nil {
 		return []event.Event{}
 	}
-	return []event.Event{transformedEvt}
+	return transformedEvts
 }

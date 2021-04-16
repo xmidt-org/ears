@@ -1,0 +1,27 @@
+id: f1000
+orgId: comcast
+appId: xfi
+userId: boris
+name: simpleFilterJsDropRoute
+receiver:
+  plugin: debug
+  name: simpleFilterJsDropRouteReceiver
+  config:
+    rounds: 5
+    intervalMs: 10
+    payload:
+      foo: bar
+    maxHistory: 100
+sender:
+  plugin: debug
+  name: simpleFilterJsDropRouteSender
+  config:
+    destination: stdout
+    maxHistory: 100
+filterChain:
+  - plugin: js
+    name: simpleFilterJsDropRouteFilter
+    config:
+      source: |-
+        return null;
+deliveryMode: whoCares

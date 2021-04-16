@@ -139,7 +139,6 @@ func (e *event) Nack(err error) {
 
 func (e *event) Clone(ctx context.Context) (Event, error) {
 	var subTree ack.SubTree
-
 	if e.ack != nil {
 		var err error
 		subTree, err = e.ack.NewSubTree()
@@ -147,16 +146,16 @@ func (e *event) Clone(ctx context.Context) (Event, error) {
 			return nil, err
 		}
 	}
-
 	//Very fast according to the following benchmark:
 	//https://xuri.me/2018/06/17/deep-copy-object-with-reflecting-or-gob-in-go.html
 	//Unclear if all types are supported:
 	//https://github.com/mohae/deepcopy/blob/master/deepcopy.go#L45-L46
-	newCopy := deepcopy.Copy(e.payload)
-
+	newPayloadCopy := deepcopy.Copy(e.payload)
+	newMetadtaCopy := deepcopy.Copy(e.metadata)
 	return &event{
-		payload: newCopy,
-		ctx:     ctx,
-		ack:     subTree,
+		payload:  newPayloadCopy,
+		metadata: newMetadtaCopy,
+		ctx:      ctx,
+		ack:      subTree,
 	}, nil
 }
