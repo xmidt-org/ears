@@ -2,6 +2,7 @@ package js
 
 import (
 	"bytes"
+	"crypto/md5"
 	"fmt"
 	"github.com/mohae/deepcopy"
 	"github.com/xmidt-org/ears/pkg/event"
@@ -14,6 +15,7 @@ import (
 	"time"
 
 	"github.com/dop251/goja"
+	lru "github.com/hashicorp/golang-lru"
 	"github.com/pkg/errors"
 )
 
@@ -25,8 +27,6 @@ const (
 //TODO: logging in filter
 //TODO: logging from JS
 //TODO: support libraries
-
-//TODO: precompile where possible
 
 var (
 	// InterruptedMessage is the string value of Interrupted.
@@ -75,6 +75,7 @@ type (
 		runtimePool     chan *Runtime
 		runtimeCount    int
 		progCache       map[string]*Program
+		lruCache        *lru.Cache
 	}
 
 	Runtime struct {
@@ -94,7 +95,7 @@ type (
 func WithMaxRuntimes(n int) func(*Interpreter) error {
 	return func(i *Interpreter) error {
 		if n < 1 {
-			return errors.New("Max runtimes cannot be less than 1")
+			return errors.New("goja max runtimes cannot be less than 1")
 		}
 		i.maxRuntimes = n
 		return nil
@@ -110,12 +111,15 @@ func NewInterpreter(options ...func(*Interpreter) error) (*Interpreter, error) {
 	for _, option := range options {
 		err = option(&interpreter)
 		if err != nil {
-			return nil, errors.Wrap(err, "Could not apply option")
+			return nil, errors.Wrap(err, "could not apply goja option")
 		}
 	}
 	interpreter.runtimePool = make(chan *Runtime, interpreter.maxRuntimes)
+	interpreter.lruCache, err = lru.New(100)
+	if err != nil {
+		return nil, errors.Wrap(err, "could initialize goja lru cache")
+	}
 	return &interpreter, nil
-
 }
 
 // CompileLibraries checks any libraries at LibrarySources.
@@ -302,16 +306,19 @@ func (interpreter *Interpreter) setEnv(o *goja.Runtime) map[string]interface{} {
 	return env
 }
 
-func (interpreter *Interpreter) Exec(evt event.Event, code string, compiled interface{}) ([]event.Event, error) {
+func (interpreter *Interpreter) Exec(evt event.Event, code string) ([]event.Event, error) {
 	if evt == nil {
 		return nil, errors.New("no event to process")
 	}
 	var programs []*Program
-	if compiled == nil {
+	progHash := fmt.Sprintf("%x", md5.Sum([]byte(code)))
+	compiled, ok := interpreter.lruCache.Get(progHash)
+	if !ok {
 		var err error
 		if compiled, err = interpreter.Compile(code); err != nil {
 			return nil, err
 		}
+		interpreter.lruCache.Add(progHash, compiled)
 	}
 	var is bool
 	if programs, is = compiled.([]*Program); !is {
