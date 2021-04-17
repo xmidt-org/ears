@@ -39,7 +39,7 @@ func NewFilter(config interface{}) (*Filter, error) {
 
 // Filter executes javascript transformation
 func (f *Filter) Filter(evt event.Event) []event.Event {
-	transformedEvts, err := defaultInterpreter.Exec(evt, f.config.Source, nil)
+	transformedEvts, err := defaultInterpreter.Exec(evt, f.config.Source)
 	if err != nil {
 		//TODO: should i nack or should i not?
 		//TODO: how to log here
