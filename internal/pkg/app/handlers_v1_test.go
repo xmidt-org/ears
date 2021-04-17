@@ -20,6 +20,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/goccy/go-yaml"
 	"github.com/rs/zerolog/log"
 	goldie "github.com/sebdah/goldie/v2"
 	"github.com/spf13/viper"
@@ -33,6 +34,7 @@ import (
 	"github.com/xmidt-org/ears/pkg/plugin/manager"
 	"github.com/xmidt-org/ears/pkg/plugins/block"
 	"github.com/xmidt-org/ears/pkg/plugins/debug"
+	"github.com/xmidt-org/ears/pkg/plugins/js"
 	"github.com/xmidt-org/ears/pkg/plugins/match"
 	"github.com/xmidt-org/ears/pkg/plugins/pass"
 	goredis "github.com/xmidt-org/ears/pkg/plugins/redis"
@@ -45,6 +47,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"strings"
 	"testing"
 	"time"
 )
@@ -180,11 +183,14 @@ func TestRouteTable(t *testing.T) {
 				// read and parse route
 				buf, err := ioutil.ReadFile("testdata/" + routeFileName + ".json")
 				if err != nil {
-					t.Fatalf("%s test: cannot read route file: %s", currentTestName, err.Error())
+					buf, err = ioutil.ReadFile("testdata/" + routeFileName + ".yaml")
+					if err != nil {
+						t.Fatalf("%s test: cannot read route file: %s", currentTestName, err.Error())
+					}
 				}
 				// scope route by prefixing all names (confirm with Trevor what unregister is meant to do)
 				var routeConfig route.Config
-				err = json.Unmarshal(buf, &routeConfig)
+				err = yaml.Unmarshal(buf, &routeConfig)
 				if err != nil {
 					t.Fatalf("%s test: cannot parse route: %s", currentTestName, err.Error())
 				}
@@ -453,6 +459,10 @@ func setupRestApi(config Config, storageMgr route.RouteStorer) (*EarsRuntime, er
 			plugin: toArr(pass.NewPluginVersion("pass", "", ""))[0].(pkgplugin.Pluginer),
 		},
 		{
+			name:   "js",
+			plugin: toArr(js.NewPluginVersion("js", "", ""))[0].(pkgplugin.Pluginer),
+		},
+		{
 			name:   "block",
 			plugin: toArr(block.NewPluginVersion("block", "", ""))[0].(pkgplugin.Pluginer),
 		},
@@ -525,10 +535,14 @@ func checkEventsSent(routeFileName string, testPrefix string, pluginMgr plugin.M
 	ctx = log.Logger.WithContext(ctx)
 	buf, err := ioutil.ReadFile(routeFileName)
 	if err != nil {
-		return err
+		routeFileName = strings.Replace(routeFileName, ".json", ".yaml", -1)
+		buf, err = ioutil.ReadFile(routeFileName)
+		if err != nil {
+			return err
+		}
 	}
 	var routeConfig route.Config
-	err = json.Unmarshal(buf, &routeConfig)
+	err = yaml.Unmarshal(buf, &routeConfig)
 	if err != nil {
 		return err
 	}

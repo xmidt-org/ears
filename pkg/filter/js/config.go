@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package transform
+package js
 
 import (
 	"github.com/xmidt-org/ears/pkg/config"
@@ -35,8 +35,8 @@ func NewConfig(config interface{}) (*Config, error) {
 // WithDefaults will set default values
 func (c Config) WithDefaults() *Config {
 	cfg := c
-	if c.Transformation == "" {
-		cfg.Transformation = DefaultConfig.Transformation
+	if c.Source == "" {
+		cfg.Source = DefaultConfig.Source
 	}
 	return &cfg
 }

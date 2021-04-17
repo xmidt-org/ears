@@ -1,0 +1,43 @@
+{
+  "status": {
+    "code": 200,
+    "message": "OK"
+  },
+  "item": {
+    "appId": "xfi",
+    "deliveryMode": "whoCares",
+    "filterChain": [
+      {
+        "config": {
+          "source": "var e1 = {};\ne1.payload = _.payload;\ne1.metadata =  _.metadata;\nvar e2 = {};\ne2.payload = _.payload;\ne2.metadata =  _.metadata;\nvar events = [ e1, e2 ];\nreturn events;"
+        },
+        "name": "simpleFilterJsSplitRouteFilter",
+        "plugin": "js"
+      }
+    ],
+    "id": "f999",
+    "name": "tbltstsimpleFilterJsSplitRoutesimpleFilterJsSplitRoute",
+    "orgId": "comcast",
+    "receiver": {
+      "config": {
+        "intervalMs": 10,
+        "maxHistory": 100,
+        "payload": {
+          "foo": "bar"
+        },
+        "rounds": 5
+      },
+      "name": "tbltstsimpleFilterJsSplitRoutesimpleFilterJsSplitRouteReceiver",
+      "plugin": "debug"
+    },
+    "sender": {
+      "config": {
+        "destination": "stdout",
+        "maxHistory": 100
+      },
+      "name": "tbltstsimpleFilterJsSplitRoutesimpleFilterJsSplitRouteSender",
+      "plugin": "debug"
+    },
+    "userId": "boris"
+  }
+}
