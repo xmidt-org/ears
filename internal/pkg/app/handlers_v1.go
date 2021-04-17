@@ -15,8 +15,8 @@
 package app
 
 import (
-	"encoding/json"
 	"errors"
+	"github.com/goccy/go-yaml"
 	"github.com/xmidt-org/ears/internal/pkg/tablemgr"
 	"io/ioutil"
 	"net/http"
@@ -68,7 +68,8 @@ func (a *APIManager) addRouteHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var route route.Config
-	err = json.Unmarshal(body, &route)
+	//err = json.Unmarshal(body, &route)
+	err = yaml.Unmarshal(body, &route)
 	if err != nil {
 		log.Ctx(ctx).Error().Str("op", "addRouteHandler").Msg(err.Error())
 		resp := ErrorResponse(err)

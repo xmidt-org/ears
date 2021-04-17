@@ -1,0 +1,27 @@
+id: f999
+orgId: comcast
+appId: xfi
+userId: boris
+name: simpleFilterJsBadRoute
+receiver:
+  plugin: debug
+  name: simpleFilterJsBadRouteReceiver
+  config:
+    rounds: 5
+    intervalMs: 10
+    payload:
+      foo: bar
+    maxHistory: 100
+sender:
+  plugin: debug
+  name: simpleFilterJsBadRouteSender
+  config:
+    destination: stdout
+    maxHistory: 100
+filterChain:
+  - plugin: js
+    name: simpleFilterJsBadRouteFilter
+    config:
+      source: |-
+        this is bad code
+deliveryMode: whoCares

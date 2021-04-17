@@ -16,6 +16,7 @@ package debug
 
 import (
 	"container/ring"
+	"github.com/rs/zerolog"
 	"sync"
 
 	"github.com/xmidt-org/ears/pkg/event"
@@ -73,11 +74,11 @@ type ReceiverConfig struct {
 
 type Receiver struct {
 	sync.Mutex
-	done chan struct{}
-
+	done    chan struct{}
 	config  ReceiverConfig
 	history *history
 	next    receiver.NextFn
+	logger  zerolog.Logger
 }
 
 type EventWriter interface {
