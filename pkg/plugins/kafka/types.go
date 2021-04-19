@@ -52,29 +52,30 @@ func NewPluginVersion(name string, version string, commitID string) (*pkgplugin.
 }
 
 var DefaultReceiverConfig = ReceiverConfig{
-	Brokers:    "",
-	Topic:      "",
-	GroupId:    "",
-	Username:   "",
-	Password:   "",
-	CACert:     "",
-	AccessCert: "",
-	AccessKey:  "",
-	Version:    "",
+	Brokers:        "",
+	Topic:          "",
+	GroupId:        "",
+	Username:       "",
+	Password:       "",
+	CACert:         "",
+	AccessCert:     "",
+	AccessKey:      "",
+	Version:        "",
+	CommitInterval: pointer.Int(1),
 }
 
 type ReceiverConfig struct {
-	Brokers string `json:"brokers,omitempty"`
-	Topic   string `json:"topic,omitempty"`
-	GroupId string `json:"groupId,omitempty"`
-
-	Username            string `json:"username,omitempty"`
+	Brokers             string `json:"brokers,omitempty"`
+	Topic               string `json:"topic,omitempty"`
+	GroupId             string `json:"groupId,omitempty"`
+	Username            string `json:"username,omitempty"` // yaml
 	Password            string `json:"password,omitempty"`
 	CACert              string `json:"caCert,omitempty"`
 	AccessCert          string `json:"accessCert,omitempty"`
 	AccessKey           string `json:"accessKey,omitempty"`
 	Version             string `json:"version,omitempty"`
-	ChannelBufferSize   int    `json:"channelBufferSize,omitempty"`
+	CommitInterval      *int   `json:"commitInterval,omitempty"`
+	ChannelBufferSize   *int   `json:"channelBufferSize,omitempty"`
 	ConsumeByPartitions bool
 	TLSEnable           bool
 }
