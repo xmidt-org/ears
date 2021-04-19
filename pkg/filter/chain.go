@@ -48,26 +48,20 @@ func (c *Chain) Filterers() []Filterer {
 }
 
 func (c *Chain) Filter(e event.Event) []event.Event {
-
 	c.Lock()
 	defer c.Unlock()
-
 	// pass event through in case of empty filter chain
 	if len(c.filterers) == 0 {
 		return []event.Event{e}
 	}
-
 	type work struct {
 		e event.Event
 		f Filterer
 		i int // Index of current filterer
 	}
-
 	queue := list.New()
 	queue.PushBack(work{e: e, f: c.filterers[0], i: 0})
-
 	events := []event.Event{}
-
 	ctx := e.Context()
 	for elem := queue.Front(); elem != nil; elem = elem.Next() {
 		select {

@@ -41,12 +41,12 @@ func NewFilter(config interface{}) (*Filter, error) {
 func (f *Filter) Filter(evt event.Event) []event.Event {
 	transformedEvts, err := defaultInterpreter.Exec(evt, f.config.Source)
 	if err != nil {
-		//TODO: should i nack or should i not?
 		//TODO: how to log here
 		evt.Nack(err)
 		return []event.Event{}
 	}
-	if transformedEvts == nil {
+	if transformedEvts == nil || len(transformedEvts) == 0 {
+		evt.Ack()
 		return []event.Event{}
 	}
 	return transformedEvts
