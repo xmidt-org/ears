@@ -64,8 +64,6 @@ func NewReceiver(config interface{}) (receiver.Receiver, error) {
 	return r, nil
 }
 
-////
-
 // Setup is run at the beginning of a new session, before ConsumeClaim
 func (r *Receiver) Setup(session sarama.ConsumerGroupSession) error {
 	r.Lock()
@@ -105,7 +103,7 @@ func (r *Receiver) Start(ctx context.Context, groupHandler sarama.ConsumerGroupH
 		// server-side rebalance happens, the consumer session will need to be
 		// recreated to get the new claims
 		if err := r.client.Consume(r.ctx, r.topics, groupHandler); err != nil {
-			//ctx.Logger().Error("op", "Consumer.Start", "error", err)
+			r.logger.Error().Str("op", "kafka.Start").Msg(err.Error())
 		}
 		// check if context was cancelled, signaling that the consumer should stop
 		if nil != r.ctx.Err() {
@@ -120,11 +118,9 @@ func (r *Receiver) Close(ctx context.Context) {
 	r.cancel()
 	r.wg.Wait()
 	if err := r.client.Close(); err != nil {
-		//ctx.Logger().Error("op", "Consumer.Close", "error", err)
+		r.logger.Error().Str("op", "kafka.Close").Msg(err.Error())
 	}
 }
-
-////
 
 func (r *Receiver) getSaramaConfig(commitIntervalSec int) (*sarama.Config, error) {
 	// init (custom) config, enable errors and notifications
@@ -168,8 +164,6 @@ func (r *Receiver) getSaramaConfig(commitIntervalSec int) (*sarama.Config, error
 	}
 	return config, nil
 }
-
-////
 
 func (r *Receiver) Receive(next receiver.NextFn) error {
 	if r == nil {
