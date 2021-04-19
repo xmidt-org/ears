@@ -15,6 +15,7 @@
 package debug
 
 import (
+	"encoding/json"
 	"fmt"
 	"io"
 	"os"
@@ -33,13 +34,10 @@ func (s *SendStdout) Write(e event.Event) error {
 func (s *SendSlice) Write(e event.Event) error {
 	s.Lock()
 	defer s.Unlock()
-
 	if s.events == nil {
 		s.events = []event.Event{}
 	}
-
 	s.events = append(s.events, e)
-
 	return nil
 }
 
@@ -51,12 +49,14 @@ func write(w io.Writer, e event.Event) error {
 	if w == nil {
 		return fmt.Errorf("writer cannot be nil")
 	}
-
 	out := "<nil>"
 	if e != nil && e.Payload() != nil {
-		out = fmt.Sprint(e.Payload())
+		buf, err := json.Marshal(e.Payload())
+		if err != nil {
+			return err
+		}
+		out = fmt.Sprint(string(buf))
 	}
-
 	fmt.Fprintln(w, out)
 	return nil
 }
