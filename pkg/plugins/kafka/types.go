@@ -91,8 +91,8 @@ type Receiver struct {
 	sarama.ConsumerGroupSession
 	wg      sync.WaitGroup
 	ready   chan bool
-	ctx     context.Context
 	cancel  context.CancelFunc
+	ctx     context.Context
 	client  sarama.ConsumerGroup
 	topics  []string
 	handler func(message *sarama.ConsumerMessage) bool
