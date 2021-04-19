@@ -59,23 +59,17 @@ func NewReceiver(config interface{}) (receiver.Receiver, error) {
 	}
 	logger := zerolog.New(os.Stdout).Level(zerolog.DebugLevel)
 	zerolog.LevelFieldName = "log.level"
-
-	topics := []string{cfg.Topic}
-	commitInterval := 1
-
 	ctx := context.Background()
 	cctx, cancel := context.WithCancel(ctx)
-
 	r := &Receiver{
 		config: cfg,
 		logger: logger,
 		cancel: cancel,
 		ctx:    cctx,
 		ready:  make(chan bool),
-		topics: topics,
+		topics: []string{cfg.Topic},
 	}
-
-	saramaConfig, err := r.getSaramaConfig(commitInterval)
+	saramaConfig, err := r.getSaramaConfig(*r.config.CommitInterval)
 	if err != nil {
 		return nil, err
 	}
@@ -84,7 +78,6 @@ func NewReceiver(config interface{}) (receiver.Receiver, error) {
 		return nil, err
 	}
 	r.client = client
-
 	return r, nil
 }
 
@@ -163,8 +156,8 @@ func (r *Receiver) getSaramaConfig(commitIntervalSec int) (*sarama.Config, error
 		}
 		config.Version = v
 	}
-	if 0 < r.config.ChannelBufferSize {
-		config.ChannelBufferSize = r.config.ChannelBufferSize
+	if r.config.ChannelBufferSize != nil && *r.config.ChannelBufferSize > 0 {
+		config.ChannelBufferSize = *r.config.ChannelBufferSize
 	}
 	config.Net.TLS.Enable = r.config.TLSEnable
 	if "" != r.config.Username {
@@ -205,33 +198,29 @@ func (r *Receiver) Receive(next receiver.NextFn) error {
 	r.next = next
 	r.done = make(chan struct{})
 	r.Unlock()
-	ctx := context.Background()
-	// does this have to be in go routine?
+	//ctx := context.Background()
 	go func() {
-		r.Start(ctx, func(msg *sarama.ConsumerMessage) bool {
+		r.Start(r.ctx, func(msg *sarama.ConsumerMessage) bool {
 			r.logger.Info().Str("op", "kafka.Receive").Msg("message received")
 			r.Lock()
 			r.count++
 			r.Unlock()
-
-			tctx, _ := context.WithTimeout(ctx, time.Duration(5)*time.Second)
+			tctx, _ := context.WithTimeout(r.ctx, time.Duration(5)*time.Second)
 			var pl interface{}
 			err := json.Unmarshal([]byte(msg.Value), &pl)
 			if err != nil {
-				r.logger.Error().Str("op", "redis.Receive").Msg("cannot parse payload: " + err.Error())
+				r.logger.Error().Str("op", "kafka.Receive").Msg("cannot parse payload: " + err.Error())
 				//return
 			}
-			// note: if we just pass msg.Payload into event, redis will blow up with an out of memory error within a
-			// few seconds - possibly a bug in the client library
 			e, err := event.New(tctx, pl, event.WithAck(
 				func(e event.Event) {
-					r.logger.Info().Str("op", "redis.Receive").Msg("processed message from redis channel")
+					r.logger.Info().Str("op", "kafka.Receive").Msg("processed message from kafka topic")
 				},
 				func(e event.Event, err error) {
-					r.logger.Error().Str("op", "redis.Receive").Msg("failed to process message: " + err.Error())
+					r.logger.Error().Str("op", "kafka.Receive").Msg("failed to process message: " + err.Error())
 				}))
 			if err != nil {
-				r.logger.Error().Str("op", "redis.Receive").Msg("cannot create event: " + err.Error())
+				r.logger.Error().Str("op", "kafka.Receive").Msg("cannot create event: " + err.Error())
 				//return
 			}
 			r.Trigger(e)

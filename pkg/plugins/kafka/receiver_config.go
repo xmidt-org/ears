@@ -33,6 +33,9 @@ func (rc *ReceiverConfig) WithDefaults() ReceiverConfig {
 	if cfg.GroupId == "" {
 		cfg.GroupId = DefaultReceiverConfig.GroupId
 	}
+	if cfg.CommitInterval == nil {
+		cfg.CommitInterval = DefaultReceiverConfig.CommitInterval
+	}
 	return cfg
 }
 
