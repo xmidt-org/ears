@@ -20,10 +20,12 @@ import (
 	"context"
 	"crypto/tls"
 	"crypto/x509"
+	"encoding/json"
 	"fmt"
 	"github.com/Shopify/sarama"
 	"github.com/rs/zerolog"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/goccy/go-yaml"
@@ -57,10 +59,32 @@ func NewReceiver(config interface{}) (receiver.Receiver, error) {
 	}
 	logger := zerolog.New(os.Stdout).Level(zerolog.DebugLevel)
 	zerolog.LevelFieldName = "log.level"
+
+	topics := []string{cfg.Topic}
+	commitInterval := 1
+
+	ctx := context.Background()
+	cctx, cancel := context.WithCancel(ctx)
+
 	r := &Receiver{
 		config: cfg,
 		logger: logger,
+		cancel: cancel,
+		ctx:    cctx,
+		ready:  make(chan bool),
+		topics: topics,
 	}
+
+	saramaConfig, err := r.getSaramaConfig(commitInterval)
+	if err != nil {
+		return nil, err
+	}
+	client, err := sarama.NewConsumerGroup(strings.Split(r.config.Brokers, ","), r.config.GroupId, saramaConfig)
+	if nil != err {
+		return nil, err
+	}
+	r.client = client
+
 	return r, nil
 }
 
@@ -94,7 +118,7 @@ func (r *Receiver) ConsumeClaim(session sarama.ConsumerGroupSession, claim saram
 	return nil
 }
 
-func (r *Receiver) Start(ctx context.Context, groupHandler sarama.ConsumerGroupHandler, handler func(*sarama.ConsumerMessage) bool) {
+func (r *Receiver) Start(ctx context.Context, handler func(*sarama.ConsumerMessage) bool) {
 	r.handler = handler
 	r.wg.Add(1)
 	defer r.wg.Done()
@@ -102,18 +126,18 @@ func (r *Receiver) Start(ctx context.Context, groupHandler sarama.ConsumerGroupH
 		// `Consume` should be called inside an infinite loop, when a
 		// server-side rebalance happens, the consumer session will need to be
 		// recreated to get the new claims
-		if err := r.client.Consume(r.ctx, r.topics, groupHandler); err != nil {
+		if err := r.client.Consume(ctx, r.topics, r); err != nil { // the receiver itself is the group handler
 			r.logger.Error().Str("op", "kafka.Start").Msg(err.Error())
 		}
 		// check if context was cancelled, signaling that the consumer should stop
-		if nil != r.ctx.Err() {
+		if nil != ctx.Err() {
 			return
 		}
 		r.ready = make(chan bool)
 	}
 }
 
-func (r *Receiver) Close(ctx context.Context) {
+func (r *Receiver) Close() {
 	<-r.ready // Await till the consumer has been set up
 	r.cancel()
 	r.wg.Wait()
@@ -181,8 +205,39 @@ func (r *Receiver) Receive(next receiver.NextFn) error {
 	r.next = next
 	r.done = make(chan struct{})
 	r.Unlock()
+	ctx := context.Background()
+	// does this have to be in go routine?
 	go func() {
-		//TODO: receive messages here
+		r.Start(ctx, func(msg *sarama.ConsumerMessage) bool {
+			r.logger.Info().Str("op", "kafka.Receive").Msg("message received")
+			r.Lock()
+			r.count++
+			r.Unlock()
+
+			tctx, _ := context.WithTimeout(ctx, time.Duration(5)*time.Second)
+			var pl interface{}
+			err := json.Unmarshal([]byte(msg.Value), &pl)
+			if err != nil {
+				r.logger.Error().Str("op", "redis.Receive").Msg("cannot parse payload: " + err.Error())
+				//return
+			}
+			// note: if we just pass msg.Payload into event, redis will blow up with an out of memory error within a
+			// few seconds - possibly a bug in the client library
+			e, err := event.New(tctx, pl, event.WithAck(
+				func(e event.Event) {
+					r.logger.Info().Str("op", "redis.Receive").Msg("processed message from redis channel")
+				},
+				func(e event.Event, err error) {
+					r.logger.Error().Str("op", "redis.Receive").Msg("failed to process message: " + err.Error())
+				}))
+			if err != nil {
+				r.logger.Error().Str("op", "redis.Receive").Msg("cannot create event: " + err.Error())
+				//return
+			}
+			r.Trigger(e)
+			// process message here
+			return false // why return false?
+		})
 	}()
 	r.logger.Info().Str("op", "kafka.Receive").Msg("waiting for receive done")
 	<-r.done
@@ -202,6 +257,7 @@ func (r *Receiver) Count() int {
 }
 
 func (r *Receiver) StopReceiving(ctx context.Context) error {
+	r.Close()
 	r.Lock()
 	if r.done != nil {
 		r.done <- struct{}{}
