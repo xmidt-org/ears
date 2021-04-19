@@ -15,6 +15,8 @@
 package kafka
 
 import (
+	"context"
+	"github.com/Shopify/sarama"
 	"github.com/rs/zerolog"
 	"github.com/xorcare/pointer"
 	"sync"
@@ -50,15 +52,31 @@ func NewPluginVersion(name string, version string, commitID string) (*pkgplugin.
 }
 
 var DefaultReceiverConfig = ReceiverConfig{
-	Brokers: "",
-	Topic:   "",
-	GroupId: "",
+	Brokers:    "",
+	Topic:      "",
+	GroupId:    "",
+	Username:   "",
+	Password:   "",
+	CACert:     "",
+	AccessCert: "",
+	AccessKey:  "",
+	Version:    "",
 }
 
 type ReceiverConfig struct {
 	Brokers string `json:"brokers,omitempty"`
 	Topic   string `json:"topic,omitempty"`
 	GroupId string `json:"groupId,omitempty"`
+
+	Username            string `json:"username,omitempty"`
+	Password            string `json:"password,omitempty"`
+	CACert              string `json:"caCert,omitempty"`
+	AccessCert          string `json:"accessCert,omitempty"`
+	AccessKey           string `json:"accessKey,omitempty"`
+	Version             string `json:"version,omitempty"`
+	ChannelBufferSize   int    `json:"channelBufferSize,omitempty"`
+	ConsumeByPartitions bool
+	TLSEnable           bool
 }
 
 type Receiver struct {
@@ -69,6 +87,15 @@ type Receiver struct {
 	logger    zerolog.Logger
 	count     int
 	startTime time.Time
+
+	sarama.ConsumerGroupSession
+	wg      sync.WaitGroup
+	ready   chan bool
+	ctx     context.Context
+	cancel  context.CancelFunc
+	client  sarama.ConsumerGroup
+	topics  []string
+	handler func(message *sarama.ConsumerMessage) bool
 }
 
 var DefaultSenderConfig = SenderConfig{
