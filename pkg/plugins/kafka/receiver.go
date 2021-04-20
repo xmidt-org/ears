@@ -156,7 +156,7 @@ func (r *Receiver) getSaramaConfig(commitIntervalSec int) (*sarama.Config, error
 		}
 		config.Version = v
 	}
-	if r.config.ChannelBufferSize != nil && *r.config.ChannelBufferSize > 0 {
+	if *r.config.ChannelBufferSize > 0 {
 		config.ChannelBufferSize = *r.config.ChannelBufferSize
 	}
 	config.Net.TLS.Enable = r.config.TLSEnable
