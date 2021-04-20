@@ -81,19 +81,17 @@ func (f *Filter) Filter(evt event.Event) []event.Event {
 		})
 		return nil
 	}
-
 	// passes if event matches
 	events := []event.Event{}
 	pass := f.matcher.Match(evt)
-
 	if f.config.Mode == ModeDeny {
 		pass = !pass
 	}
-
 	if pass {
 		events = []event.Event{evt}
+	} else {
+		evt.Ack()
 	}
-
 	return events
 }
 
@@ -101,6 +99,5 @@ func (f *Filter) Config() Config {
 	if f == nil {
 		return Config{}
 	}
-
 	return f.config
 }

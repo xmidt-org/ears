@@ -26,6 +26,6 @@ filterChain:
         var event = {};
         event.payload = _.payload;
         event.metadata =  _.metadata;
-        event.payload.a = "b";
+        event.payload.tag = "ears";
         return event;
 deliveryMode: whoCares

@@ -3,6 +3,7 @@ module github.com/xmidt-org/ears
 go 1.15
 
 require (
+	github.com/Shopify/sarama v1.28.0
 	github.com/aws/aws-sdk-go v1.36.29
 	github.com/boltdb/bolt v1.3.1
 	github.com/dop251/goja v0.0.0-20210406175830-1b11a6af686d
@@ -34,7 +35,6 @@ require (
 	github.com/spf13/jwalterweatherman v1.1.0 // indirect
 	github.com/spf13/pflag v1.0.5
 	github.com/spf13/viper v1.7.1
-	github.com/stretchr/testify v1.6.1 // indirect
 	github.com/xeipuuv/gojsonpointer v0.0.0-20190905194746-02993c407bfb // indirect
 	github.com/xeipuuv/gojsonschema v1.2.0
 	github.com/xorcare/pointer v1.1.0
@@ -43,7 +43,6 @@ require (
 	golang.org/x/crypto v0.0.0-20201221181555-eec23a3978ad // indirect
 	golang.org/x/lint v0.0.0-20201208152925-83fdc39ff7b5 // indirect
 	golang.org/x/mod v0.4.1 // indirect
-	golang.org/x/net v0.0.0-20201224014010-6772e930b67b // indirect
 	golang.org/x/sync v0.0.0-20201207232520-09787c993a3a
 	golang.org/x/sys v0.0.0-20210217105451-b926d437f341 // indirect
 	golang.org/x/tools v0.1.0 // indirect
