@@ -1,0 +1,23 @@
+{
+  "id": "loop102",
+  "orgId": "comcast",
+  "appId": "xfi",
+  "userId": "boris",
+  "name": "loop2Route",
+  "receiver": {
+    "plugin": "sqs",
+    "name": "mySqsReceiver",
+    "config": {
+      "queueUrl": "https://sqs.us-west-2.amazonaws.com/447701116110/earsSender",
+      "maxNumberOfMessages": 1
+    }
+  },
+  "sender": {
+    "plugin": "redis",
+    "name": "myRedisSender",
+    "config": {
+      "channel" : "ears_redis_route"
+    }
+  },
+  "deliveryMode": "whoCares"
+}

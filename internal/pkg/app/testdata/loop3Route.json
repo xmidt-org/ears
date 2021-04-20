@@ -1,19 +1,14 @@
 {
-  "id": "kafka102",
+  "id": "loop103",
   "orgId": "comcast",
   "appId": "xfi",
   "userId": "boris",
-  "name": "kafkaProducerRoute",
+  "name": "loop3Route",
   "receiver": {
-    "plugin": "debug",
-    "name": "mydebug",
+    "plugin": "redis",
+    "name": "myRedisReceiver",
     "config": {
-      "intervalMs": 1,
-      "maxHistory": 100,
-      "payload": {
-        "foo": "bar"
-      },
-      "rounds": 10
+      "channel" : "ears_redis_route"
     }
   },
   "sender": {

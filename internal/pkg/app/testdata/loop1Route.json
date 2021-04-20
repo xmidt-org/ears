@@ -1,9 +1,9 @@
 {
-  "id": "kafka101",
+  "id": "loop101",
   "orgId": "comcast",
   "appId": "xfi",
   "userId": "boris",
-  "name": "kafkaConsumerRoute",
+  "name": "loop1Route",
   "receiver": {
     "plugin": "kafka",
     "name": "myKafkaReceiver",
@@ -12,11 +12,11 @@
     }
   },
   "sender": {
-    "plugin": "debug",
-    "name": "myDebug",
+    "plugin": "sqs",
+    "name": "mySqsSender",
     "config": {
-      "destination": "stdout",
-      "maxHistory": 1000
+      "queueUrl": "https://sqs.us-west-2.amazonaws.com/447701116110/earsSender",
+      "maxNumberOfMessages": 1
     }
   },
   "deliveryMode": "whoCares"
