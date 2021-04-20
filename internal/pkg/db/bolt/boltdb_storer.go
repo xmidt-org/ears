@@ -68,7 +68,7 @@ func (d *BoltDbStorer) GetRoute(ctx context.Context, tid tenant.Id, id string) (
 			return &route.RouteNotFoundError{tid, id}
 		}
 
-		buf := b.Get([]byte(tid.Key(id)))
+		buf := b.Get([]byte(tid.KeyWithRoute(id)))
 		if buf == nil {
 			return &route.RouteNotFoundError{tid, id}
 		}
@@ -134,7 +134,7 @@ func (d *BoltDbStorer) SetRoute(ctx context.Context, r route.Config) error {
 		return err
 	}
 	err = d.db.Update(func(tx *bolt.Tx) error {
-		err := tx.Bucket([]byte("DB")).Bucket([]byte("ROUTES")).Put([]byte(r.TenantId.Key(r.Id)), val)
+		err := tx.Bucket([]byte("DB")).Bucket([]byte("ROUTES")).Put([]byte(r.TenantId.KeyWithRoute(r.Id)), val)
 		if err != nil {
 			return fmt.Errorf("could not insert route: %v", err)
 		}
@@ -164,7 +164,7 @@ func (d *BoltDbStorer) DeleteRoute(ctx context.Context, tid tenant.Id, id string
 		return fmt.Errorf("no route to delete in bolt")
 	}
 	err := d.db.Update(func(tx *bolt.Tx) error {
-		err := tx.Bucket([]byte("DB")).Bucket([]byte("ROUTES")).Delete([]byte(tid.Key(id)))
+		err := tx.Bucket([]byte("DB")).Bucket([]byte("ROUTES")).Delete([]byte(tid.KeyWithRoute(id)))
 		if err != nil {
 			return fmt.Errorf("could not insert route: %v", err)
 		}

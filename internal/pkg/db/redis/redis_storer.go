@@ -59,7 +59,7 @@ func NewRedisDbStorer(config Config, logger *zerolog.Logger) (*RedisDbStorer, er
 
 func (d *RedisDbStorer) GetRoute(ctx context.Context, tid tenant.Id, id string) (route.Config, error) {
 	r := route.Config{}
-	result, err := d.client.HGet(d.tableName, tid.Key(id)).Result()
+	result, err := d.client.HGet(d.tableName, tid.KeyWithRoute(id)).Result()
 	if err != nil {
 		if err.Error() == "redis: nil" {
 			return r, &route.RouteNotFoundError{tid, id}
@@ -123,7 +123,7 @@ func (d *RedisDbStorer) SetRoute(ctx context.Context, r route.Config) error {
 	if err != nil {
 		return err
 	}
-	isNew, err := d.client.HSet(d.tableName, r.TenantId.Key(r.Id), val).Result()
+	isNew, err := d.client.HSet(d.tableName, r.TenantId.KeyWithRoute(r.Id), val).Result()
 	if err != nil {
 		return fmt.Errorf("could not insert route into redis: %v", err)
 	}
@@ -151,7 +151,7 @@ func (d *RedisDbStorer) DeleteRoute(ctx context.Context, tid tenant.Id, id strin
 		return fmt.Errorf("no route to delete in bolt")
 	}
 
-	num, err := d.client.HDel(d.tableName, tid.Key(id)).Result()
+	num, err := d.client.HDel(d.tableName, tid.KeyWithRoute(id)).Result()
 	if err != nil {
 		return fmt.Errorf("could not delete route from redis: %v", err)
 	}

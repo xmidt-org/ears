@@ -16,6 +16,7 @@ package tablemgr
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"github.com/go-redis/redis"
 	"github.com/google/uuid"
@@ -23,7 +24,6 @@ import (
 	"github.com/xmidt-org/ears/internal/pkg/config"
 	"github.com/xmidt-org/ears/internal/pkg/logs"
 	"github.com/xmidt-org/ears/pkg/tenant"
-	"strings"
 	"sync"
 	"time"
 )
@@ -133,21 +133,17 @@ func (s *RedisDeltaSyncer) PublishSyncRequest(ctx context.Context, tid tenant.Id
 					} else {
 						//s.logger.Info().Str("op", "PublishSyncRequest").Msg("receive ack on channel " + EARS_REDIS_ACK_CHANNEL)
 					}
-					elems := strings.Split(msg.Payload, ",")
-					if len(elems) != 5 {
-						s.logger.Error().Str("op", "PublishSyncRequest").Msg("bad ack message structure: " + msg.Payload)
-						break
-					}
 
-					ackTid, err := tenant.FromString(elems[4])
+					var syncCmd SyncCommand
+					err = json.Unmarshal([]byte(msg.Payload), &syncCmd)
 					if err != nil {
-						s.logger.Error().Str("op", "PublishSyncRequest").Str("instanceId", elems[2]).Str("routeId", elems[1]).Str("sid", elems[3]).Msg("bad tenantId in ack message: " + err.Error())
+						s.logger.Error().Str("op", "PublishSyncRequest").Str("error", err.Error()).Msg("bad ack message structure: " + msg.Payload)
 						break
 					}
 
 					// only collect acks for this session
-					if cmd == elems[0] && routeId == elems[1] && elems[3] == sid && tid.Equal(*ackTid) {
-						received[elems[2]] = true
+					if cmd == syncCmd.Cmd && routeId == syncCmd.RouteId && syncCmd.Sid == sid && tid.Equal(syncCmd.Tenant) {
+						received[syncCmd.InstanceId] = true
 						// wait until we received an ack from each subscriber (except the one originating the request)
 						if len(received) >= numSubscribers-1 {
 							break
@@ -172,8 +168,16 @@ func (s *RedisDeltaSyncer) PublishSyncRequest(ctx context.Context, tid tenant.Id
 			// wait for listener to be ready
 			wg.Wait()
 			// ... then request all flow apis to sync
-			msg := cmd + "," + routeId + "," + instanceId + "," + sid + "," + tid.String()
-			err := s.client.Publish(EARS_REDIS_SYNC_CHANNEL, msg).Err()
+			syncCmd := &SyncCommand{
+				cmd,
+				routeId,
+				instanceId,
+				sid,
+				tid,
+			}
+
+			msg, _ := json.Marshal(syncCmd)
+			err := s.client.Publish(EARS_REDIS_SYNC_CHANNEL, string(msg)).Err()
 			if err != nil {
 				s.logger.Error().Str("op", "PublishSyncRequest").Msg(err.Error())
 			} else {
@@ -220,62 +224,51 @@ func (s *RedisDeltaSyncer) StartListeningForSyncRequests(instanceId string) {
 			} else {
 				s.logger.Info().Str("op", "ListenForSyncRequests").Msg("received message on channel " + EARS_REDIS_SYNC_CHANNEL)
 				// parse message
-				elems := strings.Split(msg.Payload, ",")
-				if len(elems) != 5 {
-					s.logger.Error().Str("op", "ListenForSyncRequests").Msg("bad message structure: " + msg.Payload)
+				var syncCmd SyncCommand
+				err := json.Unmarshal([]byte(msg.Payload), &syncCmd)
+				if err != nil {
+					s.logger.Error().Str("op", "ListenForSyncRequests").Str("error", err.Error()).Msg("bad message structure: " + msg.Payload)
 					continue
 				}
 				// leave sync loop if asked
-				if elems[0] == EARS_STOP_LISTENING_CMD {
-					if elems[2] == instanceId || elems[2] == "" {
+				if syncCmd.Cmd == EARS_STOP_LISTENING_CMD {
+					if syncCmd.InstanceId == instanceId || syncCmd.InstanceId == "" {
 						s.logger.Info().Str("op", "ListenForSyncRequests").Str("instanceId", instanceId).Msg("received stop listening message")
 						return
 					}
 				}
 				// sync only whats needed
-				if elems[2] != instanceId {
+				if syncCmd.InstanceId != instanceId {
 					s.GetInstanceCount(ctx) // just for logging
-					if elems[0] == EARS_ADD_ROUTE_CMD {
-						s.logger.Info().Str("op", "ListenForSyncRequests").Str("instanceId", instanceId).Str("routeId", elems[1]).Str("sid", elems[3]).Msg("received message to add route")
-
-						tid, err := tenant.FromString(elems[4])
-						if err != nil {
-							s.logger.Error().Str("op", "ListenForSyncRequests").Str("instanceId", elems[2]).Str("routeId", elems[1]).Str("sid", elems[3]).Msg("failed to sync route: " + err.Error())
-							continue
-						}
+					if syncCmd.Cmd == EARS_ADD_ROUTE_CMD {
+						s.logger.Info().Str("op", "ListenForSyncRequests").Str("instanceId", instanceId).Str("routeId", syncCmd.RouteId).Str("sid", syncCmd.Sid).Msg("received message to add route")
 
 						s.Lock()
 						for localTableSyncer, _ := range s.localTableSyncers {
-							err = localTableSyncer.SyncRoute(ctx, *tid, elems[1], true)
+							err = localTableSyncer.SyncRoute(ctx, syncCmd.Tenant, syncCmd.RouteId, true)
 							if err != nil {
-								s.logger.Error().Str("op", "ListenForSyncRequests").Str("instanceId", instanceId).Str("routeId", elems[1]).Str("sid", elems[3]).Msg("failed to sync route: " + err.Error())
+								s.logger.Error().Str("op", "ListenForSyncRequests").Str("instanceId", instanceId).Str("routeId", syncCmd.RouteId).Str("sid", syncCmd.Sid).Msg("failed to sync route: " + err.Error())
 							}
 						}
 						s.Unlock()
-						s.publishAckMessage(ctx, elems[0], elems[1], instanceId, elems[3], *tid)
-					} else if elems[0] == EARS_REMOVE_ROUTE_CMD {
-						s.logger.Info().Str("op", "ListenForSyncRequests").Str("instanceId", instanceId).Str("routeId", elems[1]).Str("sid", elems[3]).Msg("received message to remove route")
-
-						tid, err := tenant.FromString(elems[4])
-						if err != nil {
-							s.logger.Error().Str("op", "ListenForSyncRequests").Str("instanceId", elems[2]).Str("routeId", elems[1]).Str("sid", elems[3]).Msg("failed to sync route: " + err.Error())
-							continue
-						}
+						s.publishAckMessage(ctx, syncCmd.Cmd, syncCmd.RouteId, instanceId, syncCmd.Sid, syncCmd.Tenant)
+					} else if syncCmd.Cmd == EARS_REMOVE_ROUTE_CMD {
+						s.logger.Info().Str("op", "ListenForSyncRequests").Str("instanceId", instanceId).Str("routeId", syncCmd.RouteId).Str("sid", syncCmd.Sid).Msg("received message to remove route")
 
 						s.Lock()
 						for localTableSyncer, _ := range s.localTableSyncers {
-							err = localTableSyncer.SyncRoute(ctx, *tid, elems[1], false)
+							err = localTableSyncer.SyncRoute(ctx, syncCmd.Tenant, syncCmd.RouteId, false)
 							if err != nil {
-								s.logger.Error().Str("op", "ListenForSyncRequests").Str("instanceId", instanceId).Str("routeId", elems[1]).Str("sid", elems[3]).Msg("failed to sync route: " + err.Error())
+								s.logger.Error().Str("op", "ListenForSyncRequests").Str("instanceId", instanceId).Str("routeId", syncCmd.RouteId).Str("sid", syncCmd.Sid).Msg("failed to sync route: " + err.Error())
 							}
 						}
 						s.Unlock()
-						s.publishAckMessage(ctx, elems[0], elems[1], instanceId, elems[3], *tid)
-					} else if elems[0] == EARS_STOP_LISTENING_CMD {
+						s.publishAckMessage(ctx, syncCmd.Cmd, syncCmd.RouteId, instanceId, syncCmd.Sid, syncCmd.Tenant)
+					} else if syncCmd.Cmd == EARS_STOP_LISTENING_CMD {
 						s.logger.Info().Str("op", "ListenForSyncRequests").Str("instanceId", instanceId).Msg("stop message ignored")
 						// already handled above
 					} else {
-						s.logger.Error().Str("op", "ListenForSyncRequests").Str("instanceId", instanceId).Str("routeId", elems[1]).Str("sid", elems[3]).Msg("bad command " + elems[0])
+						s.logger.Error().Str("op", "ListenForSyncRequests").Str("instanceId", instanceId).Str("routeId", syncCmd.RouteId).Str("sid", syncCmd.Sid).Msg("bad command " + syncCmd.Cmd)
 					}
 				} else {
 					s.logger.Info().Str("op", "ListenForSyncRequests").Str("instanceId", instanceId).Msg("no need to sync myself")
@@ -291,12 +284,21 @@ func (s *RedisDeltaSyncer) publishAckMessage(ctx context.Context, cmd string, ro
 	if !s.active {
 		return nil
 	}
-	msg := cmd + "," + routeId + "," + instanceId + "," + sid + "," + tid.String()
-	err := s.client.Publish(EARS_REDIS_ACK_CHANNEL, msg).Err()
+
+	syncCmd := &SyncCommand{
+		cmd,
+		routeId,
+		instanceId,
+		sid,
+		tid,
+	}
+
+	msg, _ := json.Marshal(syncCmd)
+	err := s.client.Publish(EARS_REDIS_ACK_CHANNEL, string(msg)).Err()
 	if err != nil {
 		s.logger.Error().Str("op", "PublishAckMessage").Msg(err.Error())
 	} else {
-		s.logger.Info().Str("op", "PublishAckMessage").Msg("published ack message on " + EARS_REDIS_ACK_CHANNEL + ": " + msg)
+		s.logger.Info().Str("op", "PublishAckMessage").Msg("published ack message on " + EARS_REDIS_ACK_CHANNEL + ": " + string(msg))
 	}
 	return err
 }

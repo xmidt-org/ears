@@ -33,5 +33,5 @@ type RouteNotFoundError struct {
 }
 
 func (e *RouteNotFoundError) Error() string {
-	return errs.String("RouteNotFoundError", map[string]interface{}{"routeId": e.RouteId, "tenantId": e.TenantId.String()}, nil)
+	return errs.String("RouteNotFoundError", map[string]interface{}{"routeId": e.RouteId, "orgId": e.TenantId.OrgId, "appId": e.TenantId.AppId}, nil)
 }

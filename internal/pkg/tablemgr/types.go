@@ -31,6 +31,14 @@ const (
 	EARS_STOP_LISTENING_CMD = "stop"
 )
 
+type SyncCommand struct {
+	Cmd        string
+	RouteId    string
+	InstanceId string
+	Sid        string
+	Tenant     tenant.Id
+}
+
 type (
 
 	// A RoutingTableManager supports modifying and querying an EARS routing table

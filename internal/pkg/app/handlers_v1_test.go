@@ -225,7 +225,7 @@ func TestRouteTable(t *testing.T) {
 					t.Fatalf("%s test: route has blank ID", currentTestName)
 				}
 				routeIds = append(routeIds, rt.Id)
-				t.Logf("added route with tid: %s, id: %s", rt.TenantId.String(), rt.Id)
+				t.Logf("added route with tid: %v, id: %s", rt.TenantId, rt.Id)
 			}
 			// sleep
 			time.Sleep(time.Duration(currentTest.WaitMs) * time.Millisecond)
