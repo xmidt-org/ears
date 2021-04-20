@@ -36,6 +36,12 @@ func (rc *ReceiverConfig) WithDefaults() ReceiverConfig {
 	if cfg.CommitInterval == nil {
 		cfg.CommitInterval = DefaultReceiverConfig.CommitInterval
 	}
+	if cfg.Version == "" {
+		cfg.Version = DefaultReceiverConfig.Version
+	}
+	if cfg.ChannelBufferSize == nil {
+		cfg.ChannelBufferSize = DefaultSenderConfig.ChannelBufferSize
+	}
 	return cfg
 }
 
@@ -70,6 +76,27 @@ const receiverSchema = `
                 },
                 "groupId": {
                     "type": "string"
+                },
+                "username": {
+                    "type": "string"
+                },
+                "password": {
+                    "type": "string"
+                },
+                "caCert": {
+                    "type": "string"
+                },
+                "accessCert": {
+                    "type": "string"
+                },
+                "version": {
+                    "type": "string"
+                },
+                "commitInterval": {
+                    "type": "integer"
+                },
+                "channelBufferSize": {
+                    "type": "integer"
                 }
             },
             "required": [
