@@ -52,16 +52,17 @@ func NewPluginVersion(name string, version string, commitID string) (*pkgplugin.
 }
 
 var DefaultReceiverConfig = ReceiverConfig{
-	Brokers:        "",
-	Topic:          "",
-	GroupId:        "",
-	Username:       "",
-	Password:       "",
-	CACert:         "",
-	AccessCert:     "",
-	AccessKey:      "",
-	Version:        "",
-	CommitInterval: pointer.Int(1),
+	Brokers:           "",
+	Topic:             "",
+	GroupId:           "",
+	Username:          "",
+	Password:          "",
+	CACert:            "",
+	AccessCert:        "",
+	AccessKey:         "",
+	Version:           "",
+	CommitInterval:    pointer.Int(1),
+	ChannelBufferSize: pointer.Int(0),
 }
 
 type ReceiverConfig struct {
@@ -100,24 +101,50 @@ type Receiver struct {
 }
 
 var DefaultSenderConfig = SenderConfig{
-	Brokers:   "",
-	Topic:     "",
-	Partition: pointer.Int(-1),
+	Brokers:           "",
+	Topic:             "",
+	Partition:         pointer.Int(-1),
+	ChannelBufferSize: pointer.Int(0),
+	Username:          "",
+	Password:          "",
+	CACert:            "",
+	AccessCert:        "",
+	AccessKey:         "",
+	Version:           "",
 }
 
 // SenderConfig can be passed into NewSender() in order to configure
 // the behavior of the sender.
 type SenderConfig struct {
-	Brokers   string `json:"brokers,omitempty"`
-	Topic     string `json:"topic,omitempty"`
-	Partition *int   `json:"partition,omitempty"`
+	Brokers           string `json:"brokers,omitempty"`
+	Topic             string `json:"topic,omitempty"`
+	Partition         *int   `json:"partition,omitempty"`
+	Username          string `json:"username,omitempty"` // yaml
+	Password          string `json:"password,omitempty"`
+	CACert            string `json:"caCert,omitempty"`
+	AccessCert        string `json:"accessCert,omitempty"`
+	AccessKey         string `json:"accessKey,omitempty"`
+	Version           string `json:"version,omitempty"`
+	ChannelBufferSize *int   `json:"channelBufferSize,omitempty"`
+	TLSEnable         bool
 }
 
 type Sender struct {
 	sync.Mutex
-	config SenderConfig
-	count  int
-	logger zerolog.Logger
+	config   SenderConfig
+	count    int
+	logger   zerolog.Logger
+	producer *Producer
+}
+
+type ManualHashPartitioner struct {
+	sarama.Partitioner
+}
+
+type Producer struct {
+	pool   chan sarama.SyncProducer
+	done   chan bool
+	client sarama.Client
 }
 
 func (s *Sender) Unwrap() sender.Sender {
