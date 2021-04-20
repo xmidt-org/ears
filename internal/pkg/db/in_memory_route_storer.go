@@ -54,7 +54,7 @@ func (s *InMemoryRouteStorer) GetRoute(ctx context.Context, tid tenant.Id, id st
 
 	empty := route.Config{}
 
-	t, ok := s.tenants[tid.String()]
+	t, ok := s.tenants[tid.Key()]
 	if !ok {
 		return empty, &route.RouteNotFoundError{tid, id}
 	}
@@ -73,7 +73,7 @@ func (s *InMemoryRouteStorer) GetAllTenantRoutes(ctx context.Context, id tenant.
 	defer s.lock.RUnlock()
 
 	routes := make([]route.Config, 0)
-	t, ok := s.tenants[id.String()]
+	t, ok := s.tenants[id.Key()]
 	if !ok {
 		return routes, nil
 	}
@@ -87,9 +87,9 @@ func (s *InMemoryRouteStorer) GetAllTenantRoutes(ctx context.Context, id tenant.
 func (s *InMemoryRouteStorer) setRoute(r route.Config) {
 	r.Modified = time.Now().Unix()
 	var tenant map[string]*route.Config
-	if t, ok := s.tenants[r.TenantId.String()]; !ok {
+	if t, ok := s.tenants[r.TenantId.Key()]; !ok {
 		tenant = make(map[string]*route.Config)
-		s.tenants[r.TenantId.String()] = tenant
+		s.tenants[r.TenantId.Key()] = tenant
 	} else {
 		tenant = t
 	}
@@ -123,7 +123,7 @@ func (s *InMemoryRouteStorer) DeleteRoute(ctx context.Context, tid tenant.Id, id
 	s.lock.Lock()
 	defer s.lock.Unlock()
 
-	t, ok := s.tenants[tid.String()]
+	t, ok := s.tenants[tid.Key()]
 	if !ok {
 		return nil
 	}
@@ -136,7 +136,7 @@ func (s *InMemoryRouteStorer) DeleteRoutes(ctx context.Context, tid tenant.Id, i
 	s.lock.Lock()
 	defer s.lock.Unlock()
 
-	t, ok := s.tenants[tid.String()]
+	t, ok := s.tenants[tid.Key()]
 	if !ok {
 		return nil
 	}

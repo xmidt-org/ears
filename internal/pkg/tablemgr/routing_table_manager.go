@@ -129,13 +129,13 @@ func (r *DefaultRoutingTableManager) unregisterAndStopRoute(ctx context.Context,
 	var err error
 	r.Lock()
 	defer r.Unlock()
-	liveRoute, ok := r.liveRouteMap[tid.Key(routeId)]
+	liveRoute, ok := r.liveRouteMap[tid.KeyWithRoute(routeId)]
 	if !ok {
 		r.logger.Info().Str("op", "unregisterAndStopRoute").Str("routeId", routeId).Msg("no live route exists with this ID")
 		// no error to make this idempotent
 		//return errors.New("no live route exists with ID " + routeId)
 	} else {
-		delete(r.liveRouteMap, tid.Key(routeId))
+		delete(r.liveRouteMap, tid.KeyWithRoute(routeId))
 		numRefs := liveRoute.RemoveRouteReference()
 		r.logger.Info().Str("op", "unregisterAndStopRoute").Str("routeId", routeId).Int("numRefs", numRefs).Str("routeHash", liveRoute.Config.Hash(ctx)).Msg("number references")
 		if numRefs == 0 {
@@ -159,7 +159,7 @@ func (r *DefaultRoutingTableManager) registerAndRunRoute(ctx context.Context, ro
 	var err error
 	// check if route already exists, check if this is an update etc.
 	r.Lock()
-	existingLiveRoute, ok := r.liveRouteMap[routeConfig.TenantId.Key(routeConfig.Id)]
+	existingLiveRoute, ok := r.liveRouteMap[routeConfig.TenantId.KeyWithRoute(routeConfig.Id)]
 	r.Unlock()
 	if ok && existingLiveRoute.Config.Hash(ctx) == routeConfig.Hash(ctx) {
 		r.logger.Info().Str("op", "registerAndRunRoute").Str("routeId", routeConfig.Id).Msg("identical route exists with same hash and same ID")
@@ -189,7 +189,7 @@ func (r *DefaultRoutingTableManager) registerAndRunRoute(ctx context.Context, ro
 		// we simply increment the reference count of an already existing route and are done here
 		r.logger.Info().Str("op", "registerAndRunRoute").Str("routeId", routeConfig.Id).Msg("adding route ID to identical route which already exists under different ID " + existingLiveRoute.Config.Id)
 		existingLiveRoute.AddRouteReference()
-		r.liveRouteMap[routeConfig.TenantId.Key(routeConfig.Id)] = existingLiveRoute
+		r.liveRouteMap[routeConfig.TenantId.KeyWithRoute(routeConfig.Id)] = existingLiveRoute
 		return nil
 	}
 	// otherwise we create a brand-new route
@@ -202,7 +202,7 @@ func (r *DefaultRoutingTableManager) registerAndRunRoute(ctx context.Context, ro
 	}
 	// create live route
 	lrw.Route = &route.Route{}
-	r.liveRouteMap[routeConfig.TenantId.Key(routeConfig.Id)] = lrw
+	r.liveRouteMap[routeConfig.TenantId.KeyWithRoute(routeConfig.Id)] = lrw
 	r.routeHashMap[routeConfig.Hash(ctx)] = lrw
 	r.logger.Info().Str("op", "registerAndRunRoute").Str("routeId", routeConfig.Id).Msg("starting route")
 	go func() {
@@ -336,7 +336,7 @@ func (r *DefaultRoutingTableManager) IsSynchronized() (bool, error) {
 		if !ok {
 			return false, nil
 		}
-		_, ok = r.liveRouteMap[sr.TenantId.Key(sr.Id)]
+		_, ok = r.liveRouteMap[sr.TenantId.KeyWithRoute(sr.Id)]
 		if !ok {
 			return false, nil
 		}
@@ -365,7 +365,7 @@ func (r *DefaultRoutingTableManager) SynchronizeAllRoutes() (int, error) {
 	}
 	storedRouteMap := make(map[string]route.Config, 0)
 	for _, storedRoute := range storedRoutes {
-		storedRouteMap[storedRoute.TenantId.Key(storedRoute.Id)] = storedRoute
+		storedRouteMap[storedRoute.TenantId.KeyWithRoute(storedRoute.Id)] = storedRoute
 	}
 	mutated := 0
 	r.Lock()
@@ -376,7 +376,7 @@ func (r *DefaultRoutingTableManager) SynchronizeAllRoutes() (int, error) {
 	r.Unlock()
 	// stop all inconsistent or deleted routes
 	for _, liveRoute := range lrm {
-		storedRoute, ok := storedRouteMap[liveRoute.Config.TenantId.Key(liveRoute.Config.Id)]
+		storedRoute, ok := storedRouteMap[liveRoute.Config.TenantId.KeyWithRoute(liveRoute.Config.Id)]
 		if !ok {
 			r.logger.Info().Str("op", "Synchronize").Str("routeId", liveRoute.Config.Id).Msg("route stopped")
 			r.unregisterAndStopRoute(ctx, liveRoute.Config.TenantId, liveRoute.Config.Id)
@@ -389,7 +389,7 @@ func (r *DefaultRoutingTableManager) SynchronizeAllRoutes() (int, error) {
 	}
 	// start all missing routes
 	for _, storedRoute := range storedRoutes {
-		_, ok := lrm[storedRoute.TenantId.Key(storedRoute.Id)]
+		_, ok := lrm[storedRoute.TenantId.KeyWithRoute(storedRoute.Id)]
 		if !ok {
 			r.logger.Info().Str("op", "Synchronize").Str("routeId", storedRoute.Id).Msg("route started")
 			var rc route.Config

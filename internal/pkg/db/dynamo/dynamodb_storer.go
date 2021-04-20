@@ -57,7 +57,7 @@ func (d *DynamoDbStorer) getRoute(ctx context.Context, tid tenant.Id, routeId st
 	input := &dynamodb.GetItemInput{
 		Key: map[string]*dynamodb.AttributeValue{
 			"id": {
-				S: aws.String(tid.Key(routeId)),
+				S: aws.String(tid.KeyWithRoute(routeId)),
 			},
 		},
 		TableName: aws.String(d.tableName),
@@ -168,7 +168,7 @@ func (d *DynamoDbStorer) setRoute(ctx context.Context, r route.Config, svc *dyna
 	}
 
 	route := routeItem{
-		KeyId:  r.TenantId.Key(r.Id),
+		KeyId:  r.TenantId.KeyWithRoute(r.Id),
 		Config: r,
 	}
 
@@ -226,7 +226,7 @@ func (d *DynamoDbStorer) deleteRoute(ctx context.Context, tid tenant.Id, id stri
 	input := &dynamodb.DeleteItemInput{
 		Key: map[string]*dynamodb.AttributeValue{
 			"id": {
-				S: aws.String(tid.Key(id)),
+				S: aws.String(tid.KeyWithRoute(id)),
 			},
 		},
 		TableName: aws.String(d.tableName),
