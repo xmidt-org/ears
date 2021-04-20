@@ -111,6 +111,7 @@ var DefaultSenderConfig = SenderConfig{
 	AccessCert:        "",
 	AccessKey:         "",
 	Version:           "",
+	SenderPoolSize:    pointer.Int(1),
 }
 
 // SenderConfig can be passed into NewSender() in order to configure
@@ -127,6 +128,7 @@ type SenderConfig struct {
 	Version           string `json:"version,omitempty"`
 	ChannelBufferSize *int   `json:"channelBufferSize,omitempty"`
 	TLSEnable         bool   `json:"tlsEnable,omitempty"`
+	SenderPoolSize    *int   `json:"senderPoolSize,omitempty"`
 }
 
 type Sender struct {
