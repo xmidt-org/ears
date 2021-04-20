@@ -52,8 +52,8 @@ func NewPluginVersion(name string, version string, commitID string) (*pkgplugin.
 }
 
 var DefaultReceiverConfig = ReceiverConfig{
-	Brokers:           "",
-	Topic:             "",
+	Brokers:           "localhost:9092",
+	Topic:             "quickstart-events",
 	GroupId:           "",
 	Username:          "",
 	Password:          "",
@@ -77,8 +77,8 @@ type ReceiverConfig struct {
 	Version             string `json:"version,omitempty"`
 	CommitInterval      *int   `json:"commitInterval,omitempty"`
 	ChannelBufferSize   *int   `json:"channelBufferSize,omitempty"`
-	ConsumeByPartitions bool
-	TLSEnable           bool
+	ConsumeByPartitions bool   `json:"consumeByPartitions,omitempty"`
+	TLSEnable           bool   `json:"tlsEnable,omitempty"`
 }
 
 type Receiver struct {
@@ -101,8 +101,8 @@ type Receiver struct {
 }
 
 var DefaultSenderConfig = SenderConfig{
-	Brokers:           "",
-	Topic:             "",
+	Brokers:           "localhost:9092",
+	Topic:             "quickstart-events",
 	Partition:         pointer.Int(-1),
 	ChannelBufferSize: pointer.Int(0),
 	Username:          "",
@@ -126,7 +126,7 @@ type SenderConfig struct {
 	AccessKey         string `json:"accessKey,omitempty"`
 	Version           string `json:"version,omitempty"`
 	ChannelBufferSize *int   `json:"channelBufferSize,omitempty"`
-	TLSEnable         bool
+	TLSEnable         bool   `json:"tlsEnable,omitempty"`
 }
 
 type Sender struct {
