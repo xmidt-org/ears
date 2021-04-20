@@ -199,15 +199,17 @@ func (r *Receiver) Receive(next receiver.NextFn) error {
 	r.next = next
 	r.done = make(chan struct{})
 	r.Unlock()
+	ctx := context.Background()
 	go func() {
 		r.Start(r.ctx, func(msg *sarama.ConsumerMessage) bool {
 			r.logger.Info().Str("op", "kafka.Receive").Msg("message received")
 			r.Lock()
 			r.count++
 			r.Unlock()
-			tctx, _ := context.WithTimeout(r.ctx, time.Duration(5)*time.Second)
+			//TODO: shut down cleanly without losing events here
+			tctx, _ := context.WithTimeout(ctx, time.Duration(5)*time.Second)
 			var pl interface{}
-			err := json.Unmarshal([]byte(msg.Value), &pl)
+			err := json.Unmarshal(msg.Value, &pl)
 			if err != nil {
 				r.logger.Error().Str("op", "kafka.Receive").Msg("cannot parse payload: " + err.Error())
 				//return
@@ -230,7 +232,7 @@ func (r *Receiver) Receive(next receiver.NextFn) error {
 	r.logger.Info().Str("op", "kafka.Receive").Msg("waiting for receive done")
 	<-r.done
 	r.Lock()
-	elapsedMs := time.Now().Sub(r.startTime).Milliseconds()
+	elapsedMs := time.Since(r.startTime).Milliseconds()
 	throughput := 1000 * r.count / int(elapsedMs)
 	cnt := r.count
 	r.Unlock()

@@ -85,8 +85,6 @@ func (s *Sender) Count() int {
 }
 
 func (s *Sender) StopSending(ctx context.Context) {
-	s.Lock()
-	s.Unlock()
 }
 
 func (s *Sender) NewProducer(count int) (*Producer, error) {
