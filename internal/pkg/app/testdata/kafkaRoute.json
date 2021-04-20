@@ -1,19 +1,14 @@
 {
-  "id": "kafka102",
+  "id": "kafka103",
   "orgId": "comcast",
   "appId": "xfi",
   "userId": "boris",
-  "name": "kafkaProducerRoute",
+  "name": "kafkaRoute",
   "receiver": {
-    "plugin": "debug",
-    "name": "mydebug",
+    "plugin": "kafka",
+    "name": "myKafkaReceiver",
     "config": {
-      "intervalMs": 1,
-      "maxHistory": 100,
-      "payload": {
-        "foo": "bar"
-      },
-      "rounds": 10
+      "groupId": "myGroup"
     }
   },
   "sender": {
