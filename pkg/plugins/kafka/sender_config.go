@@ -37,6 +37,9 @@ func (sc SenderConfig) WithDefaults() SenderConfig {
 	if cfg.Version == "" {
 		cfg.Version = DefaultReceiverConfig.Version
 	}
+	if cfg.SenderPoolSize == nil {
+		cfg.SenderPoolSize = DefaultSenderConfig.SenderPoolSize
+	}
 	return cfg
 }
 
@@ -89,7 +92,12 @@ const senderSchema = `
                 },
                 "channelBufferSize": {
                     "type": "integer"
-                }
+                },
+				"senderPoolSize": {
+                    "type": "integer", 
+					"minimum": 1,
+					"maximum": 100
+				}
             },
             "required": [
                 "brokers", "topic"

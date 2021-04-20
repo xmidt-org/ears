@@ -134,7 +134,8 @@ func (r *Receiver) Close() {
 	<-r.ready // Await till the consumer has been set up
 	r.cancel()
 	r.wg.Wait()
-	if err := r.client.Close(); err != nil {
+	err := r.client.Close()
+	if err != nil {
 		r.logger.Error().Str("op", "kafka.Close").Msg(err.Error())
 	}
 }
@@ -198,7 +199,6 @@ func (r *Receiver) Receive(next receiver.NextFn) error {
 	r.next = next
 	r.done = make(chan struct{})
 	r.Unlock()
-	//ctx := context.Background()
 	go func() {
 		r.Start(r.ctx, func(msg *sarama.ConsumerMessage) bool {
 			r.logger.Info().Str("op", "kafka.Receive").Msg("message received")
@@ -224,7 +224,6 @@ func (r *Receiver) Receive(next receiver.NextFn) error {
 				//return
 			}
 			r.Trigger(e)
-			// process message here
 			return false // why return false?
 		})
 	}()
@@ -246,12 +245,12 @@ func (r *Receiver) Count() int {
 }
 
 func (r *Receiver) StopReceiving(ctx context.Context) error {
-	r.Close()
 	r.Lock()
 	if r.done != nil {
 		r.done <- struct{}{}
 	}
 	r.Unlock()
+	r.Close()
 	return nil
 }
 

@@ -70,8 +70,7 @@ func NewSender(config interface{}) (sender.Sender, error) {
 func (s *Sender) initPlugin() error {
 	var err error
 	s.Lock()
-	//TODO: set pool size in config
-	s.producer, err = s.NewProducer(1)
+	s.producer, err = s.NewProducer(*s.config.SenderPoolSize)
 	s.Unlock()
 	if err != nil {
 		return err
@@ -247,7 +246,7 @@ func (s *Sender) Send(e event.Event) {
 	}
 	//TODO: support headers
 	s.producer.SendMessage(s.config.Topic, s.config.Partition, nil, buf)
-	s.logger.Info().Str("op", "kafka.Send").Msg("sent message on redis channel")
+	s.logger.Info().Str("op", "kafka.Send").Msg("sent message on kafka topic")
 	s.Lock()
 	s.count++
 	s.Unlock()
