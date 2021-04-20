@@ -35,6 +35,7 @@ import (
 	"github.com/xmidt-org/ears/pkg/plugins/block"
 	"github.com/xmidt-org/ears/pkg/plugins/debug"
 	"github.com/xmidt-org/ears/pkg/plugins/js"
+	"github.com/xmidt-org/ears/pkg/plugins/kafka"
 	"github.com/xmidt-org/ears/pkg/plugins/match"
 	"github.com/xmidt-org/ears/pkg/plugins/pass"
 	goredis "github.com/xmidt-org/ears/pkg/plugins/redis"
@@ -449,6 +450,10 @@ func setupRestApi(config Config, storageMgr route.RouteStorer) (*EarsRuntime, er
 		{
 			name:   "redis",
 			plugin: toArr(goredis.NewPluginVersion("redis", "", ""))[0].(pkgplugin.Pluginer),
+		},
+		{
+			name:   "kafka",
+			plugin: toArr(kafka.NewPluginVersion("kafka", "", ""))[0].(pkgplugin.Pluginer),
 		},
 		{
 			name:   "match",

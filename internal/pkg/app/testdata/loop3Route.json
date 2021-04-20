@@ -1,0 +1,21 @@
+{
+  "id": "loop103",
+  "orgId": "comcast",
+  "appId": "xfi",
+  "userId": "boris",
+  "name": "loop3Route",
+  "receiver": {
+    "plugin": "redis",
+    "name": "myRedisReceiver",
+    "config": {
+      "channel" : "ears_redis_route"
+    }
+  },
+  "sender": {
+    "plugin": "kafka",
+    "name": "myKafkaSender",
+    "config": {
+    }
+  },
+  "deliveryMode": "whoCares"
+}

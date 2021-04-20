@@ -1,0 +1,26 @@
+{
+  "id": "kafka102",
+  "orgId": "comcast",
+  "appId": "xfi",
+  "userId": "boris",
+  "name": "kafkaProducerRoute",
+  "receiver": {
+    "plugin": "debug",
+    "name": "mydebug",
+    "config": {
+      "intervalMs": 1,
+      "maxHistory": 100,
+      "payload": {
+        "foo": "bar"
+      },
+      "rounds": 10
+    }
+  },
+  "sender": {
+    "plugin": "kafka",
+    "name": "myKafkaSender",
+    "config": {
+    }
+  },
+  "deliveryMode": "whoCares"
+}
