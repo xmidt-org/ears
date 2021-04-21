@@ -15,6 +15,8 @@
 package kafka
 
 //TODO: worker pool
+//TODO: test rebalancing
+//TODO: implement retries
 
 import (
 	"context"
@@ -86,7 +88,7 @@ func (r *Receiver) Setup(session sarama.ConsumerGroupSession) error {
 	r.Lock()
 	r.ConsumerGroupSession = session
 	r.Unlock()
-	// Mark the consumer as ready
+	// mark the consumer as ready
 	close(r.ready)
 	return nil
 }
@@ -113,13 +115,14 @@ func (r *Receiver) ConsumeClaim(session sarama.ConsumerGroupSession, claim saram
 
 func (r *Receiver) Start(ctx context.Context, handler func(*sarama.ConsumerMessage) bool) {
 	r.handler = handler
-	r.wg.Add(1)
-	defer r.wg.Done()
+	//r.wg.Add(1)
+	//defer r.wg.Done()
 	for {
 		// `Consume` should be called inside an infinite loop, when a
 		// server-side rebalance happens, the consumer session will need to be
 		// recreated to get the new claims
-		if err := r.client.Consume(ctx, r.topics, r); err != nil { // the receiver itself is the group handler
+		err := r.client.Consume(ctx, r.topics, r)
+		if err != nil { // the receiver itself is the group handler
 			r.logger.Error().Str("op", "kafka.Start").Msg(err.Error())
 		}
 		// check if context was cancelled, signaling that the consumer should stop
@@ -133,7 +136,7 @@ func (r *Receiver) Start(ctx context.Context, handler func(*sarama.ConsumerMessa
 func (r *Receiver) Close() {
 	<-r.ready // Await till the consumer has been set up
 	r.cancel()
-	r.wg.Wait()
+	//r.wg.Wait()
 	err := r.client.Close()
 	if err != nil {
 		r.logger.Error().Str("op", "kafka.Close").Msg(err.Error())
@@ -212,7 +215,7 @@ func (r *Receiver) Receive(next receiver.NextFn) error {
 			err := json.Unmarshal(msg.Value, &pl)
 			if err != nil {
 				r.logger.Error().Str("op", "kafka.Receive").Msg("cannot parse payload: " + err.Error())
-				//return
+				return true
 			}
 			e, err := event.New(tctx, pl, event.WithAck(
 				func(e event.Event) {
@@ -223,10 +226,11 @@ func (r *Receiver) Receive(next receiver.NextFn) error {
 				}))
 			if err != nil {
 				r.logger.Error().Str("op", "kafka.Receive").Msg("cannot create event: " + err.Error())
-				//return
+				return true
 			}
 			r.Trigger(e)
-			return false // why return false?
+			//TODO: when to return false
+			return true
 		})
 	}()
 	r.logger.Info().Str("op", "kafka.Receive").Msg("waiting for receive done")
@@ -252,7 +256,9 @@ func (r *Receiver) StopReceiving(ctx context.Context) error {
 		r.done <- struct{}{}
 	}
 	r.Unlock()
+	r.logger.Info().Str("op", "kafka.StopReceiving").Msg("done sent to receiver func")
 	r.Close()
+	r.logger.Info().Str("op", "kafka.StopReceiving").Msg("kafka client closed")
 	return nil
 }
 
