@@ -1,0 +1,36 @@
+{
+  "item": {
+    "deliveryMode": "whoCares",
+    "id": "r100",
+    "name": "simpleRoute",
+    "receiver": {
+      "config": {
+        "intervalMs": 10,
+        "maxHistory": 100,
+        "payload": {
+          "foo": "bar"
+        },
+        "rounds": 5
+      },
+      "name": "mydebug",
+      "plugin": "debug"
+    },
+    "sender": {
+      "config": {
+        "destination": "stdout",
+        "maxHistory": 100
+      },
+      "name": "simpleRouteSender",
+      "plugin": "debug"
+    },
+    "tenant": {
+      "appId": "myapp",
+      "orgId": "myorg"
+    },
+    "userId": "boris"
+  },
+  "status": {
+    "code": 200,
+    "message": "OK"
+  }
+}
