@@ -46,6 +46,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"strings"
 	"testing"
 	"time"
 )
@@ -1182,4 +1183,60 @@ func TestRestPostRouteHandlerNoUser(t *testing.T) {
 		t.Fatalf("cannot unmarshal response %s into json %s", string(w.Body.Bytes()), err.Error())
 	}
 	g.AssertJson(t, "addroutenouser", data)
+}
+
+func TestRestMultipleTenants(t *testing.T) {
+	Version = "v1.0.2"
+	routeFileName := "testdata/simpleRoute.json"
+
+	tenantPaths := []string{
+		"/orgs/myorg/applications/myapp",
+		"/orgs/myorg/applications/myapp2",
+		"/orgs/myorg2/applications/myapp",
+		"/orgs/myorg2/applications/myapp2",
+	}
+
+	runtime := setupSimpleApi(t, "inmemory")
+
+	//set routes
+	for _, path := range tenantPaths {
+		simpleRouteReader, err := os.Open(routeFileName)
+		if err != nil {
+			t.Fatalf("cannot read file: %s", err.Error())
+		}
+
+		w := httptest.NewRecorder()
+		r := httptest.NewRequest(http.MethodPost, "/ears/v1"+path+"/routes", simpleRouteReader)
+		runtime.apiManager.muxRouter.ServeHTTP(w, r)
+		if w.Code != http.StatusOK {
+			t.Fatalf("Setting route does not return 200. Instead, returns %d\n", w.Code)
+			return
+		}
+	}
+
+	//get routes
+	for _, path := range tenantPaths {
+		w := httptest.NewRecorder()
+		r := httptest.NewRequest(http.MethodGet, "/ears/v1"+path+"/routes/r100", nil)
+		runtime.apiManager.muxRouter.ServeHTTP(w, r)
+		g := goldie.New(t)
+		var data map[string]interface{}
+		err := json.Unmarshal(w.Body.Bytes(), &data)
+		if err != nil {
+			t.Fatalf("cannot unmarshal response %s into json %s", string(w.Body.Bytes()), err.Error())
+		}
+		item := data["item"].(map[string]interface{})
+		delete(item, "created")
+		delete(item, "modified")
+		g.AssertJson(t, "getroute"+strings.Replace(path, "/", "_", -1), data)
+	}
+
+	// delete routes
+	rtId := "r100"
+	for _, path := range tenantPaths {
+		r := httptest.NewRequest(http.MethodDelete, "/ears/v1"+path+"/routes/"+rtId, nil)
+		w := httptest.NewRecorder()
+		runtime.apiManager.muxRouter.ServeHTTP(w, r)
+		t.Logf("deleted route with tenant: %s, id: %s", path, rtId)
+	}
 }
