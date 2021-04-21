@@ -79,7 +79,7 @@ type (
 	}
 )
 
-const tenantPath = "/orgs/comcast/applications/xfi"
+const tenantPath = "/orgs/myorg/applications/myapp"
 
 // should in memory storer also be implemented as singleton?
 
