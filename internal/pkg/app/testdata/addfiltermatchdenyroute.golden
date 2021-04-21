@@ -39,8 +39,8 @@
       "plugin": "debug"
     },
     "tenant": {
-      "appId": "xfi",
-      "orgId": "comcast"
+      "appId": "myapp",
+      "orgId": "myorg"
     },
     "userId": "boris"
   }

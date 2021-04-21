@@ -1,7 +1,5 @@
 {
   "id": "sqs104",
-  "orgId": "comcast",
-  "appId": "xfi",
   "userId": "boris",
   "name": "sqsRouteB",
   "receiver": {
