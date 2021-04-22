@@ -40,7 +40,7 @@ func ProvideLogger(config config.Config) (*zerolog.Logger, error) {
 		}
 	}
 	logger := zerolog.New(os.Stdout).Level(logLevel)
-	zerolog.LevelFieldName = "log.level"
+	//zerolog.LevelFieldName = "log.level"
 	appLogger = &logger
 	return appLogger, nil
 }

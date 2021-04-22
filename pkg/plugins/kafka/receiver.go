@@ -59,7 +59,7 @@ func NewReceiver(config interface{}) (receiver.Receiver, error) {
 		return nil, err
 	}
 	logger := zerolog.New(os.Stdout).Level(zerolog.DebugLevel)
-	zerolog.LevelFieldName = "log.level"
+	//zerolog.LevelFieldName = "log.level"
 	ctx := context.Background()
 	cctx, cancel := context.WithCancel(ctx)
 	r := &Receiver{
