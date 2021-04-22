@@ -66,7 +66,7 @@ func TestSQSSenderReceiver(t *testing.T) {
 			a.Expect(err).To(BeNil())
 			events := []event.Event{}
 			go func() {
-				err = redisReceiver.Receive(func(e event.Event) {
+				err := redisReceiver.Receive(func(e event.Event) {
 					events = append(events, e)
 					e.Ack()
 				})
