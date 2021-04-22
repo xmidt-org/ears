@@ -1,8 +1,10 @@
 [
   {
     "id": "test",
-    "orgId": "myOrg",
-    "appId": "myApp",
+    "tenant": {
+      "orgId": "myOrg",
+      "appId": "myApp"
+    },
     "userId": "mchiang",
     "name": "differentName",
     "receiver": {},
@@ -11,8 +13,10 @@
   },
   {
     "id": "test2",
-    "orgId": "myOrg2",
-    "appId": "myApp2",
+    "tenant": {
+      "orgId": "myOrg2",
+      "appId": "myApp2"
+    },
     "userId": "bwolf",
     "name": "anotherName",
     "receiver": {},
@@ -27,10 +31,30 @@
   },
   {
     "id": "test3",
-    "orgId": "myOrg3",
-    "appId": "myApp3",
+    "tenant": {
+      "orgId": "myOrg3",
+      "appId": "myApp3"
+    },
     "userId": "tgattis",
     "name": "myName3",
+    "receiver": {},
+    "sender": {
+      "plugin": "debug",
+      "name": "my_debug",
+      "config": {
+        "key": "value"
+      }
+    },
+    "deliveryMode": "at_least_once"
+  },
+  {
+    "id": "test4",
+    "tenant": {
+      "orgId": "myOrg3",
+      "appId": "myApp3"
+    },
+    "userId": "tgattis",
+    "name": "myName4",
     "receiver": {},
     "sender": {
       "plugin": "debug",

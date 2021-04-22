@@ -17,7 +17,7 @@ package routetablesyncerfx
 import (
 	"errors"
 	"github.com/rs/zerolog"
-	"github.com/xmidt-org/ears/internal/pkg/app"
+	"github.com/xmidt-org/ears/internal/pkg/config"
 	"github.com/xmidt-org/ears/internal/pkg/tablemgr"
 	"go.uber.org/fx"
 )
@@ -30,7 +30,7 @@ var Module = fx.Options(
 
 type TableSyncerIn struct {
 	fx.In
-	Config app.Config
+	Config config.Config
 	Logger *zerolog.Logger
 }
 

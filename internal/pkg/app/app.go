@@ -21,6 +21,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/rs/zerolog"
+	"github.com/xmidt-org/ears/internal/pkg/config"
 	"go.uber.org/fx"
 	"net/http"
 )
@@ -34,7 +35,7 @@ func NewMux(a *APIManager, middleware []func(next http.Handler) http.Handler) (h
 	return a.muxRouter, nil
 }
 
-func SetupAPIServer(lifecycle fx.Lifecycle, config Config, logger *zerolog.Logger, mux http.Handler) error {
+func SetupAPIServer(lifecycle fx.Lifecycle, config config.Config, logger *zerolog.Logger, mux http.Handler) error {
 	port := config.GetInt("ears.api.port")
 	if port < 1 {
 		err := &InvalidOptionError{fmt.Sprintf("invalid port value %d", port)}

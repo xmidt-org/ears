@@ -21,6 +21,8 @@ import (
 	"github.com/go-redis/redis"
 	"github.com/rs/zerolog"
 	"github.com/xmidt-org/ears/pkg/route"
+	"github.com/xmidt-org/ears/pkg/tenant"
+	"time"
 )
 
 type RedisDbStorer struct {
@@ -55,17 +57,20 @@ func NewRedisDbStorer(config Config, logger *zerolog.Logger) (*RedisDbStorer, er
 	return rdb, nil
 }
 
-func (d *RedisDbStorer) GetRoute(ctx context.Context, id string) (route.Config, error) {
-	route := route.Config{}
-	result, err := d.client.HGet(d.tableName, id).Result()
+func (d *RedisDbStorer) GetRoute(ctx context.Context, tid tenant.Id, id string) (route.Config, error) {
+	r := route.Config{}
+	result, err := d.client.HGet(d.tableName, tid.KeyWithRoute(id)).Result()
 	if err != nil {
-		return route, fmt.Errorf("could not get route from redis: %v", err)
+		if err.Error() == "redis: nil" {
+			return r, &route.RouteNotFoundError{tid, id}
+		}
+		return r, fmt.Errorf("could not get route from redis: %v", err)
 	}
 	if result == "" {
-		return route, fmt.Errorf("could not get route from redis")
+		return r, &route.RouteNotFoundError{tid, id}
 	}
-	err = json.Unmarshal([]byte(result), &route)
-	return route, err
+	err = json.Unmarshal([]byte(result), &r)
+	return r, err
 }
 
 func (d *RedisDbStorer) GetAllRoutes(ctx context.Context) ([]route.Config, error) {
@@ -85,15 +90,40 @@ func (d *RedisDbStorer) GetAllRoutes(ctx context.Context) ([]route.Config, error
 	return routes, nil
 }
 
+//TODO make this more efficient
+func (d *RedisDbStorer) GetAllTenantRoutes(ctx context.Context, tid tenant.Id) ([]route.Config, error) {
+	routes, err := d.GetAllRoutes(ctx)
+	if err != nil {
+		return nil, err
+	}
+	filterRoutes := make([]route.Config, 0)
+	for _, route := range routes {
+		if route.TenantId.Equal(tid) {
+			filterRoutes = append(filterRoutes, route)
+		}
+	}
+	return filterRoutes, nil
+}
+
 func (d *RedisDbStorer) SetRoute(ctx context.Context, r route.Config) error {
 	if r.Id == "" {
 		return fmt.Errorf("no route to store in redis")
 	}
+
+	r.Modified = time.Now().Unix()
+
+	oldRoute, err := d.GetRoute(ctx, r.TenantId, r.Id)
+	if err == nil {
+		r.Created = oldRoute.Created
+	} else {
+		r.Created = r.Modified
+	}
+
 	val, err := json.Marshal(r)
 	if err != nil {
 		return err
 	}
-	isNew, err := d.client.HSet(d.tableName, r.Id, val).Result()
+	isNew, err := d.client.HSet(d.tableName, r.TenantId.KeyWithRoute(r.Id), val).Result()
 	if err != nil {
 		return fmt.Errorf("could not insert route into redis: %v", err)
 	}
@@ -116,12 +146,12 @@ func (d *RedisDbStorer) SetRoutes(ctx context.Context, routes []route.Config) er
 	return nil
 }
 
-func (d *RedisDbStorer) DeleteRoute(ctx context.Context, id string) error {
+func (d *RedisDbStorer) DeleteRoute(ctx context.Context, tid tenant.Id, id string) error {
 	if id == "" {
 		return fmt.Errorf("no route to delete in bolt")
 	}
 
-	num, err := d.client.HDel(d.tableName, id).Result()
+	num, err := d.client.HDel(d.tableName, tid.KeyWithRoute(id)).Result()
 	if err != nil {
 		return fmt.Errorf("could not delete route from redis: %v", err)
 	}
@@ -131,9 +161,9 @@ func (d *RedisDbStorer) DeleteRoute(ctx context.Context, id string) error {
 	return nil
 }
 
-func (d *RedisDbStorer) DeleteRoutes(ctx context.Context, ids []string) error {
+func (d *RedisDbStorer) DeleteRoutes(ctx context.Context, tid tenant.Id, ids []string) error {
 	for _, id := range ids {
-		err := d.DeleteRoute(ctx, id)
+		err := d.DeleteRoute(ctx, tid, id)
 		if err != nil {
 			return err
 		}

@@ -16,42 +16,23 @@ package db
 
 import (
 	"context"
+	"github.com/xmidt-org/ears/internal/pkg/config"
 	"github.com/xmidt-org/ears/pkg/route"
+	"github.com/xmidt-org/ears/pkg/tenant"
 	"sync"
 	"time"
 )
 
 type InMemoryRouteStorer struct {
-	routes map[string]*route.Config
-	lock   *sync.RWMutex
+	tenants map[string]map[string]*route.Config
+	lock    *sync.RWMutex
 }
 
-type Config interface {
-	GetString(key string) string
-	GetInt(key string) int
-	GetBool(key string) bool
-}
-
-func NewInMemoryRouteStorer(config Config) *InMemoryRouteStorer {
+func NewInMemoryRouteStorer(config config.Config) *InMemoryRouteStorer {
 	return &InMemoryRouteStorer{
-		routes: make(map[string]*route.Config),
-		lock:   &sync.RWMutex{},
+		tenants: make(map[string]map[string]*route.Config),
+		lock:    &sync.RWMutex{},
 	}
-}
-
-func (s *InMemoryRouteStorer) GetRoute(ctx context.Context, id string) (route.Config, error) {
-	s.lock.RLock()
-	defer s.lock.RUnlock()
-
-	empty := route.Config{}
-
-	r, ok := s.routes[id]
-	if !ok {
-		return empty, &route.RouteNotFoundError{RouteId: id}
-	}
-
-	newCopy := *r
-	return newCopy, nil
 }
 
 func (s *InMemoryRouteStorer) GetAllRoutes(ctx context.Context) ([]route.Config, error) {
@@ -59,7 +40,45 @@ func (s *InMemoryRouteStorer) GetAllRoutes(ctx context.Context) ([]route.Config,
 	defer s.lock.RUnlock()
 
 	routes := make([]route.Config, 0)
-	for _, r := range s.routes {
+	for _, tenant := range s.tenants {
+		for _, r := range tenant {
+			routes = append(routes, *r)
+		}
+	}
+	return routes, nil
+}
+
+func (s *InMemoryRouteStorer) GetRoute(ctx context.Context, tid tenant.Id, id string) (route.Config, error) {
+	s.lock.RLock()
+	defer s.lock.RUnlock()
+
+	empty := route.Config{}
+
+	t, ok := s.tenants[tid.Key()]
+	if !ok {
+		return empty, &route.RouteNotFoundError{tid, id}
+	}
+
+	r, ok := t[id]
+	if !ok {
+		return empty, &route.RouteNotFoundError{tid, id}
+	}
+
+	newCopy := *r
+	return newCopy, nil
+}
+
+func (s *InMemoryRouteStorer) GetAllTenantRoutes(ctx context.Context, id tenant.Id) ([]route.Config, error) {
+	s.lock.RLock()
+	defer s.lock.RUnlock()
+
+	routes := make([]route.Config, 0)
+	t, ok := s.tenants[id.Key()]
+	if !ok {
+		return routes, nil
+	}
+
+	for _, r := range t {
 		routes = append(routes, *r)
 	}
 	return routes, nil
@@ -67,12 +86,20 @@ func (s *InMemoryRouteStorer) GetAllRoutes(ctx context.Context) ([]route.Config,
 
 func (s *InMemoryRouteStorer) setRoute(r route.Config) {
 	r.Modified = time.Now().Unix()
-	if existing, ok := s.routes[r.Id]; !ok {
+	var tenant map[string]*route.Config
+	if t, ok := s.tenants[r.TenantId.Key()]; !ok {
+		tenant = make(map[string]*route.Config)
+		s.tenants[r.TenantId.Key()] = tenant
+	} else {
+		tenant = t
+	}
+
+	if existing, ok := tenant[r.Id]; !ok {
 		r.Created = r.Modified
 	} else {
 		r.Created = existing.Created
 	}
-	s.routes[r.Id] = &r
+	tenant[r.Id] = &r
 }
 
 func (s *InMemoryRouteStorer) SetRoute(ctx context.Context, r route.Config) error {
@@ -92,20 +119,30 @@ func (s *InMemoryRouteStorer) SetRoutes(ctx context.Context, routes []route.Conf
 	return nil
 }
 
-func (s *InMemoryRouteStorer) DeleteRoute(ctx context.Context, id string) error {
+func (s *InMemoryRouteStorer) DeleteRoute(ctx context.Context, tid tenant.Id, id string) error {
 	s.lock.Lock()
 	defer s.lock.Unlock()
 
-	delete(s.routes, id)
+	t, ok := s.tenants[tid.Key()]
+	if !ok {
+		return nil
+	}
+
+	delete(t, id)
 	return nil
 }
 
-func (s *InMemoryRouteStorer) DeleteRoutes(ctx context.Context, ids []string) error {
+func (s *InMemoryRouteStorer) DeleteRoutes(ctx context.Context, tid tenant.Id, ids []string) error {
 	s.lock.Lock()
 	defer s.lock.Unlock()
 
+	t, ok := s.tenants[tid.Key()]
+	if !ok {
+		return nil
+	}
+
 	for _, id := range ids {
-		delete(s.routes, id)
+		delete(t, id)
 	}
 	return nil
 }

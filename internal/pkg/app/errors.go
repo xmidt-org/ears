@@ -16,6 +16,7 @@ package app
 
 import (
 	"fmt"
+	"github.com/xmidt-org/ears/pkg/errs"
 	"net/http"
 )
 
@@ -54,4 +55,17 @@ func (e *NotImplementedError) Error() string {
 
 func (e *NotImplementedError) StatusCode() int {
 	return http.StatusNotImplemented
+}
+
+type BadRequestError struct {
+	message string
+	err     error
+}
+
+func (e *BadRequestError) Error() string {
+	return errs.String("BadRequestError", map[string]interface{}{"message": e.message}, e.err)
+}
+
+func (e *BadRequestError) StatusCode() int {
+	return http.StatusBadRequest
 }

@@ -1,7 +1,5 @@
 {
   "id": "redisSqs101",
-  "orgId": "comcast",
-  "appId": "xfi",
   "userId": "boris",
   "name": "redisSqsRoute",
   "receiver": {

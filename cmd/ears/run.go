@@ -19,6 +19,7 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"github.com/xmidt-org/ears/internal/pkg/app"
+	"github.com/xmidt-org/ears/internal/pkg/config"
 	"github.com/xmidt-org/ears/internal/pkg/fx/pluginmanagerfx"
 	"github.com/xmidt-org/ears/internal/pkg/fx/routestorerfx"
 	"github.com/xmidt-org/ears/internal/pkg/fx/routetablesyncerfx"
@@ -54,7 +55,6 @@ var runCmd = &cobra.Command{
 			routetablesyncerfx.Module,
 			fx.Provide(
 				AppConfig,
-				TableMgrConfig,
 				app.ProvideLogger,
 				tablemgr.NewRoutingTableManager,
 				app.NewAPIManager,
@@ -69,11 +69,7 @@ var runCmd = &cobra.Command{
 	},
 }
 
-func AppConfig() app.Config {
-	return viper.GetViper()
-}
-
-func TableMgrConfig() tablemgr.Config {
+func AppConfig() config.Config {
 	return viper.GetViper()
 }
 

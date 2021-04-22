@@ -1,7 +1,5 @@
 {
   "id": "redis108",
-  "orgId": "comcast",
-  "appId": "xfi",
   "userId": "boris",
   "name": "redisSendRoute",
   "receiver": {

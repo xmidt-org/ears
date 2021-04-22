@@ -20,6 +20,7 @@ import (
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/viper"
 	"github.com/xmidt-org/ears/internal/pkg/app"
+	"github.com/xmidt-org/ears/internal/pkg/config"
 	"github.com/xmidt-org/ears/internal/pkg/fx/pluginmanagerfx"
 	"github.com/xmidt-org/ears/internal/pkg/fx/routestorerfx"
 	"github.com/xmidt-org/ears/internal/pkg/fx/routetablesyncerfx"
@@ -31,7 +32,7 @@ import (
 	"time"
 )
 
-func AppConfig() app.Config {
+func AppConfig() config.Config {
 	v := viper.New()
 	v.Set("ears.logLevel", "info")
 	v.Set("ears.api.port", 8080)
@@ -40,16 +41,7 @@ func AppConfig() app.Config {
 	return v
 }
 
-func TableMgrConfig() tablemgr.Config {
-	v := viper.New()
-	v.Set("ears.logLevel", "info")
-	v.Set("ears.api.port", 8080)
-	v.Set("ears.storage.type", "inmemory")
-	v.Set("ears.synchronization.type", "inmemory")
-	return v
-}
-
-func BadConfig() app.Config {
+func BadConfig() config.Config {
 	v := viper.New()
 	v.Set("ears.logLevel", "info")
 	v.Set("ears.api.port", 0)
@@ -101,7 +93,6 @@ func TestAppRunSuccess(t *testing.T) {
 		routetablesyncerfx.Module,
 		fx.Provide(
 			AppConfig,
-			TableMgrConfig,
 			GetTestLogger,
 			app.NewAPIManager,
 			tablemgr.NewRoutingTableManager,
