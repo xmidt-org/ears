@@ -55,9 +55,6 @@ type Event interface {
 	//Further actions on the event are no longer possible
 	Nack(err error)
 
-	//SetAck set ack when needed
-	SetAck(handledFn func(), errFn func(error)) error
-
 	//Create a child the event with payload deep-copied
 	//Clone fails and return an error if the event is already acknowledged
 	Clone(ctx context.Context) (Event, error)

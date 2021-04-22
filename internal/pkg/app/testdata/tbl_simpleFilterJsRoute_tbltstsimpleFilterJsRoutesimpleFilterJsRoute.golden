@@ -1,0 +1,43 @@
+{
+  "status": {
+    "code": 200,
+    "message": "OK"
+  },
+  "item": {
+    "appId": "xfi",
+    "deliveryMode": "whoCares",
+    "filterChain": [
+      {
+        "config": {
+          "source": "var event = {};\nevent.payload = _.payload;\nevent.metadata =  _.metadata;\nevent.payload.tag = \"ears\";\nreturn event;"
+        },
+        "name": "simpleFilterJsRouteFilter",
+        "plugin": "js"
+      }
+    ],
+    "id": "f999",
+    "name": "tbltstsimpleFilterJsRoutesimpleFilterJsRoute",
+    "orgId": "comcast",
+    "receiver": {
+      "config": {
+        "intervalMs": 10,
+        "maxHistory": 100,
+        "payload": {
+          "foo": "bar"
+        },
+        "rounds": 5
+      },
+      "name": "tbltstsimpleFilterJsRoutesimpleFilterJsRouteReceiver",
+      "plugin": "debug"
+    },
+    "sender": {
+      "config": {
+        "destination": "stdout",
+        "maxHistory": 100
+      },
+      "name": "tbltstsimpleFilterJsRoutesimpleFilterJsRouteSender",
+      "plugin": "debug"
+    },
+    "userId": "boris"
+  }
+}

@@ -21,6 +21,8 @@ import (
 	"github.com/xmidt-org/ears/pkg/plugin/manager"
 	"github.com/xmidt-org/ears/pkg/plugins/block"
 	"github.com/xmidt-org/ears/pkg/plugins/debug"
+	"github.com/xmidt-org/ears/pkg/plugins/js"
+	"github.com/xmidt-org/ears/pkg/plugins/kafka"
 	"github.com/xmidt-org/ears/pkg/plugins/match"
 	"github.com/xmidt-org/ears/pkg/plugins/pass"
 	"github.com/xmidt-org/ears/pkg/plugins/redis"
@@ -79,12 +81,20 @@ func ProvidePluginManager(in PluginIn) (PluginOut, error) {
 			plugin: toArr(redis.NewPluginVersion("redis", "", ""))[0].(pkgplugin.Pluginer),
 		},
 		{
+			name:   "kafka",
+			plugin: toArr(kafka.NewPluginVersion("kafka", "", ""))[0].(pkgplugin.Pluginer),
+		},
+		{
 			name:   "match",
 			plugin: toArr(match.NewPluginVersion("match", "", ""))[0].(pkgplugin.Pluginer),
 		},
 		{
 			name:   "pass",
 			plugin: toArr(pass.NewPluginVersion("pass", "", ""))[0].(pkgplugin.Pluginer),
+		},
+		{
+			name:   "js",
+			plugin: toArr(js.NewPluginVersion("js", "", ""))[0].(pkgplugin.Pluginer),
 		},
 		{
 			name:   "block",

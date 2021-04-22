@@ -16,6 +16,8 @@ package debug
 
 import (
 	"context"
+	"github.com/rs/zerolog"
+	"os"
 	"sync"
 
 	"fmt"
@@ -27,7 +29,7 @@ import (
 	"github.com/xmidt-org/ears/pkg/receiver"
 )
 
-//TODO an configuration option to make this configurable
+//TODO a configuration option to make this configurable
 var debugMaxTO = time.Second * 10 //Default acknowledge timeout (10 seconds)
 
 func (r *Receiver) Receive(next receiver.NextFn) error {
@@ -36,18 +38,15 @@ func (r *Receiver) Receive(next receiver.NextFn) error {
 			Err: fmt.Errorf("Receive called on <nil> pointer"),
 		}
 	}
-
 	if next == nil {
 		return &receiver.InvalidConfigError{
 			Err: fmt.Errorf("next cannot be nil"),
 		}
 	}
-
 	r.Lock()
 	r.done = make(chan struct{})
 	r.next = next
 	r.Unlock()
-
 	go func() {
 		defer func() {
 			r.Lock()
@@ -56,30 +55,25 @@ func (r *Receiver) Receive(next receiver.NextFn) error {
 			}
 			r.Unlock()
 		}()
-
 		eventsDone := &sync.WaitGroup{}
 		eventsDone.Add(*r.config.Rounds)
 		for count := *r.config.Rounds; count != 0; {
 			select {
 			case <-r.done:
-				//fmt.Printf("RECEIVER DONE BY ROUTE\n")
 				return
 			case <-time.After(time.Duration(*r.config.IntervalMs) * time.Millisecond):
-				//fmt.Printf("RECEIVER NEW EVENT\n")
 				ctx, _ := context.WithTimeout(context.Background(), debugMaxTO)
 				e, err := event.New(ctx, r.config.Payload, event.WithAck(
 					func(evt event.Event) {
 						eventsDone.Done()
 					}, func(evt event.Event, err error) {
-						//fmt.Println("Debug error", err.Error())
+						r.logger.Error().Str("op", "debug.Receive").Msg("failed to process message: " + err.Error())
 						eventsDone.Done()
 					}))
 				if err != nil {
 					return
 				}
-
 				r.Trigger(e)
-
 				if count > 0 {
 					count--
 				}
@@ -87,7 +81,6 @@ func (r *Receiver) Receive(next receiver.NextFn) error {
 		}
 		eventsDone.Wait()
 	}()
-
 	<-r.done
 	return nil
 }
@@ -95,20 +88,16 @@ func (r *Receiver) Receive(next receiver.NextFn) error {
 func (r *Receiver) StopReceiving(ctx context.Context) error {
 	r.Lock()
 	defer r.Unlock()
-
 	if r.done != nil {
 		//BW
 		//close(r.done)
 	}
-
 	return nil
 }
 
 func NewReceiver(config interface{}) (receiver.Receiver, error) {
-
 	var cfg ReceiverConfig
 	var err error
-
 	switch c := config.(type) {
 	case string:
 		err = yaml.Unmarshal([]byte(c), &cfg)
@@ -119,26 +108,23 @@ func NewReceiver(config interface{}) (receiver.Receiver, error) {
 	case *ReceiverConfig:
 		cfg = *c
 	}
-
 	if err != nil {
 		return nil, &pkgplugin.InvalidConfigError{
 			Err: err,
 		}
 	}
-
 	cfg = cfg.WithDefaults()
-
 	err = cfg.Validate()
 	if err != nil {
 		return nil, err
 	}
-
+	logger := zerolog.New(os.Stdout).Level(zerolog.DebugLevel)
+	zerolog.LevelFieldName = "log.level"
 	r := &Receiver{
 		config: cfg,
+		logger: logger,
 	}
-
 	r.history = newHistory(*r.config.MaxHistory)
-
 	return r, nil
 }
 
@@ -149,29 +135,20 @@ func (r *Receiver) Count() int {
 func (r *Receiver) Trigger(e event.Event) {
 	// Ensure that `next` can be slow and locking here will not
 	// prevent other requests from executing.
-	//BW TODO: where is the next slice here?
 	r.Lock()
 	next := r.next
-	//BW
-	//fmt.Printf("TRIGGER\n")
 	r.Unlock()
-
 	r.history.Add(e)
-
 	next(e)
 }
 
 func (r *Receiver) History() []event.Event {
 	history := r.history.History()
-
 	events := make([]event.Event, len(history))
-
 	for i, h := range history {
 		if e, ok := h.(event.Event); ok {
 			events[i] = e
 		}
 	}
-
 	return events
-
 }
