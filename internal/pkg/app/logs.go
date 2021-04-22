@@ -17,6 +17,7 @@ package app
 import (
 	"fmt"
 	"github.com/rs/zerolog"
+	"github.com/xmidt-org/ears/internal/pkg/config"
 	"os"
 	"sync"
 )
@@ -24,7 +25,7 @@ import (
 var appLogger *zerolog.Logger
 var appLoggerLock = &sync.Mutex{}
 
-func ProvideLogger(config Config) (*zerolog.Logger, error) {
+func ProvideLogger(config config.Config) (*zerolog.Logger, error) {
 	appLoggerLock.Lock()
 	defer appLoggerLock.Unlock()
 

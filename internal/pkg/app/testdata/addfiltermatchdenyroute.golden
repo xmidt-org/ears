@@ -4,7 +4,6 @@
     "message": "OK"
   },
   "item": {
-    "appId": "xfi",
     "deliveryMode": "whoCares",
     "filterChain": [
       {
@@ -19,7 +18,6 @@
     ],
     "id": "f104",
     "name": "simpleFilterMatchDenyRoute",
-    "orgId": "comcast",
     "receiver": {
       "config": {
         "intervalMs": 10,
@@ -39,6 +37,10 @@
       },
       "name": "simpleFilterMatchDenyRouteSender",
       "plugin": "debug"
+    },
+    "tenant": {
+      "appId": "myapp",
+      "orgId": "myorg"
     },
     "userId": "boris"
   }

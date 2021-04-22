@@ -1,7 +1,5 @@
 {
   "id" : "f108",
-  "orgId" : "comcast",
-  "appId" : "xfi",
   "userId" : "boris",
   "name" : "simpleFilterSplitRoute",
   "receiver" : {

@@ -18,12 +18,12 @@ package db_test
 
 import (
 	"github.com/spf13/viper"
-	"github.com/xmidt-org/ears/internal/pkg/app"
+	"github.com/xmidt-org/ears/internal/pkg/config"
 	"github.com/xmidt-org/ears/internal/pkg/db/dynamo"
 	"testing"
 )
 
-func dynamoDbConfig() app.Config {
+func dynamoDbConfig() config.Config {
 	v := viper.New()
 	v.Set("ears.db.region", "us-west-2")
 	v.Set("ears.db.tableName", "gears.dev.ears")

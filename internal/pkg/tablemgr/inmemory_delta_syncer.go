@@ -18,8 +18,9 @@ import (
 	"context"
 	"github.com/google/uuid"
 	"github.com/rs/zerolog"
+	"github.com/xmidt-org/ears/internal/pkg/config"
 	"github.com/xmidt-org/ears/internal/pkg/logs"
-	"strings"
+	"github.com/xmidt-org/ears/pkg/tenant"
 	"sync"
 )
 
@@ -31,16 +32,16 @@ var (
 type (
 	InmemoryDeltaSyncer struct {
 		sync.Mutex
-		notify            chan string
+		notify            chan SyncCommand
 		active            bool
 		instanceCnt       int
 		localTableSyncers map[RoutingTableLocalSyncer]struct{}
 		logger            *zerolog.Logger
-		config            Config
+		config            config.Config
 	}
 )
 
-func NewInMemoryDeltaSyncer(logger *zerolog.Logger, config Config) RoutingTableDeltaSyncer {
+func NewInMemoryDeltaSyncer(logger *zerolog.Logger, config config.Config) RoutingTableDeltaSyncer {
 	// This delta syncer is mainly for testing purposes. For it to work, multiple ears runtimes
 	// should run within the same process and share the same instance of the in memory delta
 	// syncer - we are forcing this here with a singleton
@@ -56,7 +57,7 @@ func NewInMemoryDeltaSyncer(logger *zerolog.Logger, config Config) RoutingTableD
 		if !s.active {
 			logger.Info().Msg("InMemory Delta Syncer Not Activated")
 		} else {
-			s.notify = make(chan string, 0)
+			s.notify = make(chan SyncCommand, 0)
 		}
 		inmemoryDeltaSyncerSingleton = s
 	}
@@ -77,7 +78,7 @@ func (s *InmemoryDeltaSyncer) UnregisterLocalTableSyncer(localTableSyncer Routin
 
 // PublishSyncRequest asks others to sync their routing tables
 
-func (s *InmemoryDeltaSyncer) PublishSyncRequest(ctx context.Context, routeId string, instanceId string, add bool) {
+func (s *InmemoryDeltaSyncer) PublishSyncRequest(ctx context.Context, tid tenant.Id, routeId string, instanceId string, add bool) {
 	if !s.active {
 		return
 	}
@@ -93,7 +94,14 @@ func (s *InmemoryDeltaSyncer) PublishSyncRequest(ctx context.Context, routeId st
 		s.logger.Info().Str("op", "PublishSyncRequest").Msg("no subscribers but me - no need to publish sync")
 	} else {
 		go func() {
-			msg := cmd + "," + routeId + "," + instanceId + "," + sid
+			msg := SyncCommand{
+				cmd,
+				routeId,
+				instanceId,
+				sid,
+				tid,
+			}
+
 			s.notify <- msg
 		}()
 	}
@@ -112,47 +120,44 @@ func (s *InmemoryDeltaSyncer) StartListeningForSyncRequests(instanceId string) {
 		ctx := context.Background()
 		ctx = logs.SubLoggerCtx(ctx, s.logger)
 		for msg := range s.notify {
-			elems := strings.Split(msg, ",")
-			if len(elems) != 4 {
-				s.logger.Error().Str("op", "ListenForSyncRequests").Msg("bad message structure: " + msg)
-			}
 			// leave sync loop if asked
-			if elems[0] == EARS_STOP_LISTENING_CMD {
-				if elems[2] == instanceId || elems[2] == "" {
-					s.logger.Info().Str("op", "ListenForSyncRequests").Str("instanceId", elems[2]).Msg("received stop listening message")
+			if msg.Cmd == EARS_STOP_LISTENING_CMD {
+				if msg.InstanceId == instanceId || msg.InstanceId == "" {
+					s.logger.Info().Str("op", "ListenForSyncRequests").Str("instanceId", msg.InstanceId).Msg("received stop listening message")
 					return
 				}
 			}
-			var err error
-			if elems[0] == EARS_ADD_ROUTE_CMD {
-				s.logger.Info().Str("op", "ListenForSyncRequests").Str("instanceId", elems[2]).Str("routeId", elems[1]).Str("sid", elems[3]).Msg("received message to add route")
+			if msg.Cmd == EARS_ADD_ROUTE_CMD {
+				s.logger.Info().Str("op", "ListenForSyncRequests").Str("instanceId", msg.InstanceId).Str("routeId", msg.RouteId).Str("sid", msg.Sid).Msg("received message to add route")
+
 				s.Lock()
 				for localTableSyncer, _ := range s.localTableSyncers {
-					if elems[2] != localTableSyncer.GetInstanceId() {
-						err = localTableSyncer.SyncRoute(ctx, elems[1], true)
+					if msg.InstanceId != localTableSyncer.GetInstanceId() {
+						err := localTableSyncer.SyncRoute(ctx, msg.Tenant, msg.RouteId, true)
 						if err != nil {
-							s.logger.Error().Str("op", "ListenForSyncRequests").Str("instanceId", elems[2]).Str("routeId", elems[1]).Str("sid", elems[3]).Msg("failed to sync route: " + err.Error())
+							s.logger.Error().Str("op", "ListenForSyncRequests").Str("instanceId", msg.InstanceId).Str("routeId", msg.RouteId).Str("sid", msg.Sid).Msg("failed to sync route: " + err.Error())
 						}
 					}
 				}
 				s.Unlock()
-			} else if elems[0] == EARS_REMOVE_ROUTE_CMD {
-				s.logger.Info().Str("op", "ListenForSyncRequests").Str("instanceId", elems[2]).Str("routeId", elems[1]).Str("sid", elems[3]).Msg("received message to remove route")
+			} else if msg.Cmd == EARS_REMOVE_ROUTE_CMD {
+				s.logger.Info().Str("op", "ListenForSyncRequests").Str("instanceId", msg.InstanceId).Str("routeId", msg.RouteId).Str("sid", msg.Sid).Msg("received message to remove route")
+
 				s.Lock()
 				for localTableSyncer, _ := range s.localTableSyncers {
-					if elems[2] != localTableSyncer.GetInstanceId() {
-						err = localTableSyncer.SyncRoute(ctx, elems[1], false)
+					if msg.InstanceId != localTableSyncer.GetInstanceId() {
+						err := localTableSyncer.SyncRoute(ctx, msg.Tenant, msg.RouteId, false)
 						if err != nil {
-							s.logger.Error().Str("op", "ListenForSyncRequests").Str("instanceId", elems[2]).Str("routeId", elems[1]).Str("sid", elems[3]).Msg("failed to sync route: " + err.Error())
+							s.logger.Error().Str("op", "ListenForSyncRequests").Str("instanceId", msg.InstanceId).Str("routeId", msg.RouteId).Str("sid", msg.Sid).Msg("failed to sync route: " + err.Error())
 						}
 					}
 				}
 				s.Unlock()
-			} else if elems[0] == EARS_STOP_LISTENING_CMD {
-				s.logger.Info().Str("op", "ListenForSyncRequests").Str("instanceId", elems[2]).Msg("stop message ignored")
+			} else if msg.Cmd == EARS_STOP_LISTENING_CMD {
+				s.logger.Info().Str("op", "ListenForSyncRequests").Str("instanceId", msg.InstanceId).Msg("stop message ignored")
 				// already handled above
 			} else {
-				s.logger.Error().Str("op", "ListenForSyncRequests").Str("instanceId", elems[2]).Str("routeId", elems[1]).Str("sid", elems[3]).Msg("bad command " + elems[0])
+				s.logger.Error().Str("op", "ListenForSyncRequests").Str("instanceId", msg.InstanceId).Str("routeId", msg.RouteId).Str("sid", msg.Sid).Msg("bad command " + msg.Cmd)
 			}
 		}
 	}()

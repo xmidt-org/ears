@@ -15,9 +15,11 @@
 package app
 
 import (
-	"errors"
+	"context"
 	"github.com/goccy/go-yaml"
+	"github.com/xmidt-org/ears/internal/pkg/logs"
 	"github.com/xmidt-org/ears/internal/pkg/tablemgr"
+	"github.com/xmidt-org/ears/pkg/tenant"
 	"io/ioutil"
 	"net/http"
 
@@ -38,11 +40,11 @@ func NewAPIManager(routingMgr tablemgr.RoutingTableManager) (*APIManager, error)
 		routingTableMgr: routingMgr,
 	}
 	api.muxRouter.HandleFunc("/ears/version", api.versionHandler).Methods(http.MethodGet)
-	api.muxRouter.HandleFunc("/ears/v1/routes/{routeId}", api.addRouteHandler).Methods(http.MethodPut)
-	api.muxRouter.HandleFunc("/ears/v1/routes", api.addRouteHandler).Methods(http.MethodPost)
-	api.muxRouter.HandleFunc("/ears/v1/routes/{routeId}", api.removeRouteHandler).Methods(http.MethodDelete)
-	api.muxRouter.HandleFunc("/ears/v1/routes/{routeId}", api.getRouteHandler).Methods(http.MethodGet)
-	api.muxRouter.HandleFunc("/ears/v1/routes", api.getAllRoutesHandler).Methods(http.MethodGet)
+	api.muxRouter.HandleFunc("/ears/v1/orgs/{orgId}/applications/{appId}/routes/{routeId}", api.addRouteHandler).Methods(http.MethodPut)
+	api.muxRouter.HandleFunc("/ears/v1/orgs/{orgId}/applications/{appId}/routes", api.addRouteHandler).Methods(http.MethodPost)
+	api.muxRouter.HandleFunc("/ears/v1/orgs/{orgId}/applications/{appId}/routes/{routeId}", api.removeRouteHandler).Methods(http.MethodDelete)
+	api.muxRouter.HandleFunc("/ears/v1/orgs/{orgId}/applications/{appId}/routes/{routeId}", api.getRouteHandler).Methods(http.MethodGet)
+	api.muxRouter.HandleFunc("/ears/v1/orgs/{orgId}/applications/{appId}/routes", api.getAllTenantRoutesHandler).Methods(http.MethodGet)
 	api.muxRouter.HandleFunc("/ears/v1/senders", api.getAllSendersHandler).Methods(http.MethodGet)
 	api.muxRouter.HandleFunc("/ears/v1/receivers", api.getAllReceiversHandler).Methods(http.MethodGet)
 	api.muxRouter.HandleFunc("/ears/v1/filters", api.getAllFiltersHandler).Methods(http.MethodGet)
@@ -56,9 +58,36 @@ func (a *APIManager) versionHandler(w http.ResponseWriter, r *http.Request) {
 	resp.Respond(ctx, w)
 }
 
+func getTenant(ctx context.Context, vars map[string]string) (*tenant.Id, error) {
+	orgId := vars["orgId"]
+	appId := vars["appId"]
+	logs.StrToLogCtx(ctx, "orgId", orgId)
+	logs.StrToLogCtx(ctx, "appId", appId)
+
+	if orgId == "" || appId == "" {
+		var err error
+		if orgId == "" {
+			err = &BadRequestError{"orgId empty", nil}
+		} else {
+			err = &BadRequestError{"appId empty", nil}
+		}
+		return nil, err
+	}
+	return &tenant.Id{orgId, appId}, nil
+}
+
 func (a *APIManager) addRouteHandler(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	vars := mux.Vars(r)
+
+	tid, err := getTenant(ctx, vars)
+	if err != nil {
+		log.Ctx(ctx).Error().Str("op", "AddRouteHandler").Str("error", err.Error()).Msg("orgId or appId empty")
+		resp := ErrorResponse(err)
+		resp.Respond(ctx, w)
+		return
+	}
+
 	routeId := vars["routeId"]
 	body, err := ioutil.ReadAll(r.Body)
 	if err != nil {
@@ -72,12 +101,13 @@ func (a *APIManager) addRouteHandler(w http.ResponseWriter, r *http.Request) {
 	err = yaml.Unmarshal(body, &route)
 	if err != nil {
 		log.Ctx(ctx).Error().Str("op", "addRouteHandler").Msg(err.Error())
+		err = &BadRequestError{"Cannot unmarshal request body", err}
 		resp := ErrorResponse(err)
 		resp.Respond(ctx, w)
 		return
 	}
 	if routeId != "" && route.Id != "" && routeId != route.Id {
-		err := errors.New("route ID mismatch " + routeId + " vs " + route.Id)
+		err := &BadRequestError{"route ID mismatch " + routeId + " vs " + route.Id, nil}
 		log.Ctx(ctx).Error().Str("op", "addRouteHandler").Msg(err.Error())
 		resp := ErrorResponse(err)
 		resp.Respond(ctx, w)
@@ -86,6 +116,8 @@ func (a *APIManager) addRouteHandler(w http.ResponseWriter, r *http.Request) {
 	if routeId != "" && route.Id == "" {
 		route.Id = routeId
 	}
+	route.TenantId.AppId = tid.AppId
+	route.TenantId.OrgId = tid.OrgId
 	err = a.routingTableMgr.AddRoute(ctx, &route)
 	if err != nil {
 		log.Ctx(ctx).Error().Str("op", "addRouteHandler").Msg(err.Error())
@@ -100,8 +132,17 @@ func (a *APIManager) addRouteHandler(w http.ResponseWriter, r *http.Request) {
 func (a *APIManager) removeRouteHandler(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	vars := mux.Vars(r)
+
+	tid, err := getTenant(ctx, vars)
+	if err != nil {
+		log.Ctx(ctx).Error().Str("op", "removeRouteHandler").Str("error", err.Error()).Msg("orgId or appId empty")
+		resp := ErrorResponse(err)
+		resp.Respond(ctx, w)
+		return
+	}
+
 	routeId := vars["routeId"]
-	err := a.routingTableMgr.RemoveRoute(ctx, routeId)
+	err = a.routingTableMgr.RemoveRoute(ctx, *tid, routeId)
 	if err != nil {
 		log.Ctx(ctx).Error().Str("op", "removeRouteHandler").Msg(err.Error())
 		resp := ErrorResponse(err)
@@ -115,8 +156,17 @@ func (a *APIManager) removeRouteHandler(w http.ResponseWriter, r *http.Request) 
 func (a *APIManager) getRouteHandler(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	vars := mux.Vars(r)
+
+	tid, err := getTenant(ctx, vars)
+	if err != nil {
+		log.Ctx(ctx).Error().Str("op", "getRouteHandler").Str("error", err.Error()).Msg("orgId or appId empty")
+		resp := ErrorResponse(err)
+		resp.Respond(ctx, w)
+		return
+	}
+
 	routeId := vars["routeId"]
-	routeConfig, err := a.routingTableMgr.GetRoute(ctx, routeId)
+	routeConfig, err := a.routingTableMgr.GetRoute(ctx, *tid, routeId)
 	if err != nil {
 		log.Ctx(ctx).Error().Str("op", "getRouteHandler").Msg(err.Error())
 		if _, ok := err.(*route.RouteNotFoundError); ok {
@@ -133,11 +183,21 @@ func (a *APIManager) getRouteHandler(w http.ResponseWriter, r *http.Request) {
 	resp.Respond(ctx, w)
 }
 
-func (a *APIManager) getAllRoutesHandler(w http.ResponseWriter, r *http.Request) {
+func (a *APIManager) getAllTenantRoutesHandler(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
-	allRouteConfigs, err := a.routingTableMgr.GetAllRoutes(ctx)
+	vars := mux.Vars(r)
+
+	tid, err := getTenant(ctx, vars)
 	if err != nil {
-		log.Ctx(ctx).Error().Str("op", "getAllRoutesHandler").Msg(err.Error())
+		log.Ctx(ctx).Error().Str("op", "GetAllTenantRoutes").Str("error", err.Error()).Msg("orgId or appId empty")
+		resp := ErrorResponse(err)
+		resp.Respond(ctx, w)
+		return
+	}
+
+	allRouteConfigs, err := a.routingTableMgr.GetAllTenantRoutes(ctx, *tid)
+	if err != nil {
+		log.Ctx(ctx).Error().Str("op", "GetAllTenantRoutes").Msg(err.Error())
 		resp := ErrorResponse(err)
 		resp.Respond(ctx, w)
 		return

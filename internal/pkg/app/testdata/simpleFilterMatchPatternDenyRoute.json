@@ -1,7 +1,5 @@
 {
   "id" : "f106",
-  "orgId" : "comcast",
-  "appId" : "xfi",
   "userId" : "boris",
   "name" : "simpleFilterMatchPatternDenyRoute",
   "receiver" : {

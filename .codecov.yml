@@ -6,6 +6,7 @@ coverage:
 ignore:
   - "*_test.go"
   - "vendor"
+  - "cmd"
 
 fixes:
   - "github.com/xmidt-org/ears/::"
