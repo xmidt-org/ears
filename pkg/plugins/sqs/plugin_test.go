@@ -18,6 +18,7 @@ package sqs_test
 
 import (
 	"context"
+	"sync"
 	"testing"
 	"time"
 
@@ -79,15 +80,20 @@ func TestSQSSenderReceiver(t *testing.T) {
 			sqsReceiver, err := sqsPlugin.NewReceiver(tc.receiverConfig)
 			a.Expect(err).To(BeNil())
 			events := []event.Event{}
+			var mutex = &sync.Mutex{}
 			go func() {
 				err = sqsReceiver.Receive(func(e event.Event) {
+					mutex.Lock()
 					events = append(events, e)
+					mutex.Unlock()
 					e.Ack()
 				})
 				a.Expect(err).To(BeNil())
 			}()
 			time.Sleep(2 * time.Second)
+			mutex.Lock()
 			a.Expect(events).To(HaveLen(tc.numMessages))
+			mutex.Unlock()
 			err = sqsReceiver.StopReceiving(ctx)
 			a.Expect(err).To(BeNil())
 			sqsSender.StopSending(ctx)
