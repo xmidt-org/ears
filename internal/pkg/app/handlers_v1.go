@@ -16,7 +16,7 @@ package app
 
 import (
 	"context"
-	"encoding/json"
+	"github.com/goccy/go-yaml"
 	"github.com/xmidt-org/ears/internal/pkg/logs"
 	"github.com/xmidt-org/ears/internal/pkg/tablemgr"
 	"github.com/xmidt-org/ears/pkg/tenant"
@@ -97,7 +97,8 @@ func (a *APIManager) addRouteHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var route route.Config
-	err = json.Unmarshal(body, &route)
+	//err = json.Unmarshal(body, &route)
+	err = yaml.Unmarshal(body, &route)
 	if err != nil {
 		log.Ctx(ctx).Error().Str("op", "addRouteHandler").Msg(err.Error())
 		err = &BadRequestError{"Cannot unmarshal request body", err}
