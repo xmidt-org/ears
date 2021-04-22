@@ -4,7 +4,6 @@
     "message": "OK"
   },
   "item": {
-    "appId": "xfi",
     "deliveryMode": "whoCares",
     "filterChain": [
       {
@@ -17,7 +16,6 @@
     ],
     "id": "f1000",
     "name": "tbltstsimpleFilterJsDropRoutesimpleFilterJsDropRoute",
-    "orgId": "comcast",
     "receiver": {
       "config": {
         "intervalMs": 10,
@@ -37,6 +35,10 @@
       },
       "name": "tbltstsimpleFilterJsDropRoutesimpleFilterJsDropRouteSender",
       "plugin": "debug"
+    },
+    "tenant": {
+      "appId": "myapp",
+      "orgId": "myorg"
     },
     "userId": "boris"
   }
