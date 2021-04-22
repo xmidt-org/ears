@@ -89,7 +89,6 @@ type Receiver struct {
 	logger    zerolog.Logger
 	count     int
 	startTime time.Time
-
 	sarama.ConsumerGroupSession
 	wg      sync.WaitGroup
 	ready   chan bool
@@ -137,6 +136,7 @@ type Sender struct {
 	count    int
 	logger   zerolog.Logger
 	producer *Producer
+	stopped  bool
 }
 
 type ManualHashPartitioner struct {
@@ -147,6 +147,7 @@ type Producer struct {
 	pool   chan sarama.SyncProducer
 	done   chan bool
 	client sarama.Client
+	logger zerolog.Logger
 }
 
 func (s *Sender) Unwrap() sender.Sender {

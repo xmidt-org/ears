@@ -31,6 +31,8 @@ import (
 	"time"
 )
 
+//TODO: support headers
+
 func NewSender(config interface{}) (sender.Sender, error) {
 	var cfg SenderConfig
 	var err error
@@ -85,6 +87,10 @@ func (s *Sender) Count() int {
 }
 
 func (s *Sender) StopSending(ctx context.Context) {
+	s.Lock()
+	defer s.Unlock()
+	s.stopped = true
+	s.producer.Close(ctx)
 }
 
 func (s *Sender) NewProducer(count int) (*Producer, error) {
@@ -103,6 +109,7 @@ func (s *Sender) NewProducer(count int) (*Producer, error) {
 		pool:   pool,
 		done:   make(chan bool),
 		client: c,
+		logger: s.logger,
 	}, nil
 }
 
@@ -177,12 +184,15 @@ func (p *Producer) Partitions(topic string) ([]int32, error) {
 	return p.client.Partitions(topic)
 }
 
-func (p *Producer) Close(ctx *context.Context) {
+func (p *Producer) Close(ctx context.Context) {
 	close(p.done)
 	for i := 0; i < len(p.pool); i++ {
 		producer := <-p.pool
-		if err := producer.Close(); nil != err {
-			//ctx.Log.Error("op", "Producer.Close", "error", err)
+		err := producer.Close()
+		if err != nil {
+			p.logger.Error().Str("op", "Producer.Close").Msg(err.Error())
+		} else {
+			p.logger.Info().Str("op", "Producer.Close").Msg("kafka producer closed")
 		}
 	}
 }
@@ -209,20 +219,21 @@ func (p *Producer) SendMessage(topic string, partition *int, headers map[string]
 	var producer sarama.SyncProducer
 	select {
 	case <-p.done:
+		//p.logger.Info().Str("op", "kafka.Send").Msg("producer done")
 		return fmt.Errorf("producer closed")
 	case producer = <-p.pool:
 	}
 	defer func() {
 		p.pool <- producer
 	}()
-	//start := time.Now()
-	part, _, err := producer.SendMessage(message)
-	//TODO: log partition, offset etc.
+	start := time.Now()
+	part, offset, err := producer.SendMessage(message)
 	if nil != err {
 		return err
 	}
 	// override log values if any
-	//elapsed := time.Since(start)
+	elapsed := time.Since(start)
+	p.logger.Info().Str("op", "kafka.Send").Int("elapsed", int(elapsed.Milliseconds())).Int("partition", int(part)).Int("offset", int(offset)).Msg("sent message on kafka topic")
 	return nil
 }
 
@@ -236,15 +247,23 @@ func (mp *ManualHashPartitioner) Partition(message *sarama.ProducerMessage, numP
 }
 
 func (s *Sender) Send(e event.Event) {
+	if s.stopped {
+		s.logger.Info().Str("op", "kafka.Send").Msg("drop message due to closed sender")
+		return
+	}
 	buf, err := json.Marshal(e.Payload())
 	if err != nil {
 		s.logger.Error().Str("op", "kafka.Send").Msg("failed to marshal message: " + err.Error())
 		e.Nack(err)
 		return
 	}
-	//TODO: support headers
-	s.producer.SendMessage(s.config.Topic, s.config.Partition, nil, buf)
-	s.logger.Info().Str("op", "kafka.Send").Msg("sent message on kafka topic")
+	err = s.producer.SendMessage(s.config.Topic, s.config.Partition, nil, buf)
+	if err != nil {
+		s.logger.Error().Str("op", "kafka.Send").Msg("failed to send message: " + err.Error())
+		e.Nack(err)
+		return
+	}
+	//s.logger.Info().Str("op", "kafka.Send").Msg("sent message on kafka topic")
 	s.Lock()
 	s.count++
 	s.Unlock()

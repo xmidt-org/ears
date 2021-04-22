@@ -65,8 +65,11 @@ func (rte *Route) Stop(ctx context.Context) error {
 	if rte.r == nil {
 		return nil
 	}
+	//log.Ctx(ctx).Info().Str("op", "StopRoute").Msg("stop receiving")
 	err := rte.r.StopReceiving(ctx)
+	//log.Ctx(ctx).Info().Str("op", "StopRoute").Msg("stop sending")
 	rte.s.StopSending(ctx)
+	//log.Ctx(ctx).Info().Str("op", "StopRoute").Msg("all stopped")
 	return err
 }
 
