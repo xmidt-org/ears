@@ -87,12 +87,11 @@ func (a *APIManager) addRouteHandler(w http.ResponseWriter, r *http.Request) {
 		resp.Respond(ctx, w)
 		return
 	}
-
 	routeId := vars["routeId"]
 	body, err := ioutil.ReadAll(r.Body)
 	if err != nil {
 		log.Ctx(ctx).Error().Str("op", "addRouteHandler").Msg(err.Error())
-		resp := ErrorResponse(err)
+		resp := ErrorResponse(&BadRequestError{err.Error(), err})
 		resp.Respond(ctx, w)
 		return
 	}
@@ -102,7 +101,7 @@ func (a *APIManager) addRouteHandler(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		log.Ctx(ctx).Error().Str("op", "addRouteHandler").Msg(err.Error())
 		err = &BadRequestError{"Cannot unmarshal request body", err}
-		resp := ErrorResponse(err)
+		resp := ErrorResponse(&BadRequestError{err.Error(), err})
 		resp.Respond(ctx, w)
 		return
 	}
@@ -121,7 +120,7 @@ func (a *APIManager) addRouteHandler(w http.ResponseWriter, r *http.Request) {
 	err = a.routingTableMgr.AddRoute(ctx, &route)
 	if err != nil {
 		log.Ctx(ctx).Error().Str("op", "addRouteHandler").Msg(err.Error())
-		resp := ErrorResponse(err)
+		resp := ErrorResponse(&BadRequestError{err.Error(), err})
 		resp.Respond(ctx, w)
 		return
 	}
@@ -132,7 +131,6 @@ func (a *APIManager) addRouteHandler(w http.ResponseWriter, r *http.Request) {
 func (a *APIManager) removeRouteHandler(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	vars := mux.Vars(r)
-
 	tid, err := getTenant(ctx, vars)
 	if err != nil {
 		log.Ctx(ctx).Error().Str("op", "removeRouteHandler").Str("error", err.Error()).Msg("orgId or appId empty")
@@ -140,12 +138,11 @@ func (a *APIManager) removeRouteHandler(w http.ResponseWriter, r *http.Request) 
 		resp.Respond(ctx, w)
 		return
 	}
-
 	routeId := vars["routeId"]
 	err = a.routingTableMgr.RemoveRoute(ctx, *tid, routeId)
 	if err != nil {
 		log.Ctx(ctx).Error().Str("op", "removeRouteHandler").Msg(err.Error())
-		resp := ErrorResponse(err)
+		resp := ErrorResponse(&BadRequestError{err.Error(), err})
 		resp.Respond(ctx, w)
 		return
 	}
@@ -156,7 +153,6 @@ func (a *APIManager) removeRouteHandler(w http.ResponseWriter, r *http.Request) 
 func (a *APIManager) getRouteHandler(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	vars := mux.Vars(r)
-
 	tid, err := getTenant(ctx, vars)
 	if err != nil {
 		log.Ctx(ctx).Error().Str("op", "getRouteHandler").Str("error", err.Error()).Msg("orgId or appId empty")
@@ -164,7 +160,6 @@ func (a *APIManager) getRouteHandler(w http.ResponseWriter, r *http.Request) {
 		resp.Respond(ctx, w)
 		return
 	}
-
 	routeId := vars["routeId"]
 	routeConfig, err := a.routingTableMgr.GetRoute(ctx, *tid, routeId)
 	if err != nil {
@@ -173,7 +168,7 @@ func (a *APIManager) getRouteHandler(w http.ResponseWriter, r *http.Request) {
 			resp := ErrorResponse(&NotFoundError{})
 			resp.Respond(ctx, w)
 		} else {
-			resp := ErrorResponse(err)
+			resp := ErrorResponse(&BadRequestError{err.Error(), err})
 			resp.Respond(ctx, w)
 		}
 		return
@@ -186,7 +181,6 @@ func (a *APIManager) getRouteHandler(w http.ResponseWriter, r *http.Request) {
 func (a *APIManager) getAllTenantRoutesHandler(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	vars := mux.Vars(r)
-
 	tid, err := getTenant(ctx, vars)
 	if err != nil {
 		log.Ctx(ctx).Error().Str("op", "GetAllTenantRoutes").Str("error", err.Error()).Msg("orgId or appId empty")
@@ -194,11 +188,10 @@ func (a *APIManager) getAllTenantRoutesHandler(w http.ResponseWriter, r *http.Re
 		resp.Respond(ctx, w)
 		return
 	}
-
 	allRouteConfigs, err := a.routingTableMgr.GetAllTenantRoutes(ctx, *tid)
 	if err != nil {
 		log.Ctx(ctx).Error().Str("op", "GetAllTenantRoutes").Msg(err.Error())
-		resp := ErrorResponse(err)
+		resp := ErrorResponse(&BadRequestError{err.Error(), err})
 		resp.Respond(ctx, w)
 		return
 	}
@@ -211,7 +204,7 @@ func (a *APIManager) getAllSendersHandler(w http.ResponseWriter, r *http.Request
 	allSenders, err := a.routingTableMgr.GetAllSenders(ctx)
 	if err != nil {
 		log.Ctx(ctx).Error().Str("op", "getAllSendersHandler").Msg(err.Error())
-		resp := ErrorResponse(err)
+		resp := ErrorResponse(&BadRequestError{err.Error(), err})
 		resp.Respond(ctx, w)
 		return
 	}
@@ -224,7 +217,7 @@ func (a *APIManager) getAllReceiversHandler(w http.ResponseWriter, r *http.Reque
 	allReceivers, err := a.routingTableMgr.GetAllReceivers(ctx)
 	if err != nil {
 		log.Ctx(ctx).Error().Str("op", "getAllReceiversHandler").Msg(err.Error())
-		resp := ErrorResponse(err)
+		resp := ErrorResponse(&BadRequestError{err.Error(), err})
 		resp.Respond(ctx, w)
 		return
 	}
@@ -237,7 +230,7 @@ func (a *APIManager) getAllFiltersHandler(w http.ResponseWriter, r *http.Request
 	allFilters, err := a.routingTableMgr.GetAllFilters(ctx)
 	if err != nil {
 		log.Ctx(ctx).Error().Str("op", "getAllFiltersHandler").Msg(err.Error())
-		resp := ErrorResponse(err)
+		resp := ErrorResponse(&BadRequestError{err.Error(), err})
 		resp.Respond(ctx, w)
 		return
 	}

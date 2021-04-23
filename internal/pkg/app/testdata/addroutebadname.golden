@@ -1,7 +1,7 @@
 {
-  "item": "invalid route name simple_route",
+  "item": "BadRequestError (message=invalid route name simple_route): invalid route name simple_route",
   "status": {
-    "code": 500,
-    "message": "Internal Server Error"
+    "code": 400,
+    "message": "Bad Request"
   }
 }
