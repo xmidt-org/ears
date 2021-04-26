@@ -312,6 +312,21 @@
           "expectedEventCount": 0
         }
       ]
+    },
+    "simpleFilterDecodeRoute": {
+      "seq": 20,
+      "routeFiles": [
+        "simpleFilterDecodeRoute"
+      ],
+      "waitMs": 100,
+      "events": [
+        {
+          "senderRouteFiles": "simpleFilterDecodeRoute",
+          "expectedEventCount": 5,
+          "expectedEventIndex": 0,
+          "expectedEventPayloadFile": "event8"
+        }
+      ]
     }
   }
 }
