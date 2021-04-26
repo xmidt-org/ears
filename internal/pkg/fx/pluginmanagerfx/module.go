@@ -102,6 +102,10 @@ func ProvidePluginManager(in PluginIn) (PluginOut, error) {
 			plugin: toArr(dedup.NewPluginVersion("dedup", "", ""))[0].(pkgplugin.Pluginer),
 		},
 		{
+			name:   "ttl",
+			plugin: toArr(dedup.NewPluginVersion("ttl", "", ""))[0].(pkgplugin.Pluginer),
+		},
+		{
 			name:   "block",
 			plugin: toArr(block.NewPluginVersion("block", "", ""))[0].(pkgplugin.Pluginer),
 		},
