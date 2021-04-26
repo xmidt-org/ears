@@ -299,6 +299,19 @@
           "expectedEventPayloadFile": "event1"
         }
       ]
+    },
+    "simpleFilterTtlRoute": {
+      "seq": 19,
+      "routeFiles": [
+        "simpleFilterTtlRoute"
+      ],
+      "waitMs": 100,
+      "events": [
+        {
+          "senderRouteFiles": "simpleFilterTtlRoute",
+          "expectedEventCount": 0
+        }
+      ]
     }
   }
 }

@@ -66,9 +66,9 @@ func (f *Filter) Filter(evt event.Event) []event.Event {
 				return []event.Event{}
 			}
 		}
-		evtTs, ok := obj.(int)
+		evtTs, ok := obj.(uint64)
 		if !ok {
-			evt.Nack(errors.New("not an integer at ttl path " + f.config.TtlPath))
+			evt.Nack(errors.New("not a uint64 at ttl path " + f.config.TtlPath))
 			return []event.Event{}
 		}
 		nowNanos := time.Now().UnixNano()
