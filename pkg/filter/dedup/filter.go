@@ -61,6 +61,7 @@ func (f *Filter) Filter(evt event.Event) []event.Event {
 		f.lruCache.Add(evtHash, struct{}{})
 		return []event.Event{evt}
 	} else {
+		evt.Ack()
 		return []event.Event{}
 	}
 }
