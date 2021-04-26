@@ -21,6 +21,7 @@ import (
 	"github.com/xmidt-org/ears/pkg/plugin/manager"
 	"github.com/xmidt-org/ears/pkg/plugins/block"
 	"github.com/xmidt-org/ears/pkg/plugins/debug"
+	"github.com/xmidt-org/ears/pkg/plugins/dedup"
 	"github.com/xmidt-org/ears/pkg/plugins/js"
 	"github.com/xmidt-org/ears/pkg/plugins/kafka"
 	"github.com/xmidt-org/ears/pkg/plugins/match"
@@ -95,6 +96,10 @@ func ProvidePluginManager(in PluginIn) (PluginOut, error) {
 		{
 			name:   "js",
 			plugin: toArr(js.NewPluginVersion("js", "", ""))[0].(pkgplugin.Pluginer),
+		},
+		{
+			name:   "dedup",
+			plugin: toArr(dedup.NewPluginVersion("dedup", "", ""))[0].(pkgplugin.Pluginer),
 		},
 		{
 			name:   "block",
