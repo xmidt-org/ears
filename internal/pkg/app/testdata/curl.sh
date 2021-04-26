@@ -18,65 +18,65 @@ curl -X GET http://localhost:3000/ears/version | jq .
 
 echo "add routes"
 
-curl -X POST http://localhost:3000/ears/v1/orgs/myorg/applications/myapp/routes --data @simpleRoute.json | jq .
+curl -X POST http://localhost:3000/ears/v1/orgs/myorg/applications/myapp/routes --data-binary @simpleRoute.json | jq .
 
-curl -X POST http://localhost:3000/ears/v1/orgs/myorg/applications/myapp/routes --data @simpleRouteAA.json | jq .
+curl -X POST http://localhost:3000/ears/v1/orgs/myorg/applications/myapp/routes --data-binary @simpleRouteAA.json | jq .
 
-curl -X POST http://localhost:3000/ears/v1/orgs/myorg/applications/myapp/routes --data @simpleRouteBB.json | jq .
+curl -X POST http://localhost:3000/ears/v1/orgs/myorg/applications/myapp/routes --data-binary @simpleRouteBB.json | jq .
 
-curl -X POST http://localhost:3000/ears/v1/orgs/myorg/applications/myapp/routes --data @simpleRouteAB.json | jq .
+curl -X POST http://localhost:3000/ears/v1/orgs/myorg/applications/myapp/routes --data-binary @simpleRouteAB.json | jq .
 
-curl -X POST http://localhost:3000/ears/v1/orgs/myorg/applications/myapp/routes --data @simpleFilterChainMatchRoute.json | jq .
+curl -X POST http://localhost:3000/ears/v1/orgs/myorg/applications/myapp/routes --data-binary @simpleFilterChainMatchRoute.json | jq .
 
-curl -X POST http://localhost:3000/ears/v1/orgs/myorg/applications/myapp/routes --data @simpleFilterSplitRoute.json | jq .
+curl -X POST http://localhost:3000/ears/v1/orgs/myorg/applications/myapp/routes --data-binary @simpleFilterSplitRoute.json | jq .
 
-curl -X POST http://localhost:3000/ears/v1/orgs/myorg/applications/myapp/routes --data @simpleFilterDeepSplitRoute.json | jq .
+curl -X POST http://localhost:3000/ears/v1/orgs/myorg/applications/myapp/routes --data-binary @simpleFilterDeepSplitRoute.json | jq .
 
-curl -X POST http://localhost:3000/ears/v1/orgs/myorg/applications/myapp/routes --data @simpleFilterMatchAllowRoute.json | jq .
+curl -X POST http://localhost:3000/ears/v1/orgs/myorg/applications/myapp/routes --data-binary @simpleFilterMatchAllowRoute.json | jq .
 
-curl -X POST http://localhost:3000/ears/v1/orgs/myorg/applications/myapp/routes --data @simpleFilterMatchDenyRoute.json | jq .
+curl -X POST http://localhost:3000/ears/v1/orgs/myorg/applications/myapp/routes --data-binary @simpleFilterMatchDenyRoute.json | jq .
 
-curl -X POST http://localhost:3000/ears/v1/orgs/myorg/applications/myapp/routes --data @simpleFilterUnwrapRoute.json | jq .
+curl -X POST http://localhost:3000/ears/v1/orgs/myorg/applications/myapp/routes --data-binary @simpleFilterUnwrapRoute.json | jq .
 
-curl -X POST http://localhost:3000/ears/v1/orgs/myorg/applications/myapp/routes --data @sqsReceiverRoute.json | jq .
+curl -X POST http://localhost:3000/ears/v1/orgs/myorg/applications/myapp/routes --data-binary @sqsReceiverRoute.json | jq .
 
-curl -X POST http://localhost:3000/ears/v1/orgs/myorg/applications/myapp/routes --data @sqsSenderRoute.json | jq .
+curl -X POST http://localhost:3000/ears/v1/orgs/myorg/applications/myapp/routes --data-binary @sqsSenderRoute.json | jq .
 
 # update route
 
-curl -X POST http://localhost:3000/ears/v1/orgs/myorg/applications/myapp/routes --data @update1.json | jq .
+curl -X POST http://localhost:3000/ears/v1/orgs/myorg/applications/myapp/routes --data-binary @update1.json | jq .
 
-curl -X POST http://localhost:3000/ears/v1/orgs/myorg/applications/myapp/routes --data @update2.json | jq .
+curl -X POST http://localhost:3000/ears/v1/orgs/myorg/applications/myapp/routes --data-binary @update2.json | jq .
 
-curl -X POST http://localhost:3000/ears/v1/orgs/myorg/applications/myapp/routes --data @update3.json | jq .
+curl -X POST http://localhost:3000/ears/v1/orgs/myorg/applications/myapp/routes --data-binary @update3.json | jq .
 
-curl -X POST http://localhost:3000/ears/v1/orgs/myorg/applications/myapp/routes --data @update4.json | jq .
+curl -X POST http://localhost:3000/ears/v1/orgs/myorg/applications/myapp/routes --data-binary @update4.json | jq .
 
 # idempotency test
 
-# curl -X POST http://localhost:3000/ears/v1/orgs/myorg/applications/myapp/routes --data @simpleRoute.json | jq .
+# curl -X POST http://localhost:3000/ears/v1/orgs/myorg/applications/myapp/routes --data-binary @simpleRoute.json | jq .
 
-# curl -X POST http://localhost:3000/ears/v1/orgs/myorg/applications/myapp/routes --data @simpleRouteBlankID.json | jq .
+# curl -X POST http://localhost:3000/ears/v1/orgs/myorg/applications/myapp/routes --data-binary @simpleRouteBlankID.json | jq .
 
-# curl -X POST http://localhost:3000/ears/v1/orgs/myorg/applications/myapp/routes --data @simpleFilterRoute.json | jq .
+# curl -X POST http://localhost:3000/ears/v1/orgs/myorg/applications/myapp/routes --data-binary @simpleFilterRoute.json | jq .
 
 # echo "invalid routes"
 
-# curl -X PUT http://localhost:3000/ears/v1/routes/orgs/myorg/applications/myapp/wrongid --data @simpleRoute.json | jq .
+# curl -X PUT http://localhost:3000/ears/v1/routes/orgs/myorg/applications/myapp/wrongid --data-binary @simpleRoute.json | jq .
 
-# curl -X POST http://localhost:3000/ears/v1/orgs/myorg/applications/myapp/routes --data @simpleRouteBadName.json | jq .
+# curl -X POST http://localhost:3000/ears/v1/orgs/myorg/applications/myapp/routes --data-binary @simpleRouteBadName.json | jq .
 
-# curl -X POST http://localhost:3000/ears/v1/orgs/myorg/applications/myapp/routes --data @simpleRouteBadPluginName.json | jq .
+# curl -X POST http://localhost:3000/ears/v1/orgs/myorg/applications/myapp/routes --data-binary @simpleRouteBadPluginName.json | jq .
 
-# curl -X POST http://localhost:3000/ears/v1/orgs/myorg/applications/myapp/routes --data @simpleRouteNoReceiver.json | jq .
+# curl -X POST http://localhost:3000/ears/v1/orgs/myorg/applications/myapp/routes --data-binary @simpleRouteNoReceiver.json | jq .
 
-# curl -X POST http://localhost:3000/ears/v1/orgs/myorg/applications/myapp/routes --data @simpleRouteNoSender.json | jq .
+# curl -X POST http://localhost:3000/ears/v1/orgs/myorg/applications/myapp/routes --data-binary @simpleRouteNoSender.json | jq .
 
-# curl -X POST http://localhost:3000/ears/v1/orgs/myorg/applications/myapp/routes --data @simpleRouteNoApp.json | jq .
+# curl -X POST http://localhost:3000/ears/v1/orgs/myorg/applications/myapp/routes --data-binary @simpleRouteNoApp.json | jq .
 
-# curl -X POST http://localhost:3000/ears/v1/orgs/myorg/applications/myapp/routes --data @simpleRouteNoOrg.json | jq .
+# curl -X POST http://localhost:3000/ears/v1/orgs/myorg/applications/myapp/routes --data-binary @simpleRouteNoOrg.json | jq .
 
-# curl -X POST http://localhost:3000/ears/v1/orgs/myorg/applications/myapp/routes --data @simpleRouteNoUser.json | jq .
+# curl -X POST http://localhost:3000/ears/v1/orgs/myorg/applications/myapp/routes --data-binary @simpleRouteNoUser.json | jq .
 
 echo "get routes"
 
