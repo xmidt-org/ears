@@ -23,38 +23,27 @@ import (
 )
 
 // a SplitFilter splits and event into two or more events
-/*type SplitFilter struct {
-	SplitPath string // path to split array in payload
-}*/
-
 func NewFilter(config interface{}) (*Filter, error) {
-
 	cfg, err := NewConfig(config)
-
 	if err != nil {
 		return nil, &filter.InvalidConfigError{
 			Err: err,
 		}
 	}
-
 	cfg = cfg.WithDefaults()
-
 	err = cfg.Validate()
 	if err != nil {
 		return nil, err
 	}
-
 	f := &Filter{
 		config: *cfg,
 	}
-
 	return f, nil
 }
 
 // Filter splits an event containing an array into multiple events
 func (f *Filter) Filter(evt event.Event) []event.Event {
 	//TODO: add validation logic to filter
-	//TODO: maybe replace with jq filter
 	if f == nil {
 		evt.Nack(&filter.InvalidConfigError{
 			Err: fmt.Errorf("<nil> pointer filter")})

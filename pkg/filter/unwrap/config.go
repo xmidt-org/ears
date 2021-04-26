@@ -22,55 +22,33 @@ import (
 )
 
 func NewConfig(config interface{}) (*Config, error) {
-
 	var cfg Config
 	err := pkgconfig.NewConfig(config, &cfg)
-
 	if err != nil {
 		return nil, &filter.InvalidConfigError{
 			Err: err,
 		}
 	}
-
 	return &cfg, nil
 }
 
-// WithDefaults will set
-//   * The .Destination and .Writer if Destination is DestinationUnknown
-//   * The .MaxHistory if it is nil
-//
-// The values will be set to the corresponding DefaultSenderConfig.* values
-//
-
 func (c Config) WithDefaults() *Config {
-	// if c == nil {
-	// 	return &DefaultConfig
-	// }
-
 	cfg := c
-
 	if c.UnwrapPath == "" {
 		cfg.UnwrapPath = DefaultConfig.UnwrapPath
 	}
 	return &cfg
 }
 
-// Validate will ensure that:
-//   * The .Destination is a valid DestinationType and is not DestinationUnknown
-//   * Max history is >= 0
-//   * The .Writer is only set when .Destination is DestinationCustom
 func (c *Config) Validate() error {
 	return nil
 }
-
-// Exporter interface
 
 func (c *Config) String() string {
 	s, err := c.YAML()
 	if err != nil {
 		return errs.String("error", nil, err)
 	}
-
 	return s
 }
 
