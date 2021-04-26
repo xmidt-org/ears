@@ -223,8 +223,8 @@ func (r *Receiver) Receive(next receiver.NextFn) error {
 	<-r.done
 	r.Lock()
 	elapsedMs := time.Now().Sub(r.startTime).Milliseconds()
-	receiveThroughput := 1000 * r.receiveCount / int(elapsedMs)
-	deleteThroughput := 1000 * r.deleteCount / int(elapsedMs)
+	receiveThroughput := 1000 * r.receiveCount / (int(elapsedMs) + 1)
+	deleteThroughput := 1000 * r.deleteCount / (int(elapsedMs) + 1)
 	receiveCnt := r.receiveCount
 	deleteCnt := r.deleteCount
 	r.Unlock()
