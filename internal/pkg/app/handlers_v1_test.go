@@ -44,6 +44,7 @@ import (
 	"github.com/xmidt-org/ears/pkg/plugins/split"
 	"github.com/xmidt-org/ears/pkg/plugins/sqs"
 	"github.com/xmidt-org/ears/pkg/plugins/transform"
+	"github.com/xmidt-org/ears/pkg/plugins/ttl"
 	"github.com/xmidt-org/ears/pkg/plugins/unwrap"
 	"github.com/xmidt-org/ears/pkg/route"
 	"io/ioutil"
@@ -477,7 +478,7 @@ func setupRestApi(config config.Config, storageMgr route.RouteStorer) (*EarsRunt
 		},
 		{
 			name:   "ttl",
-			plugin: toArr(dedup.NewPluginVersion("ttl", "", ""))[0].(pkgplugin.Pluginer),
+			plugin: toArr(ttl.NewPluginVersion("ttl", "", ""))[0].(pkgplugin.Pluginer),
 		},
 		{
 			name:   "block",
