@@ -1,0 +1,40 @@
+{
+  "id" : "ttl101",
+  "userId" : "boris",
+  "name" : "simpleDecodeFilterRoute",
+  "receiver" : {
+    "plugin" : "debug",
+    "name" : "simpleDecodeFilterRouteReceiver",
+    "config" :
+    {
+      "rounds" : 5,
+      "intervalMs" : 10,
+      "payload" : {
+        "topic": "/iot/FF6AF0AD873B4FEA94DC31BCC991DB18/jarvis-lutron-iot-adapter/command/stateChange",
+        "content": "ewogICJldmVudElkIjogIjQ2OGFkZjgwLWRjOWQtMTFlNC05ODlhLTQxZjIzNjQzODk2NSIsCiAgImFjY291bnRJZCI6ICJGRjZBRjBBRDg3M0I0RkVBOTREQzMxQkNDOTkxREIxOCIsCiAgImFkYXB0ZXJJZCI6ICJqYXJ2aXMtbHV0cm9uLWlvdC1hZGFwdGVyIiwKICAiZGV2aWNlSWQiOiAiIiwKICAidHlwZSI6ICJ0eXBlIiwKICAidmFsdWUiOiAibmFtZSIsCiAgInRpbWVzdGFtcCI6IDE0MjgzNTI4Nzc5NDQsCiAgIm5hbWUiOiAibmFtZSIsCiAgInRpdGxlIjogInRpdGxlIiwKICAiZGVzY3JpcHRpb24iOiAib3BlcmF0aW9uIgp9",
+        "sequence": 1428352877944,
+        "timestamp": 1428352877944
+      },
+      "maxHistory": 100
+    }
+  },
+  "sender" : {
+    "plugin" : "debug",
+    "name" : "simpleDecodeFilterRouteSender",
+    "config" : {
+      "destination" : "stdout",
+      "maxHistory": 100
+    }
+  },
+  "filterChain" : [
+    {
+      "plugin" : "decode",
+      "name" : "simpleDecodeFilterRouteFilter",
+      "config" : {
+        "decodePath" : "content",
+        "encoding" : "base64"
+      }
+    }
+  ],
+  "deliveryMode" : "whoCares"
+}
