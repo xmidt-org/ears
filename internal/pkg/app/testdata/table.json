@@ -284,6 +284,21 @@
           "expectedEventCount": 10
         }
       ]
+    },
+    "simpleFilterDedupRoute": {
+      "seq": 18,
+      "routeFiles": [
+        "simpleFilterDedupRoute"
+      ],
+      "waitMs": 100,
+      "events": [
+        {
+          "senderRouteFiles": "simpleFilterDedupRoute",
+          "expectedEventCount": 1,
+          "expectedEventIndex": 0,
+          "expectedEventPayloadFile": "event1"
+        }
+      ]
     }
   }
 }
