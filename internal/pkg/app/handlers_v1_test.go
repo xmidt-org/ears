@@ -621,6 +621,49 @@ func TestRestVersionHandler(t *testing.T) {
 	g.AssertJson(t, "version", data)
 }
 
+// update route test
+
+func TestRestUpdateRoutesHandler(t *testing.T) {
+	Version = "v1.0.2"
+	runtime := setupSimpleApi(t, "inmemory")
+	files := []string{"update1", "update2", "update3", "update4"}
+	for _, fn := range files {
+		w := httptest.NewRecorder()
+		routeFileName := "testdata/" + fn + ".json"
+		simpleRouteReader, err := os.Open(routeFileName)
+		if err != nil {
+			t.Fatalf("cannot read file: %s", err.Error())
+		}
+		r := httptest.NewRequest(http.MethodPost, "/ears/v1"+tenantPath+"/routes", simpleRouteReader)
+		runtime.apiManager.muxRouter.ServeHTTP(w, r)
+		var data Response
+		err = json.Unmarshal(w.Body.Bytes(), &data)
+		if err != nil {
+			t.Fatalf("cannot unmarshal response %s into json %s", string(w.Body.Bytes()), err.Error())
+		}
+	}
+	err := checkNumRoutes(runtime.apiManager, t.Name(), 1)
+	if err != nil {
+		t.Fatalf("%s test: route count issue: %s", t.Name(), err.Error())
+	}
+	// check number of events received by output plugin
+	time.Sleep(time.Duration(100) * time.Millisecond)
+	routeFileName := "testdata/update4.json"
+	err = checkEventsSent(routeFileName, "", runtime.pluginManger, 5, "testdata/event1.json", 0)
+	if err != nil {
+		t.Fatalf("check events sent error: %s", err.Error())
+	}
+	// delete route
+	r := httptest.NewRequest(http.MethodDelete, "/ears/v1"+tenantPath+"/routes/update101", nil)
+	w := httptest.NewRecorder()
+	runtime.apiManager.muxRouter.ServeHTTP(w, r)
+	err = checkNumRoutes(runtime.apiManager, t.Name(), 0)
+	if err != nil {
+		t.Fatalf("%s test: route count issue: %s", t.Name(), err.Error())
+	}
+	t.Logf("deleted route with id: %s", "update101")
+}
+
 // single route tests
 
 func TestRestPostSimpleRouteHandler(t *testing.T) {

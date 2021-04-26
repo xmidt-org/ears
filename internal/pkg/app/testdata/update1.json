@@ -1,0 +1,20 @@
+{
+  "id": "update101",
+  "userId": "boris",
+  "name": "sqsRoute",
+  "receiver": {
+    "plugin": "sqs",
+    "name": "mySqsReceiver",
+    "config": {
+      "queueUrl": "https://sqs.us-west-2.amazonaws.com/447701116110/earsReceiver"
+    }
+  },
+  "sender": {
+    "plugin": "sqs",
+    "name": "mySqsSender",
+    "config": {
+      "queueUrl": "https://sqs.us-west-2.amazonaws.com/447701116110/earsReceiver"
+    }
+  },
+  "deliveryMode": "whoCares"
+}
