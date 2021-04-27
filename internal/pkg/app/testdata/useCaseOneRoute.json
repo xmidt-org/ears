@@ -58,6 +58,21 @@
       "config": {
         "decodePath": "Message"
       }
+    },
+    {
+      "plugin": "match",
+      "name": "useCaseOneRouteMatcher",
+      "config": {
+        "mode": "allow",
+        "matcher": "pattern",
+        "pattern": {
+          "Message" : {
+            "body" : {
+              "accountProducts" : "*"
+            }
+          }
+        }
+      }
     }
   ],
   "deliveryMode": "whoCares"
