@@ -11,25 +11,44 @@
           "decodePath": "content",
           "encoding": "base64"
         },
+        "name": "simpleEncodeFilterRouteFilter",
+        "plugin": "encode"
+      },
+      {
+        "config": {
+          "decodePath": "content",
+          "encoding": "base64"
+        },
         "name": "simpleDecodeFilterRouteFilter",
         "plugin": "decode"
       }
     ],
-    "id": "decode101",
-    "name": "tbltstsimpleFilterDecodeRoutesimpleDecodeFilterRoute",
+    "id": "encode101",
+    "name": "tbltstsimpleFilterEncodeRoutesimpleEncodeFilterRoute",
     "receiver": {
       "config": {
         "intervalMs": 10,
         "maxHistory": 100,
         "payload": {
-          "content": "ewogICJldmVudElkIjogIjQ2OGFkZjgwLWRjOWQtMTFlNC05ODlhLTQxZjIzNjQzODk2NSIsCiAgImFjY291bnRJZCI6ICJGRjZBRjBBRDg3M0I0RkVBOTREQzMxQkNDOTkxREIxOCIsCiAgImFkYXB0ZXJJZCI6ICJqYXJ2aXMtbHV0cm9uLWlvdC1hZGFwdGVyIiwKICAiZGV2aWNlSWQiOiAiIiwKICAidHlwZSI6ICJ0eXBlIiwKICAidmFsdWUiOiAibmFtZSIsCiAgInRpbWVzdGFtcCI6IDE0MjgzNTI4Nzc5NDQsCiAgIm5hbWUiOiAibmFtZSIsCiAgInRpdGxlIjogInRpdGxlIiwKICAiZGVzY3JpcHRpb24iOiAib3BlcmF0aW9uIgp9",
+          "content": {
+            "accountId": "FF6AF0AD873B4FEA94DC31BCC991DB18",
+            "adapterId": "jarvis-lutron-iot-adapter",
+            "description": "operation",
+            "deviceId": "",
+            "eventId": "468adf80-dc9d-11e4-989a-41f236438965",
+            "name": "name",
+            "timestamp": 1428352877944,
+            "title": "title",
+            "type": "type",
+            "value": "name"
+          },
           "sequence": 1428352877944,
           "timestamp": 1428352877944,
           "topic": "/iot/FF6AF0AD873B4FEA94DC31BCC991DB18/jarvis-lutron-iot-adapter/command/stateChange"
         },
         "rounds": 5
       },
-      "name": "tbltstsimpleFilterDecodeRoutesimpleDecodeFilterRouteReceiver",
+      "name": "tbltstsimpleFilterEncodeRoutesimpleEncodeFilterRouteReceiver",
       "plugin": "debug"
     },
     "sender": {
@@ -37,7 +56,7 @@
         "destination": "stdout",
         "maxHistory": 100
       },
-      "name": "tbltstsimpleFilterDecodeRoutesimpleDecodeFilterRouteSender",
+      "name": "tbltstsimpleFilterEncodeRoutesimpleEncodeFilterRouteSender",
       "plugin": "debug"
     },
     "tenant": {
