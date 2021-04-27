@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package decode
+package encode
 
 import (
 	"encoding/base64"
@@ -53,50 +53,35 @@ func (f *Filter) Filter(evt event.Event) []event.Event {
 	obj := evt.Payload()
 	var parent interface{}
 	var key string
-	if f.config.DecodePath == "" {
-	} else if f.config.DecodePath == "." {
+	if f.config.EncodePath == "" {
+	} else if f.config.EncodePath == "." {
 	} else {
-		path := strings.Split(f.config.DecodePath, ".")
+		path := strings.Split(f.config.EncodePath, ".")
 		for _, p := range path {
 			var ok bool
 			parent = obj
 			key = p
 			obj, ok = obj.(map[string]interface{})[p]
 			if !ok {
-				evt.Nack(errors.New("invalid object at decode path " + f.config.DecodePath))
+				evt.Nack(errors.New("invalid object at decode path " + f.config.EncodePath))
 				return []event.Event{}
 			}
 		}
 	}
 	if obj == nil {
-		evt.Nack(errors.New("nil object at decode path " + f.config.DecodePath))
+		evt.Nack(errors.New("nil object at decode path " + f.config.EncodePath))
 		return []event.Event{}
 	}
-	var input string
-	switch obj.(type) {
-	case string:
-		input = obj.(string)
-	case []byte:
-		input = string(obj.([]byte))
-	default:
-		evt.Nack(errors.New("unsupported field type at decode path " + f.config.DecodePath))
-		return []event.Event{}
-	}
-	buf, err := base64.StdEncoding.DecodeString(input)
+	buf, err := json.Marshal(obj)
 	if err != nil {
 		evt.Nack(err)
 		return []event.Event{}
 	}
-	var output interface{}
-	err = json.Unmarshal(buf, &output)
-	if err != nil {
-		evt.Nack(err)
-		return []event.Event{}
-	}
+	output := base64.StdEncoding.EncodeToString(buf)
 	if key != "" {
 		parentMap, is := parent.(map[string]interface{})
 		if !is {
-			evt.Nack(errors.New("parent is not a map at decode path " + f.config.DecodePath))
+			evt.Nack(errors.New("parent is not a map at decode path " + f.config.EncodePath))
 			return []event.Event{}
 		}
 		parentMap[key] = output
@@ -105,6 +90,7 @@ func (f *Filter) Filter(evt event.Event) []event.Event {
 	}
 	return []event.Event{evt}
 }
+
 func (f *Filter) Config() Config {
 	if f == nil {
 		return Config{}
