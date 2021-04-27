@@ -327,6 +327,21 @@
           "expectedEventPayloadFile": "event8"
         }
       ]
+    },
+    "simpleFilterEncodeRoute": {
+      "seq": 21,
+      "routeFiles": [
+        "simpleFilterEncodeRoute"
+      ],
+      "waitMs": 100,
+      "events": [
+        {
+          "senderRouteFiles": "simpleFilterEncodeRoute",
+          "expectedEventCount": 5,
+          "expectedEventIndex": 0,
+          "expectedEventPayloadFile": "event8"
+        }
+      ]
     }
   }
 }
