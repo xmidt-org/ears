@@ -17,6 +17,7 @@ package match
 import (
 	"fmt"
 	"github.com/xmidt-org/ears/pkg/filter/match/pattern"
+	"github.com/xmidt-org/ears/pkg/filter/match/patternregex"
 
 	"github.com/xmidt-org/ears/pkg/event"
 	"github.com/xmidt-org/ears/pkg/filter"
@@ -55,6 +56,13 @@ func NewFilter(config interface{}) (*Filter, error) {
 		}
 	case MatcherPattern:
 		matcher, err = pattern.NewMatcher(cfg.Pattern)
+		if err != nil {
+			return nil, &filter.InvalidConfigError{
+				Err: err,
+			}
+		}
+	case MatcherPatternRegex:
+		matcher, err = patternregex.NewMatcher(cfg.Pattern)
 		if err != nil {
 			return nil, &filter.InvalidConfigError{
 				Err: err,

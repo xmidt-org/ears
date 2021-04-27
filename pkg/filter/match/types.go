@@ -37,9 +37,10 @@ const (
 type MatcherType int
 
 const (
-	MatcherUnknown MatcherType = iota // unknown
-	MatcherRegex                      // regex
-	MatcherPattern                    // pattern
+	MatcherUnknown      MatcherType = iota // unknown
+	MatcherRegex                           // regex
+	MatcherPattern                         // pattern
+	MatcherPatternRegex                    // patternregex
 )
 
 // Config can be passed into NewFilter() in order to configure
