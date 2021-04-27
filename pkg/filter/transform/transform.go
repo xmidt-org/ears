@@ -73,7 +73,7 @@ func (f *Filter) Config() Config {
 	return f.config
 }
 
-// transform is a helper function to perfrom a simple transformation
+// transform is a helper function to perform a simple transformation
 func transform(a interface{}, t interface{}, parent interface{}, key string, idx int) {
 	if a == nil || t == nil {
 		return
