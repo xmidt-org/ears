@@ -36,9 +36,6 @@ var _ Event = &EventMock{}
 // 			PayloadFunc: func() interface{} {
 // 				panic("mock out the Payload method")
 // 			},
-// 			SetAckFunc: func(handledFn func(), errFn func(error)) error {
-// 				panic("mock out the SetAck method")
-// 			},
 // 			SetContextFunc: func(ctx context.Context) error {
 // 				panic("mock out the SetContext method")
 // 			},
@@ -73,9 +70,6 @@ type EventMock struct {
 	// PayloadFunc mocks the Payload method.
 	PayloadFunc func() interface{}
 
-	// SetAckFunc mocks the SetAck method.
-	SetAckFunc func(handledFn func(), errFn func(error)) error
-
 	// SetContextFunc mocks the SetContext method.
 	SetContextFunc func(ctx context.Context) error
 
@@ -109,13 +103,6 @@ type EventMock struct {
 		// Payload holds details about calls to the Payload method.
 		Payload []struct {
 		}
-		// SetAck holds details about calls to the SetAck method.
-		SetAck []struct {
-			// HandledFn is the handledFn argument value.
-			HandledFn func()
-			// ErrFn is the errFn argument value.
-			ErrFn func(error)
-		}
 		// SetContext holds details about calls to the SetContext method.
 		SetContext []struct {
 			// Ctx is the ctx argument value.
@@ -138,7 +125,6 @@ type EventMock struct {
 	lockMetadata    sync.RWMutex
 	lockNack        sync.RWMutex
 	lockPayload     sync.RWMutex
-	lockSetAck      sync.RWMutex
 	lockSetContext  sync.RWMutex
 	lockSetMetadata sync.RWMutex
 	lockSetPayload  sync.RWMutex
@@ -307,41 +293,6 @@ func (mock *EventMock) PayloadCalls() []struct {
 	mock.lockPayload.RLock()
 	calls = mock.calls.Payload
 	mock.lockPayload.RUnlock()
-	return calls
-}
-
-// SetAck calls SetAckFunc.
-func (mock *EventMock) SetAck(handledFn func(), errFn func(error)) error {
-	if mock.SetAckFunc == nil {
-		panic("EventMock.SetAckFunc: method is nil but Event.SetAck was just called")
-	}
-	callInfo := struct {
-		HandledFn func()
-		ErrFn     func(error)
-	}{
-		HandledFn: handledFn,
-		ErrFn:     errFn,
-	}
-	mock.lockSetAck.Lock()
-	mock.calls.SetAck = append(mock.calls.SetAck, callInfo)
-	mock.lockSetAck.Unlock()
-	return mock.SetAckFunc(handledFn, errFn)
-}
-
-// SetAckCalls gets all the calls that were made to SetAck.
-// Check the length with:
-//     len(mockedEvent.SetAckCalls())
-func (mock *EventMock) SetAckCalls() []struct {
-	HandledFn func()
-	ErrFn     func(error)
-} {
-	var calls []struct {
-		HandledFn func()
-		ErrFn     func(error)
-	}
-	mock.lockSetAck.RLock()
-	calls = mock.calls.SetAck
-	mock.lockSetAck.RUnlock()
 	return calls
 }
 
