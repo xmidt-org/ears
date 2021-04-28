@@ -342,6 +342,21 @@
           "expectedEventPayloadFile": "event8"
         }
       ]
+    },
+    "simpleFilterHashRoute": {
+      "seq": 22,
+      "routeFiles": [
+        "simpleFilterHashRoute"
+      ],
+      "waitMs": 100,
+      "events": [
+        {
+          "senderRouteFiles": "simpleFilterHashRoute",
+          "expectedEventCount": 5,
+          "expectedEventIndex": 0,
+          "expectedEventPayloadFile": "event12"
+        }
+      ]
     }
   }
 }
