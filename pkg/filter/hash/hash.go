@@ -156,10 +156,16 @@ func (f *Filter) Filter(evt event.Event) []event.Event {
 			obj = evt.Payload()
 		}
 		path := strings.Split(f.config.ResultPath, ".")
-		for _, p := range path {
+		for i, p := range path {
 			var ok bool
 			parent = obj
 			key = p
+			if i == len(path)-1 {
+				break
+			}
+			if obj.(map[string]interface{})[p] == nil {
+				obj.(map[string]interface{})[p] = make(map[string]interface{})
+			}
 			obj, ok = obj.(map[string]interface{})[p]
 			if !ok {
 				evt.Nack(errors.New("invalid object at result path " + f.config.ResultPath))
