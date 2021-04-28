@@ -1,0 +1,16 @@
+{
+  "message" : {
+    "op": "process",
+    "payload": {
+      "foo": "bar"
+    }
+  },
+  "tx": {
+    "traceId": "123",
+    "spanId": "123"
+  },
+  "to" : {
+    "app" : "",
+    "location" : ""
+  }
+}
