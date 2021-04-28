@@ -1,0 +1,103 @@
+{
+  "id" : "hash101",
+  "userId" : "boris",
+  "name" : "simpleHashFilterRoute",
+  "receiver" : {
+    "plugin" : "debug",
+    "name" : "simpleEncodeFilterRouteReceiver",
+    "config" :
+    {
+      "rounds" : 5,
+      "intervalMs" : 10,
+      "payload" : {
+        "topic": "some/test/topic",
+        "content": {
+          "eventId": "468adf80-dc9d-11e4-989a-41f236438965",
+          "accountId": "SomeAccountId",
+          "adapterId": "foo-adapter",
+          "deviceId": "",
+          "type": "type",
+          "value": "name",
+          "timestamp": 1428352877944,
+          "name": "name",
+          "title": "title",
+          "description": "operation"
+        },
+        "sequence": 1428352877944,
+        "timestamp": 1428352877944
+      },
+      "maxHistory": 100
+    }
+  },
+  "sender" : {
+    "plugin" : "debug",
+    "name" : "simpleHashFilterRouteSender",
+    "config" : {
+      "destination" : "stdout",
+      "maxHistory": 100
+    }
+  },
+  "filterChain" : [
+    {
+      "plugin" : "hash",
+      "name" : "simpleHashMd5HexFilterRouteFilter",
+      "config" : {
+        "hashPath" : "content.accountId",
+        "resultPath" : "content.hash.accountIdHashMd5Hex",
+        "encoding" : "hex",
+        "hashAlgorithm" : "md5"
+      }
+    },
+    {
+      "plugin" : "hash",
+      "name" : "simpleHashMd5B64FilterRouteFilter",
+      "config" : {
+        "hashPath" : "content.accountId",
+        "resultPath" : "content.hash.accountIdHashMd5Base64",
+        "encoding" : "base64",
+        "hashAlgorithm" : "md5"
+      }
+    },
+    {
+      "plugin" : "hash",
+      "name" : "simpleHashSha1HexFilterRouteFilter",
+      "config" : {
+        "hashPath" : "content.accountId",
+        "resultPath" : "content.hash.accountIdHashSha1Hex",
+        "encoding" : "hex",
+        "hashAlgorithm" : "sha1"
+      }
+    },
+    {
+      "plugin" : "hash",
+      "name" : "simpleHashSha1B64FilterRouteFilter",
+      "config" : {
+        "hashPath" : "content.accountId",
+        "resultPath" : "content.hash.accountIdHashSha1Base64",
+        "encoding" : "base64",
+        "hashAlgorithm" : "sha1"
+      }
+    },
+    {
+      "plugin" : "hash",
+      "name" : "simpleHashSha256HexFilterRouteFilter",
+      "config" : {
+        "hashPath" : "content.accountId",
+        "resultPath" : "content.hash.accountIdHashSha256Hex",
+        "encoding" : "hex",
+        "hashAlgorithm" : "sha256"
+      }
+    },
+    {
+      "plugin" : "hash",
+      "name" : "simpleHashSha256B64FilterRouteFilter",
+      "config" : {
+        "hashPath" : "content.accountId",
+        "resultPath" : "content.hash.accountIdHashSha256Base64",
+        "encoding" : "base64",
+        "hashAlgorithm" : "sha256"
+      }
+    }
+  ],
+  "deliveryMode" : "whoCares"
+}
