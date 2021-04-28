@@ -63,13 +63,13 @@ func (f *Filter) Filter(evt event.Event) []event.Event {
 			key = p
 			obj, ok = obj.(map[string]interface{})[p]
 			if !ok {
-				evt.Nack(errors.New("invalid object at decode path " + f.config.EncodePath))
+				evt.Nack(errors.New("invalid object at encode path " + f.config.EncodePath))
 				return []event.Event{}
 			}
 		}
 	}
 	if obj == nil {
-		evt.Nack(errors.New("nil object at decode path " + f.config.EncodePath))
+		evt.Nack(errors.New("nil object at encode path " + f.config.EncodePath))
 		return []event.Event{}
 	}
 	buf, err := json.Marshal(obj)
@@ -81,7 +81,7 @@ func (f *Filter) Filter(evt event.Event) []event.Event {
 	if key != "" {
 		parentMap, is := parent.(map[string]interface{})
 		if !is {
-			evt.Nack(errors.New("parent is not a map at decode path " + f.config.EncodePath))
+			evt.Nack(errors.New("parent is not a map at encode path " + f.config.EncodePath))
 			return []event.Event{}
 		}
 		parentMap[key] = output

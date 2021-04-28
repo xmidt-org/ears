@@ -23,8 +23,9 @@ type Config struct {
 	ResultPath    string `json:"resultPath,omitempty"` // if omitted hashPath will be used as result path
 	Metadata      *bool  `json:"metadata,omitempty"`   // if true result will go to metadata, otherwise payload
 	HashAlgorithm string `json:"hashAlgorithm,omitempty"`
-	Key           string `json:"key,omitempty"` // optional key for certain hash algorithms
-	Mod           *int   `json:"mod,omitempty"` // optional modulo for certain integer based hashes
+	Key           string `json:"key,omitempty"`      // optional key for certain hash algorithms
+	Mod           *int   `json:"mod,omitempty"`      // optional modulo for certain integer based hashes
+	Encoding      string `json:"encoding,omitempty"` // optional encoding of hash, base64, hex etc.
 }
 
 var DefaultConfig = Config{
@@ -34,6 +35,7 @@ var DefaultConfig = Config{
 	HashAlgorithm: "md5",
 	Key:           "",
 	Mod:           pointer.Int(0),
+	Encoding:      "",
 }
 
 type Filter struct {

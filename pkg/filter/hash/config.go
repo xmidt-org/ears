@@ -52,6 +52,9 @@ func (c Config) WithDefaults() *Config {
 	if c.HashAlgorithm == "" {
 		cfg.HashAlgorithm = DefaultConfig.HashAlgorithm
 	}
+	if c.Encoding == "" {
+		cfg.Encoding = DefaultConfig.Encoding
+	}
 	return &cfg
 }
 
