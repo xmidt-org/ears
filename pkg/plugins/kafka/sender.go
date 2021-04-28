@@ -197,11 +197,7 @@ func (p *Producer) Close(ctx context.Context) {
 	}
 }
 
-func (p *Producer) SendMessage(topic string, partition *int, headers map[string]string, bs []byte) error {
-	var part int32 = -1
-	if nil != partition {
-		part = int32(*partition)
-	}
+func (p *Producer) SendMessage(topic string, partition int, headers map[string]string, bs []byte) error {
 	var hs []sarama.RecordHeader
 	for k, v := range headers {
 		hs = append(hs, sarama.RecordHeader{
@@ -211,7 +207,7 @@ func (p *Producer) SendMessage(topic string, partition *int, headers map[string]
 	}
 	message := &sarama.ProducerMessage{
 		Topic:     topic,
-		Partition: part,
+		Partition: int32(partition),
 		Value:     sarama.StringEncoder(bs),
 		Headers:   hs,
 		Timestamp: time.Now(),
@@ -257,7 +253,17 @@ func (s *Sender) Send(e event.Event) {
 		e.Nack(err)
 		return
 	}
-	err = s.producer.SendMessage(s.config.Topic, s.config.Partition, nil, buf)
+	partition := -1
+	if s.config.PartitionPath != "" {
+		val, _, _ := e.Eval(s.config.PartitionPath, *s.config.Metadata)
+		intVal, ok := val.(int)
+		if ok {
+			partition = intVal
+		}
+	} else {
+		partition = *s.config.Partition
+	}
+	err = s.producer.SendMessage(s.config.Topic, partition, nil, buf)
 	if err != nil {
 		s.logger.Error().Str("op", "kafka.Send").Msg("failed to send message: " + err.Error())
 		e.Nack(err)

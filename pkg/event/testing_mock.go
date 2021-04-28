@@ -27,6 +27,9 @@ var _ Event = &EventMock{}
 // 			ContextFunc: func() context.Context {
 // 				panic("mock out the Context method")
 // 			},
+// 			EvalFunc: func(path string, metadata bool) (interface{}, interface{}, string) {
+// 				panic("mock out the Eval method")
+// 			},
 // 			MetadataFunc: func() interface{} {
 // 				panic("mock out the Metadata method")
 // 			},
@@ -61,6 +64,9 @@ type EventMock struct {
 	// ContextFunc mocks the Context method.
 	ContextFunc func() context.Context
 
+	// EvalFunc mocks the Eval method.
+	EvalFunc func(path string, metadata bool) (interface{}, interface{}, string)
+
 	// MetadataFunc mocks the Metadata method.
 	MetadataFunc func() interface{}
 
@@ -92,6 +98,13 @@ type EventMock struct {
 		// Context holds details about calls to the Context method.
 		Context []struct {
 		}
+		// Eval holds details about calls to the Eval method.
+		Eval []struct {
+			// Path is the path argument value.
+			Path string
+			// Metadata is the metadata argument value.
+			Metadata bool
+		}
 		// Metadata holds details about calls to the Metadata method.
 		Metadata []struct {
 		}
@@ -122,6 +135,7 @@ type EventMock struct {
 	lockAck         sync.RWMutex
 	lockClone       sync.RWMutex
 	lockContext     sync.RWMutex
+	lockEval        sync.RWMutex
 	lockMetadata    sync.RWMutex
 	lockNack        sync.RWMutex
 	lockPayload     sync.RWMutex
@@ -210,6 +224,41 @@ func (mock *EventMock) ContextCalls() []struct {
 	mock.lockContext.RLock()
 	calls = mock.calls.Context
 	mock.lockContext.RUnlock()
+	return calls
+}
+
+// Eval calls EvalFunc.
+func (mock *EventMock) Eval(path string, metadata bool) (interface{}, interface{}, string) {
+	if mock.EvalFunc == nil {
+		panic("EventMock.EvalFunc: method is nil but Event.Eval was just called")
+	}
+	callInfo := struct {
+		Path     string
+		Metadata bool
+	}{
+		Path:     path,
+		Metadata: metadata,
+	}
+	mock.lockEval.Lock()
+	mock.calls.Eval = append(mock.calls.Eval, callInfo)
+	mock.lockEval.Unlock()
+	return mock.EvalFunc(path, metadata)
+}
+
+// EvalCalls gets all the calls that were made to Eval.
+// Check the length with:
+//     len(mockedEvent.EvalCalls())
+func (mock *EventMock) EvalCalls() []struct {
+	Path     string
+	Metadata bool
+} {
+	var calls []struct {
+		Path     string
+		Metadata bool
+	}
+	mock.lockEval.RLock()
+	calls = mock.calls.Eval
+	mock.lockEval.RUnlock()
 	return calls
 }
 

@@ -20,6 +20,7 @@ package event
 import (
 	"context"
 	"github.com/xmidt-org/ears/internal/pkg/ack"
+	"strings"
 
 	"github.com/mohae/deepcopy"
 )
@@ -105,6 +106,30 @@ func (e *event) SetMetadata(metadata interface{}) error {
 	e.metadata = metadata
 	return nil
 }
+
+func (e *event) Eval(path string, metadata bool) (interface{}, interface{}, string) {
+	obj := e.Payload()
+	if metadata {
+		obj = e.Metadata()
+	}
+	if path == "" || path == "." {
+		return obj, nil, ""
+	}
+	var parent interface{}
+	var key string
+	segments := strings.Split(path, ".")
+	for _, s := range segments {
+		var ok bool
+		parent = obj
+		key = s
+		obj, ok = obj.(map[string]interface{})[s]
+		if !ok {
+			return nil, nil, ""
+		}
+	}
+	return obj, parent, key
+}
+
 func (e *event) Context() context.Context {
 	return e.ctx
 }
