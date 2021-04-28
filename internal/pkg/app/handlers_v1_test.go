@@ -38,6 +38,7 @@ import (
 	"github.com/xmidt-org/ears/pkg/plugins/decode"
 	"github.com/xmidt-org/ears/pkg/plugins/dedup"
 	"github.com/xmidt-org/ears/pkg/plugins/encode"
+	"github.com/xmidt-org/ears/pkg/plugins/hash"
 	"github.com/xmidt-org/ears/pkg/plugins/js"
 	"github.com/xmidt-org/ears/pkg/plugins/kafka"
 	"github.com/xmidt-org/ears/pkg/plugins/match"
@@ -489,6 +490,10 @@ func setupRestApi(config config.Config, storageMgr route.RouteStorer) (*EarsRunt
 		{
 			name:   "encode",
 			plugin: toArr(encode.NewPluginVersion("encode", "", ""))[0].(pkgplugin.Pluginer),
+		},
+		{
+			name:   "hash",
+			plugin: toArr(hash.NewPluginVersion("hash", "", ""))[0].(pkgplugin.Pluginer),
 		},
 		{
 			name:   "block",
