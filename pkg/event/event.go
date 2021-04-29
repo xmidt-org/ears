@@ -150,17 +150,17 @@ func (e *event) SetPathValue(path string, val interface{}, metadata bool, create
 		var ok bool
 		parent = obj
 		key = s
+		if i == len(segments)-1 {
+			break
+		}
 		obj, ok = obj.(map[string]interface{})[s]
 		if !ok {
 			if createPath && i < len(segments)-1 {
-				obj.(map[string]interface{})[s] = make(map[string]interface{})
-				obj = obj.(map[string]interface{})[s]
+				parent.(map[string]interface{})[key] = make(map[string]interface{})
+				obj = parent.(map[string]interface{})[key]
 			} else {
 				return nil, ""
 			}
-		}
-		if i == len(segments)-1 {
-			break
 		}
 	}
 	obj.(map[string]interface{})[key] = val
