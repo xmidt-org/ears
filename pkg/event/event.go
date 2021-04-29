@@ -107,7 +107,7 @@ func (e *event) SetMetadata(metadata interface{}) error {
 	return nil
 }
 
-func (e *event) Eval(path string, metadata bool, create bool) (interface{}, interface{}, string) {
+func (e *event) GetPathValue(path string, metadata bool) (interface{}, interface{}, string) {
 	obj := e.Payload()
 	if metadata {
 		obj = e.Metadata()
@@ -118,21 +118,53 @@ func (e *event) Eval(path string, metadata bool, create bool) (interface{}, inte
 	var parent interface{}
 	var key string
 	segments := strings.Split(path, ".")
+	for _, s := range segments {
+		var ok bool
+		parent = obj
+		key = s
+		obj, ok = obj.(map[string]interface{})[s]
+		if !ok {
+			return nil, parent, key
+		}
+	}
+	return obj, parent, key
+}
+
+func (e *event) SetPathValue(path string, val interface{}, metadata bool, createPath bool) (interface{}, string) {
+	obj := e.Payload()
+	if metadata {
+		obj = e.Metadata()
+	}
+	if path == "" || path == "." {
+		if metadata {
+			e.SetMetadata(val)
+		} else {
+			e.SetPayload(val)
+		}
+		return nil, ""
+	}
+	var parent interface{}
+	var key string
+	segments := strings.Split(path, ".")
 	for i, s := range segments {
 		var ok bool
 		parent = obj
 		key = s
 		obj, ok = obj.(map[string]interface{})[s]
 		if !ok {
-			if create && i < len(segments)-1 {
+			if createPath && i < len(segments)-1 {
 				obj.(map[string]interface{})[s] = make(map[string]interface{})
 				obj = obj.(map[string]interface{})[s]
 			} else {
-				return nil, parent, key
+				return nil, ""
 			}
 		}
+		if i == len(segments)-1 {
+			break
+		}
 	}
-	return obj, parent, key
+	obj.(map[string]interface{})[key] = val
+	return parent, key
 }
 
 func (e *event) Context() context.Context {
