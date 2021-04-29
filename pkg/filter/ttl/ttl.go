@@ -19,7 +19,6 @@ import (
 	"fmt"
 	"github.com/xmidt-org/ears/pkg/event"
 	"github.com/xmidt-org/ears/pkg/filter"
-	"strings"
 	"time"
 )
 
@@ -48,37 +47,24 @@ func (f *Filter) Filter(evt event.Event) []event.Event {
 		})
 		return nil
 	}
-	if f.config.TtlPath == "" {
-		evt.Nack(errors.New("bad ttl path " + f.config.TtlPath))
+	obj, _, _ := evt.GetPathValue(f.config.TtlPath, false)
+	if obj == nil {
+		evt.Nack(errors.New("nil object at unwrap path " + f.config.TtlPath))
 		return []event.Event{}
-	} else if f.config.TtlPath == "." {
-		evt.Nack(errors.New("bad ttl path " + f.config.TtlPath))
+	}
+	evtTs, ok := obj.(uint64)
+	if !ok {
+		evt.Nack(errors.New("not a uint64 at ttl path " + f.config.TtlPath))
 		return []event.Event{}
-	} else {
-		path := strings.Split(f.config.TtlPath, ".")
-		obj := evt.Payload()
-		for _, p := range path {
-			var ok bool
-			obj, ok = obj.(map[string]interface{})[p]
-			if !ok {
-				evt.Nack(errors.New("invalid object in ttl path " + f.config.TtlPath))
-				return []event.Event{}
-			}
-		}
-		evtTs, ok := obj.(uint64)
-		if !ok {
-			evt.Nack(errors.New("not a uint64 at ttl path " + f.config.TtlPath))
-			return []event.Event{}
-		}
-		nowNanos := time.Now().UnixNano()
-		if int64(evtTs) > nowNanos {
-			evt.Nack(errors.New("event from the future at ttl path " + f.config.TtlPath))
-			return []event.Event{}
-		}
-		if nowNanos-int64(evtTs) >= int64(*f.config.Ttl*(*f.config.TtlNanoFactor)) {
-			evt.Ack()
-			return []event.Event{}
-		}
+	}
+	nowNanos := time.Now().UnixNano()
+	if int64(evtTs) > nowNanos {
+		evt.Nack(errors.New("event from the future at ttl path " + f.config.TtlPath))
+		return []event.Event{}
+	}
+	if nowNanos-int64(evtTs) >= int64(*f.config.Ttl*(*f.config.TtlNanoFactor)) {
+		evt.Ack()
+		return []event.Event{}
 	}
 	return []event.Event{evt}
 }
