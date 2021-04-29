@@ -21,7 +21,6 @@ import (
 	"fmt"
 	"github.com/xmidt-org/ears/pkg/event"
 	"github.com/xmidt-org/ears/pkg/filter"
-	"strings"
 )
 
 func NewFilter(config interface{}) (*Filter, error) {
@@ -50,24 +49,7 @@ func (f *Filter) Filter(evt event.Event) []event.Event {
 		})
 		return nil
 	}
-	obj := evt.Payload()
-	var parent interface{}
-	var key string
-	if f.config.EncodePath == "" {
-	} else if f.config.EncodePath == "." {
-	} else {
-		path := strings.Split(f.config.EncodePath, ".")
-		for _, p := range path {
-			var ok bool
-			parent = obj
-			key = p
-			obj, ok = obj.(map[string]interface{})[p]
-			if !ok {
-				evt.Nack(errors.New("invalid object at encode path " + f.config.EncodePath))
-				return []event.Event{}
-			}
-		}
-	}
+	obj, _, _ := evt.GetPathValue(f.config.EncodePath, false)
 	if obj == nil {
 		evt.Nack(errors.New("nil object at encode path " + f.config.EncodePath))
 		return []event.Event{}
@@ -78,16 +60,7 @@ func (f *Filter) Filter(evt event.Event) []event.Event {
 		return []event.Event{}
 	}
 	output := base64.StdEncoding.EncodeToString(buf)
-	if key != "" {
-		parentMap, is := parent.(map[string]interface{})
-		if !is {
-			evt.Nack(errors.New("parent is not a map at encode path " + f.config.EncodePath))
-			return []event.Event{}
-		}
-		parentMap[key] = output
-	} else {
-		evt.SetPayload(output)
-	}
+	evt.SetPathValue(f.config.EncodePath, output, false, true)
 	return []event.Event{evt}
 }
 

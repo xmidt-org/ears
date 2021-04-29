@@ -21,7 +21,6 @@ import (
 	"fmt"
 	"github.com/xmidt-org/ears/pkg/event"
 	"github.com/xmidt-org/ears/pkg/filter"
-	"strings"
 )
 
 func NewFilter(config interface{}) (*Filter, error) {
@@ -50,24 +49,7 @@ func (f *Filter) Filter(evt event.Event) []event.Event {
 		})
 		return nil
 	}
-	obj := evt.Payload()
-	var parent interface{}
-	var key string
-	if f.config.DecodePath == "" {
-	} else if f.config.DecodePath == "." {
-	} else {
-		path := strings.Split(f.config.DecodePath, ".")
-		for _, p := range path {
-			var ok bool
-			parent = obj
-			key = p
-			obj, ok = obj.(map[string]interface{})[p]
-			if !ok {
-				evt.Nack(errors.New("invalid object at decode path " + f.config.DecodePath))
-				return []event.Event{}
-			}
-		}
-	}
+	obj, _, _ := evt.GetPathValue(f.config.DecodePath, false)
 	if obj == nil {
 		evt.Nack(errors.New("nil object at decode path " + f.config.DecodePath))
 		return []event.Event{}
@@ -93,16 +75,7 @@ func (f *Filter) Filter(evt event.Event) []event.Event {
 		evt.Nack(err)
 		return []event.Event{}
 	}
-	if key != "" {
-		parentMap, is := parent.(map[string]interface{})
-		if !is {
-			evt.Nack(errors.New("parent is not a map at decode path " + f.config.DecodePath))
-			return []event.Event{}
-		}
-		parentMap[key] = output
-	} else {
-		evt.SetPayload(output)
-	}
+	evt.SetPathValue(f.config.DecodePath, output, false, true)
 	return []event.Event{evt}
 }
 func (f *Filter) Config() Config {
