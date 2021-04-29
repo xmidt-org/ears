@@ -38,13 +38,13 @@ type routeItem struct {
 }
 
 func NewDynamoDbStorer(config config.Config) (*DynamoDbStorer, error) {
-	region := config.GetString("ears.db.region")
+	region := config.GetString("ears.storage.route.region")
 	if region == "" {
-		return nil, &MissingConfigError{"ears.db.region"}
+		return nil, &MissingConfigError{"ears.storage.route.region"}
 	}
-	tableName := config.GetString("ears.db.tableName")
+	tableName := config.GetString("ears.storage.route.tableName")
 	if tableName == "" {
-		return nil, &MissingConfigError{"ears.db.tableName"}
+		return nil, &MissingConfigError{"ears.storage.route.tableName"}
 	}
 
 	return &DynamoDbStorer{

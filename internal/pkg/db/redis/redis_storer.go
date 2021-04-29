@@ -43,7 +43,7 @@ type Config interface {
 
 func NewRedisDbStorer(config Config, logger *zerolog.Logger) (*RedisDbStorer, error) {
 	rdb := &RedisDbStorer{
-		endpoint:  config.GetString("ears.storage.endpoint"),
+		endpoint:  config.GetString("ears.storage.route.endpoint"),
 		tableName: "routes",
 		logger:    logger,
 		config:    config,

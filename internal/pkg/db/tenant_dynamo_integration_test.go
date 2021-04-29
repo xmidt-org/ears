@@ -23,17 +23,17 @@ import (
 	"testing"
 )
 
-func dynamoDbConfig() config.Config {
+func tenantDbConfig() config.Config {
 	v := viper.New()
-	v.Set("ears.storage.route.region", "us-west-2")
-	v.Set("ears.storage.route.tableName", "dev.ears.routes")
+	v.Set("ears.storage.tenant.region", "us-west-2")
+	v.Set("ears.storage.tenant.tableName", "dev.ears.tenants")
 	return v
 }
 
-func TestDynamoRouteStorer(t *testing.T) {
-	s, err := dynamo.NewDynamoDbStorer(dynamoDbConfig())
+func TestDynamoTenantStorer(t *testing.T) {
+	s, err := dynamo.NewTenantStorer(tenantDbConfig())
 	if err != nil {
 		t.Fatalf("Error instantiate dynamodb %s\n", err.Error())
 	}
-	testRouteStorer(s, t)
+	testTenantStorer(s, t)
 }
