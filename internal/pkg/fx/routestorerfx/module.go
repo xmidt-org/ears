@@ -44,7 +44,7 @@ type StorageOut struct {
 
 func ProvideRouteStorer(in StorageIn) (StorageOut, error) {
 	out := StorageOut{}
-	storageType := in.Config.GetString("ears.storage.type")
+	storageType := in.Config.GetString("ears.storage.route.type")
 	switch storageType {
 	case "inmemory":
 		out.RouteStorer = db.NewInMemoryRouteStorer(in.Config)
@@ -67,7 +67,7 @@ func ProvideRouteStorer(in StorageIn) (StorageOut, error) {
 		}
 		out.RouteStorer = routeStorer
 	default:
-		return out, &UnsupportedStorageError{storageType}
+		return out, &UnsupportedRouteStorageError{storageType}
 	}
 	return out, nil
 }
