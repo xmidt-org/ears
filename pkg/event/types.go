@@ -43,9 +43,13 @@ type Event interface {
 	//Will return an error if the event is done
 	SetMetadata(metadata interface{}) error
 
-	// Eval finds object at path in either payload or metadata and returns such object
+	// SetPathValue sets object value at path in either payload or metadata and returns its parent
+	// object and parent key if those exist
+	SetPathValue(path string, val interface{}, metadata bool, createPath bool) (interface{}, string)
+
+	// GetPathValue finds object at path in either payload or metadata and returns such object
 	// if one exists along with its parent object and parent key if those exist
-	Eval(path string, metadata bool, create bool) (interface{}, interface{}, string)
+	GetPathValue(path string, metadata bool) (interface{}, interface{}, string)
 
 	//Replace the current event context
 	//Will return an error if the event is done
