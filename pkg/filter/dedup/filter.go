@@ -49,7 +49,6 @@ func (f *Filter) Filter(evt event.Event) []event.Event {
 		})
 		return nil
 	}
-	//TODO: we should have an event hash
 	buf, err := json.Marshal(evt.Payload())
 	if err != nil {
 		evt.Nack(err)
