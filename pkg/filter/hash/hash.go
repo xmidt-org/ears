@@ -150,8 +150,8 @@ func (f *Filter) Filter(evt event.Event) []event.Event {
 		if *f.config.Metadata {
 			if evt.Metadata() == nil {
 				evt.SetMetadata(make(map[string]interface{}))
-				obj = evt.Metadata()
 			}
+			obj = evt.Metadata()
 		} else {
 			obj = evt.Payload()
 		}
