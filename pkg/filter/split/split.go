@@ -19,7 +19,6 @@ import (
 	"fmt"
 	"github.com/xmidt-org/ears/pkg/event"
 	"github.com/xmidt-org/ears/pkg/filter"
-	"strings"
 )
 
 // a SplitFilter splits and event into two or more events
@@ -43,67 +42,36 @@ func NewFilter(config interface{}) (*Filter, error) {
 
 // Filter splits an event containing an array into multiple events
 func (f *Filter) Filter(evt event.Event) []event.Event {
-	//TODO: add validation logic to filter
 	if f == nil {
 		evt.Nack(&filter.InvalidConfigError{
 			Err: fmt.Errorf("<nil> pointer filter")})
 		return nil
 	}
 	events := []event.Event{}
-	if f.config.SplitPath == "" {
-		events = append(events, evt)
-	} else if f.config.SplitPath == "." {
-		switch evt.Payload().(type) {
-		case []interface{}:
-			for _, p := range evt.Payload().([]interface{}) {
-				nevt, err := evt.Clone(evt.Context())
-				if err != nil {
-					evt.Nack(err)
-					return nil
-				}
-				err = nevt.SetPayload(p)
-				if err != nil {
-					evt.Nack(err)
-					return nil
-				}
-				events = append(events, nevt)
-			}
-			evt.Ack()
-		default:
-			evt.Nack(errors.New("split on non array type"))
-			return nil
-		}
-	} else {
-		path := strings.Split(f.config.SplitPath, ".")
-		obj := evt.Payload()
-		for _, p := range path {
-			var ok bool
-			obj, ok = obj.(map[string]interface{})[p]
-			if !ok {
-				evt.Nack(errors.New("invalid object in filter path"))
-				return nil
-			}
-		}
-		arr, ok := obj.([]interface{})
-		if !ok {
-			evt.Nack(errors.New("split on non array type"))
-			return nil
-		}
-		for _, p := range arr {
-			nevt, err := evt.Clone(evt.Context())
-			if err != nil {
-				evt.Nack(err)
-				return nil
-			}
-			err = nevt.SetPayload(p)
-			if err != nil {
-				evt.Nack(err)
-				return nil
-			}
-			events = append(events, nevt)
-		}
-		evt.Ack()
+	obj, _, _ := evt.GetPathValue(f.config.SplitPath, false)
+	if obj == nil {
+		evt.Nack(errors.New("nil object at split path " + f.config.SplitPath))
+		return []event.Event{}
 	}
+	arr, ok := obj.([]interface{})
+	if !ok {
+		evt.Nack(errors.New("split on non array type"))
+		return nil
+	}
+	for _, p := range arr {
+		nevt, err := evt.Clone(evt.Context())
+		if err != nil {
+			evt.Nack(err)
+			return nil
+		}
+		err = nevt.SetPayload(p)
+		if err != nil {
+			evt.Nack(err)
+			return nil
+		}
+		events = append(events, nevt)
+	}
+	evt.Ack()
 	return events
 }
 

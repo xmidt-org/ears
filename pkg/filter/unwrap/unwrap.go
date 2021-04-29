@@ -42,7 +42,6 @@ func NewFilter(config interface{}) (*Filter, error) {
 
 // Filter splits an event containing an array into multiple events
 func (f *Filter) Filter(evt event.Event) []event.Event {
-	//TODO: add validation logic to filter
 	if f == nil {
 		evt.Nack(&filter.InvalidConfigError{
 			Err: fmt.Errorf("<nil> pointer filter"),
