@@ -15,6 +15,7 @@
 package transform
 
 import (
+	"errors"
 	"fmt"
 	"github.com/mohae/deepcopy"
 	"github.com/xmidt-org/ears/pkg/event"
@@ -54,13 +55,15 @@ func (f *Filter) Filter(evt event.Event) []event.Event {
 	if f.config.Transformation == nil {
 		events = append(events, evt)
 	} else {
-		thisTransfrom := deepcopy.Copy(f.config.Transformation)
-		transform(evt.Payload(), thisTransfrom, nil, "", -1)
-		err := evt.SetPayload(thisTransfrom)
-		if err != nil {
-			evt.Nack(err)
+		thisTransform := deepcopy.Copy(f.config.Transformation)
+		obj, _, _ := evt.GetPathValue(f.config.TransformPath, false)
+		if obj == nil {
+			evt.Nack(errors.New("no value at transform path " + f.config.TransformPath))
 			return nil
 		}
+		obj = deepcopy.Copy(obj)
+		transform(obj, thisTransform, nil, "", -1)
+		evt.SetPathValue(f.config.ResultPath, thisTransform, false, true)
 		events = append(events, evt)
 	}
 	return events
