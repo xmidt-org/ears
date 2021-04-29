@@ -19,7 +19,6 @@ import (
 	"fmt"
 	"github.com/xmidt-org/ears/pkg/event"
 	"github.com/xmidt-org/ears/pkg/filter"
-	"strings"
 )
 
 func NewFilter(config interface{}) (*Filter, error) {
@@ -48,30 +47,17 @@ func (f *Filter) Filter(evt event.Event) []event.Event {
 		})
 		return nil
 	}
-	events := []event.Event{}
-	if f.config.UnwrapPath == "" {
-		events = append(events, evt)
-	} else if f.config.UnwrapPath == "." {
-		events = append(events, evt)
-	} else {
-		path := strings.Split(f.config.UnwrapPath, ".")
-		obj := evt.Payload()
-		for _, p := range path {
-			var ok bool
-			obj, ok = obj.(map[string]interface{})[p]
-			if !ok {
-				evt.Nack(errors.New("invalid object in filter path"))
-				return nil
-			}
-		}
-		err := evt.SetPayload(obj)
-		if err != nil {
-			evt.Nack(err)
-			return nil
-		}
-		events = append(events, evt)
+	obj, _, _ := evt.GetPathValue(f.config.UnwrapPath, false)
+	if obj == nil {
+		evt.Nack(errors.New("nil object at unwrap path " + f.config.UnwrapPath))
+		return []event.Event{}
 	}
-	return events
+	err := evt.SetPayload(obj)
+	if err != nil {
+		evt.Nack(err)
+		return nil
+	}
+	return []event.Event{evt}
 }
 
 func (f *Filter) Config() Config {
