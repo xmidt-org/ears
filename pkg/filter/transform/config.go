@@ -38,6 +38,12 @@ func (c Config) WithDefaults() *Config {
 	if c.Transformation == "" {
 		cfg.Transformation = DefaultConfig.Transformation
 	}
+	if c.TransformPath == "" {
+		cfg.TransformPath = DefaultConfig.TransformPath
+	}
+	if c.ResultPath == "" {
+		cfg.ResultPath = DefaultConfig.ResultPath
+	}
 	return &cfg
 }
 
