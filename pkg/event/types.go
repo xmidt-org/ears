@@ -45,7 +45,7 @@ type Event interface {
 
 	// Eval finds object at path in either payload or metadata and returns such object
 	// if one exists along with its parent object and parent key if those exist
-	Eval(path string, metadata bool) (interface{}, interface{}, string)
+	Eval(path string, metadata bool, create bool) (interface{}, interface{}, string)
 
 	//Replace the current event context
 	//Will return an error if the event is done

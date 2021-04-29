@@ -107,7 +107,7 @@ func (e *event) SetMetadata(metadata interface{}) error {
 	return nil
 }
 
-func (e *event) Eval(path string, metadata bool) (interface{}, interface{}, string) {
+func (e *event) Eval(path string, metadata bool, create bool) (interface{}, interface{}, string) {
 	obj := e.Payload()
 	if metadata {
 		obj = e.Metadata()
@@ -118,13 +118,18 @@ func (e *event) Eval(path string, metadata bool) (interface{}, interface{}, stri
 	var parent interface{}
 	var key string
 	segments := strings.Split(path, ".")
-	for _, s := range segments {
+	for i, s := range segments {
 		var ok bool
 		parent = obj
 		key = s
 		obj, ok = obj.(map[string]interface{})[s]
 		if !ok {
-			return nil, nil, ""
+			if create && i < len(segments)-1 {
+				obj.(map[string]interface{})[s] = make(map[string]interface{})
+				obj = obj.(map[string]interface{})[s]
+			} else {
+				return nil, parent, key
+			}
 		}
 	}
 	return obj, parent, key
