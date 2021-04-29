@@ -122,7 +122,7 @@ type SenderConfig struct {
 	Topic             string `json:"topic,omitempty"`
 	Partition         *int   `json:"partition,omitempty"`
 	PartitionPath     string `json:"partitionPath,omitempty"` // if path is set look up partition from event rather than using the hard coded partition id
-	Metadata          *bool  `json:"partitionPath,omitempty"` // if true partition path will be evaluated on metadata, otherwise on payload
+	Metadata          *bool  `json:"metadata,omitempty"`      // if true partition path will be evaluated on metadata, otherwise on payload
 	Username          string `json:"username,omitempty"`
 	Password          string `json:"password,omitempty"`
 	CACert            string `json:"caCert,omitempty"`
