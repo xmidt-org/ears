@@ -14,12 +14,16 @@
 
 package transform
 
+import "github.com/xorcare/pointer"
+
 // Config can be passed into NewFilter() in order to configure
 // the behavior of the sender.
 type Config struct {
 	Transformation interface{} `json:"transformation,omitempty"`
 	TransformPath  string      `json:"transformPath,omitempty"`
 	ResultPath     string      `json:"resultPath,omitempty"`
+	FromMetadata   *bool       `json:"fromMetadata,omitempty"`
+	ToMetadata     *bool       `json:"toMetadata,omitempty"`
 }
 
 var empty interface{}
@@ -27,6 +31,8 @@ var DefaultConfig = Config{
 	Transformation: empty,
 	TransformPath:  "",
 	ResultPath:     "",
+	FromMetadata:   pointer.Bool(false),
+	ToMetadata:     pointer.Bool(false),
 }
 
 type Filter struct {

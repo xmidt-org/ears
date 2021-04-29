@@ -44,6 +44,12 @@ func (c Config) WithDefaults() *Config {
 	if c.ResultPath == "" {
 		cfg.ResultPath = DefaultConfig.ResultPath
 	}
+	if c.FromMetadata == nil {
+		cfg.FromMetadata = DefaultConfig.FromMetadata
+	}
+	if c.ToMetadata == nil {
+		cfg.ToMetadata = DefaultConfig.ToMetadata
+	}
 	return &cfg
 }
 
