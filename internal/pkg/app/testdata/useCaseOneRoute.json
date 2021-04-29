@@ -6,7 +6,7 @@
     "plugin": "debug",
     "name": "useCaseRouteReceiver",
     "config": {
-      "rounds": 5,
+      "rounds": 1,
       "intervalMs": 10,
       "payload": {
         "Type": "Notification",
@@ -67,11 +67,47 @@
         "matcher": "pattern",
         "pattern": {
           "Message" : {
-            "body" : {
-              "accountProducts" : "*"
+            "header" : {
+              "partner" : "Partner",
+              "type" : "ACCOUNT_PRODUCT"
             }
           }
         }
+      }
+    },
+    {
+      "plugin": "transform",
+      "name": "useCaseOneRouteTransformer",
+      "config": {
+        "transformation": {
+          "message" : {
+            "op" : "process",
+            "uses" : "xbo_account",
+            "payload" : {
+              "metadata" : {
+                "type" : "{Message.header.type}",
+                "event" : "{Message.header.event}",
+                "timestamp" : "{Message.header.timestampMs}",
+                "id" : "{Message.body.account.id}"
+              }
+            }
+          },
+          "to" : {
+            "location" : "{Message.body.account.id}",
+            "app" : "myapp"
+          }
+        }
+      }
+    },
+    {
+      "plugin": "hash",
+      "name": "useCaseOneRouteHasher",
+      "config": {
+        "hashPath" : "to.location",
+        "resultPath" : "kafka.partition",
+        "hashAlgorithm" : "fnv",
+        "mod" : 100,
+        "metadata" : true
       }
     }
   ],
