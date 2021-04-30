@@ -84,8 +84,8 @@ filterChain:
   - plugin: hash
     name: useCaseOneRouteHasher
     config:
-      hashPath: to.location
-      resultPath: kafka.partition
+      fromPath: to.location
+      toPath: kafka.partition
       hashAlgorithm: fnv
       mod: 100
       metadata: true

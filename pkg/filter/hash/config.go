@@ -34,17 +34,20 @@ func NewConfig(config interface{}) (*Config, error) {
 
 func (c Config) WithDefaults() *Config {
 	cfg := c
-	if c.HashPath == "" {
-		cfg.HashPath = DefaultConfig.HashPath
+	if c.FromPath == "" {
+		cfg.FromPath = DefaultConfig.FromPath
 	}
-	if c.ResultPath == "" {
-		cfg.ResultPath = DefaultConfig.ResultPath
+	if c.ToPath == "" {
+		cfg.ToPath = DefaultConfig.ToPath
+	}
+	if c.FromMetadata == nil {
+		cfg.FromMetadata = DefaultConfig.FromMetadata
+	}
+	if c.ToMetadata == nil {
+		cfg.ToMetadata = DefaultConfig.ToMetadata
 	}
 	if c.Mod == nil {
 		cfg.Mod = DefaultConfig.Mod
-	}
-	if c.Metadata == nil {
-		cfg.Metadata = DefaultConfig.Metadata
 	}
 	if c.Key == "" {
 		cfg.Key = DefaultConfig.Key

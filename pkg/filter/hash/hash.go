@@ -54,9 +54,9 @@ func (f *Filter) Filter(evt event.Event) []event.Event {
 		})
 		return nil
 	}
-	obj, _, _ := evt.GetPathValue(f.config.HashPath, false)
+	obj, _, _ := evt.GetPathValue(f.config.FromPath, *f.config.FromMetadata)
 	if obj == nil {
-		evt.Nack(errors.New("nil object at hash path " + f.config.HashPath))
+		evt.Nack(errors.New("nil object at path " + f.config.FromPath))
 		return []event.Event{}
 	}
 	buf, err := json.Marshal(obj)
@@ -126,11 +126,11 @@ func (f *Filter) Filter(evt event.Event) []event.Event {
 	} else if f.config.Encoding == "hex" {
 		output = hex.EncodeToString(output.([]byte))
 	}
-	path := f.config.ResultPath
+	path := f.config.ToPath
 	if path == "" {
-		path = f.config.HashPath
+		path = f.config.FromPath
 	}
-	evt.SetPathValue(path, output, *f.config.Metadata, true)
+	evt.SetPathValue(path, output, *f.config.ToMetadata, true)
 	return []event.Event{evt}
 }
 
