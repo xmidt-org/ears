@@ -20,8 +20,8 @@ import "github.com/xorcare/pointer"
 // the behavior of the sender.
 type Config struct {
 	Transformation interface{} `json:"transformation,omitempty"`
-	TransformPath  string      `json:"transformPath,omitempty"`
-	ResultPath     string      `json:"resultPath,omitempty"`
+	FromPath       string      `json:"formPath,omitempty"`
+	ToPath         string      `json:"toPath,omitempty"`
 	FromMetadata   *bool       `json:"fromMetadata,omitempty"`
 	ToMetadata     *bool       `json:"toMetadata,omitempty"`
 }
@@ -29,8 +29,8 @@ type Config struct {
 var empty interface{}
 var DefaultConfig = Config{
 	Transformation: empty,
-	TransformPath:  "",
-	ResultPath:     "",
+	FromPath:       "",
+	ToPath:         "",
 	FromMetadata:   pointer.Bool(false),
 	ToMetadata:     pointer.Bool(false),
 }

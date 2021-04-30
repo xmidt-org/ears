@@ -38,11 +38,11 @@ func (c Config) WithDefaults() *Config {
 	if c.Transformation == "" {
 		cfg.Transformation = DefaultConfig.Transformation
 	}
-	if c.TransformPath == "" {
-		cfg.TransformPath = DefaultConfig.TransformPath
+	if c.FromPath == "" {
+		cfg.FromPath = DefaultConfig.FromPath
 	}
-	if c.ResultPath == "" {
-		cfg.ResultPath = DefaultConfig.ResultPath
+	if c.ToPath == "" {
+		cfg.ToPath = DefaultConfig.ToPath
 	}
 	if c.FromMetadata == nil {
 		cfg.FromMetadata = DefaultConfig.FromMetadata
