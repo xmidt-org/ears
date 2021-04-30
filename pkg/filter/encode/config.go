@@ -34,8 +34,17 @@ func NewConfig(config interface{}) (*Config, error) {
 
 func (c Config) WithDefaults() *Config {
 	cfg := c
-	if c.EncodePath == "" {
-		cfg.EncodePath = DefaultConfig.EncodePath
+	if c.FromPath == "" {
+		cfg.FromPath = DefaultConfig.FromPath
+	}
+	if c.ToPath == "" {
+		cfg.ToPath = DefaultConfig.ToPath
+	}
+	if c.FromMetadata == nil {
+		cfg.FromMetadata = DefaultConfig.FromMetadata
+	}
+	if c.ToMetadata == nil {
+		cfg.ToMetadata = DefaultConfig.ToMetadata
 	}
 	if c.Encoding == "" {
 		cfg.Encoding = DefaultConfig.Encoding

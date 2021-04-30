@@ -56,7 +56,7 @@
       "plugin": "decode",
       "name": "useCaseOneRouteDecoder",
       "config": {
-        "decodePath": "Message"
+        "fromPath": "Message"
       }
     },
     {

@@ -8,8 +8,8 @@
     "filterChain": [
       {
         "config": {
-          "decodePath": "content",
-          "encoding": "base64"
+          "encoding": "base64",
+          "fromPath": "content"
         },
         "name": "simpleDecodeFilterRouteFilter",
         "plugin": "decode"
