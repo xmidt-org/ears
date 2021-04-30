@@ -72,6 +72,9 @@ filterChain:
         to:
           location: "{Message.body.account.id}"
           app: myapp
+  - plugin: log
+    name: useCaseOneRouteLogger
+    config:
   - plugin: js
     name: useCaseOneRouteFilterJs
     config:
