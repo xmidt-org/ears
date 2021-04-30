@@ -72,9 +72,6 @@ filterChain:
         to:
           location: "{Message.body.account.id}"
           app: myapp
-  - plugin: log
-    name: useCaseOneRouteLogger
-    config:
   - plugin: js
     name: useCaseOneRouteFilterJs
     config:
@@ -89,7 +86,10 @@ filterChain:
     config:
       fromPath: to.location
       toPath: kafka.partition
+      toMetadata: true
       hashAlgorithm: fnv
       mod: 100
-      metadata: true
+  - plugin: log
+    name: useCaseOneRouteLogger
+    config:
 deliveryMode: whoCares

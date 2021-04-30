@@ -66,10 +66,10 @@
         "mode": "allow",
         "matcher": "pattern",
         "pattern": {
-          "Message" : {
-            "header" : {
-              "partner" : "Partner",
-              "type" : "ACCOUNT_PRODUCT"
+          "Message": {
+            "header": {
+              "partner": "Partner",
+              "type": "ACCOUNT_PRODUCT"
             }
           }
         }
@@ -80,39 +80,51 @@
       "name": "useCaseOneRouteTransformer",
       "config": {
         "transformation": {
-          "message" : {
-            "op" : "process",
-            "uses" : "xbo_account",
-            "payload" : {
-              "metadata" : {
-                "type" : "{Message.header.type}",
-                "event" : "{Message.header.event}",
-                "timestamp" : "{Message.header.timestampMs}",
-                "id" : "{Message.body.account.id}"
+          "message": {
+            "op": "process",
+            "uses": "xbo_account",
+            "payload": {
+              "metadata": {
+                "type": "{Message.header.type}",
+                "event": "{Message.header.event}",
+                "timestamp": "{Message.header.timestampMs}",
+                "id": "{Message.body.account.id}"
               },
-              "body" : {
-                "addedAccountProducts" : "{Message.body.addedAccountProducts}",
-                "removedAccountProducts" : "{Message.body.removedAccountProducts}"
+              "body": {
+                "addedAccountProducts": "{Message.body.addedAccountProducts}",
+                "removedAccountProducts": "{Message.body.removedAccountProducts}"
               }
             }
           },
-          "to" : {
-            "location" : "{Message.body.account.id}",
-            "app" : "myapp"
+          "to": {
+            "location": "{Message.body.account.id}",
+            "app": "myapp"
           }
         }
+      }
+    },
+    {
+      "plugin": "js",
+      "name": "useCaseOneRouteFilterJs",
+      "config": {
+        "source": "if (_.event.payload.message.payload.body.addedAccountProducts.length == 0 && _.event.payload.message.payload.body.removedAccountProducts.length == 0) {\n  return null;\n} else {\n  return _.event;\n}"
       }
     },
     {
       "plugin": "hash",
       "name": "useCaseOneRouteHasher",
       "config": {
-        "fromPath" : "to.location",
-        "toPath" : "kafka.partition",
-        "hashAlgorithm" : "fnv",
-        "mod" : 100,
-        "metadata" : true
+        "fromPath": "to.location",
+        "toPath": "kafka.partition",
+        "toMetadata": true,
+        "hashAlgorithm": "fnv",
+        "mod": 100
       }
+    },
+    {
+      "plugin": "log",
+      "name": "useCaseOneRouteLogger",
+      "config": null
     }
   ],
   "deliveryMode": "whoCares"
