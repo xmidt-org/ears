@@ -48,9 +48,9 @@ func (f *Filter) Filter(evt event.Event) []event.Event {
 		})
 		return nil
 	}
-	obj, _, _ := evt.GetPathValue(f.config.EncodePath, false)
+	obj, _, _ := evt.GetPathValue(f.config.FromPath, *f.config.FromMetadata)
 	if obj == nil {
-		evt.Nack(errors.New("nil object at encode path " + f.config.EncodePath))
+		evt.Nack(errors.New("nil object at path " + f.config.FromPath))
 		return []event.Event{}
 	}
 	buf, err := json.Marshal(obj)
@@ -59,7 +59,11 @@ func (f *Filter) Filter(evt event.Event) []event.Event {
 		return []event.Event{}
 	}
 	output := base64.StdEncoding.EncodeToString(buf)
-	evt.SetPathValue(f.config.EncodePath, output, false, true)
+	path := f.config.ToPath
+	if f.config.FromPath != "" {
+		path = f.config.FromPath
+	}
+	evt.SetPathValue(path, output, *f.config.ToMetadata, true)
 	return []event.Event{evt}
 }
 

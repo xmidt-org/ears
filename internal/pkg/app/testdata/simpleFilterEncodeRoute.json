@@ -42,7 +42,7 @@
       "plugin" : "encode",
       "name" : "simpleEncodeFilterRouteFilter",
       "config" : {
-        "decodePath" : "content",
+        "fromPath" : "content",
         "encoding" : "base64"
       }
     },
@@ -50,7 +50,7 @@
       "plugin" : "decode",
       "name" : "simpleDecodeFilterRouteFilter",
       "config" : {
-        "decodePath" : "content",
+        "fromPath" : "content",
         "encoding" : "base64"
       }
     }

@@ -48,9 +48,9 @@ func (f *Filter) Filter(evt event.Event) []event.Event {
 		})
 		return nil
 	}
-	obj, _, _ := evt.GetPathValue(f.config.DecodePath, false)
+	obj, _, _ := evt.GetPathValue(f.config.FromPath, *f.config.FromMetadata)
 	if obj == nil {
-		evt.Nack(errors.New("nil object at decode path " + f.config.DecodePath))
+		evt.Nack(errors.New("nil object at path " + f.config.FromPath))
 		return []event.Event{}
 	}
 	var input string
@@ -60,7 +60,7 @@ func (f *Filter) Filter(evt event.Event) []event.Event {
 	case []byte:
 		input = string(obj.([]byte))
 	default:
-		evt.Nack(errors.New("unsupported field type at decode path " + f.config.DecodePath))
+		evt.Nack(errors.New("unsupported field type at path " + f.config.FromPath))
 		return []event.Event{}
 	}
 	buf, err := base64.StdEncoding.DecodeString(input)
@@ -74,7 +74,11 @@ func (f *Filter) Filter(evt event.Event) []event.Event {
 		evt.Nack(err)
 		return []event.Event{}
 	}
-	evt.SetPathValue(f.config.DecodePath, output, false, true)
+	path := f.config.ToPath
+	if f.config.FromPath != "" {
+		path = f.config.FromPath
+	}
+	evt.SetPathValue(path, output, *f.config.ToMetadata, true)
 	return []event.Event{evt}
 }
 func (f *Filter) Config() Config {

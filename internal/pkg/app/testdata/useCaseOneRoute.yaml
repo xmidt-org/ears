@@ -42,7 +42,7 @@ filterChain:
   - plugin: decode
     name: useCaseOneRouteDecoder
     config:
-      decodePath: Message
+      fromPath: Message
   - plugin: match
     name: useCaseOneRouteMatcher
     config:

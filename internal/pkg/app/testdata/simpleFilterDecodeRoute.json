@@ -31,7 +31,7 @@
       "plugin" : "decode",
       "name" : "simpleDecodeFilterRouteFilter",
       "config" : {
-        "decodePath" : "content",
+        "fromPath" : "content",
         "encoding" : "base64"
       }
     }

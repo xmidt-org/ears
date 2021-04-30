@@ -14,16 +14,24 @@
 
 package encode
 
+import "github.com/xorcare/pointer"
+
 // Config can be passed into NewFilter() in order to configure
 // the behavior of the sender.
 type Config struct {
-	EncodePath string `json:"decodePath,omitempty"`
-	Encoding   string `json:"encoding,omitempty"`
+	FromPath     string `json:"fromPath,omitempty"`
+	ToPath       string `json:"toPath,omitempty"`
+	FromMetadata *bool  `json:"fromMetadata,omitempty"`
+	ToMetadata   *bool  `json:"toMetadata,omitempty"`
+	Encoding     string `json:"encoding,omitempty"`
 }
 
 var DefaultConfig = Config{
-	EncodePath: ".",
-	Encoding:   "base64",
+	FromPath:     "",
+	ToPath:       "",
+	FromMetadata: pointer.Bool(false),
+	ToMetadata:   pointer.Bool(false),
+	Encoding:     "base64",
 }
 
 type Filter struct {
