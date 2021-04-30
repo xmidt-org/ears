@@ -19,9 +19,10 @@ import "github.com/xorcare/pointer"
 // Config can be passed into NewFilter() in order to configure
 // the behavior of the sender.
 type Config struct {
-	HashPath      string `json:"hashPath,omitempty"`
-	ResultPath    string `json:"resultPath,omitempty"` // if omitted hashPath will be used as result path
-	Metadata      *bool  `json:"metadata,omitempty"`   // if true result will go to metadata, otherwise payload
+	FromPath      string `json:"fromPath,omitempty"`
+	ToPath        string `json:"toPath,omitempty"`
+	FromMetadata  *bool  `json:"fromMetadata,omitempty"`
+	ToMetadata    *bool  `json:"toMetadata,omitempty"`
 	HashAlgorithm string `json:"hashAlgorithm,omitempty"`
 	Key           string `json:"key,omitempty"`      // optional key for certain hash algorithms
 	Mod           *int   `json:"mod,omitempty"`      // optional modulo for certain integer based hashes
@@ -29,9 +30,10 @@ type Config struct {
 }
 
 var DefaultConfig = Config{
-	HashPath:      ".",
-	ResultPath:    "",
-	Metadata:      pointer.Bool(false),
+	FromPath:      "",
+	ToPath:        "",
+	FromMetadata:  pointer.Bool(false),
+	ToMetadata:    pointer.Bool(false),
 	HashAlgorithm: "md5",
 	Key:           "",
 	Mod:           pointer.Int(0),
