@@ -54,14 +54,18 @@ func (f *Filter) Filter(evt event.Event) []event.Event {
 		events = append(events, evt)
 	} else {
 		thisTransform := deepcopy.Copy(f.config.Transformation)
-		obj, _, _ := evt.GetPathValue(f.config.TransformPath, *f.config.FromMetadata)
+		obj, _, _ := evt.GetPathValue(f.config.FromPath, *f.config.FromMetadata)
 		if obj == nil {
-			evt.Nack(errors.New("no value at transform path " + f.config.TransformPath))
+			evt.Nack(errors.New("no value at path " + f.config.FromPath))
 			return nil
 		}
 		obj = deepcopy.Copy(obj)
 		transform(obj, thisTransform, nil, "", -1)
-		evt.SetPathValue(f.config.ResultPath, thisTransform, *f.config.ToMetadata, true)
+		path := f.config.ToPath
+		if f.config.FromPath != "" {
+			path = f.config.FromPath
+		}
+		evt.SetPathValue(path, thisTransform, *f.config.ToMetadata, true)
 		events = append(events, evt)
 	}
 	return events
