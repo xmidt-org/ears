@@ -18,7 +18,6 @@ import (
 	"context"
 	"errors"
 	"github.com/goccy/go-yaml"
-	"github.com/xmidt-org/ears/internal/pkg/db/dynamo"
 	"github.com/xmidt-org/ears/internal/pkg/logs"
 	"github.com/xmidt-org/ears/internal/pkg/tablemgr"
 	"github.com/xmidt-org/ears/pkg/tenant"
@@ -318,12 +317,12 @@ func (a *APIManager) setTenantConfigHandler(w http.ResponseWriter, r *http.Reque
 		log.Ctx(ctx).Error().Str("op", "setTenantConfigHandler").Str("error", err.Error()).Msg("error setting tenant config")
 
 		var tenantNotFound *tenant.TenantNotFoundError
-		var marshalMapError *dynamo.DynamoDbMarshalError
+		var badConfig *tenant.BadConfigError
 		if errors.As(err, &tenantNotFound) {
 			resp := ErrorResponse(&NotFoundError{})
 			resp.Respond(ctx, w)
-		} else if errors.As(err, &marshalMapError) {
-			resp := ErrorResponse(&BadRequestError{"fail to marshal tenant config", err})
+		} else if errors.As(err, &badConfig) {
+			resp := ErrorResponse(&BadRequestError{"bad tenant config", err})
 			resp.Respond(ctx, w)
 		} else {
 			resp := ErrorResponse(err)

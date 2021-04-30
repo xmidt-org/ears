@@ -42,7 +42,7 @@ func (s *TenantStorer) GetConfig(ctx context.Context, id tenant.Id) (*tenant.Con
 		Region: aws.String(s.region),
 	})
 	if err != nil {
-		return nil, &DynamoDbNewSessionError{err}
+		return nil, &tenant.InternalStorageError{err}
 	}
 	svc := dynamodb.New(sess)
 	input := &dynamodb.GetItemInput{
@@ -56,7 +56,7 @@ func (s *TenantStorer) GetConfig(ctx context.Context, id tenant.Id) (*tenant.Con
 
 	result, err := svc.GetItemWithContext(ctx, input)
 	if err != nil {
-		return nil, &DynamoDbGetItemError{err}
+		return nil, &tenant.InternalStorageError{err}
 	}
 
 	if result.Item == nil {
@@ -66,7 +66,7 @@ func (s *TenantStorer) GetConfig(ctx context.Context, id tenant.Id) (*tenant.Con
 	var item tenantItem
 	err = dynamodbattribute.UnmarshalMap(result.Item, &item)
 	if err != nil {
-		return nil, &DynamoDbMarshalError{err}
+		return nil, &tenant.InternalStorageError{err}
 	}
 
 	return &item.Config, nil
@@ -77,7 +77,7 @@ func (s *TenantStorer) SetConfig(ctx context.Context, config tenant.Config) erro
 		Region: aws.String(s.region),
 	})
 	if err != nil {
-		return &DynamoDbNewSessionError{err}
+		return &tenant.InternalStorageError{err}
 	}
 	svc := dynamodb.New(sess)
 
@@ -89,7 +89,7 @@ func (s *TenantStorer) SetConfig(ctx context.Context, config tenant.Config) erro
 
 	item, err := dynamodbattribute.MarshalMap(configItem)
 	if err != nil {
-		return &DynamoDbMarshalError{err}
+		return &tenant.BadConfigError{}
 	}
 
 	input := &dynamodb.PutItemInput{
@@ -99,10 +99,8 @@ func (s *TenantStorer) SetConfig(ctx context.Context, config tenant.Config) erro
 
 	_, err = svc.PutItemWithContext(ctx, input)
 	if err != nil {
-		return &DynamoDbPutItemError{err}
+		return &tenant.InternalStorageError{err}
 	}
-	return nil
-
 	return nil
 }
 
@@ -111,7 +109,7 @@ func (s *TenantStorer) DeleteConfig(ctx context.Context, id tenant.Id) error {
 		Region: aws.String(s.region),
 	})
 	if err != nil {
-		return &DynamoDbNewSessionError{err}
+		return &tenant.InternalStorageError{err}
 	}
 	svc := dynamodb.New(sess)
 
@@ -126,7 +124,7 @@ func (s *TenantStorer) DeleteConfig(ctx context.Context, id tenant.Id) error {
 
 	_, err = svc.DeleteItemWithContext(ctx, input)
 	if err != nil {
-		return &DynamoDbDeleteItemError{err}
+		return &tenant.InternalStorageError{err}
 	}
 
 	return nil
