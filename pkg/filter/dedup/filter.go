@@ -49,7 +49,8 @@ func (f *Filter) Filter(evt event.Event) []event.Event {
 		})
 		return nil
 	}
-	buf, err := json.Marshal(evt.Payload())
+	obj, _, _ := evt.GetPathValue(f.config.DedupPath, false)
+	buf, err := json.Marshal(obj)
 	if err != nil {
 		evt.Nack(err)
 		return []event.Event{}
