@@ -4,11 +4,11 @@
 
 * Syntax should be consistent and concise
 * Functionality should be maximally generic and flexible
-* Choose default values wisely so they may often be omitted
+* Choose default config values wisely so they may often be omitted
 
-## Assumptions, Conventions and Configuration Consistency
+## Assumptions And Conventions
 
-* Payloads are either byte arrays or strings. If a payload is a string it will be parsed as JSON into an `interface{}`. Thus the payload will be one of `map[string]interface{}`, `[]interface[]`, `string`, `bool` or `float`. 
+* Payloads are either byte arrays or strings. If a payload is a string it will be parsed as JSON into an `interface{}`. Thus the payload will be one of `map[string]interface{}`, `[]interface{}`, `string`, `bool` or `float`. 
 * Some filter configs require to specify a particular subset of a deeply nested map. We use dot-delimited path syntax for this purpose, for example `foo.bar.baz` to reach the value `hello` of the payload `{ "foo" : { "bar" : { "baz" : "hello" }}}`. The root path is defined as `.` or blank string.
 * Some filters take data from one sub section of a payload and move them to another sub section of the same payload. By convention we use the configs `FromPath`and `ToPath` for this purpose. If `ToPath` is omitted, then `FromPath` will be used as `ToPath` as well. 
 * Events carry two distinct pieces of data objects: payload and metadata. Metadata can be used to store temporary data that is produced by one filter and may be consumed by another filter or sender downstream. We use the boolean configs `FromMetadta` and `ToMetadata` to indicate if a filter should operate on metadata or payload. Both default to `false`. 
@@ -186,6 +186,7 @@ Arbitrary filtering or transformation operation given in JavaScript source code.
 either `null` (if the event is to be filtered), a single event (original event or modified event), or an
 array of events if the event is to be split. The event object must contain a `payload` section and optionally
 a `metadata` section. The original event is reachable using the context variable `_.event`. 
+Multiline scripts usually look better in YAML representation.
 
 ### Example
 
