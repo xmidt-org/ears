@@ -205,13 +205,6 @@ func (p *Producer) SendMessage(topic string, partition int, headers map[string]s
 			Value: []byte(v),
 		})
 	}
-	message := &sarama.ProducerMessage{
-		Topic:     topic,
-		Partition: int32(partition),
-		Value:     sarama.StringEncoder(bs),
-		Headers:   hs,
-		Timestamp: time.Now(),
-	}
 	var producer sarama.SyncProducer
 	select {
 	case <-p.done:
@@ -223,6 +216,21 @@ func (p *Producer) SendMessage(topic string, partition int, headers map[string]s
 		p.pool <- producer
 	}()
 	start := time.Now()
+	if partition != -1 {
+		p.client.Partitions(topic)
+		ps, err := p.client.Partitions(topic)
+		if nil != err {
+			return err
+		}
+		partition = partition % len(ps)
+	}
+	message := &sarama.ProducerMessage{
+		Topic:     topic,
+		Partition: int32(partition),
+		Value:     sarama.StringEncoder(bs),
+		Headers:   hs,
+		Timestamp: time.Now(),
+	}
 	part, offset, err := producer.SendMessage(message)
 	if nil != err {
 		return err
