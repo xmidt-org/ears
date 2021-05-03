@@ -15,6 +15,7 @@
 package decode
 
 import (
+	"errors"
 	"github.com/xmidt-org/ears/pkg/config"
 	pkgconfig "github.com/xmidt-org/ears/pkg/config"
 	"github.com/xmidt-org/ears/pkg/errs"
@@ -53,6 +54,9 @@ func (c Config) WithDefaults() *Config {
 }
 
 func (c *Config) Validate() error {
+	if c.Encoding != "base64" {
+		return errors.New("unsupported encoding " + c.Encoding)
+	}
 	return nil
 }
 
