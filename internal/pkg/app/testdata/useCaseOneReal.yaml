@@ -75,7 +75,6 @@ filterChain:
       toPath: kafka.partition
       toMetadata: true
       hashAlgorithm: fnv
-      mod: 100
   - plugin: trace
     name: useCaseOneRouteTracer
     config:

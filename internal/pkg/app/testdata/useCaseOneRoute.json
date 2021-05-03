@@ -117,8 +117,7 @@
         "fromPath": "to.location",
         "toPath": "kafka.partition",
         "toMetadata": true,
-        "hashAlgorithm": "fnv",
-        "mod": 100
+        "hashAlgorithm": "fnv"
       }
     },
     {
