@@ -8,9 +8,9 @@
     "filterChain": [
       {
         "config": {
-          "ttl": 300000,
-          "ttlNanoFactor": 1,
-          "ttlPath": ".content.timestamp"
+          "nanoFactor": 1,
+          "path": ".content.timestamp",
+          "ttl": 300000
         },
         "name": "simpleTtlFilterRouteFilter",
         "plugin": "ttl"
