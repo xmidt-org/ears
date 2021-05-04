@@ -25,6 +25,12 @@ import (
 //go:generate rm -f testing_mock.go
 //go:generate moq -out testing_mock.go . Event
 
+const (
+	PAYLOAD = "payload"
+	METADATA = "metadata"
+)
+
+
 type Event interface {
 	//Get the event payload
 	Payload() interface{}
@@ -45,11 +51,11 @@ type Event interface {
 
 	// SetPathValue sets object value at path in either payload or metadata and returns its parent
 	// object and parent key if those exist
-	SetPathValue(path string, val interface{}, metadata bool, createPath bool) (interface{}, string)
+	SetPathValue(path string, val interface{}, createPath bool) (interface{}, string)
 
 	// GetPathValue finds object at path in either payload or metadata and returns such object
 	// if one exists along with its parent object and parent key if those exist
-	GetPathValue(path string, metadata bool) (interface{}, interface{}, string)
+	GetPathValue(path string) (interface{}, interface{}, string)
 
 	//Replace the current event context
 	//Will return an error if the event is done

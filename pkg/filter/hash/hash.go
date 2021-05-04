@@ -54,7 +54,7 @@ func (f *Filter) Filter(evt event.Event) []event.Event {
 		})
 		return nil
 	}
-	obj, _, _ := evt.GetPathValue(f.config.FromPath, *f.config.FromMetadata)
+	obj, _, _ := evt.GetPathValue(f.config.FromPath)
 	if obj == nil {
 		evt.Nack(errors.New("nil object at path " + f.config.FromPath))
 		return []event.Event{}
@@ -130,7 +130,7 @@ func (f *Filter) Filter(evt event.Event) []event.Event {
 	if path == "" {
 		path = f.config.FromPath
 	}
-	evt.SetPathValue(path, output, *f.config.ToMetadata, true)
+	evt.SetPathValue(path, output, true)
 	return []event.Event{evt}
 }
 

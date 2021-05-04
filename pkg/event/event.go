@@ -47,7 +47,6 @@ func New(ctx context.Context, payload interface{}, options ...EventOption) (Even
 			return nil, err
 		}
 	}
-
 	return e, nil
 }
 
@@ -66,7 +65,6 @@ func WithAck(handledFn func(Event), errFn func(Event, error)) EventOption {
 		if handledFn == nil || errFn == nil {
 			return &NoAckHandlersError{}
 		}
-
 		e.ack = ack.NewAckTree(e.ctx, func() {
 			handledFn(e)
 		}, func(err error) {
@@ -107,19 +105,29 @@ func (e *event) SetMetadata(metadata interface{}) error {
 	return nil
 }
 
-func (e *event) GetPathValue(path string, metadata bool) (interface{}, interface{}, string) {
+func (e *event) GetPathValue(path string) (interface{}, interface{}, string) {
 	obj := e.Payload()
-	if metadata {
+	if strings.HasPrefix(path, METADATA + ".") || path == METADATA {
 		obj = e.Metadata()
 	}
-	if path == "" || path == "." {
+	if path == "" || path == "." || path == PAYLOAD || path == METADATA {
 		return obj, nil, ""
+	}
+	if strings.HasPrefix(path, ".") {
+		path = PAYLOAD + path
+	}
+	if !strings.HasPrefix(path, PAYLOAD + ".") && !strings.HasPrefix(path, METADATA + ".") {
+		return nil, nil, ""
 	}
 	var parent interface{}
 	var key string
+	var ok bool
 	segments := strings.Split(path, ".")
-	for _, s := range segments {
-		var ok bool
+	if len(segments) < 2 {
+		return nil, nil, ""
+	}
+	for i := 1; i < len(segments); i++ {
+		s := segments[i]
 		parent = obj
 		key = s
 		obj, ok = obj.(map[string]interface{})[s]
@@ -130,24 +138,33 @@ func (e *event) GetPathValue(path string, metadata bool) (interface{}, interface
 	return obj, parent, key
 }
 
-func (e *event) SetPathValue(path string, val interface{}, metadata bool, createPath bool) (interface{}, string) {
+func (e *event) SetPathValue(path string, val interface{}, createPath bool) (interface{}, string) {
 	obj := e.Payload()
-	if metadata {
+	if strings.HasPrefix(path, METADATA + ".") || path == METADATA {
 		obj = e.Metadata()
 	}
-	if path == "" || path == "." {
-		if metadata {
-			e.SetMetadata(val)
-		} else {
-			e.SetPayload(val)
-		}
+	if strings.HasPrefix(path, ".") {
+		path = PAYLOAD +  path
+	}
+	if path == "" {
+		path = PAYLOAD
+	}
+	if path == PAYLOAD {
+		e.SetPayload(val)
+		return nil, ""
+	} else if path == METADATA {
+		e.SetMetadata(val)
+		return nil, ""
+	}
+	if !strings.HasPrefix(path, PAYLOAD + ".") && !strings.HasPrefix(path, METADATA + ".") {
 		return nil, ""
 	}
 	var parent interface{}
 	var key string
+	var ok bool
 	segments := strings.Split(path, ".")
-	for i, s := range segments {
-		var ok bool
+	for i := 1; i < len(segments); i++ {
+		s := segments[i]
 		parent = obj
 		key = s
 		if i == len(segments)-1 {

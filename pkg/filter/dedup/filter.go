@@ -49,7 +49,7 @@ func (f *Filter) Filter(evt event.Event) []event.Event {
 		})
 		return nil
 	}
-	obj, _, _ := evt.GetPathValue(f.config.DedupPath, false)
+	obj, _, _ := evt.GetPathValue(f.config.DedupPath)
 	buf, err := json.Marshal(obj)
 	if err != nil {
 		evt.Nack(err)

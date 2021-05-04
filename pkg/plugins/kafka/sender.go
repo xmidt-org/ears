@@ -263,7 +263,7 @@ func (s *Sender) Send(e event.Event) {
 	}
 	partition := -1
 	if s.config.PartitionPath != "" {
-		val, _, _ := e.GetPathValue(s.config.PartitionPath, *s.config.Metadata)
+		val, _, _ := e.GetPathValue(s.config.PartitionPath)
 		intVal, ok := val.(int)
 		if ok {
 			partition = intVal

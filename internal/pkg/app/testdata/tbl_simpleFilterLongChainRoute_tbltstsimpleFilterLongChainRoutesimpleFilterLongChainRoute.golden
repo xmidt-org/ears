@@ -8,7 +8,7 @@
     "filterChain": [
       {
         "config": {
-          "unwrapPath": "a.b.c"
+          "unwrapPath": ".a.b.c"
         },
         "name": "simpleFilterLongChainRouteUnwrapper",
         "plugin": "unwrap"

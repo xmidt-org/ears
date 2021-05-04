@@ -27,7 +27,7 @@ var _ Event = &EventMock{}
 // 			ContextFunc: func() context.Context {
 // 				panic("mock out the Context method")
 // 			},
-// 			GetPathValueFunc: func(path string, metadata bool) (interface{}, interface{}, string) {
+// 			GetPathValueFunc: func(path string) (interface{}, interface{}, string) {
 // 				panic("mock out the GetPathValue method")
 // 			},
 // 			MetadataFunc: func() interface{} {
@@ -45,7 +45,7 @@ var _ Event = &EventMock{}
 // 			SetMetadataFunc: func(metadata interface{}) error {
 // 				panic("mock out the SetMetadata method")
 // 			},
-// 			SetPathValueFunc: func(path string, val interface{}, metadata bool, createPath bool) (interface{}, string) {
+// 			SetPathValueFunc: func(path string, val interface{}, createPath bool) (interface{}, string) {
 // 				panic("mock out the SetPathValue method")
 // 			},
 // 			SetPayloadFunc: func(payload interface{}) error {
@@ -68,7 +68,7 @@ type EventMock struct {
 	ContextFunc func() context.Context
 
 	// GetPathValueFunc mocks the GetPathValue method.
-	GetPathValueFunc func(path string, metadata bool) (interface{}, interface{}, string)
+	GetPathValueFunc func(path string) (interface{}, interface{}, string)
 
 	// MetadataFunc mocks the Metadata method.
 	MetadataFunc func() interface{}
@@ -86,7 +86,7 @@ type EventMock struct {
 	SetMetadataFunc func(metadata interface{}) error
 
 	// SetPathValueFunc mocks the SetPathValue method.
-	SetPathValueFunc func(path string, val interface{}, metadata bool, createPath bool) (interface{}, string)
+	SetPathValueFunc func(path string, val interface{}, createPath bool) (interface{}, string)
 
 	// SetPayloadFunc mocks the SetPayload method.
 	SetPayloadFunc func(payload interface{}) error
@@ -108,8 +108,6 @@ type EventMock struct {
 		GetPathValue []struct {
 			// Path is the path argument value.
 			Path string
-			// Metadata is the metadata argument value.
-			Metadata bool
 		}
 		// Metadata holds details about calls to the Metadata method.
 		Metadata []struct {
@@ -138,8 +136,6 @@ type EventMock struct {
 			Path string
 			// Val is the val argument value.
 			Val interface{}
-			// Metadata is the metadata argument value.
-			Metadata bool
 			// CreatePath is the createPath argument value.
 			CreatePath bool
 		}
@@ -246,33 +242,29 @@ func (mock *EventMock) ContextCalls() []struct {
 }
 
 // GetPathValue calls GetPathValueFunc.
-func (mock *EventMock) GetPathValue(path string, metadata bool) (interface{}, interface{}, string) {
+func (mock *EventMock) GetPathValue(path string) (interface{}, interface{}, string) {
 	if mock.GetPathValueFunc == nil {
 		panic("EventMock.GetPathValueFunc: method is nil but Event.GetPathValue was just called")
 	}
 	callInfo := struct {
-		Path     string
-		Metadata bool
+		Path string
 	}{
-		Path:     path,
-		Metadata: metadata,
+		Path: path,
 	}
 	mock.lockGetPathValue.Lock()
 	mock.calls.GetPathValue = append(mock.calls.GetPathValue, callInfo)
 	mock.lockGetPathValue.Unlock()
-	return mock.GetPathValueFunc(path, metadata)
+	return mock.GetPathValueFunc(path)
 }
 
 // GetPathValueCalls gets all the calls that were made to GetPathValue.
 // Check the length with:
 //     len(mockedEvent.GetPathValueCalls())
 func (mock *EventMock) GetPathValueCalls() []struct {
-	Path     string
-	Metadata bool
+	Path string
 } {
 	var calls []struct {
-		Path     string
-		Metadata bool
+		Path string
 	}
 	mock.lockGetPathValue.RLock()
 	calls = mock.calls.GetPathValue
@@ -426,25 +418,23 @@ func (mock *EventMock) SetMetadataCalls() []struct {
 }
 
 // SetPathValue calls SetPathValueFunc.
-func (mock *EventMock) SetPathValue(path string, val interface{}, metadata bool, createPath bool) (interface{}, string) {
+func (mock *EventMock) SetPathValue(path string, val interface{}, createPath bool) (interface{}, string) {
 	if mock.SetPathValueFunc == nil {
 		panic("EventMock.SetPathValueFunc: method is nil but Event.SetPathValue was just called")
 	}
 	callInfo := struct {
 		Path       string
 		Val        interface{}
-		Metadata   bool
 		CreatePath bool
 	}{
 		Path:       path,
 		Val:        val,
-		Metadata:   metadata,
 		CreatePath: createPath,
 	}
 	mock.lockSetPathValue.Lock()
 	mock.calls.SetPathValue = append(mock.calls.SetPathValue, callInfo)
 	mock.lockSetPathValue.Unlock()
-	return mock.SetPathValueFunc(path, val, metadata, createPath)
+	return mock.SetPathValueFunc(path, val, createPath)
 }
 
 // SetPathValueCalls gets all the calls that were made to SetPathValue.
@@ -453,13 +443,11 @@ func (mock *EventMock) SetPathValue(path string, val interface{}, metadata bool,
 func (mock *EventMock) SetPathValueCalls() []struct {
 	Path       string
 	Val        interface{}
-	Metadata   bool
 	CreatePath bool
 } {
 	var calls []struct {
 		Path       string
 		Val        interface{}
-		Metadata   bool
 		CreatePath bool
 	}
 	mock.lockSetPathValue.RLock()
