@@ -9,9 +9,9 @@
 ## Assumptions And Conventions
 
 * Payloads are either byte arrays or strings. If a payload is a string it will be parsed as JSON into an `interface{}`. Thus the payload will be one of `map[string]interface{}`, `[]interface{}`, `string`, `bool` or `float`. 
-* Some filter configs require to specify a particular subset of a deeply nested map. We use dot-delimited path syntax for this purpose, for example `foo.bar.baz` to reach the value `hello` of the payload `{ "foo" : { "bar" : { "baz" : "hello" }}}`. The root path is defined as `.` or blank string.
+* Some filter configs require to specify a particular subset of a deeply nested map. We use dot-delimited path syntax for this purpose, for example `.foo.bar.baz` to reach the value `hello` of the payload `{ "foo" : { "bar" : { "baz" : "hello" }}}`. The root path is defined as `.` or blank string.
 * Some filters take data from one sub section of a payload and move them to another sub section of the same payload. By convention we use the configs `FromPath`and `ToPath` for this purpose. If `ToPath` is omitted, then `FromPath` will be used as `ToPath` as well. 
-* Events carry two distinct pieces of data objects: payload and metadata. Metadata can be used to store temporary data that is produced by one filter and may be consumed by another filter or sender downstream. We use the boolean configs `FromMetadta` and `ToMetadata` to indicate if a filter should operate on metadata or payload. Both default to `false`. 
+* Events carry two distinct pieces of data objects: payload and metadata and in the future possibly more. Metadata can be used to store temporary data that is produced by one filter and may be consumed by another filter or sender downstream. We use the path prefix `payload.` and `metadata.` to indicate if a filter should operate on metadata or payload. By default we assume a path is used for payloads so the path `.foo` is equivalent to `payload.foo`. 
 
 ## Standard Library Of Filters
 
@@ -21,7 +21,6 @@
 * transform
 * hash
 * js
-* hash
 * split
 * log
 * unwrap
@@ -76,10 +75,9 @@ Replace the content of the message field with its base64 decoded value.
   "plugin": "decode",
   "name": "useCaseOneRouteDecoder",
   "config": {
-    "fromPath": "body.message"
-    "toPath" : "body.message",
-    "fromMetadata" : false,
-    "toMetadata" : false        
+    "fromPath": "payload.body.message",
+    "toPath" : "payload.body.message",
+    "encoding" : "base64" 
   }
 }
 ```
@@ -91,7 +89,7 @@ Omitting configs for default behavior we can reduce this to:
   "plugin": "decode",
   "name": "useCaseOneRouteDecoder",
   "config": {
-    "fromPath": "body.message"
+    "fromPath": ".body.message"
   }
 }
 ```
@@ -113,10 +111,9 @@ Replace the content of the message field with its base64 encoded value.
 {
   "plugin": "encode",
   "config": {
-    "fromPath": "body.message"
-    "toPath" : "body.message",
-    "fromMetadata" : false,
-    "toMetadata" : false        
+    "fromPath": "payload..body.message",
+    "toPath" : "payload.body.message",
+    "encoding: " "base64"
   }
 }
 ```
@@ -127,7 +124,7 @@ Omitting configs for default behavior we can reduce this to:
 {
   "plugin": "decode",
   "config": {
-    "fromPath": "body.message"
+    "fromPath": ".body.message"
   }
 }
 ```
@@ -138,9 +135,8 @@ Omitting configs for default behavior we can reduce this to:
 
 Basic structural transformations of event payloads and or metadata. Existing fields can be moved around
 or filtered. We are using transformation by example syntax for the transformed event and dot-delimited path
-syntax to choose from the original event. The filter supports the standard configs `FromPath`, `ToPath`,
-`FromMetadata` and `ToMetadata`. Note you can use this filter to move arbitrary pieces of data between 
-the payload and the metadata section.
+syntax to choose from the original event. The filter supports the `ToPath` config which you can use 
+to move arbitrary pieces of data between the payload and the metadata section of the event.
 
 ### Example
 
@@ -158,19 +154,19 @@ all other configs use default values.
         "op": "process",
         "payload": {
           "metadata": {
-            "type": "{Message.header.type}",
-            "event": "{Message.header.event}",
-            "timestamp": "{Message.header.timestampMs}",
-            "id": "{Message.body.account.id}"
+            "type": "{.Message.header.type}",
+            "event": "{.Message.header.event}",
+            "timestamp": "{.Message.header.timestampMs}",
+            "id": "{.Message.body.account.id}"
           },
           "body": {
-            "addedAccountProducts": "{Message.body.addedAccountProducts}",
-            "removedAccountProducts": "{Message.body.removedAccountProducts}"
+            "addedAccountProducts": "{.Message.body.addedAccountProducts}",
+            "removedAccountProducts": "{.Message.body.removedAccountProducts}"
           }
         }
       },
       "to": {
-        "location": "{Message.body.account.id}",
+        "location": "{.Message.body.account.id}",
         "app": "myapp"
       }
     }
@@ -210,8 +206,8 @@ Filter the event if two array values in the payload are both empty ("nothing to 
 ### Description
 
 Calculate a hash over a (subset of) the payload or metadata of an event.
-The filter supports the standard configs `FromPath`, `ToPath`,
-`FromMetadata` and `ToMetadata`. Supported hash algorithms are fnv, md5, sha1 and sha-256.
+The filter supports the standard configs `FromPath` and `ToPath`.
+Supported hash algorithms are fnv, md5, sha1 and sha-256.
 
 ### Example
 
@@ -224,13 +220,24 @@ result in the metadata section for later downstream use in the route.
 {
   "plugin": "hash",
   "config": {
-    "fromPath": "to.location",
-    "toPath": "kafka.partition",
-    "toMetadata": true,
-    "hashAlgorithm": "fnv",
-    "mod": 100
+    "fromPath": "payload.to.location",
+    "toPath": "metadata.kafka.partition",
+    "hashAlgorithm": "fnv"
   }
-},
+}
+```
+
+or equivalent
+
+```
+{
+  "plugin": "hash",
+  "config": {
+    "fromPath": ".to.location",
+    "toPath": "metadata.kafka.partition",
+    "hashAlgorithm": "fnv"
+  }
+}
 ```
 
 ## split
@@ -287,7 +294,7 @@ This is a typical requirement when removing an event payload from an envelope.
 {
   "plugin" : "unwrap",
   "config" : {
-    "unwrapPath" : "content"
+    "unwrapPath" : ".content"
   }
 }
 
@@ -311,7 +318,7 @@ Expire events that arte older than five minutes.
 {
   "plugin" : "ttl",
   "config" : {
-    "ttlPath" : "content.timestamp",
+    "ttlPath" : ".content.timestamp",
     "ttlNanoFactor" : 1,
     "ttl" : 300000
   }
@@ -330,7 +337,7 @@ Add standard trace information to event payload.
 {
   "plugin": "trace",
   "config": {
-    "tracePath" : "tx.traceId"
+    "tracePath" : ".tx.traceId"
   }
 }
 ```
