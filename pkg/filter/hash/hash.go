@@ -70,9 +70,6 @@ func (f *Filter) Filter(evt event.Event) []event.Event {
 		h := fnv.New32a()
 		h.Write(buf)
 		fnvHash := int(h.Sum32())
-		if *f.config.Mod > 0 {
-			fnvHash = fnvHash % (*f.config.Mod)
-		}
 		output = fnvHash
 		break
 	case "md5":

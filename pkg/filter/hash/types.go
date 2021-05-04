@@ -14,8 +14,6 @@
 
 package hash
 
-import "github.com/xorcare/pointer"
-
 // Config can be passed into NewFilter() in order to configure
 // the behavior of the sender.
 type Config struct {
@@ -23,7 +21,6 @@ type Config struct {
 	ToPath        string `json:"toPath,omitempty"`
 	HashAlgorithm string `json:"hashAlgorithm,omitempty"`
 	Key           string `json:"key,omitempty"`      // optional key for certain hash algorithms
-	Mod           *int   `json:"mod,omitempty"`      // optional modulo for certain integer based hashes
 	Encoding      string `json:"encoding,omitempty"` // optional encoding of hash, base64, hex etc.
 }
 
@@ -32,7 +29,6 @@ var DefaultConfig = Config{
 	ToPath:        "",
 	HashAlgorithm: "md5",
 	Key:           "",
-	Mod:           pointer.Int(0),
 	Encoding:      "",
 }
 

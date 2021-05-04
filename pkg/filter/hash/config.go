@@ -40,9 +40,6 @@ func (c Config) WithDefaults() *Config {
 	if c.ToPath == "" {
 		cfg.ToPath = DefaultConfig.ToPath
 	}
-	if c.Mod == nil {
-		cfg.Mod = DefaultConfig.Mod
-	}
 	if c.Key == "" {
 		cfg.Key = DefaultConfig.Key
 	}
