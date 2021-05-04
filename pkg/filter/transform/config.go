@@ -38,9 +38,6 @@ func (c Config) WithDefaults() *Config {
 	if c.Transformation == "" {
 		cfg.Transformation = DefaultConfig.Transformation
 	}
-	if c.FromPath == "" {
-		cfg.FromPath = DefaultConfig.FromPath
-	}
 	if c.ToPath == "" {
 		cfg.ToPath = DefaultConfig.ToPath
 	}

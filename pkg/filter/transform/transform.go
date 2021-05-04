@@ -53,13 +53,8 @@ func (f *Filter) Filter(evt event.Event) []event.Event {
 		events = append(events, evt)
 	} else {
 		thisTransform := deepcopy.Copy(f.config.Transformation)
-		//TODO: support for fromPath
 		transform(evt, thisTransform, nil, "", -1)
-		path := f.config.ToPath
-		if f.config.FromPath != "" {
-			path = f.config.FromPath
-		}
-		evt.SetPathValue(path, thisTransform, true)
+		evt.SetPathValue(f.config.ToPath, thisTransform, true)
 		events = append(events, evt)
 	}
 	return events
