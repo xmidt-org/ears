@@ -19,15 +19,15 @@ import "github.com/xorcare/pointer"
 // Config can be passed into NewFilter() in order to configure
 // the behavior of the sender.
 type Config struct {
-	TtlPath       string `json:"ttlPath,omitempty"`
+	Path       string `json:"path,omitempty"`
 	Ttl           *int   `json:"ttl,omitempty"`           // ttl in MS
-	TtlNanoFactor *int   `json:"ttlNanoFactor,omitempty"` // factor to convert timestamp to nano seconds
+	NanoFactor *int   `json:"nanoFactor,omitempty"` // factor to convert timestamp to nano seconds
 }
 
 var DefaultConfig = Config{
-	TtlPath:       "",
+	Path:       "",
 	Ttl:           pointer.Int(1000 * 60 * 5), // 5 min in ms
-	TtlNanoFactor: pointer.Int(1000 * 1000),
+	NanoFactor: pointer.Int(1000 * 1000),
 }
 
 type Filter struct {

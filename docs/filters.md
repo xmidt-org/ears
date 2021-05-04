@@ -305,7 +305,7 @@ This is a typical requirement when removing an event payload from an envelope.
 ### Description
 
 Filter an event if it is too old. Requires a valid timestamp to be present in the event payload.
-`ttlNanoFactor` is the factor that must be applied to convert the event timestamp into nanoseconds.
+`nanoFactor` is the factor that must be applied to convert the event timestamp into nanoseconds.
 The actual `ttl` is given in milliseconds.
 
 ### Example
@@ -318,8 +318,8 @@ Expire events that arte older than five minutes.
 {
   "plugin" : "ttl",
   "config" : {
-    "ttlPath" : ".content.timestamp",
-    "ttlNanoFactor" : 1,
+    "path" : ".content.timestamp",
+    "nanoFactor" : 1,
     "ttl" : 300000
   }
 }

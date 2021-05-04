@@ -34,14 +34,14 @@ func NewConfig(config interface{}) (*Config, error) {
 
 func (c Config) WithDefaults() *Config {
 	cfg := c
-	if c.TtlPath == "" {
-		cfg.TtlPath = DefaultConfig.TtlPath
+	if c.Path == "" {
+		cfg.Path = DefaultConfig.Path
 	}
 	if c.Ttl == nil {
 		cfg.Ttl = DefaultConfig.Ttl
 	}
-	if c.TtlNanoFactor == nil {
-		cfg.TtlNanoFactor = DefaultConfig.TtlNanoFactor
+	if c.NanoFactor == nil {
+		cfg.NanoFactor = DefaultConfig.NanoFactor
 	}
 	return &cfg
 }
