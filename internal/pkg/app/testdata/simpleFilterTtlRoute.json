@@ -42,7 +42,7 @@
       "plugin" : "ttl",
       "name" : "simpleTtlFilterRouteFilter",
       "config" : {
-        "ttlPath" : "content.timestamp",
+        "ttlPath" : ".content.timestamp",
         "ttlNanoFactor" : 1,
         "ttl" : 300000
       }

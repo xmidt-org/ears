@@ -39,7 +39,7 @@
       "plugin" : "split",
       "name" : "SimpleFilterDeepSplitRouteSenderSplitter",
       "config" : {
-        "splitPath" : "a.b.c"
+        "splitPath" : ".a.b.c"
       }
     }
   ],

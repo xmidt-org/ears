@@ -10,7 +10,7 @@
         "config": {
           "ttl": 300000,
           "ttlNanoFactor": 1,
-          "ttlPath": "content.timestamp"
+          "ttlPath": ".content.timestamp"
         },
         "name": "simpleTtlFilterRouteFilter",
         "plugin": "ttl"

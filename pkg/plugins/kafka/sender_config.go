@@ -34,9 +34,6 @@ func (sc SenderConfig) WithDefaults() SenderConfig {
 	if cfg.PartitionPath == "" {
 		cfg.PartitionPath = DefaultSenderConfig.PartitionPath
 	}
-	if cfg.Metadata == nil {
-		cfg.Metadata = DefaultSenderConfig.Metadata
-	}
 	if cfg.ChannelBufferSize == nil {
 		cfg.ChannelBufferSize = DefaultSenderConfig.ChannelBufferSize
 	}

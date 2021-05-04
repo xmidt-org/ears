@@ -16,7 +16,7 @@
     "config": {
       "brokers": "localhost:9092",
       "topic": "mytopic",
-      "partitionPath": "{kafka.partition}",
+      "partitionPath": "{metadata.kafka.partition}",
       "metadata" : true,
       "caCert": "",
       "accessCert": "",
@@ -39,7 +39,7 @@
       "plugin": "decode",
       "name": "useCaseOneRouteDecoder",
       "config": {
-        "fromPath": "Message"
+        "fromPath": ".Message"
       }
     },
     {
@@ -68,19 +68,19 @@
             "uses": "xbo_account",
             "payload": {
               "metadata": {
-                "type": "{Message.header.type}",
-                "event": "{Message.header.event}",
-                "timestamp": "{Message.header.timestampMs}",
-                "id": "{Message.body.account.id}"
+                "type": "{.Message.header.type}",
+                "event": "{.Message.header.event}",
+                "timestamp": "{.Message.header.timestampMs}",
+                "id": "{.Message.body.account.id}"
               },
               "body": {
-                "addedAccountProducts": "{Message.body.addedAccountProducts}",
-                "removedAccountProducts": "{Message.body.removedAccountProducts}"
+                "addedAccountProducts": "{.Message.body.addedAccountProducts}",
+                "removedAccountProducts": "{.Message.body.removedAccountProducts}"
               }
             }
           },
           "to": {
-            "location": "{Message.body.account.id}",
+            "location": "{.Message.body.account.id}",
             "app": "myapp"
           }
         }
@@ -97,9 +97,8 @@
       "plugin": "hash",
       "name": "useCaseOneRouteHasher",
       "config": {
-        "fromPath": "to.location",
-        "toPath": "kafka.partition",
-        "toMetadata": true,
+        "fromPath": ".to.location",
+        "toPath": "metadata.kafka.partition",
         "hashAlgorithm": "fnv"
       }
     },
@@ -107,7 +106,7 @@
       "plugin": "trace",
       "name": "useCaseOneRouteTracer",
       "config": {
-        "tracePath" : "tx.traceId"
+        "tracePath" : ".tx.traceId"
       }
     },
     {

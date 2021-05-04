@@ -9,7 +9,7 @@
       {
         "config": {
           "encoding": "base64",
-          "fromPath": "content"
+          "fromPath": ".content"
         },
         "name": "simpleDecodeFilterRouteFilter",
         "plugin": "decode"

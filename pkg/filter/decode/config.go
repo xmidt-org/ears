@@ -41,12 +41,6 @@ func (c Config) WithDefaults() *Config {
 	if c.ToPath == "" {
 		cfg.ToPath = DefaultConfig.ToPath
 	}
-	if c.FromMetadata == nil {
-		cfg.FromMetadata = DefaultConfig.FromMetadata
-	}
-	if c.ToMetadata == nil {
-		cfg.ToMetadata = DefaultConfig.ToMetadata
-	}
 	if c.Encoding == "" {
 		cfg.Encoding = DefaultConfig.Encoding
 	}

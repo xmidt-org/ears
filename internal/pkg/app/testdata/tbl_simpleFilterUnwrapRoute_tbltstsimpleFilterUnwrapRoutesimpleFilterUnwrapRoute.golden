@@ -8,7 +8,7 @@
     "filterChain": [
       {
         "config": {
-          "unwrapPath": "content"
+          "unwrapPath": ".content"
         },
         "name": "simpleFilterUnwrapRouteUnwrapper",
         "plugin": "unwrap"

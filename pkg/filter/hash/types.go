@@ -21,8 +21,6 @@ import "github.com/xorcare/pointer"
 type Config struct {
 	FromPath      string `json:"fromPath,omitempty"`
 	ToPath        string `json:"toPath,omitempty"`
-	FromMetadata  *bool  `json:"fromMetadata,omitempty"`
-	ToMetadata    *bool  `json:"toMetadata,omitempty"`
 	HashAlgorithm string `json:"hashAlgorithm,omitempty"`
 	Key           string `json:"key,omitempty"`      // optional key for certain hash algorithms
 	Mod           *int   `json:"mod,omitempty"`      // optional modulo for certain integer based hashes
@@ -32,8 +30,6 @@ type Config struct {
 var DefaultConfig = Config{
 	FromPath:      "",
 	ToPath:        "",
-	FromMetadata:  pointer.Bool(false),
-	ToMetadata:    pointer.Bool(false),
 	HashAlgorithm: "md5",
 	Key:           "",
 	Mod:           pointer.Int(0),

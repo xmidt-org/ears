@@ -9,9 +9,9 @@
       {
         "config": {
           "encoding": "hex",
-          "fromPath": "content.accountId",
+          "fromPath": ".content.accountId",
           "hashAlgorithm": "md5",
-          "toPath": "content.hash.accountIdHashMd5Hex"
+          "toPath": ".content.hash.accountIdHashMd5Hex"
         },
         "name": "simpleHashMd5HexFilterRouteFilter",
         "plugin": "hash"
@@ -19,9 +19,9 @@
       {
         "config": {
           "encoding": "base64",
-          "fromPath": "content.accountId",
+          "fromPath": ".content.accountId",
           "hashAlgorithm": "md5",
-          "toPath": "content.hash.accountIdHashMd5Base64"
+          "toPath": ".content.hash.accountIdHashMd5Base64"
         },
         "name": "simpleHashMd5B64FilterRouteFilter",
         "plugin": "hash"
@@ -29,9 +29,9 @@
       {
         "config": {
           "encoding": "hex",
-          "fromPath": "content.accountId",
+          "fromPath": ".content.accountId",
           "hashAlgorithm": "sha1",
-          "toPath": "content.hash.accountIdHashSha1Hex"
+          "toPath": ".content.hash.accountIdHashSha1Hex"
         },
         "name": "simpleHashSha1HexFilterRouteFilter",
         "plugin": "hash"
@@ -39,9 +39,9 @@
       {
         "config": {
           "encoding": "base64",
-          "fromPath": "content.accountId",
+          "fromPath": ".content.accountId",
           "hashAlgorithm": "sha1",
-          "toPath": "content.hash.accountIdHashSha1Base64"
+          "toPath": ".content.hash.accountIdHashSha1Base64"
         },
         "name": "simpleHashSha1B64FilterRouteFilter",
         "plugin": "hash"
@@ -49,9 +49,9 @@
       {
         "config": {
           "encoding": "hex",
-          "fromPath": "content.accountId",
+          "fromPath": ".content.accountId",
           "hashAlgorithm": "sha256",
-          "toPath": "content.hash.accountIdHashSha256Hex"
+          "toPath": ".content.hash.accountIdHashSha256Hex"
         },
         "name": "simpleHashSha256HexFilterRouteFilter",
         "plugin": "hash"
@@ -59,9 +59,9 @@
       {
         "config": {
           "encoding": "base64",
-          "fromPath": "content.accountId",
+          "fromPath": ".content.accountId",
           "hashAlgorithm": "sha256",
-          "toPath": "content.hash.accountIdHashSha256Base64"
+          "toPath": ".content.hash.accountIdHashSha256Base64"
         },
         "name": "simpleHashSha256B64FilterRouteFilter",
         "plugin": "hash"
