@@ -18,14 +18,12 @@ package transform
 // the behavior of the sender.
 type Config struct {
 	Transformation interface{} `json:"transformation,omitempty"`
-	FromPath       string      `json:"formPath,omitempty"`
-	ToPath         string      `json:"toPath,omitempty"`
+	ToPath       string      `json:"formPath,omitempty"`
 }
 
 var empty interface{}
 var DefaultConfig = Config{
 	Transformation: empty,
-	FromPath:       "",
 	ToPath:         "",
 }
 

@@ -17,7 +17,6 @@
       "brokers": "localhost:9092",
       "topic": "mytopic",
       "partitionPath": "{metadata.kafka.partition}",
-      "metadata" : true,
       "caCert": "",
       "accessCert": "",
       "accessKey": ""
