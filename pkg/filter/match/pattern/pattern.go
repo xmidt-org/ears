@@ -63,6 +63,10 @@ func contains(a interface{}, b interface{}) bool {
 	case []interface{}:
 		switch a.(type) {
 		case []interface{}:
+			// enforce exact array match - maybe this should be broken out as a config in the future
+			if len(a.([]interface{})) != len(b.([]interface{})) {
+				return false
+			}
 			// check if all fields in b are in a (in any order)
 			for _, vb := range b.([]interface{}) {
 				present := false

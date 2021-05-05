@@ -58,15 +58,17 @@ filterChain:
         to:
           location: "{.Message.body.account.id}"
           app: myapp
-  - plugin: js
-    name: useCaseOneRouteFilterJs
+  - plugin: match
+    name: useCaseOneRouteEmptyMatcher
     config:
-      source: |-
-        if (_.event.payload.message.payload.body.addedAccountProducts.length == 0 && _.event.payload.message.payload.body.removedAccountProducts.length == 0) {
-          return null;
-        } else {
-          return _.event;
-        }
+      mode: deny
+      matcher: pattern
+      pattern:
+        message:
+          payload:
+            body:
+              addedAccountProducts: []
+              removedAccountProducts: []
   - plugin: hash
     name: useCaseOneRouteHasher
     config:
