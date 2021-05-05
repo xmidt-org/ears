@@ -47,6 +47,7 @@ func TestConfigWithDefault(t *testing.T) {
 				Mode:    match.ModeAllow,
 				Matcher: match.DefaultConfig.Matcher,
 				Pattern: match.DefaultConfig.Pattern,
+				ExactArrayMatch: pointer.Bool(true),
 			},
 		},
 
@@ -59,6 +60,7 @@ func TestConfigWithDefault(t *testing.T) {
 				Mode:    match.ModeDeny,
 				Matcher: match.DefaultConfig.Matcher,
 				Pattern: match.DefaultConfig.Pattern,
+				ExactArrayMatch: pointer.Bool(true),
 			},
 		},
 
@@ -71,6 +73,7 @@ func TestConfigWithDefault(t *testing.T) {
 				Mode:    match.DefaultConfig.Mode,
 				Matcher: match.MatcherRegex,
 				Pattern: match.DefaultConfig.Pattern,
+				ExactArrayMatch: pointer.Bool(true),
 			},
 		},
 
@@ -83,6 +86,7 @@ func TestConfigWithDefault(t *testing.T) {
 				Mode:    match.DefaultConfig.Mode,
 				Matcher: match.DefaultConfig.Matcher,
 				Pattern: pointer.String("mypattern"),
+				ExactArrayMatch: pointer.Bool(true),
 			},
 		},
 	}

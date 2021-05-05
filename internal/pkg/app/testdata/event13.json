@@ -1,0 +1,100 @@
+{
+  "Type": "Notification",
+  "MessageId": "e684b540-9101-530b-9e85-ed705c063207",
+  "TopicArn": "topicarn_ACCOUNT",
+  "Message": {
+    "header": {
+      "type": "ACCOUNT_PRODUCT",
+      "event": "CREATE",
+      "partner": "Partner",
+      "trackingId": "123",
+      "timestamp": "Nov 19, 2020 7:43:02 PM",
+      "timestampMs": 1605814982503,
+      "schema": "1.0",
+      "bodyEncrypted": false,
+      "success": true
+    },
+    "body": {
+      "account": {
+        "id": "123",
+        "source": "ABC",
+        "sourceId": "123.IMS",
+        "billingAccountId": "123",
+        "status": "Active",
+        "enabled": true
+      },
+      "addedAccountProducts": [
+        {
+          "source": "ABC",
+          "accountProductId": "a.b"
+        }
+      ],
+      "removedAccountProducts": [],
+      "accountProducts": [
+        {
+          "source": "ABC",
+          "accountProductId": "a-b"
+        },
+        {
+          "source": "ABC",
+          "accountProductId": "a.b"
+        },
+        {
+          "source": "ABC",
+          "accountProductId": "a.b"
+        },
+        {
+          "source": "DEF",
+          "accountProductId": "a.b"
+        },
+        {
+          "source": "ABC",
+          "accountProductId": "a.b"
+        },
+        {
+          "source": "ABC",
+          "accountProductId": "a.b"
+        },
+        {
+          "source": "ABC",
+          "accountProductId": "a.b"
+        },
+        {
+          "source": "GHI",
+          "accountProductId": "a.b"
+        }
+      ]
+    }
+  },
+  "Timestamp": "2020-11-19T19:43:03.236Z",
+  "SignatureVersion": "1",
+  "Signature": "signature",
+  "SigningCertURL": "https://sns.us-east-1.amazonaws.com/123.pem",
+  "UnsubscribeURL": "https://sns.us-east-1.amazonaws.com/?Action=Unsubscribe&SubscriptionArn=123",
+  "MessageAttributes": {
+    "header.partner": {
+      "Type": "String",
+      "Value": "Partner"
+    },
+    "body.accountProducts.accountProductId": {
+      "Type": "String",
+      "Value": "productId"
+    },
+    "header.type": {
+      "Type": "String",
+      "Value": "ACCOUNT_PRODUCT"
+    },
+    "body.account.status": {
+      "Type": "String",
+      "Value": "Active"
+    },
+    "body.addedAccountProducts.accountProductId": {
+      "Type": "String",
+      "Value": "video:state"
+    },
+    "header.event": {
+      "Type": "String",
+      "Value": "CREATE"
+    }
+  }
+}

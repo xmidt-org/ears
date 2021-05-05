@@ -15,6 +15,7 @@
 package js
 
 import (
+	"github.com/rs/zerolog/log"
 	"github.com/xmidt-org/ears/pkg/event"
 	"github.com/xmidt-org/ears/pkg/filter"
 )
@@ -41,7 +42,7 @@ func NewFilter(config interface{}) (*Filter, error) {
 func (f *Filter) Filter(evt event.Event) []event.Event {
 	transformedEvts, err := defaultInterpreter.Exec(evt, f.config.Source)
 	if err != nil {
-		//TODO: how to log here
+		log.Ctx(evt.Context()).Error().Str("op", "js.Filter").Msg("js filter error: " + err.Error())
 		evt.Nack(err)
 		return []event.Event{}
 	}

@@ -1,0 +1,35 @@
+{
+  "id" : "dedup101",
+  "userId" : "boris",
+  "name" : "simpleDedupFilterRoute",
+  "receiver" : {
+    "plugin" : "debug",
+    "name" : "simpleDedupFilterRouteReceiver",
+    "config" :
+    {
+      "rounds" : 5,
+      "intervalMs" : 10,
+      "payload" : {
+        "foo" : "bar"
+      },
+      "maxHistory": 100
+    }
+  },
+  "sender" : {
+    "plugin" : "debug",
+    "name" : "simpleDedupFilterRouteSender",
+    "config" : {
+      "destination" : "stdout",
+      "maxHistory": 100
+    }
+  },
+  "filterChain" : [
+    {
+      "plugin" : "dedup",
+      "name" : "simpleDedupFilterRouteFilter",
+      "config" : {
+      }
+    }
+  ],
+  "deliveryMode" : "whoCares"
+}

@@ -33,7 +33,7 @@
       "plugin" : "split",
       "name" : "simpleFilterSplitRouteSplitter",
       "config" : {
-        "splitPath" : "."
+        "path" : "."
       }
     }
   ],

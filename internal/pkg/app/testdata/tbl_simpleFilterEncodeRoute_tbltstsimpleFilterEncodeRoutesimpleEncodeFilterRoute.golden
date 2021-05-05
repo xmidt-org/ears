@@ -1,0 +1,68 @@
+{
+  "status": {
+    "code": 200,
+    "message": "OK"
+  },
+  "item": {
+    "deliveryMode": "whoCares",
+    "filterChain": [
+      {
+        "config": {
+          "encoding": "base64",
+          "fromPath": ".content"
+        },
+        "name": "simpleEncodeFilterRouteFilter",
+        "plugin": "encode"
+      },
+      {
+        "config": {
+          "encoding": "base64",
+          "fromPath": ".content"
+        },
+        "name": "simpleDecodeFilterRouteFilter",
+        "plugin": "decode"
+      }
+    ],
+    "id": "encode101",
+    "name": "tbltstsimpleFilterEncodeRoutesimpleEncodeFilterRoute",
+    "receiver": {
+      "config": {
+        "intervalMs": 10,
+        "maxHistory": 100,
+        "payload": {
+          "content": {
+            "accountId": "FF6AF0AD873B4FEA94DC31BCC991DB18",
+            "adapterId": "jarvis-lutron-iot-adapter",
+            "description": "operation",
+            "deviceId": "",
+            "eventId": "468adf80-dc9d-11e4-989a-41f236438965",
+            "name": "name",
+            "timestamp": 1428352877944,
+            "title": "title",
+            "type": "type",
+            "value": "name"
+          },
+          "sequence": 1428352877944,
+          "timestamp": 1428352877944,
+          "topic": "/iot/FF6AF0AD873B4FEA94DC31BCC991DB18/jarvis-lutron-iot-adapter/command/stateChange"
+        },
+        "rounds": 5
+      },
+      "name": "tbltstsimpleFilterEncodeRoutesimpleEncodeFilterRouteReceiver",
+      "plugin": "debug"
+    },
+    "sender": {
+      "config": {
+        "destination": "stdout",
+        "maxHistory": 100
+      },
+      "name": "tbltstsimpleFilterEncodeRoutesimpleEncodeFilterRouteSender",
+      "plugin": "debug"
+    },
+    "tenant": {
+      "appId": "myapp",
+      "orgId": "myorg"
+    },
+    "userId": "boris"
+  }
+}

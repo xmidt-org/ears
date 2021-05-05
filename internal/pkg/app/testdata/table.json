@@ -284,6 +284,109 @@
           "expectedEventCount": 10
         }
       ]
+    },
+    "simpleFilterDedupRoute": {
+      "seq": 18,
+      "routeFiles": [
+        "simpleFilterDedupRoute"
+      ],
+      "waitMs": 100,
+      "events": [
+        {
+          "senderRouteFiles": "simpleFilterDedupRoute",
+          "expectedEventCount": 1,
+          "expectedEventIndex": 0,
+          "expectedEventPayloadFile": "event1"
+        }
+      ]
+    },
+    "simpleFilterTtlRoute": {
+      "seq": 19,
+      "routeFiles": [
+        "simpleFilterTtlRoute"
+      ],
+      "waitMs": 100,
+      "events": [
+        {
+          "senderRouteFiles": "simpleFilterTtlRoute",
+          "expectedEventCount": 0
+        }
+      ]
+    },
+    "simpleFilterDecodeRoute": {
+      "seq": 20,
+      "routeFiles": [
+        "simpleFilterDecodeRoute"
+      ],
+      "waitMs": 100,
+      "events": [
+        {
+          "senderRouteFiles": "simpleFilterDecodeRoute",
+          "expectedEventCount": 5,
+          "expectedEventIndex": 0,
+          "expectedEventPayloadFile": "event8"
+        }
+      ]
+    },
+    "simpleFilterEncodeRoute": {
+      "seq": 21,
+      "routeFiles": [
+        "simpleFilterEncodeRoute"
+      ],
+      "waitMs": 100,
+      "events": [
+        {
+          "senderRouteFiles": "simpleFilterEncodeRoute",
+          "expectedEventCount": 5,
+          "expectedEventIndex": 0,
+          "expectedEventPayloadFile": "event8"
+        }
+      ]
+    },
+    "simpleFilterHashRoute": {
+      "seq": 22,
+      "routeFiles": [
+        "simpleFilterHashRoute"
+      ],
+      "waitMs": 100,
+      "events": [
+        {
+          "senderRouteFiles": "simpleFilterHashRoute",
+          "expectedEventCount": 5,
+          "expectedEventIndex": 0,
+          "expectedEventPayloadFile": "event12"
+        }
+      ]
+    },
+    "simpleFilterBatchRoute": {
+      "seq": 23,
+      "routeFiles": [
+        "simpleFilterBatchRoute"
+      ],
+      "waitMs": 100,
+      "events": [
+        {
+          "senderRouteFiles": "simpleFilterBatchRoute",
+          "expectedEventCount": 2,
+          "expectedEventIndex": 0,
+          "expectedEventPayloadFile": "event14"
+        }
+      ]
+    },
+    "useCaseOneRoute": {
+      "seq": 24,
+      "routeFiles": [
+        "useCaseOneRoute"
+      ],
+      "waitMs": 100,
+      "events": [
+        {
+          "senderRouteFiles": "useCaseOneRoute",
+          "expectedEventCount": 1,
+          "expectedEventIndex": 0,
+          "expectedEventPayloadFile": "event15"
+        }
+      ]
     }
   }
 }

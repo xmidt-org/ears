@@ -12,23 +12,65 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package filters
+package ttl
 
 import (
+	"errors"
+	"fmt"
 	"github.com/xmidt-org/ears/pkg/event"
+	"github.com/xmidt-org/ears/pkg/filter"
+	"time"
 )
 
-// a TTLFilter filters an event when it is too old
-type TTLFilter struct {
-	TTL    int    // ttl in seconds
-	TsPath string // path to timestamp information in payload
+func NewFilter(config interface{}) (*Filter, error) {
+	cfg, err := NewConfig(config)
+	if err != nil {
+		return nil, &filter.InvalidConfigError{
+			Err: err,
+		}
+	}
+	cfg = cfg.WithDefaults()
+	err = cfg.Validate()
+	if err != nil {
+		return nil, err
+	}
+	f := &Filter{
+		config: *cfg,
+	}
+	return f, nil
 }
 
-// Filter filters event if it hhas expired
-func (mf *TTLFilter) Filter(evt event.Event) []event.Event {
-	// never filters
-	events := []event.Event{}
-	//TODO: implement filter logic
-	events = append(events, evt)
-	return events
+func (f *Filter) Filter(evt event.Event) []event.Event {
+	if f == nil {
+		evt.Nack(&filter.InvalidConfigError{
+			Err: fmt.Errorf("<nil> pointer filter"),
+		})
+		return nil
+	}
+	obj, _, _ := evt.GetPathValue(f.config.Path)
+	if obj == nil {
+		evt.Nack(errors.New("nil object at path " + f.config.Path))
+		return []event.Event{}
+	}
+	evtTs, ok := obj.(uint64)
+	if !ok {
+		evt.Nack(errors.New("not a uint64 at path " + f.config.Path))
+		return []event.Event{}
+	}
+	nowNanos := time.Now().UnixNano()
+	if int64(evtTs) > nowNanos {
+		evt.Nack(errors.New("event from the future at path " + f.config.Path))
+		return []event.Event{}
+	}
+	if nowNanos-int64(evtTs) >= int64(*f.config.Ttl*(*f.config.NanoFactor)) {
+		evt.Ack()
+		return []event.Event{}
+	}
+	return []event.Event{evt}
+}
+func (f *Filter) Config() Config {
+	if f == nil {
+		return Config{}
+	}
+	return f.config
 }

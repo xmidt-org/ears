@@ -43,10 +43,10 @@
       "name" : "simpleFilterTransformRouteTransformer",
       "config" : {
         "transformation" : {
-          "payload" : "{content}",
-          "account" : "{content.accountId}",
+          "payload" : "{.content}",
+          "account" : "{.content.accountId}",
           "metadata" : {
-            "ts" : "{timestamp}"
+            "ts" : "{.timestamp}"
           }
         }
       }

@@ -1,0 +1,43 @@
+{
+  "status": {
+    "code": 200,
+    "message": "OK"
+  },
+  "item": {
+    "deliveryMode": "whoCares",
+    "filterChain": [
+      {
+        "config": {},
+        "name": "simpleDedupFilterRouteFilter",
+        "plugin": "dedup"
+      }
+    ],
+    "id": "dedup101",
+    "name": "tbltstsimpleFilterDedupRoutesimpleDedupFilterRoute",
+    "receiver": {
+      "config": {
+        "intervalMs": 10,
+        "maxHistory": 100,
+        "payload": {
+          "foo": "bar"
+        },
+        "rounds": 5
+      },
+      "name": "tbltstsimpleFilterDedupRoutesimpleDedupFilterRouteReceiver",
+      "plugin": "debug"
+    },
+    "sender": {
+      "config": {
+        "destination": "stdout",
+        "maxHistory": 100
+      },
+      "name": "tbltstsimpleFilterDedupRoutesimpleDedupFilterRouteSender",
+      "plugin": "debug"
+    },
+    "tenant": {
+      "appId": "myapp",
+      "orgId": "myorg"
+    },
+    "userId": "boris"
+  }
+}
