@@ -39,7 +39,7 @@
       "plugin" : "unwrap",
       "name" : "simpleFilterLongChainRouteUnwrapper",
       "config" : {
-        "unwrapPath" : ".a.b.c"
+        "path" : ".a.b.c"
       }
     },
     {

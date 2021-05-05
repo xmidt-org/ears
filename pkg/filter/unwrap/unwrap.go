@@ -47,9 +47,9 @@ func (f *Filter) Filter(evt event.Event) []event.Event {
 		})
 		return nil
 	}
-	obj, _, _ := evt.GetPathValue(f.config.UnwrapPath)
+	obj, _, _ := evt.GetPathValue(f.config.Path)
 	if obj == nil {
-		evt.Nack(errors.New("nil object at unwrap path " + f.config.UnwrapPath))
+		evt.Nack(errors.New("nil object at path " + f.config.Path))
 		return []event.Event{}
 	}
 	err := evt.SetPayload(obj)

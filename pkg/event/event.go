@@ -151,7 +151,7 @@ func (e *event) SetPathValue(path string, val interface{}, createPath bool) (int
 		} else {
 			return nil, ""
 		}
-	} 
+	}
 	if strings.HasPrefix(path, ".") {
 		path = PAYLOAD +  path
 	}

@@ -34,8 +34,8 @@ func NewConfig(config interface{}) (*Config, error) {
 
 func (c Config) WithDefaults() *Config {
 	cfg := c
-	if c.UnwrapPath == "" {
-		cfg.UnwrapPath = DefaultConfig.UnwrapPath
+	if c.Path == "" {
+		cfg.Path = DefaultConfig.Path
 	}
 	return &cfg
 }
