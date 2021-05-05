@@ -372,6 +372,21 @@
           "expectedEventPayloadFile": "event14"
         }
       ]
+    },
+    "useCaseOneRoute": {
+      "seq": 24,
+      "routeFiles": [
+        "useCaseOneRoute"
+      ],
+      "waitMs": 100,
+      "events": [
+        {
+          "senderRouteFiles": "useCaseOneRoute",
+          "expectedEventCount": 1,
+          "expectedEventIndex": 0,
+          "expectedEventPayloadFile": "event15"
+        }
+      ]
     }
   }
 }
