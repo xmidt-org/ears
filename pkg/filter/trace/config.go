@@ -34,8 +34,8 @@ func NewConfig(config interface{}) (*Config, error) {
 
 func (c Config) WithDefaults() *Config {
 	cfg := c
-	if c.TracePath == "" {
-		cfg.TracePath = DefaultConfig.TracePath
+	if c.Path == "" {
+		cfg.Path = DefaultConfig.Path
 	}
 	return &cfg
 }

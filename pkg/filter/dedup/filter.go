@@ -17,6 +17,7 @@ package dedup
 import (
 	"crypto/md5"
 	"encoding/json"
+	"errors"
 	"fmt"
 	lru "github.com/hashicorp/golang-lru"
 	"github.com/xmidt-org/ears/pkg/event"
@@ -49,7 +50,11 @@ func (f *Filter) Filter(evt event.Event) []event.Event {
 		})
 		return nil
 	}
-	obj, _, _ := evt.GetPathValue(f.config.DedupPath)
+	obj, _, _ := evt.GetPathValue(f.config.Path)
+	if obj == nil {
+		evt.Nack(errors.New("nil object at path " + f.config.Path))
+		return []event.Event{}
+	}
 	buf, err := json.Marshal(obj)
 	if err != nil {
 		evt.Nack(err)

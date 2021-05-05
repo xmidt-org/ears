@@ -134,7 +134,7 @@
       "plugin": "trace",
       "name": "useCaseOneRouteTracer",
       "config": {
-        "tracePath" : ".tx.traceId"
+        "path" : ".tx.traceId"
       }
     },
     {

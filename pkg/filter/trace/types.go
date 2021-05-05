@@ -17,11 +17,11 @@ package trace
 // Config can be passed into NewFilter() in order to configure
 // the behavior of the sender.
 type Config struct {
-	TracePath       string `json:"tracePath,omitempty"`
+	Path       string `json:"path,omitempty"`
 }
 
 var DefaultConfig = Config{
-	TracePath:       "",
+	Path:       "",
 }
 
 type Filter struct {

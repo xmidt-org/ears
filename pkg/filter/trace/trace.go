@@ -46,7 +46,7 @@ func (f *Filter) Filter(evt event.Event) []event.Event {
 		return nil
 	}
 	traceId := "123-456-789-000"
-	evt.SetPathValue(f.config.TracePath, traceId, true)
+	evt.SetPathValue(f.config.Path, traceId, true)
 	return []event.Event{evt}
 }
 func (f *Filter) Config() Config {
