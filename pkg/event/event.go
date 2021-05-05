@@ -110,6 +110,9 @@ func (e *event) GetPathValue(path string) (interface{}, interface{}, string) {
 	if strings.HasPrefix(path, METADATA + ".") || path == METADATA {
 		obj = e.Metadata()
 	}
+	if obj == nil {
+		return nil, nil, ""
+	}
 	if path == "" || path == "." || path == PAYLOAD || path == METADATA {
 		return obj, nil, ""
 	}
@@ -141,6 +144,11 @@ func (e *event) GetPathValue(path string) (interface{}, interface{}, string) {
 func (e *event) SetPathValue(path string, val interface{}, createPath bool) (interface{}, string) {
 	obj := e.Payload()
 	if strings.HasPrefix(path, METADATA + ".") || path == METADATA {
+		obj = e.Metadata()
+		if obj == nil {
+			e.SetMetadata(make(map[string]interface{}, 0))
+
+		}
 		obj = e.Metadata()
 	}
 	if strings.HasPrefix(path, ".") {
