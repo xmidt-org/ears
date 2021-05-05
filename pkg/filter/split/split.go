@@ -48,9 +48,9 @@ func (f *Filter) Filter(evt event.Event) []event.Event {
 		return nil
 	}
 	events := []event.Event{}
-	obj, _, _ := evt.GetPathValue(f.config.SplitPath)
+	obj, _, _ := evt.GetPathValue(f.config.Path)
 	if obj == nil {
-		evt.Nack(errors.New("nil object at split path " + f.config.SplitPath))
+		evt.Nack(errors.New("nil object at path " + f.config.Path))
 		return []event.Event{}
 	}
 	arr, ok := obj.([]interface{})
