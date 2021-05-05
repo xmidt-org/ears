@@ -93,6 +93,24 @@
       }
     },
     {
+      "plugin": "match",
+      "name": "useCaseOneRouteEmptyMatcher",
+      "config": {
+        "mode": "deny",
+        "matcher": "pattern",
+        "pattern": {
+          "message": {
+           "payload" : {
+             "body" : {
+               "addedAccountProducts" : [],
+               "removedAccountProducts": []
+             }
+           }
+          }
+        }
+      }
+    },
+    {
       "plugin": "hash",
       "name": "useCaseOneRouteHasher",
       "config": {
