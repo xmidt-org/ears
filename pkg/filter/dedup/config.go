@@ -38,8 +38,8 @@ func (c Config) WithDefaults() *Config {
 	if c.CacheSize == nil {
 		cfg.CacheSize = DefaultConfig.CacheSize
 	}
-	if c.DedupPath == "" {
-		cfg.DedupPath = DefaultConfig.DedupPath
+	if c.Path == "" {
+		cfg.Path = DefaultConfig.Path
 	}
 	return &cfg
 }

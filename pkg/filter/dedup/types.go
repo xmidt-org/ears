@@ -23,12 +23,12 @@ import (
 // the behavior of the sender.
 type Config struct {
 	CacheSize *int `json:"cacheSize,omitempty"`
-	DedupPath string
+	Path string `json:"path,omitempty"`
 }
 
 var DefaultConfig = Config{
 	CacheSize: pointer.Int(1000),
-	DedupPath: "",
+	Path: "",
 }
 
 type Filter struct {
