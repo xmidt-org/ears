@@ -33,6 +33,7 @@ import (
 	"github.com/xmidt-org/ears/internal/pkg/tablemgr"
 	pkgplugin "github.com/xmidt-org/ears/pkg/plugin"
 	"github.com/xmidt-org/ears/pkg/plugin/manager"
+	"github.com/xmidt-org/ears/pkg/plugins/batch"
 	"github.com/xmidt-org/ears/pkg/plugins/block"
 	"github.com/xmidt-org/ears/pkg/plugins/debug"
 	"github.com/xmidt-org/ears/pkg/plugins/decode"
@@ -484,6 +485,10 @@ func setupRestApi(config config.Config, storageMgr route.RouteStorer) (*EarsRunt
 		{
 			name:   "dedup",
 			plugin: toArr(dedup.NewPluginVersion("dedup", "", ""))[0].(pkgplugin.Pluginer),
+		},
+		{
+			name:   "batch",
+			plugin: toArr(batch.NewPluginVersion("batch", "", ""))[0].(pkgplugin.Pluginer),
 		},
 		{
 			name:   "ttl",
