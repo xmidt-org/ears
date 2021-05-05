@@ -17,11 +17,11 @@ package unwrap
 // Config can be passed into NewFilter() in order to configure
 // the behavior of the sender.
 type Config struct {
-	UnwrapPath string `json:"unwrapPath,omitempty"`
+	Path string `json:"path,omitempty"`
 }
 
 var DefaultConfig = Config{
-	UnwrapPath: "",
+	Path: "",
 }
 
 type Filter struct {
