@@ -145,12 +145,13 @@ func (e *event) SetPathValue(path string, val interface{}, createPath bool) (int
 	obj := e.Payload()
 	if strings.HasPrefix(path, METADATA + ".") || path == METADATA {
 		obj = e.Metadata()
-		if obj == nil {
+		if obj == nil && createPath {
 			e.SetMetadata(make(map[string]interface{}, 0))
-
+			obj = e.Metadata()
+		} else {
+			return nil, ""
 		}
-		obj = e.Metadata()
-	}
+	} 
 	if strings.HasPrefix(path, ".") {
 		path = PAYLOAD +  path
 	}
