@@ -81,6 +81,9 @@
           "to": {
             "location": "{.Message.body.account.id}",
             "app": "myapp"
+          },
+          "tx": {
+            "traceId" : "{trace.id}"
           }
         }
       }
@@ -110,13 +113,6 @@
         "fromPath": ".to.location",
         "toPath": "metadata.kafka.partition",
         "hashAlgorithm": "fnv"
-      }
-    },
-    {
-      "plugin": "trace",
-      "name": "useCaseOneRouteTracer",
-      "config": {
-        "path" : ".tx.traceId"
       }
     },
     {

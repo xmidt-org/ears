@@ -106,6 +106,10 @@ func (e *event) SetMetadata(metadata interface{}) error {
 }
 
 func (e *event) GetPathValue(path string) (interface{}, interface{}, string) {
+	// in the future we need proper evaluation of tenant and trace paths here
+	if path == TRACE + ".id" {
+		return "123-456-789-000", nil, ""
+	}
 	obj := e.Payload()
 	if strings.HasPrefix(path, METADATA + ".") || path == METADATA {
 		obj = e.Metadata()
