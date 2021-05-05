@@ -62,6 +62,9 @@
             "to": {
               "app": "myapp",
               "location": "{.Message.body.account.id}"
+            },
+            "tx": {
+              "traceId": "{trace.id}"
             }
           }
         },
@@ -94,13 +97,6 @@
         },
         "name": "useCaseOneRouteHasher",
         "plugin": "hash"
-      },
-      {
-        "config": {
-          "path": ".tx.traceId"
-        },
-        "name": "useCaseOneRouteTracer",
-        "plugin": "trace"
       },
       {
         "name": "useCaseOneRouteLogger",

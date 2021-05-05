@@ -72,6 +72,8 @@ filterChain:
         to:
           location: "{.Message.body.account.id}"
           app: myapp
+        tx:
+          traceId: "{trace.id}"
   - plugin: match
     name: useCaseOneRouteEmptyMatcher
     config:
