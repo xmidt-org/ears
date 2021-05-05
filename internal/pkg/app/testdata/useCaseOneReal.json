@@ -86,13 +86,6 @@
       }
     },
     {
-      "plugin": "js",
-      "name": "useCaseOneRouteFilterJs",
-      "config": {
-        "source": "if (_.event.payload.message.payload.body.addedAccountProducts.length == 0 && _.event.payload.message.payload.body.removedAccountProducts.length == 0) {\n  return null;\n} else {\n  return _.event;\n}"
-      }
-    },
-    {
       "plugin": "match",
       "name": "useCaseOneRouteEmptyMatcher",
       "config": {
