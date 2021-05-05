@@ -28,24 +28,18 @@ import (
 var _ Matcher = (*regex.Matcher)(nil)
 
 func NewFilter(config interface{}) (*Filter, error) {
-
 	cfg, err := NewConfig(config)
-
 	if err != nil {
 		return nil, &filter.InvalidConfigError{
 			Err: err,
 		}
 	}
-
 	cfg = cfg.WithDefaults()
-
 	err = cfg.Validate()
 	if err != nil {
 		return nil, err
 	}
-
 	var matcher Matcher
-
 	switch cfg.Matcher {
 	case MatcherRegex:
 		matcher, err = regex.NewMatcher(cfg.Pattern)
@@ -55,14 +49,14 @@ func NewFilter(config interface{}) (*Filter, error) {
 			}
 		}
 	case MatcherPattern:
-		matcher, err = pattern.NewMatcher(cfg.Pattern)
+		matcher, err = pattern.NewMatcher(cfg.Pattern, *cfg.ExactArrayMatch)
 		if err != nil {
 			return nil, &filter.InvalidConfigError{
 				Err: err,
 			}
 		}
 	case MatcherPatternRegex:
-		matcher, err = patternregex.NewMatcher(cfg.Pattern)
+		matcher, err = patternregex.NewMatcher(cfg.Pattern, *cfg.ExactArrayMatch)
 		if err != nil {
 			return nil, &filter.InvalidConfigError{
 				Err: err,
@@ -73,12 +67,10 @@ func NewFilter(config interface{}) (*Filter, error) {
 			Err: fmt.Errorf("unsupported matcher type: %s", cfg.Matcher.String()),
 		}
 	}
-
 	f := &Filter{
 		config:  *cfg,
 		matcher: matcher,
 	}
-
 	return f, nil
 }
 
