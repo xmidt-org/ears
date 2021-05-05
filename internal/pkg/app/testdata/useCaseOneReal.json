@@ -6,7 +6,7 @@
     "plugin": "sqs",
     "name": "useCaseOneRouteReceiver",
     "config": {
-      "queueUrl": "https://sqs.us-west-2.amazonaws.com/447701116110/myqueye",
+      "queueUrl": "https://sqs.us-west-2.amazonaws.com/123/myqueye",
       "receiverPoolSize": 10
     }
   },
