@@ -15,11 +15,11 @@
 package split
 
 type Config struct {
-	SplitPath string `json:"splitPath,omitempty"`
+	Path string `json:"path,omitempty"`
 }
 
 var DefaultConfig = Config{
-	SplitPath: "",
+	Path: "",
 }
 
 type Filter struct {

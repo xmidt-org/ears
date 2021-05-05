@@ -15,7 +15,7 @@
       },
       {
         "config": {
-          "splitPath": "."
+          "path": "."
         },
         "name": "simpleFilterLongChainRouteSplitter",
         "plugin": "split"

@@ -34,8 +34,8 @@ func NewConfig(config interface{}) (*Config, error) {
 
 func (c Config) WithDefaults() *Config {
 	cfg := c
-	if c.SplitPath == "" {
-		cfg.SplitPath = DefaultConfig.SplitPath
+	if c.Path == "" {
+		cfg.Path = DefaultConfig.Path
 	}
 	return &cfg
 }
