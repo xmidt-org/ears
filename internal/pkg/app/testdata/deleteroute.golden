@@ -5,6 +5,75 @@
       "filterChain": [
         {
           "config": {
+            "batchSize": 5
+          },
+          "name": "simpleBatchFilterRouteFilter",
+          "plugin": "batch"
+        }
+      ],
+      "id": "batch101",
+      "name": "tbltstsimpleFilterBatchRoutesimpleBatchFilterRoute",
+      "receiver": {
+        "config": {
+          "intervalMs": 10,
+          "maxHistory": 100,
+          "payload": {
+            "foo": "bar"
+          },
+          "rounds": 10
+        },
+        "name": "tbltstsimpleFilterBatchRoutesimpleBatchFilterRouteReceiver",
+        "plugin": "debug"
+      },
+      "sender": {
+        "config": {
+          "destination": "stdout",
+          "maxHistory": 100
+        },
+        "name": "tbltstsimpleFilterBatchRoutesimpleBatchFilterRouteSender",
+        "plugin": "debug"
+      },
+      "tenant": {
+        "appId": "myapp",
+        "orgId": "myorg"
+      },
+      "userId": "boris"
+    },
+    {
+      "deliveryMode": "whoCares",
+      "id": "update101",
+      "name": "simpleRoute",
+      "receiver": {
+        "config": {
+          "intervalMs": 10,
+          "maxHistory": 100,
+          "payload": {
+            "foo": "bar"
+          },
+          "rounds": 5
+        },
+        "name": "mydebug",
+        "plugin": "debug"
+      },
+      "sender": {
+        "config": {
+          "destination": "stdout",
+          "maxHistory": 100
+        },
+        "name": "simpleRouteSender",
+        "plugin": "debug"
+      },
+      "tenant": {
+        "appId": "myapp",
+        "orgId": "myorg"
+      },
+      "userId": "boris"
+    },
+    {
+      "deliveryMode": "whoCares",
+      "filterChain": [
+        {
+          "config": {
             "matcher": "regex",
             "mode": "allow",
             "pattern": "^.*$"
