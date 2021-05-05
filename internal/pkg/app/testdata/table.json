@@ -357,6 +357,21 @@
           "expectedEventPayloadFile": "event12"
         }
       ]
+    },
+    "simpleFilterBatchRoute": {
+      "seq": 23,
+      "routeFiles": [
+        "simpleFilterBatchRoute"
+      ],
+      "waitMs": 100,
+      "events": [
+        {
+          "senderRouteFiles": "simpleFilterBatchRoute",
+          "expectedEventCount": 2,
+          "expectedEventIndex": 0,
+          "expectedEventPayloadFile": "event14"
+        }
+      ]
     }
   }
 }
