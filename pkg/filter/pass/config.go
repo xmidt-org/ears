@@ -33,7 +33,6 @@ func (c *Config) String() string {
 	if err != nil {
 		return errs.String("error", nil, err)
 	}
-
 	return s
 }
 

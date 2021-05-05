@@ -1,0 +1,30 @@
+{
+  "message": {
+    "op": "process",
+    "payload": {
+      "body": {
+        "addedAccountProducts": [
+          {
+            "accountProductId": "a.b",
+            "source": "ABC"
+          }
+        ],
+        "removedAccountProducts": []
+      },
+      "metadata": {
+        "event": "CREATE",
+        "id": "123",
+        "timestamp": 1605814982503,
+        "type": "ACCOUNT_PRODUCT"
+      }
+    },
+    "uses": "xbo_account"
+  },
+  "to": {
+    "app": "myapp",
+    "location": "123"
+  },
+  "tx": {
+    "traceId": "123-456-789-000"
+  }
+}

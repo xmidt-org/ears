@@ -8,7 +8,7 @@
     "filterChain": [
       {
         "config": {
-          "splitPath": "a.b.c"
+          "path": ".a.b.c"
         },
         "name": "SimpleFilterDeepSplitRouteSenderSplitter",
         "plugin": "split"

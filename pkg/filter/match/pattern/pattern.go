@@ -19,33 +19,33 @@ import (
 )
 
 type Matcher struct {
-	p interface{}
+	pattern interface{}
+	exactArrayMatch bool
 }
 
-func NewMatcher(p interface{}) (*Matcher, error) {
-	return &Matcher{p: p}, nil
+func NewMatcher(p interface{}, exactArrayMatch bool) (*Matcher, error) {
+	return &Matcher{pattern: p, exactArrayMatch: exactArrayMatch}, nil
 }
 
 func (m *Matcher) Match(event event.Event) bool {
-	if m == nil || m.p == nil || event == nil {
+	if m == nil || m.pattern == nil || event == nil {
 		return false
 	}
-	matches, _ := contains(event.Payload(), m.p, 0)
-	return matches
+	return m.contains(event.Payload(), m.pattern)
 }
 
 // contains is a helper function to check if b is contained in a (if b is a partial of a)
-func contains(a interface{}, b interface{}, strength int) (bool, int) {
+func (m *Matcher) contains(a interface{}, b interface{}) bool {
 	if a == nil && b == nil {
-		return true, strength
+		return true
 	}
 	if a == nil || b == nil {
-		return false, strength
+		return false
 	}
 	switch b.(type) {
 	case string:
 		if b.(string) == "*" && a != nil {
-			return true, strength
+			return true
 		}
 	}
 	switch b.(type) {
@@ -53,43 +53,43 @@ func contains(a interface{}, b interface{}, strength int) (bool, int) {
 		switch a.(type) {
 		case map[string]interface{}:
 			for k, vb := range b.(map[string]interface{}) {
-				c, s := contains(a.(map[string]interface{})[k], vb, 0)
+				c := m.contains(a.(map[string]interface{})[k], vb)
 				if !c {
-					return false, strength
+					return false
 				}
-				strength += s
 			}
 		default:
-			return false, strength
+			return false
 		}
 	case []interface{}:
 		switch a.(type) {
 		case []interface{}:
+			// enforce exact array match
+			if m.exactArrayMatch {
+				if len(a.([]interface{})) != len(b.([]interface{})) {
+					return false
+				}
+			}
 			// check if all fields in b are in a (in any order)
 			for _, vb := range b.([]interface{}) {
 				present := false
 				for _, va := range a.([]interface{}) {
-					// this supports partial matches in deeply structured array elements even with wild cards etc.
-					c, s := contains(va, vb, 0)
+					// this supports partial matches in deeply structured array elements
+					c := m.contains(va, vb)
 					if c {
-						strength += s
 						present = true
 						break
 					}
 				}
 				if !present {
-					return false, strength
+					return false
 				}
 			}
 		default:
-			return false, strength
+			return false
 		}
 	default:
-		equal := a == b
-		if equal {
-			strength++
-		}
-		return equal, strength
+		return a == b
 	}
-	return true, strength
+	return true
 }

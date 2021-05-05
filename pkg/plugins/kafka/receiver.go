@@ -249,7 +249,7 @@ func (r *Receiver) Receive(next receiver.NextFn) error {
 	<-r.done
 	r.Lock()
 	elapsedMs := time.Since(r.startTime).Milliseconds()
-	throughput := 1000 * r.count / int(elapsedMs)
+	throughput := 1000 * r.count / (int(elapsedMs) + 1)
 	cnt := r.count
 	r.Unlock()
 	r.logger.Info().Str("op", "kafka.Receive").Int("elapsedMs", int(elapsedMs)).Int("count", cnt).Int("throughput", throughput).Msg("receive done")

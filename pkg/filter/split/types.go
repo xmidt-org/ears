@@ -14,14 +14,12 @@
 
 package split
 
-// Config can be passed into NewFilter() in order to configure
-// the behavior of the sender.
 type Config struct {
-	SplitPath string `json:"splitPath,omitempty"`
+	Path string `json:"path,omitempty"`
 }
 
 var DefaultConfig = Config{
-	SplitPath: "",
+	Path: "",
 }
 
 type Filter struct {

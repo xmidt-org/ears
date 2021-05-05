@@ -9,11 +9,11 @@
       {
         "config": {
           "transformation": {
-            "account": "{content.accountId}",
+            "account": "{.content.accountId}",
             "metadata": {
-              "ts": "{timestamp}"
+              "ts": "{.timestamp}"
             },
-            "payload": "{content}"
+            "payload": "{.content}"
           }
         },
         "name": "simpleFilterTransformRouteTransformer",

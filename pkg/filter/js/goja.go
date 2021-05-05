@@ -5,6 +5,7 @@ import (
 	"crypto/md5"
 	"fmt"
 	"github.com/mohae/deepcopy"
+	"github.com/rs/zerolog/log"
 	"github.com/xmidt-org/ears/pkg/event"
 	"io/ioutil"
 	"net/http"
@@ -24,8 +25,6 @@ const (
 )
 
 //TODO: canonical method to pass event(s) back and forth
-//TODO: logging in filter
-//TODO: logging from JS
 //TODO: support libraries
 
 var (
@@ -336,7 +335,7 @@ func (interpreter *Interpreter) Exec(evt event.Event, code string) ([]event.Even
 		}
 	}()
 	env := o.Get("_").Export().(map[string]interface{})
-	//env["ctx"] = ctx
+	//env["ctx"] = evt.Context()
 	if evt.Payload() == nil {
 		env["payload"] = map[string]interface{}{}
 	} else {
@@ -347,8 +346,38 @@ func (interpreter *Interpreter) Exec(evt event.Event, code string) ([]event.Even
 	} else {
 		env["metadata"] = deepcopy.Copy(evt.Metadata())
 	}
+	env["event"] = map[string]interface{}{}
+	(env["event"].(map[string]interface{}))["payload"] = env["payload"]
+	(env["event"].(map[string]interface{}))["metadata"] = env["metadata"]
 	env["log"] = func(x interface{}) {
-		//TODO: log
+		switch vv := x.(type) {
+		case goja.Value:
+			x = vv.Export()
+		}
+		s, is := x.(string)
+		if is {
+			log.Ctx(evt.Context()).Info().Str("op", "js.Filter").Msg(s)
+		}
+	}
+	env["logInfo"] = func(x interface{}) {
+		switch vv := x.(type) {
+		case goja.Value:
+			x = vv.Export()
+		}
+		s, is := x.(string)
+		if is {
+			log.Ctx(evt.Context()).Info().Str("op", "js.Filter").Msg(s)
+		}
+	}
+	env["logError"] = func(x interface{}) {
+		switch vv := x.(type) {
+		case goja.Value:
+			x = vv.Export()
+		}
+		s, is := x.(string)
+		if is {
+			log.Ctx(evt.Context()).Error().Str("op", "js.Filter").Msg(s)
+		}
 	}
 	var v goja.Value
 	var err error
@@ -405,6 +434,7 @@ func (interpreter *Interpreter) Exec(evt event.Event, code string) ([]event.Even
 			if !is {
 				return nil, errors.New("array element is not map")
 			}
+			//m = deepcopy.Copy(m).(map[string]interface{})
 			nevt, err := evt.Clone(evt.Context())
 			if err != nil {
 				return nil, err
@@ -422,6 +452,7 @@ func (interpreter *Interpreter) Exec(evt event.Event, code string) ([]event.Even
 		return events, nil
 	case map[string]interface{}:
 		m := x.(map[string]interface{})
+		//m = deepcopy.Copy(m).(map[string]interface{})
 		err = evt.SetPayload(m["payload"])
 		if err != nil {
 			return nil, err
