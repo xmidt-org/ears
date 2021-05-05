@@ -19,6 +19,7 @@ import (
 	"github.com/rs/zerolog"
 	p "github.com/xmidt-org/ears/internal/pkg/plugin"
 	"github.com/xmidt-org/ears/pkg/plugin/manager"
+	"github.com/xmidt-org/ears/pkg/plugins/batch"
 	"github.com/xmidt-org/ears/pkg/plugins/block"
 	"github.com/xmidt-org/ears/pkg/plugins/debug"
 	"github.com/xmidt-org/ears/pkg/plugins/decode"
@@ -110,6 +111,10 @@ func ProvidePluginManager(in PluginIn) (PluginOut, error) {
 		{
 			name:   "dedup",
 			plugin: toArr(dedup.NewPluginVersion("dedup", "", ""))[0].(pkgplugin.Pluginer),
+		},
+		{
+			name:   "batch",
+			plugin: toArr(batch.NewPluginVersion("batch", "", ""))[0].(pkgplugin.Pluginer),
 		},
 		{
 			name:   "ttl",
