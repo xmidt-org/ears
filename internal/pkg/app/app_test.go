@@ -23,7 +23,9 @@ import (
 	"github.com/xmidt-org/ears/internal/pkg/config"
 	"github.com/xmidt-org/ears/internal/pkg/fx/pluginmanagerfx"
 	"github.com/xmidt-org/ears/internal/pkg/fx/routestorerfx"
-	"github.com/xmidt-org/ears/internal/pkg/fx/routetablesyncerfx"
+	"github.com/xmidt-org/ears/internal/pkg/fx/syncerfx"
+	"github.com/xmidt-org/ears/internal/pkg/fx/tenantstorerfx"
+	"github.com/xmidt-org/ears/internal/pkg/quota"
 	"github.com/xmidt-org/ears/internal/pkg/tablemgr"
 	testLog "github.com/xmidt-org/ears/test/log"
 	"go.uber.org/fx"
@@ -36,7 +38,8 @@ func AppConfig() config.Config {
 	v := viper.New()
 	v.Set("ears.logLevel", "info")
 	v.Set("ears.api.port", 8080)
-	v.Set("ears.storage.type", "inmemory")
+	v.Set("ears.storage.route.type", "inmemory")
+	v.Set("ears.storage.tenant.type", "inmemory")
 	v.Set("ears.synchronization.type", "inmemory")
 	return v
 }
@@ -45,7 +48,8 @@ func BadConfig() config.Config {
 	v := viper.New()
 	v.Set("ears.logLevel", "info")
 	v.Set("ears.api.port", 0)
-	v.Set("ears.storage.type", "inmemory")
+	v.Set("ears.storage.route.type", "inmemory")
+	v.Set("ears.storage.tenant.type", "inmemory")
 	v.Set("ears.synchronization.type", "inmemory")
 	return v
 }
@@ -90,15 +94,19 @@ func TestAppRunSuccess(t *testing.T) {
 	earsApp := fx.New(
 		pluginmanagerfx.Module,
 		routestorerfx.Module,
-		routetablesyncerfx.Module,
+		syncerfx.Module,
+		tenantstorerfx.Module,
 		fx.Provide(
 			AppConfig,
 			GetTestLogger,
 			app.NewAPIManager,
 			tablemgr.NewRoutingTableManager,
 			app.NewMiddleware,
+			quota.NewQuotaManager,
 			app.NewMux,
 		),
+		fx.Invoke(syncerfx.SetupDeltaSyncer),
+		fx.Invoke(tablemgr.SetupRoutingManager),
 		fx.Invoke(app.SetupAPIServer),
 	)
 

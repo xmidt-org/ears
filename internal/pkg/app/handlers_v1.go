@@ -269,7 +269,7 @@ func (a *APIManager) getTenantConfigHandler(w http.ResponseWriter, r *http.Reque
 
 		var tenantNotFound *tenant.TenantNotFoundError
 		if errors.As(err, &tenantNotFound) {
-			resp := ErrorResponse(&NotFoundError{})
+			resp := ErrorResponse(&NotFoundError{"tenant " + tenantNotFound.Tenant.ToString() + " not found"})
 			resp.Respond(ctx, w)
 		} else {
 			resp := ErrorResponse(err)
@@ -319,7 +319,7 @@ func (a *APIManager) setTenantConfigHandler(w http.ResponseWriter, r *http.Reque
 		var tenantNotFound *tenant.TenantNotFoundError
 		var badConfig *tenant.BadConfigError
 		if errors.As(err, &tenantNotFound) {
-			resp := ErrorResponse(&NotFoundError{})
+			resp := ErrorResponse(&NotFoundError{"tenant " + tenantNotFound.Tenant.ToString() + " not found"})
 			resp.Respond(ctx, w)
 		} else if errors.As(err, &badConfig) {
 			resp := ErrorResponse(&BadRequestError{"bad tenant config", err})
@@ -353,7 +353,7 @@ func (a *APIManager) deleteTenantConfigHandler(w http.ResponseWriter, r *http.Re
 
 		var tenantNotFound *tenant.TenantNotFoundError
 		if errors.As(err, &tenantNotFound) {
-			resp := ErrorResponse(&NotFoundError{})
+			resp := ErrorResponse(&NotFoundError{"tenant " + tenantNotFound.Tenant.ToString() + " not found"})
 			resp.Respond(ctx, w)
 		} else {
 			resp := ErrorResponse(err)

@@ -30,6 +30,7 @@ import (
 	"github.com/xmidt-org/ears/internal/pkg/db/dynamo"
 	"github.com/xmidt-org/ears/internal/pkg/db/redis"
 	"github.com/xmidt-org/ears/internal/pkg/plugin"
+	"github.com/xmidt-org/ears/internal/pkg/syncer"
 	"github.com/xmidt-org/ears/internal/pkg/tablemgr"
 	pkgplugin "github.com/xmidt-org/ears/pkg/plugin"
 	"github.com/xmidt-org/ears/pkg/plugin/manager"
@@ -80,6 +81,7 @@ type (
 		pluginManger        plugin.Manager
 		storageLayer        route.RouteStorer
 		routingTableManager tablemgr.RoutingTableManager
+		deltaSyncer         syncer.DeltaSyncer
 	}
 )
 
@@ -148,7 +150,7 @@ func TestRouteTable(t *testing.T) {
 	if err != nil {
 		t.Fatalf("cannot create ears runtime: %s\n", err.Error())
 	}
-	runtime.routingTableManager.StartListeningForSyncRequests("")
+	runtime.deltaSyncer.StartListeningForSyncRequests()
 	// add passive ears instances if any
 	passiveRuntimes := make([]*EarsRuntime, 0)
 	if table.NumInstances < 2 {
@@ -161,9 +163,9 @@ func TestRouteTable(t *testing.T) {
 		}
 		// should review this
 		if getTableSyncerType(config, "") != "inmemory" {
-			rt.routingTableManager.StartListeningForSyncRequests("")
+			rt.deltaSyncer.StartListeningForSyncRequests()
 		} else {
-			runtime.routingTableManager.RegisterLocalTableSyncer(rt.routingTableManager)
+			runtime.deltaSyncer.RegisterLocalSyncer("route", rt.routingTableManager)
 		}
 		t.Logf("started passive ears runtime %d", i)
 		passiveRuntimes = append(passiveRuntimes, rt)
@@ -311,9 +313,9 @@ func TestRouteTable(t *testing.T) {
 		})
 	}
 	// tear down ears runtime
-	runtime.routingTableManager.StopListeningForSyncRequests("")
+	runtime.deltaSyncer.StopListeningForSyncRequests()
 	for _, rt := range passiveRuntimes {
-		rt.routingTableManager.StopListeningForSyncRequests("")
+		rt.deltaSyncer.StopListeningForSyncRequests()
 	}
 }
 
@@ -405,20 +407,20 @@ func getStorageLayer(config config.Config, storageType string) (route.RouteStore
 }
 
 // if storageType is blank choose storag elayer specified in ears.yaml
-func getTableSyncer(config config.Config, syncType string) (tablemgr.RoutingTableDeltaSyncer, error) {
+func getTableSyncer(config config.Config, syncType string) (syncer.DeltaSyncer, error) {
 	if syncType == "" {
 		syncType = config.GetString("ears.synchronization.type")
 	}
-	var syncer tablemgr.RoutingTableDeltaSyncer
+	var s syncer.DeltaSyncer
 	switch syncType {
 	case "inmemory":
-		syncer = tablemgr.NewInMemoryDeltaSyncer(&log.Logger, config)
+		s = syncer.NewInMemoryDeltaSyncer(&log.Logger, config)
 	case "redis":
-		syncer = tablemgr.NewRedisDeltaSyncer(&log.Logger, config)
+		s = syncer.NewRedisDeltaSyncer(&log.Logger, config)
 	default:
 		return nil, errors.New("unsupported syncer type '" + syncType + "'")
 	}
-	return syncer, nil
+	return s, nil
 }
 
 func getTableSyncerType(config config.Config, syncType string) string {
@@ -431,11 +433,11 @@ func getTableSyncerType(config config.Config, syncType string) string {
 func setupRestApi(config config.Config, storageMgr route.RouteStorer) (*EarsRuntime, error) {
 	mgr, err := manager.New()
 	if err != nil {
-		return &EarsRuntime{config, nil, nil, storageMgr, nil}, err
+		return &EarsRuntime{config, nil, nil, storageMgr, nil, nil}, err
 	}
 	pluginMgr, err := plugin.NewManager(plugin.WithPluginManager(mgr), plugin.WithLogger(&log.Logger))
 	if err != nil {
-		return &EarsRuntime{config, nil, nil, storageMgr, nil}, err
+		return &EarsRuntime{config, nil, nil, storageMgr, nil, nil}, err
 	}
 	toArr := func(a ...interface{}) []interface{} { return a }
 	defaultPlugins := []struct {
@@ -490,19 +492,28 @@ func setupRestApi(config config.Config, storageMgr route.RouteStorer) (*EarsRunt
 	for _, plug := range defaultPlugins {
 		err = mgr.RegisterPlugin(plug.name, plug.plugin)
 		if err != nil {
-			return &EarsRuntime{config, nil, nil, storageMgr, nil}, err
+			return &EarsRuntime{config, nil, nil, storageMgr, nil, nil}, err
 		}
 	}
 	tableSyncer, err := getTableSyncer(config, "")
 	if err != nil {
-		return &EarsRuntime{config, nil, nil, storageMgr, nil}, err
+		return &EarsRuntime{config, nil, nil, storageMgr, nil, nil}, err
 	}
 	routingMgr := tablemgr.NewRoutingTableManager(pluginMgr, storageMgr, tableSyncer, &log.Logger, config)
-	apiMgr, err := NewAPIManager(routingMgr)
+
+	tenantStorer := db.NewTenantInmemoryStorer()
+	apiMgr, err := NewAPIManager(routingMgr, tenantStorer)
 	if err != nil {
-		return &EarsRuntime{config, nil, nil, storageMgr, nil}, err
+		return &EarsRuntime{config, nil, nil, storageMgr, nil, nil}, err
 	}
-	return &EarsRuntime{config, apiMgr, pluginMgr, storageMgr, routingMgr}, nil
+	return &EarsRuntime{
+		config,
+		apiMgr,
+		pluginMgr,
+		storageMgr,
+		routingMgr,
+		tableSyncer,
+	}, nil
 }
 
 func resetDebugSender(routeFileName string, pluginMgr plugin.Manager) error {
@@ -518,7 +529,7 @@ func resetDebugSender(routeFileName string, pluginMgr plugin.Manager) error {
 	if err != nil {
 		return err
 	}
-	sdr, err := pluginMgr.RegisterSender(ctx, rt.Sender.Plugin, rt.Sender.Name, stringify(rt.Sender.Config))
+	sdr, err := pluginMgr.RegisterSender(ctx, rt.Sender.Plugin, rt.Sender.Name, stringify(rt.Sender.Config), rt.TenantId)
 	if err != nil {
 		return err
 	}
@@ -555,7 +566,7 @@ func checkEventsSent(routeFileName string, testPrefix string, pluginMgr plugin.M
 		return err
 	}
 	prefixRouteConfig(&routeConfig, testPrefix)
-	sdr, err := pluginMgr.RegisterSender(ctx, routeConfig.Sender.Plugin, routeConfig.Sender.Name, stringify(routeConfig.Sender.Config))
+	sdr, err := pluginMgr.RegisterSender(ctx, routeConfig.Sender.Plugin, routeConfig.Sender.Name, stringify(routeConfig.Sender.Config), routeConfig.TenantId)
 	if err != nil {
 		return err
 	}
@@ -607,7 +618,7 @@ func TestRestVersionHandler(t *testing.T) {
 	Version = "v1.0.2"
 	w := httptest.NewRecorder()
 	r := httptest.NewRequest(http.MethodGet, "/version", nil)
-	api, err := NewAPIManager(&tablemgr.DefaultRoutingTableManager{})
+	api, err := NewAPIManager(&tablemgr.DefaultRoutingTableManager{}, nil)
 	if err != nil {
 		t.Fatalf("Fail to setup api manager: %s\n", err.Error())
 	}

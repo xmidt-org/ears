@@ -16,7 +16,7 @@ type BadConfigError struct {
 }
 
 func (e *BadConfigError) Error() string {
-	return errs.String("TenantNotFoundError", nil, nil)
+	return errs.String("BadConfigError", nil, nil)
 }
 
 type InternalStorageError struct {
@@ -25,4 +25,8 @@ type InternalStorageError struct {
 
 func (e *InternalStorageError) Error() string {
 	return errs.String("InternalStorageError", nil, e.Wrapped)
+}
+
+func (e *InternalStorageError) Unwrap() error {
+	return e.Wrapped
 }

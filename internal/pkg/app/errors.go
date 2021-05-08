@@ -36,10 +36,14 @@ type ApiError interface {
 }
 
 type NotFoundError struct {
+	message string
 }
 
 func (e *NotFoundError) Error() string {
-	return "Item not found"
+	if e.message == "" {
+		return "Item not found"
+	}
+	return e.message
 }
 
 func (e *NotFoundError) StatusCode() int {
