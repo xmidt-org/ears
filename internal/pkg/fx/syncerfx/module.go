@@ -12,13 +12,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package routetablesyncerfx
+package syncerfx
 
 import (
+	"context"
 	"errors"
 	"github.com/rs/zerolog"
 	"github.com/xmidt-org/ears/internal/pkg/config"
-	"github.com/xmidt-org/ears/internal/pkg/tablemgr"
+	"github.com/xmidt-org/ears/internal/pkg/syncer"
 	"go.uber.org/fx"
 )
 
@@ -36,7 +37,7 @@ type TableSyncerIn struct {
 
 type TableSyncerOut struct {
 	fx.Out
-	RoutingTableDeltaSyncer tablemgr.RoutingTableDeltaSyncer
+	RoutingTableDeltaSyncer syncer.DeltaSyncer
 }
 
 func ProvideRouteTableSyncer(in TableSyncerIn) (TableSyncerOut, error) {
@@ -44,11 +45,29 @@ func ProvideRouteTableSyncer(in TableSyncerIn) (TableSyncerOut, error) {
 	tableSyncerType := in.Config.GetString("ears.synchronization.type")
 	switch tableSyncerType {
 	case "inmemory":
-		out.RoutingTableDeltaSyncer = tablemgr.NewInMemoryDeltaSyncer(in.Logger, in.Config)
+		out.RoutingTableDeltaSyncer = syncer.NewInMemoryDeltaSyncer(in.Logger, in.Config)
 	case "redis":
-		out.RoutingTableDeltaSyncer = tablemgr.NewRedisDeltaSyncer(in.Logger, in.Config)
+		out.RoutingTableDeltaSyncer = syncer.NewRedisDeltaSyncer(in.Logger, in.Config)
 	default:
 		return out, errors.New("unsupported table syncer type " + tableSyncerType)
 	}
 	return out, nil
+}
+
+func SetupDeltaSyncer(lifecycle fx.Lifecycle, logger *zerolog.Logger, deltaSyncer syncer.DeltaSyncer) error {
+	lifecycle.Append(
+		fx.Hook{
+			OnStart: func(context.Context) error {
+				deltaSyncer.StartListeningForSyncRequests()
+				logger.Info().Msg("Delta Syncer Service Started")
+				return nil
+			},
+			OnStop: func(ctx context.Context) error {
+				deltaSyncer.StopListeningForSyncRequests()
+				logger.Info().Msg("Delta Syncer Service Stopped")
+				return nil
+			},
+		},
+	)
+	return nil
 }

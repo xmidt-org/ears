@@ -29,6 +29,10 @@ func (id Id) KeyWithRoute(routeId string) string {
 	return id.Key() + delimiter + base64.StdEncoding.EncodeToString([]byte(routeId))
 }
 
+func (id Id) ToString() string {
+	return "OrgId=" + id.OrgId + " AppId=" + id.AppId
+}
+
 type Config struct {
 	Tenant   Id    `json:"tenant"`             //tenant id
 	Quota    Quota `json:"quota"`              // tenant quota

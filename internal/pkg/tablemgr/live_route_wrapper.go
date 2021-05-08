@@ -89,9 +89,10 @@ func (lrw *LiveRouteWrapper) Unregister(ctx context.Context, r *DefaultRoutingTa
 func (lrw *LiveRouteWrapper) Register(ctx context.Context, r *DefaultRoutingTableManager) error {
 	var err error
 	lrw.FilterChain = &filter.Chain{}
+	tid := lrw.Config.TenantId
 	if lrw.Config.FilterChain != nil {
 		for _, f := range lrw.Config.FilterChain {
-			filter, err := r.pluginMgr.RegisterFilter(ctx, f.Plugin, f.Name, stringify(f.Config))
+			filter, err := r.pluginMgr.RegisterFilter(ctx, f.Plugin, f.Name, stringify(f.Config), tid)
 			if err != nil {
 				lrw.Unregister(ctx, r)
 				return err
@@ -100,13 +101,13 @@ func (lrw *LiveRouteWrapper) Register(ctx context.Context, r *DefaultRoutingTabl
 		}
 	}
 	// set up sender
-	lrw.Sender, err = r.pluginMgr.RegisterSender(ctx, lrw.Config.Sender.Plugin, lrw.Config.Sender.Name, stringify(lrw.Config.Sender.Config))
+	lrw.Sender, err = r.pluginMgr.RegisterSender(ctx, lrw.Config.Sender.Plugin, lrw.Config.Sender.Name, stringify(lrw.Config.Sender.Config), tid)
 	if err != nil {
 		lrw.Unregister(ctx, r)
 		return err
 	}
 	// set up receiver
-	lrw.Receiver, err = r.pluginMgr.RegisterReceiver(ctx, lrw.Config.Receiver.Plugin, lrw.Config.Receiver.Name, stringify(lrw.Config.Receiver.Config))
+	lrw.Receiver, err = r.pluginMgr.RegisterReceiver(ctx, lrw.Config.Receiver.Plugin, lrw.Config.Receiver.Name, stringify(lrw.Config.Receiver.Config), tid)
 	if err != nil {
 		lrw.Unregister(ctx, r)
 		return err
