@@ -267,7 +267,6 @@ func (r *DefaultRoutingTableManager) GetAllTenantRoutes(ctx context.Context, ten
 }
 
 func (r *DefaultRoutingTableManager) GetAllRoutes(ctx context.Context) ([]route.Config, error) {
-	//TODO: shouldn't the type be []*route.Config?
 	routes, err := r.storageMgr.GetAllRoutes(ctx)
 	if err != nil {
 		return nil, err

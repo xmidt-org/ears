@@ -1,0 +1,55 @@
+package tenant
+
+import "github.com/xmidt-org/ears/pkg/errs"
+
+// Standard set of errors for TenantStorer
+
+type TenantNotFoundError struct {
+	Tenant Id
+}
+
+func (e *TenantNotFoundError) Error() string {
+	return errs.String("TenantNotFoundError", map[string]interface{}{"orgId": e.Tenant.OrgId, "appId": e.Tenant.AppId}, nil)
+}
+
+type BadConfigError struct {
+}
+
+func (e *BadConfigError) Error() string {
+	return errs.String("TenantNotFoundError", nil, nil)
+}
+
+type InternalStorageError struct {
+	Wrapped error
+}
+
+func (e *InternalStorageError) Error() string {
+	return errs.String("InternalStorageError", nil, e.Wrapped)
+}
+
+////
+
+sess, err := session.NewSession(&aws.Config{
+    Region: aws.String(s.region),
+})
+if err != nil {
+    return &tenant.InternalStorageError{err}
+}
+
+////
+
+var tenantNotFound *tenant.TenantNotFoundError
+var badConfig *tenant.BadConfigError
+if errors.As(err, &tenantNotFound) {
+    resp := ErrorResponse(&NotFoundError{})
+    resp.Respond(ctx, w)
+} else if errors.As(err, &badConfig) {
+    resp := ErrorResponse(&BadRequestError{"bad tenant config", err})
+    resp.Respond(ctx, w)
+} else {
+    resp := ErrorResponse(err)
+    resp.Respond(ctx, w)
+}
+
+
+
