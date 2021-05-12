@@ -16,4 +16,5 @@ ears:
     endpoint: localhost:6379
     active: yes
 
-
+  ratelimiter:
+    endpiont: localhost:6379

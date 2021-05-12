@@ -22,10 +22,10 @@ import (
 	"github.com/xmidt-org/ears/internal/pkg/app"
 	"github.com/xmidt-org/ears/internal/pkg/config"
 	"github.com/xmidt-org/ears/internal/pkg/fx/pluginmanagerfx"
+	"github.com/xmidt-org/ears/internal/pkg/fx/quotamanagerfx"
 	"github.com/xmidt-org/ears/internal/pkg/fx/routestorerfx"
 	"github.com/xmidt-org/ears/internal/pkg/fx/syncerfx"
 	"github.com/xmidt-org/ears/internal/pkg/fx/tenantstorerfx"
-	"github.com/xmidt-org/ears/internal/pkg/quota"
 	"github.com/xmidt-org/ears/internal/pkg/tablemgr"
 	testLog "github.com/xmidt-org/ears/test/log"
 	"go.uber.org/fx"
@@ -41,6 +41,7 @@ func AppConfig() config.Config {
 	v.Set("ears.storage.route.type", "inmemory")
 	v.Set("ears.storage.tenant.type", "inmemory")
 	v.Set("ears.synchronization.type", "inmemory")
+	v.Set("ears.ratelimiter.endpoint", "localhost:6379")
 	return v
 }
 
@@ -51,6 +52,7 @@ func BadConfig() config.Config {
 	v.Set("ears.storage.route.type", "inmemory")
 	v.Set("ears.storage.tenant.type", "inmemory")
 	v.Set("ears.synchronization.type", "inmemory")
+	v.Set("ears.ratelimiter.endpoint", "localhost:6379")
 	return v
 }
 
@@ -96,15 +98,16 @@ func TestAppRunSuccess(t *testing.T) {
 		routestorerfx.Module,
 		syncerfx.Module,
 		tenantstorerfx.Module,
+		quotamanagerfx.Module,
 		fx.Provide(
 			AppConfig,
 			GetTestLogger,
 			app.NewAPIManager,
 			tablemgr.NewRoutingTableManager,
 			app.NewMiddleware,
-			quota.NewQuotaManager,
 			app.NewMux,
 		),
+		fx.Invoke(quotamanagerfx.SetupQuotaManager),
 		fx.Invoke(syncerfx.SetupDeltaSyncer),
 		fx.Invoke(tablemgr.SetupRoutingManager),
 		fx.Invoke(app.SetupAPIServer),

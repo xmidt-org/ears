@@ -30,6 +30,7 @@ import (
 	"github.com/xmidt-org/ears/internal/pkg/db/dynamo"
 	"github.com/xmidt-org/ears/internal/pkg/db/redis"
 	"github.com/xmidt-org/ears/internal/pkg/plugin"
+	"github.com/xmidt-org/ears/internal/pkg/quota"
 	"github.com/xmidt-org/ears/internal/pkg/syncer"
 	"github.com/xmidt-org/ears/internal/pkg/tablemgr"
 	pkgplugin "github.com/xmidt-org/ears/pkg/plugin"
@@ -502,7 +503,9 @@ func setupRestApi(config config.Config, storageMgr route.RouteStorer) (*EarsRunt
 	routingMgr := tablemgr.NewRoutingTableManager(pluginMgr, storageMgr, tableSyncer, &log.Logger, config)
 
 	tenantStorer := db.NewTenantInmemoryStorer()
-	apiMgr, err := NewAPIManager(routingMgr, tenantStorer)
+	quotaManager, _ := quota.NewQuotaManager(tenantStorer, tableSyncer, config)
+
+	apiMgr, err := NewAPIManager(routingMgr, tenantStorer, quotaManager)
 	if err != nil {
 		return &EarsRuntime{config, nil, nil, storageMgr, nil, nil}, err
 	}
@@ -618,7 +621,7 @@ func TestRestVersionHandler(t *testing.T) {
 	Version = "v1.0.2"
 	w := httptest.NewRecorder()
 	r := httptest.NewRequest(http.MethodGet, "/version", nil)
-	api, err := NewAPIManager(&tablemgr.DefaultRoutingTableManager{}, nil)
+	api, err := NewAPIManager(&tablemgr.DefaultRoutingTableManager{}, nil, nil)
 	if err != nil {
 		t.Fatalf("Fail to setup api manager: %s\n", err.Error())
 	}
