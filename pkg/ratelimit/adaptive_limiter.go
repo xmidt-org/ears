@@ -1,3 +1,17 @@
+// Copyright 2021 Comcast Cable Communications Management, LLC
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package ratelimit
 
 import (
@@ -20,10 +34,9 @@ type AdaptiveRateLimiter struct {
 	lastTune   time.Time
 	takeCount  int
 	limitCount int
-	workerName string
 }
 
-func NewAdaptiveRateLimiter(workerName string, backendLimiter RateLimiter, initialRqs int, totalRqs int) *AdaptiveRateLimiter {
+func NewAdaptiveRateLimiter(backendLimiter RateLimiter, initialRqs int, totalRqs int) *AdaptiveRateLimiter {
 	return &AdaptiveRateLimiter{
 		backend:    backendLimiter,
 		initialRqs: initialRqs,
@@ -34,7 +47,6 @@ func NewAdaptiveRateLimiter(workerName string, backendLimiter RateLimiter, initi
 		lastTune:   time.Now(),
 		takeCount:  0,
 		limitCount: 0,
-		workerName: workerName, //debug only
 	}
 }
 
@@ -106,10 +118,6 @@ func (r *AdaptiveRateLimiter) tuneRqs(ctx context.Context) error {
 		return nil
 	}
 
-	//fmt.Printf("%p, tune last=%s, now=%s\n", r.backend, ts(r.lastTune), ts(time.Now()))
-
-	//fmt.Printf("(%s) rqs: %d, takeCount: %d, limitCount: %d\n", r.workerName, r.currentRqs, r.takeCount, r.limitCount)
-
 	newRqs := r.currentRqs
 	if r.limitCount > 0 {
 		if newRqs*2 < r.totalRqs {
@@ -146,7 +154,6 @@ func (r *AdaptiveRateLimiter) tuneRqs(ctx context.Context) error {
 			target = floor
 			floor = 0
 		}
-		//fmt.Printf("(%s) target: %d, floor: %d\n", r.workerName, target, floor)
 		target = (target + floor) / 2
 		if target == 0 {
 			return &BackendError{err}

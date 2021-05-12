@@ -21,10 +21,10 @@ import (
 	"github.com/xmidt-org/ears/internal/pkg/app"
 	"github.com/xmidt-org/ears/internal/pkg/config"
 	"github.com/xmidt-org/ears/internal/pkg/fx/pluginmanagerfx"
+	"github.com/xmidt-org/ears/internal/pkg/fx/quotamanagerfx"
 	"github.com/xmidt-org/ears/internal/pkg/fx/routestorerfx"
 	"github.com/xmidt-org/ears/internal/pkg/fx/syncerfx"
 	"github.com/xmidt-org/ears/internal/pkg/fx/tenantstorerfx"
-	"github.com/xmidt-org/ears/internal/pkg/quota"
 	"github.com/xmidt-org/ears/internal/pkg/tablemgr"
 	"github.com/xmidt-org/ears/pkg/cli"
 	"github.com/xmidt-org/ears/pkg/panics"
@@ -56,18 +56,19 @@ var runCmd = &cobra.Command{
 			routestorerfx.Module,
 			syncerfx.Module,
 			tenantstorerfx.Module,
+			quotamanagerfx.Module,
 			fx.Provide(
 				AppConfig,
 				app.ProvideLogger,
 				tablemgr.NewRoutingTableManager,
 				app.NewAPIManager,
 				app.NewMiddleware,
-				quota.NewQuotaManager,
 				app.NewMux,
 			),
 			fx.Logger(logger),
 			fx.Invoke(syncerfx.SetupDeltaSyncer),
 			fx.Invoke(tablemgr.SetupRoutingManager),
+			fx.Invoke(quotamanagerfx.SetupQuotaManager),
 			fx.Invoke(app.SetupAPIServer),
 		)
 		earsApp.Run()

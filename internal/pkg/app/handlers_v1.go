@@ -19,6 +19,7 @@ import (
 	"errors"
 	"github.com/goccy/go-yaml"
 	"github.com/xmidt-org/ears/internal/pkg/logs"
+	"github.com/xmidt-org/ears/internal/pkg/quota"
 	"github.com/xmidt-org/ears/internal/pkg/tablemgr"
 	"github.com/xmidt-org/ears/pkg/tenant"
 	"io/ioutil"
@@ -34,13 +35,15 @@ type APIManager struct {
 	muxRouter       *mux.Router
 	routingTableMgr tablemgr.RoutingTableManager
 	tenantStorer    tenant.TenantStorer
+	quotaManager    *quota.QuotaManager
 }
 
-func NewAPIManager(routingMgr tablemgr.RoutingTableManager, tenantStorer tenant.TenantStorer) (*APIManager, error) {
+func NewAPIManager(routingMgr tablemgr.RoutingTableManager, tenantStorer tenant.TenantStorer, quotaManager *quota.QuotaManager) (*APIManager, error) {
 	api := &APIManager{
 		muxRouter:       mux.NewRouter(),
 		routingTableMgr: routingMgr,
 		tenantStorer:    tenantStorer,
+		quotaManager:    quotaManager,
 	}
 	api.muxRouter.HandleFunc("/ears/version", api.versionHandler).Methods(http.MethodGet)
 	api.muxRouter.HandleFunc("/ears/v1/orgs/{orgId}/applications/{appId}/routes/{routeId}", api.addRouteHandler).Methods(http.MethodPut)
@@ -330,6 +333,8 @@ func (a *APIManager) setTenantConfigHandler(w http.ResponseWriter, r *http.Reque
 		}
 		return
 	}
+
+	a.quotaManager.PublishQuota(ctx, *tid)
 
 	resp := ItemResponse(tenantConfig)
 	resp.Respond(ctx, w)

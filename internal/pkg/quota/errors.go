@@ -12,16 +12,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// +build !integration
+package quota
 
-package db_test
+import "github.com/xmidt-org/ears/pkg/errs"
 
-import (
-	"github.com/xmidt-org/ears/internal/pkg/db"
-	"testing"
-)
+type ConfigNotFoundError struct {
+	configKey string
+}
 
-func TestInMemoryTenantStorer(t *testing.T) {
-	s := db.NewTenantInmemoryStorer()
-	testTenantStorer(s, t)
+func (e *ConfigNotFoundError) Error() string {
+	return errs.String("ConfigNotFoundError", map[string]interface{}{"configKey": e.configKey}, nil)
 }

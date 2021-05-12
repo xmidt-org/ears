@@ -73,7 +73,7 @@ if [[ $1 != "" ]]; then
 	doCheck=""
 	echo "  - Applying changes"
 else
-	echo "  - Running in check mode only"
+	echo "  - Running in check mode only, use 'addlicense.sh apply' to apply changes"
 fi
 
 ${cmd} -v \
