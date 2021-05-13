@@ -42,7 +42,6 @@ type (
 		instanceId   string
 		localSyncers map[string][]LocalSyncer
 		logger       *zerolog.Logger
-		config       config.Config
 	}
 )
 
@@ -52,7 +51,6 @@ func NewInMemoryDeltaSyncer(logger *zerolog.Logger, config config.Config) DeltaS
 
 	s := new(InmemoryDeltaSyncer)
 	s.logger = logger
-	s.config = config
 	s.localSyncers = make(map[string][]LocalSyncer, 0)
 	hostname, _ := os.Hostname()
 	s.instanceId = hostname + "_" + uuid.New().String()
@@ -60,11 +58,6 @@ func NewInMemoryDeltaSyncer(logger *zerolog.Logger, config config.Config) DeltaS
 	if !s.active {
 		logger.Info().Msg("InMemory Delta Syncer Not Activated")
 	}
-
-	syncerGroup.Lock()
-	defer syncerGroup.Unlock()
-	syncerGroup.syncers[s.instanceId] = s
-
 	return s
 }
 
@@ -137,13 +130,6 @@ func (s *InmemoryDeltaSyncer) PublishSyncRequest(ctx context.Context, tid tenant
 }
 
 func (s *InmemoryDeltaSyncer) notify(ctx context.Context, msg SyncCommand) {
-	// leave sync loop if asked
-	if msg.Cmd == EARS_STOP_LISTENING_CMD {
-		if msg.InstanceId == s.instanceId || msg.InstanceId == "" {
-			s.logger.Info().Str("op", "ListenForSyncRequests").Str("instanceId", msg.InstanceId).Msg("received stop listening message")
-			return
-		}
-	}
 	if msg.Cmd == EARS_ADD_ITEM_CMD {
 		s.logger.Info().Str("op", "ListenForSyncRequests").Str("instanceId", msg.InstanceId).Str("routeId", msg.ItemId).Str("sid", msg.Sid).Msg("received message to add route")
 
@@ -180,12 +166,18 @@ func (s *InmemoryDeltaSyncer) notify(ctx context.Context, msg SyncCommand) {
 	}
 }
 
-// StopListeningForSyncRequests stops listening for sync requests
-func (s *InmemoryDeltaSyncer) StopListeningForSyncRequests() {
-}
-
 // ListenForSyncRequests listens for sync request
 func (s *InmemoryDeltaSyncer) StartListeningForSyncRequests() {
+	syncerGroup.Lock()
+	defer syncerGroup.Unlock()
+	syncerGroup.syncers[s.instanceId] = s
+}
+
+// StopListeningForSyncRequests stops listening for sync requests
+func (s *InmemoryDeltaSyncer) StopListeningForSyncRequests() {
+	syncerGroup.Lock()
+	defer syncerGroup.Unlock()
+	delete(syncerGroup.syncers, s.instanceId)
 }
 
 // GetSubscriberCount gets number of live ears instances
@@ -197,5 +189,5 @@ func (s *InmemoryDeltaSyncer) GetInstanceCount(ctx context.Context) int {
 	s.Lock()
 	defer s.Unlock()
 
-	return len(s.localSyncers[ITEM_TYPE_ROUTE])
+	return len(syncerGroup.syncers)
 }

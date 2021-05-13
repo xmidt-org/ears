@@ -225,6 +225,8 @@ func (s *RedisDeltaSyncer) StartListeningForSyncRequests() {
 	if !s.active {
 		return
 	}
+	subscribeComplete := sync.WaitGroup{}
+	subscribeComplete.Add(1)
 	go func() {
 		ctx := context.Background()
 		ctx = logs.SubLoggerCtx(ctx, s.logger)
@@ -236,6 +238,8 @@ func (s *RedisDeltaSyncer) StartListeningForSyncRequests() {
 		defer lrc.Close()
 		pubsub := lrc.Subscribe(EARS_REDIS_SYNC_CHANNEL)
 		defer pubsub.Close()
+
+		subscribeComplete.Done()
 		for {
 			msg, err := pubsub.ReceiveMessage()
 			if err != nil {
@@ -303,6 +307,8 @@ func (s *RedisDeltaSyncer) StartListeningForSyncRequests() {
 			}
 		}
 	}()
+
+	subscribeComplete.Wait()
 }
 
 // PublishAckMessage confirm successful syncing of routing table

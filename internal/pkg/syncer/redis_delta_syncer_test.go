@@ -12,33 +12,29 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package ratelimit
+// +build integration
 
-import "github.com/xmidt-org/ears/pkg/errs"
+package syncer_test
 
-type InvalidUnitError struct {
-	BadUnit int
+import (
+	"github.com/rs/zerolog/log"
+	"github.com/spf13/viper"
+	"github.com/xmidt-org/ears/internal/pkg/config"
+	"github.com/xmidt-org/ears/internal/pkg/syncer"
+	"testing"
+)
+
+func RedisConfig() config.Config {
+	v := viper.New()
+	v.Set("ears.synchronization.endpoint", "localhost:6379")
+	v.Set("ears.synchronization.active", true)
+	return v
 }
 
-func (e *InvalidUnitError) Error() string {
-	return errs.String("InvalidUnitError", map[string]interface{}{"unit": e.BadUnit}, nil)
+func newRedisDeltaSyncer() syncer.DeltaSyncer {
+	return syncer.NewRedisDeltaSyncer(&log.Logger, RedisConfig())
 }
 
-type LimitReached struct {
-}
-
-func (e *LimitReached) Error() string {
-	return errs.String("LimitReached", nil, nil)
-}
-
-type BackendError struct {
-	Source error
-}
-
-func (e *BackendError) Error() string {
-	return errs.String("BackendError", nil, e.Source)
-}
-
-func (e *BackendError) Unwrap() error {
-	return e.Source
+func TestRedisDeltaSyncer(t *testing.T) {
+	testSyncers(newRedisDeltaSyncer, t)
 }

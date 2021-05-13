@@ -26,11 +26,12 @@ import (
 )
 
 type QuotaManager struct {
-	limiters     map[string]*QuotaLimiter
-	tenantStorer tenant.TenantStorer
-	syncer       syncer.DeltaSyncer
-	lock         *sync.Mutex
-	redisAddr    string
+	limiters           map[string]*QuotaLimiter
+	tenantStorer       tenant.TenantStorer
+	syncer             syncer.DeltaSyncer
+	lock               *sync.Mutex
+	backendLimiterType string
+	redisAddr          string
 
 	ticker *time.Ticker
 	done   context.CancelFunc
@@ -38,17 +39,27 @@ type QuotaManager struct {
 }
 
 func NewQuotaManager(tenantStorer tenant.TenantStorer, syncer syncer.DeltaSyncer, config config.Config) (*QuotaManager, error) {
-	redisAddr := config.GetString("ears.ratelimiter.endpoint")
-	if redisAddr == "" {
-		return nil, &ConfigNotFoundError{"ears.ratelimiter.endpoint"}
+	backendLimiterType := config.GetString("ears.ratelimiter.type")
+
+	if backendLimiterType != "redis" && backendLimiterType != "inmemory" {
+		return nil, &BadConfigError{"ears.ratelimiter.type", backendLimiterType}
+	}
+
+	redisAddr := ""
+	if backendLimiterType == "redis" {
+		redisAddr = config.GetString("ears.ratelimiter.endpoint")
+		if redisAddr == "" {
+			return nil, &ConfigNotFoundError{"ears.ratelimiter.endpoint"}
+		}
 	}
 
 	return &QuotaManager{
-		limiters:     make(map[string]*QuotaLimiter),
-		tenantStorer: tenantStorer,
-		syncer:       syncer,
-		lock:         &sync.Mutex{},
-		redisAddr:    redisAddr,
+		limiters:           make(map[string]*QuotaLimiter),
+		tenantStorer:       tenantStorer,
+		syncer:             syncer,
+		lock:               &sync.Mutex{},
+		backendLimiterType: backendLimiterType,
+		redisAddr:          redisAddr,
 	}, nil
 }
 
@@ -142,7 +153,7 @@ func (m *QuotaManager) getLimiter(ctx context.Context, tid tenant.Id) (*QuotaLim
 	instanceCount := m.syncer.GetInstanceCount(ctx)
 	initialRqs := tenantRqs / instanceCount
 
-	m.limiters[tid.Key()] = NewQuotaLimiter(tid, m.redisAddr, initialRqs, tenantRqs)
+	m.limiters[tid.Key()] = NewQuotaLimiter(tid, m.backendLimiterType, m.redisAddr, initialRqs, tenantRqs)
 	return limiter, nil
 }
 

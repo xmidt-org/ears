@@ -59,6 +59,7 @@ func (r *AdaptiveRateLimiter) SetLimit(newLimit int) error {
 	defer r.lock.Unlock()
 
 	r.totalRqs = newLimit
+	r.backend.SetLimit(r.totalRqs)
 	return nil
 }
 
