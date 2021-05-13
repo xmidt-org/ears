@@ -67,6 +67,10 @@ func (r *AdaptiveRateLimiter) Limit() int {
 	return r.totalRqs
 }
 
+func (r *AdaptiveRateLimiter) AdaptiveLimit() int {
+	return int(r.limiter.Limit())
+}
+
 func (r *AdaptiveRateLimiter) Take(ctx context.Context, unit int) error {
 	r.lock.Lock()
 	defer r.lock.Unlock()
@@ -122,8 +126,11 @@ func (r *AdaptiveRateLimiter) tuneRqs(ctx context.Context) error {
 	newRqs := r.currentRqs
 	if r.limitCount > 0 {
 		if newRqs*2 < r.totalRqs {
-			//looks like there are room to grow, lets ask for more quota
+			//looks like there are room to grow, lets double the quota
 			newRqs = newRqs * 2
+		} else {
+			//not as much room. Ask for midpoint between currentRqs and max
+			newRqs = (newRqs + r.totalRqs) / 2
 		}
 	} else if r.takeCount < newRqs {
 		takeCount := float32(r.takeCount)

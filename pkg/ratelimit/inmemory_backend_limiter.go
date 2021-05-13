@@ -17,18 +17,21 @@ package ratelimit
 import (
 	"context"
 	"github.com/xmidt-org/ears/pkg/tenant"
-	"golang.org/x/time/rate"
 	"sync"
 	"time"
 )
 
-var globalLimiters = make(map[string]*rate.Limiter)
+var globalLimiters = make(map[string]*InMemoryBackendLimiter)
 var lock = &sync.Mutex{}
 
 //InMemoryBackendLimiter is only for testing/unit test purpose
 type InMemoryBackendLimiter struct {
-	tid           tenant.Id
-	tenantLimiter *rate.Limiter
+	sync.Mutex
+
+	rqs  int       // request per second
+	last time.Time // last time we were polled/asked
+
+	allowance float64
 }
 
 func NewInMemoryBackendLimiter(tid tenant.Id, rqs int) *InMemoryBackendLimiter {
@@ -36,32 +39,50 @@ func NewInMemoryBackendLimiter(tid tenant.Id, rqs int) *InMemoryBackendLimiter {
 	defer lock.Unlock()
 
 	limiter, ok := globalLimiters[tid.Key()]
-	if !ok {
-		limiter = rate.NewLimiter(rate.Limit(rqs), 1)
-		globalLimiters[tid.Key()] = limiter
+	if ok {
+		return limiter
 	}
-	return &InMemoryBackendLimiter{
-		tid,
-		limiter,
-	}
+
+	limiter = &InMemoryBackendLimiter{rqs: rqs, last: time.Now()}
+	limiter.allowance = float64(rqs)
+	globalLimiters[tid.Key()] = limiter
+
+	return limiter
 }
 
 func (r *InMemoryBackendLimiter) Take(ctx context.Context, unit int) error {
-	allowed := r.tenantLimiter.AllowN(time.Now(), unit)
-	if !allowed {
+	if r.rqs == 0 {
 		return &LimitReached{}
 	}
+
+	r.Lock()
+	defer r.Unlock()
+
+	rate := float64(r.rqs)
+	now := time.Now()
+	elapsed := now.Sub(r.last)
+	r.last = now
+	r.allowance += elapsed.Seconds() * rate
+
+	if r.allowance > rate {
+		r.allowance = rate
+	}
+
+	if r.allowance < float64(unit) {
+		return &LimitReached{}
+	}
+	r.allowance -= float64(unit)
 	return nil
 }
 
 func (r *InMemoryBackendLimiter) Limit() int {
-	return int(r.tenantLimiter.Limit())
+	return r.rqs
 }
 
 func (r *InMemoryBackendLimiter) SetLimit(newLimit int) error {
 	if newLimit < 0 {
 		return &InvalidUnitError{newLimit}
 	}
-	r.tenantLimiter.SetLimit(rate.Limit(newLimit))
+	r.rqs = newLimit
 	return nil
 }
