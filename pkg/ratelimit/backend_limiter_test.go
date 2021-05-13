@@ -40,8 +40,11 @@ func testBackendLimiter(r ratelimit.RateLimiter, t *testing.T) {
 
 	ctx := context.Background()
 
-	//Empty the bucket if it starts out full
-	r.Take(ctx, 5)
+	time.Sleep(time.Second)
+	err = r.Take(ctx, 5)
+	if err != nil {
+		t.Fatalf("Fail to take 5 unit, error=%s\n", err.Error())
+	}
 
 	for i := 0; i < 5; i++ {
 		time.Sleep(200 * time.Millisecond)
