@@ -16,6 +16,7 @@ package ratelimit
 
 import (
 	"context"
+	"fmt"
 	"github.com/go-redis/redis/v8"
 	"github.com/xmidt-org/ears/pkg/tenant"
 	"math/rand"
@@ -67,6 +68,7 @@ func (r *RedisRateLimiter) Take(ctx context.Context, unit int) error {
 		if err != redis.TxFailedErr {
 			return err
 		}
+		fmt.Printf("try again\n")
 		r := rand.Float32()
 		time.Sleep(time.Millisecond * time.Duration(r*100))
 	}
@@ -101,6 +103,9 @@ func (r *RedisRateLimiter) take(ctx context.Context, unit int) error {
 		//calculate new allowance
 		currTs := time.Now()
 		elapsed := currTs.UnixNano() - refillTs
+
+		//fmt.Printf("allowance=%f elapsed=%d\n", allowance, elapsed)
+
 		allowance += float64(elapsed) * float64(r.rqs) / float64(time.Second)
 
 		//allowance cannot be bigger than quota
