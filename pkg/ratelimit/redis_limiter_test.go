@@ -12,26 +12,22 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package syncer_test
+// +build integration
+
+package ratelimit_test
 
 import (
-	"github.com/rs/zerolog/log"
-	"github.com/spf13/viper"
-	"github.com/xmidt-org/ears/internal/pkg/config"
-	"github.com/xmidt-org/ears/internal/pkg/syncer"
+	"github.com/xmidt-org/ears/pkg/ratelimit"
+	"github.com/xmidt-org/ears/pkg/tenant"
 	"testing"
 )
 
-func InMemoryConfig() config.Config {
-	v := viper.New()
-	v.Set("ears.synchronization.active", true)
-	return v
-}
+func TestRedisBackendLimiter(t *testing.T) {
+	limiter := ratelimit.NewRedisRateLimiter(
+		tenant.Id{"myOrg", "myAppblah2"},
+		"localhost:6379",
+		0,
+	)
 
-func newInMemoryDeltaSyncer() syncer.DeltaSyncer {
-	return syncer.NewInMemoryDeltaSyncer(&log.Logger, InMemoryConfig())
-}
-
-func TestInMemoryDeltaSyncer(t *testing.T) {
-	testSyncers(newInMemoryDeltaSyncer, t)
+	testBackendLimiter(limiter, t)
 }
