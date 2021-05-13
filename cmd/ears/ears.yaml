@@ -20,6 +20,7 @@ ears:
     active: yes
 
   ratelimiter:
+    type: inmemory
     endpoint: localhost:6379
 
 

@@ -41,7 +41,7 @@ func AppConfig() config.Config {
 	v.Set("ears.storage.route.type", "inmemory")
 	v.Set("ears.storage.tenant.type", "inmemory")
 	v.Set("ears.synchronization.type", "inmemory")
-	v.Set("ears.ratelimiter.endpoint", "localhost:6379")
+	v.Set("ears.ratelimiter.type", "inmemory")
 	return v
 }
 
@@ -52,7 +52,7 @@ func BadConfig() config.Config {
 	v.Set("ears.storage.route.type", "inmemory")
 	v.Set("ears.storage.tenant.type", "inmemory")
 	v.Set("ears.synchronization.type", "inmemory")
-	v.Set("ears.ratelimiter.endpoint", "localhost:6379")
+	v.Set("ears.ratelimiter.type", "inmemory")
 	return v
 }
 

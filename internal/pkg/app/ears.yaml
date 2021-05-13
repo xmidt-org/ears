@@ -17,4 +17,5 @@ ears:
     active: yes
 
   ratelimiter:
+    type: inmemory
     endpiont: localhost:6379

@@ -23,3 +23,12 @@ type ConfigNotFoundError struct {
 func (e *ConfigNotFoundError) Error() string {
 	return errs.String("ConfigNotFoundError", map[string]interface{}{"configKey": e.configKey}, nil)
 }
+
+type BadConfigError struct {
+	configKey   string
+	configValue string
+}
+
+func (e *BadConfigError) Error() string {
+	return errs.String("BadConfigError", map[string]interface{}{"configKey": e.configKey, "configValue": e.configValue}, nil)
+}

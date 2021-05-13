@@ -29,8 +29,14 @@ type QuotaLimiter struct {
 	wakeup          chan bool
 }
 
-func NewQuotaLimiter(tid tenant.Id, redisAddr string, initialRqs int, tenantRqs int) *QuotaLimiter {
-	backendLimiter := ratelimit.NewRedisRateLimiter(tid, redisAddr, tenantRqs)
+func NewQuotaLimiter(tid tenant.Id, backendLimiterType string, redisAddr string, initialRqs int, tenantRqs int) *QuotaLimiter {
+
+	var backendLimiter ratelimit.RateLimiter
+	if backendLimiterType == "redis" {
+		backendLimiter = ratelimit.NewRedisRateLimiter(tid, redisAddr, tenantRqs)
+	} else {
+		backendLimiter = ratelimit.NewInMemoryBackendLimiter(tid, tenantRqs)
+	}
 	limiter := ratelimit.NewAdaptiveRateLimiter(backendLimiter, initialRqs, tenantRqs)
 
 	return &QuotaLimiter{
