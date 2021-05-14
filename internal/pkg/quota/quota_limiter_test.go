@@ -1,0 +1,116 @@
+package quota_test
+
+import (
+	"context"
+	"errors"
+	"fmt"
+	"github.com/xmidt-org/ears/internal/pkg/quota"
+	"github.com/xmidt-org/ears/pkg/tenant"
+	"testing"
+	"time"
+)
+
+func TestQuotaLimiter(t *testing.T) {
+	limiter := quota.NewQuotaLimiter(tenant.Id{"myOrg", "myApp"}, "inmemory", "", 1, 12)
+
+	var err error
+	for i := 0; i < 3; i++ {
+		//validate that we can do 1rps
+		err = validateRps(limiter, 1)
+		if err == nil {
+			break
+		}
+		if err.Error() == "Cannot reach desired RPS" {
+			continue
+		}
+		t.Fatalf("Fail to reach the desired rps, error=%s\n", err.Error())
+	}
+	if err != nil {
+		t.Fatalf("Fail to reach the desired rps in 3 tries")
+	}
+
+	for i := 0; i < 3; i++ {
+		//validate that we can do 2rps
+		err = validateRps(limiter, 2)
+		if err == nil {
+			break
+		}
+		if err.Error() == "Cannot reach desired RPS" {
+			time.Sleep(time.Second)
+			continue
+		}
+		t.Fatalf("Fail to reach the desired rps, error=%s\n", err.Error())
+	}
+	if err != nil {
+		t.Fatalf("Fail to reach the desired rps in 3 tries")
+	}
+
+	for i := 0; i < 3; i++ {
+		//validate that we can do 8rps
+		err = validateRps(limiter, 8)
+		if err == nil {
+			break
+		}
+		if err.Error() == "Cannot reach desired RPS" {
+			continue
+		}
+		t.Fatalf("Fail to reach the desired rps, error=%s\n", err.Error())
+	}
+	if err != nil {
+		t.Fatalf("Fail to reach the desired rps in 3 tries")
+	}
+
+	limiter.SetLimit(100)
+	for i := 0; i < 10; i++ {
+		//validate that we can do 80rps
+		err = validateRps(limiter, 80)
+		if err == nil {
+			break
+		}
+		if err.Error() == "Cannot reach desired RPS" {
+			continue
+		}
+		t.Fatalf("Fail to reach the desired rps, error=%s\n", err.Error())
+	}
+	if err != nil {
+		t.Fatalf("Fail to reach the desired rps in 3 tries")
+	}
+
+	limiter.SetLimit(1000)
+	for i := 0; i < 10; i++ {
+		//validate that we can do 80rps
+		err = validateRps(limiter, 800)
+		if err == nil {
+			break
+		}
+		if err.Error() == "Cannot reach desired RPS" {
+			continue
+		}
+		t.Fatalf("Fail to reach the desired rps, error=%s\n", err.Error())
+	}
+	if err != nil {
+		t.Fatalf("Fail to reach the desired rps in 3 tries")
+	}
+}
+
+func validateRps(limiter *quota.QuotaLimiter, rps int) error {
+	ctx := context.Background()
+	ctx, _ = context.WithTimeout(ctx, 2*time.Second)
+
+	start := time.Now()
+
+	count := 0
+	for i := 0; i < rps; i++ {
+		err := limiter.Wait(ctx)
+		if err != nil {
+			return err
+		}
+		count++
+	}
+
+	fmt.Printf("elapsed time=%dms, adaptiveLimit=%d\n", time.Now().Sub(start).Milliseconds(), limiter.AdaptiveLimit())
+	if start.Add(time.Second + time.Millisecond*100).After(time.Now()) {
+		return nil
+	}
+	return errors.New("Cannot reach desired RPS")
+}
