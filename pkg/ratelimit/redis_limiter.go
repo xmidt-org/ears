@@ -16,7 +16,6 @@ package ratelimit
 
 import (
 	"context"
-	"fmt"
 	"github.com/go-redis/redis/v8"
 	"github.com/xmidt-org/ears/pkg/tenant"
 	"math/rand"
@@ -68,7 +67,6 @@ func (r *RedisRateLimiter) Take(ctx context.Context, unit int) error {
 		if err != redis.TxFailedErr {
 			return err
 		}
-		fmt.Printf("try again\n")
 		r := rand.Float32()
 		time.Sleep(time.Millisecond * time.Duration(r*100))
 	}

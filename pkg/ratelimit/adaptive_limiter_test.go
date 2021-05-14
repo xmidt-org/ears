@@ -12,20 +12,21 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package ratelimit
+package ratelimit_test
 
 import (
 	"context"
 	"errors"
 	"github.com/rs/zerolog/log"
+	"github.com/xmidt-org/ears/pkg/ratelimit"
 	"github.com/xmidt-org/ears/pkg/tenant"
 	"testing"
 	"time"
 )
 
 func TestAdaptiveRateLimiter(t *testing.T) {
-	backend := NewInMemoryBackendLimiter(tenant.Id{"myApp", "myOrg"}, 12)
-	limiter := NewAdaptiveRateLimiter(backend, 1, 12)
+	backend := ratelimit.NewInMemoryBackendLimiter(tenant.Id{"myApp", "myOrg"}, 12)
+	limiter := ratelimit.NewAdaptiveRateLimiter(backend, 1, 12)
 
 	ctx := context.Background()
 	logger := log.With().Logger()
@@ -82,7 +83,7 @@ func TestAdaptiveRateLimiter(t *testing.T) {
 	}
 }
 
-func validateRps(limiter *AdaptiveRateLimiter, rps int, ctx context.Context) error {
+func validateRps(limiter *ratelimit.AdaptiveRateLimiter, rps int, ctx context.Context) error {
 	sleepTime := time.Duration(1000000/rps) * time.Microsecond
 	for i := 0; i < rps; i++ {
 		time.Sleep(sleepTime)
@@ -94,7 +95,7 @@ func validateRps(limiter *AdaptiveRateLimiter, rps int, ctx context.Context) err
 	return nil
 }
 
-func simulateRps(limiter *AdaptiveRateLimiter, rps int, ctx context.Context) error {
+func simulateRps(limiter *ratelimit.AdaptiveRateLimiter, rps int, ctx context.Context) error {
 	sleepTime := time.Duration(1000000/rps) * time.Microsecond
 	prevLimit := limiter.AdaptiveLimit()
 	for {
