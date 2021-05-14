@@ -47,7 +47,18 @@ func TestAdaptiveRateLimiter(t *testing.T) {
 	//verify that we can take at the desired rate
 	err = validateRps(limiter, 9, ctx)
 	if err != nil {
-		t.Fatalf("Fail to validate at 8 rps, error=%s\n", err.Error())
+		t.Fatalf("Fail to validate at 9 rps, error=%s\n", err.Error())
+	}
+
+	subCtx, _ = context.WithTimeout(ctx, time.Second*5)
+	err = simulateRps(limiter, 3, subCtx)
+	if err != nil {
+		t.Fatalf("Failed to simulateRps %s\n", err.Error())
+	}
+	//verify that we can take at the desired rate
+	err = validateRps(limiter, 3, ctx)
+	if err != nil {
+		t.Fatalf("Fail to validate at 3 rps, error=%s\n", err.Error())
 	}
 
 	subCtx, _ = context.WithTimeout(ctx, time.Second*5)
@@ -71,6 +82,7 @@ func validateRps(limiter *AdaptiveRateLimiter, rps int, ctx context.Context) err
 
 func simulateRps(limiter *AdaptiveRateLimiter, rps int, ctx context.Context) error {
 	sleepTime := time.Duration(1000000/rps) * time.Microsecond
+	prevLimit := limiter.AdaptiveLimit()
 	for {
 		select {
 		case <-ctx.Done():
@@ -80,9 +92,10 @@ func simulateRps(limiter *AdaptiveRateLimiter, rps int, ctx context.Context) err
 		}
 		limiter.Take(ctx, 1)
 
-		if limiter.AdaptiveLimit() >= rps {
+		if limiter.AdaptiveLimit() >= rps && limiter.AdaptiveLimit() == prevLimit {
 			break
 		}
+		prevLimit = limiter.AdaptiveLimit()
 	}
 	return nil
 }

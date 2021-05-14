@@ -68,7 +68,7 @@ func (r *AdaptiveRateLimiter) Limit() int {
 }
 
 func (r *AdaptiveRateLimiter) AdaptiveLimit() int {
-	return int(r.limiter.Limit())
+	return r.currentRqs
 }
 
 func (r *AdaptiveRateLimiter) Take(ctx context.Context, unit int) error {
