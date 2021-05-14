@@ -25,7 +25,7 @@ import (
 //Quota limiter implements an additional Wait function
 type QuotaLimiter struct {
 	tid             tenant.Id
-	internalLimiter ratelimit.RateLimiter
+	adaptiveLimiter *ratelimit.AdaptiveRateLimiter
 	wakeup          chan bool
 }
 
@@ -41,7 +41,7 @@ func NewQuotaLimiter(tid tenant.Id, backendLimiterType string, redisAddr string,
 
 	return &QuotaLimiter{
 		tid:             tid,
-		internalLimiter: limiter,
+		adaptiveLimiter: limiter,
 		wakeup:          make(chan bool),
 	}
 }
@@ -49,7 +49,7 @@ func NewQuotaLimiter(tid tenant.Id, backendLimiterType string, redisAddr string,
 func (r *QuotaLimiter) Wait(ctx context.Context) error {
 	for {
 		err := r.Take(ctx, 1)
-		if err != nil {
+		if err == nil {
 			return nil
 		}
 		sleepTO := time.Second * 5
@@ -71,11 +71,15 @@ func (r *QuotaLimiter) Wait(ctx context.Context) error {
 }
 
 func (r *QuotaLimiter) Take(ctx context.Context, unit int) error {
-	return r.internalLimiter.Take(ctx, unit)
+	return r.adaptiveLimiter.Take(ctx, unit)
 }
 
 func (r *QuotaLimiter) Limit() int {
-	return r.internalLimiter.Limit()
+	return r.adaptiveLimiter.Limit()
+}
+
+func (r *QuotaLimiter) AdaptiveLimit() int {
+	return r.adaptiveLimiter.AdaptiveLimit()
 }
 
 func (r *QuotaLimiter) SetLimit(newLimit int) error {
@@ -84,7 +88,7 @@ func (r *QuotaLimiter) SetLimit(newLimit int) error {
 		return nil
 	}
 
-	err := r.SetLimit(newLimit)
+	err := r.adaptiveLimiter.SetLimit(newLimit)
 	if err != nil {
 		return err
 	}

@@ -110,7 +110,7 @@ func (r *AdaptiveRateLimiter) initLimiter(ctx context.Context) error {
 		}
 		return &BackendError{err}
 	}
-	r.limiter = rate.NewLimiter(rate.Limit(r.initialRqs), 1)
+	r.limiter = rate.NewLimiter(rate.Limit(r.initialRqs), r.initialRqs)
 	r.currentRqs = r.initialRqs
 	r.lastTune = time.Now()
 	return nil
@@ -180,6 +180,7 @@ func (r *AdaptiveRateLimiter) tuneRqs(ctx context.Context) error {
 		Msg("Updating new ratelimit")
 
 	r.limiter.SetLimit(rate.Limit(newRqs))
+	r.limiter.SetBurst(newRqs)
 	r.currentRqs = newRqs
 	return nil
 }
