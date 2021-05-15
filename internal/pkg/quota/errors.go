@@ -32,3 +32,11 @@ type BadConfigError struct {
 func (e *BadConfigError) Error() string {
 	return errs.String("BadConfigError", map[string]interface{}{"configKey": e.configKey, "configValue": e.configValue}, nil)
 }
+
+type BadStateError struct {
+	message string
+}
+
+func (e *BadStateError) Error() string {
+	return errs.String("BadStateError", map[string]interface{}{"message": e.message}, nil)
+}

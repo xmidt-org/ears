@@ -64,6 +64,8 @@ func NewQuotaManager(tenantStorer tenant.TenantStorer, syncer syncer.DeltaSyncer
 }
 
 func (m *QuotaManager) Start() {
+	m.syncer.RegisterLocalSyncer("tenant", m)
+
 	//Start backup quota syncer that wakes up every minute to sync on tenant quota
 	ticker := time.NewTicker(time.Minute)
 	ctx := context.Background()
@@ -76,9 +78,9 @@ func (m *QuotaManager) Start() {
 	go func() {
 		for {
 			select {
-			case <-ctx.Done():
+			case <-m.ctx.Done():
 				return
-			case <-ticker.C:
+			case <-m.ticker.C:
 				m.syncAllItems()
 			}
 		}
@@ -86,6 +88,8 @@ func (m *QuotaManager) Start() {
 }
 
 func (m *QuotaManager) Stop() {
+	m.syncer.UnregisterLocalSyncer("tenant", m)
+
 	if m.ticker != nil {
 		m.ticker.Stop()
 		m.done()
@@ -99,6 +103,14 @@ func (m *QuotaManager) Wait(ctx context.Context, tid tenant.Id) error {
 		return nil
 	}
 	return limiter.Wait(ctx)
+}
+
+func (m *QuotaManager) TenantLimit(ctx context.Context, tid tenant.Id) int {
+	limiter, err := m.getLimiter(ctx, tid)
+	if err != nil {
+		return 0
+	}
+	return limiter.Limit()
 }
 
 func (m *QuotaManager) SyncItem(ctx context.Context, tid tenant.Id, itemId string, add bool) error {
@@ -151,9 +163,14 @@ func (m *QuotaManager) getLimiter(ctx context.Context, tid tenant.Id) (*QuotaLim
 	}
 
 	instanceCount := m.syncer.GetInstanceCount(ctx)
+	if instanceCount == 0 {
+		return nil, &BadStateError{"Zero ears instance in cluster"}
+	}
+
 	initialRqs := tenantRqs / instanceCount
 
-	m.limiters[tid.Key()] = NewQuotaLimiter(tid, m.backendLimiterType, m.redisAddr, initialRqs, tenantRqs)
+	limiter = NewQuotaLimiter(tid, m.backendLimiterType, m.redisAddr, initialRqs, tenantRqs)
+	m.limiters[tid.Key()] = limiter
 	return limiter, nil
 }
 
