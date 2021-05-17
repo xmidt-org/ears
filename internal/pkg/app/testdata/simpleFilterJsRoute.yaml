@@ -24,8 +24,9 @@ filterChain:
     config:
       source: |-
         var event = {};
-        event.payload = _.payload;
-        event.metadata =  _.metadata;
+        event.payload = _.event.payload;
+        event.metadata =  _.event.metadata;
         event.payload.tag = "ears";
+        _.logInfo("logging info from ears filter");
         return event;
 deliveryMode: whoCares

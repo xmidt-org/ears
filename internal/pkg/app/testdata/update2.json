@@ -1,0 +1,21 @@
+{
+  "id": "update101",
+  "orgId": "comcast",
+  "appId": "xfi",
+  "userId": "boris",
+  "name": "kafkaRoute",
+  "receiver": {
+    "plugin": "kafka",
+    "name": "myKafkaReceiver",
+    "config": {
+      "groupId": "myGroup"
+    }
+  },
+  "sender": {
+    "plugin": "kafka",
+    "name": "myKafkaSender",
+    "config": {
+    }
+  },
+  "deliveryMode": "whoCares"
+}

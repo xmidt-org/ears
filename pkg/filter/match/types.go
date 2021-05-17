@@ -16,6 +16,7 @@ package match
 
 import (
 	"github.com/xmidt-org/ears/pkg/event"
+	"github.com/xorcare/pointer"
 )
 
 type Matcher interface {
@@ -37,23 +38,26 @@ const (
 type MatcherType int
 
 const (
-	MatcherUnknown MatcherType = iota // unknown
-	MatcherRegex                      // regex
-	MatcherPattern                    // pattern
+	MatcherUnknown      MatcherType = iota // unknown
+	MatcherRegex                           // regex
+	MatcherPattern                         // pattern
+	MatcherPatternRegex                    // patternregex
 )
 
 // Config can be passed into NewFilter() in order to configure
 // the behavior of the sender.
 type Config struct {
-	Mode    ModeType    `json:"mode,omitempty"`
-	Matcher MatcherType `json:"matcher,omitempty"`
-	Pattern interface{} `json:"pattern,omitempty"`
+	Mode    ModeType     `json:"mode,omitempty"`
+	Matcher MatcherType  `json:"matcher,omitempty"`
+	Pattern interface{}  `json:"pattern,omitempty"`
+	ExactArrayMatch *bool `json:"exactArrayMatch,omitempty"`
 }
 
 var DefaultConfig = Config{
 	Mode:    ModeAllow,
 	Matcher: MatcherRegex,
 	Pattern: `^.*$`,
+	ExactArrayMatch: pointer.Bool(true),
 }
 
 type Filter struct {

@@ -1,0 +1,20 @@
+{
+  "id": "update101",
+  "userId": "boris",
+  "name": "redisRoute",
+  "receiver": {
+    "plugin": "redis",
+    "name": "myRedisReceiver",
+    "config": {
+      "channel" : "ears_redis_route"
+    }
+  },
+  "sender": {
+    "plugin": "redis",
+    "name": "myRedisSender",
+    "config": {
+      "channel" : "ears_redis_route"
+    }
+  },
+  "deliveryMode": "whoCares"
+}

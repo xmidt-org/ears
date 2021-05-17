@@ -195,6 +195,9 @@ var _ Sender = &SenderMock{}
 // 			SendFunc: func(e event.Event)  {
 // 				panic("mock out the Send method")
 // 			},
+// 			StopSendingFunc: func(ctx context.Context)  {
+// 				panic("mock out the StopSending method")
+// 			},
 // 			UnwrapFunc: func() Sender {
 // 				panic("mock out the Unwrap method")
 // 			},
@@ -208,6 +211,9 @@ type SenderMock struct {
 	// SendFunc mocks the Send method.
 	SendFunc func(e event.Event)
 
+	// StopSendingFunc mocks the StopSending method.
+	StopSendingFunc func(ctx context.Context)
+
 	// UnwrapFunc mocks the Unwrap method.
 	UnwrapFunc func() Sender
 
@@ -218,12 +224,18 @@ type SenderMock struct {
 			// E is the e argument value.
 			E event.Event
 		}
+		// StopSending holds details about calls to the StopSending method.
+		StopSending []struct {
+			// Ctx is the ctx argument value.
+			Ctx context.Context
+		}
 		// Unwrap holds details about calls to the Unwrap method.
 		Unwrap []struct {
 		}
 	}
-	lockSend   sync.RWMutex
-	lockUnwrap sync.RWMutex
+	lockSend        sync.RWMutex
+	lockStopSending sync.RWMutex
+	lockUnwrap      sync.RWMutex
 }
 
 // Send calls SendFunc.
@@ -242,9 +254,6 @@ func (mock *SenderMock) Send(e event.Event) {
 	mock.SendFunc(e)
 }
 
-func (mock *SenderMock) StopSending(ctx context.Context) {
-}
-
 // SendCalls gets all the calls that were made to Send.
 // Check the length with:
 //     len(mockedSender.SendCalls())
@@ -257,6 +266,37 @@ func (mock *SenderMock) SendCalls() []struct {
 	mock.lockSend.RLock()
 	calls = mock.calls.Send
 	mock.lockSend.RUnlock()
+	return calls
+}
+
+// StopSending calls StopSendingFunc.
+func (mock *SenderMock) StopSending(ctx context.Context) {
+	if mock.StopSendingFunc == nil {
+		panic("SenderMock.StopSendingFunc: method is nil but Sender.StopSending was just called")
+	}
+	callInfo := struct {
+		Ctx context.Context
+	}{
+		Ctx: ctx,
+	}
+	mock.lockStopSending.Lock()
+	mock.calls.StopSending = append(mock.calls.StopSending, callInfo)
+	mock.lockStopSending.Unlock()
+	mock.StopSendingFunc(ctx)
+}
+
+// StopSendingCalls gets all the calls that were made to StopSending.
+// Check the length with:
+//     len(mockedSender.StopSendingCalls())
+func (mock *SenderMock) StopSendingCalls() []struct {
+	Ctx context.Context
+} {
+	var calls []struct {
+		Ctx context.Context
+	}
+	mock.lockStopSending.RLock()
+	calls = mock.calls.StopSending
+	mock.lockStopSending.RUnlock()
 	return calls
 }
 

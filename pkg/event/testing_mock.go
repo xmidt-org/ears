@@ -27,6 +27,9 @@ var _ Event = &EventMock{}
 // 			ContextFunc: func() context.Context {
 // 				panic("mock out the Context method")
 // 			},
+// 			GetPathValueFunc: func(path string) (interface{}, interface{}, string) {
+// 				panic("mock out the GetPathValue method")
+// 			},
 // 			MetadataFunc: func() interface{} {
 // 				panic("mock out the Metadata method")
 // 			},
@@ -36,14 +39,14 @@ var _ Event = &EventMock{}
 // 			PayloadFunc: func() interface{} {
 // 				panic("mock out the Payload method")
 // 			},
-// 			SetAckFunc: func(handledFn func(), errFn func(error)) error {
-// 				panic("mock out the SetAck method")
-// 			},
 // 			SetContextFunc: func(ctx context.Context) error {
 // 				panic("mock out the SetContext method")
 // 			},
 // 			SetMetadataFunc: func(metadata interface{}) error {
 // 				panic("mock out the SetMetadata method")
+// 			},
+// 			SetPathValueFunc: func(path string, val interface{}, createPath bool) (interface{}, string) {
+// 				panic("mock out the SetPathValue method")
 // 			},
 // 			SetPayloadFunc: func(payload interface{}) error {
 // 				panic("mock out the SetPayload method")
@@ -64,6 +67,9 @@ type EventMock struct {
 	// ContextFunc mocks the Context method.
 	ContextFunc func() context.Context
 
+	// GetPathValueFunc mocks the GetPathValue method.
+	GetPathValueFunc func(path string) (interface{}, interface{}, string)
+
 	// MetadataFunc mocks the Metadata method.
 	MetadataFunc func() interface{}
 
@@ -73,14 +79,14 @@ type EventMock struct {
 	// PayloadFunc mocks the Payload method.
 	PayloadFunc func() interface{}
 
-	// SetAckFunc mocks the SetAck method.
-	SetAckFunc func(handledFn func(), errFn func(error)) error
-
 	// SetContextFunc mocks the SetContext method.
 	SetContextFunc func(ctx context.Context) error
 
 	// SetMetadataFunc mocks the SetMetadata method.
 	SetMetadataFunc func(metadata interface{}) error
+
+	// SetPathValueFunc mocks the SetPathValue method.
+	SetPathValueFunc func(path string, val interface{}, createPath bool) (interface{}, string)
 
 	// SetPayloadFunc mocks the SetPayload method.
 	SetPayloadFunc func(payload interface{}) error
@@ -98,6 +104,11 @@ type EventMock struct {
 		// Context holds details about calls to the Context method.
 		Context []struct {
 		}
+		// GetPathValue holds details about calls to the GetPathValue method.
+		GetPathValue []struct {
+			// Path is the path argument value.
+			Path string
+		}
 		// Metadata holds details about calls to the Metadata method.
 		Metadata []struct {
 		}
@@ -109,13 +120,6 @@ type EventMock struct {
 		// Payload holds details about calls to the Payload method.
 		Payload []struct {
 		}
-		// SetAck holds details about calls to the SetAck method.
-		SetAck []struct {
-			// HandledFn is the handledFn argument value.
-			HandledFn func()
-			// ErrFn is the errFn argument value.
-			ErrFn func(error)
-		}
 		// SetContext holds details about calls to the SetContext method.
 		SetContext []struct {
 			// Ctx is the ctx argument value.
@@ -126,22 +130,32 @@ type EventMock struct {
 			// Metadata is the metadata argument value.
 			Metadata interface{}
 		}
+		// SetPathValue holds details about calls to the SetPathValue method.
+		SetPathValue []struct {
+			// Path is the path argument value.
+			Path string
+			// Val is the val argument value.
+			Val interface{}
+			// CreatePath is the createPath argument value.
+			CreatePath bool
+		}
 		// SetPayload holds details about calls to the SetPayload method.
 		SetPayload []struct {
 			// Payload is the payload argument value.
 			Payload interface{}
 		}
 	}
-	lockAck         sync.RWMutex
-	lockClone       sync.RWMutex
-	lockContext     sync.RWMutex
-	lockMetadata    sync.RWMutex
-	lockNack        sync.RWMutex
-	lockPayload     sync.RWMutex
-	lockSetAck      sync.RWMutex
-	lockSetContext  sync.RWMutex
-	lockSetMetadata sync.RWMutex
-	lockSetPayload  sync.RWMutex
+	lockAck          sync.RWMutex
+	lockClone        sync.RWMutex
+	lockContext      sync.RWMutex
+	lockGetPathValue sync.RWMutex
+	lockMetadata     sync.RWMutex
+	lockNack         sync.RWMutex
+	lockPayload      sync.RWMutex
+	lockSetContext   sync.RWMutex
+	lockSetMetadata  sync.RWMutex
+	lockSetPathValue sync.RWMutex
+	lockSetPayload   sync.RWMutex
 }
 
 // Ack calls AckFunc.
@@ -224,6 +238,37 @@ func (mock *EventMock) ContextCalls() []struct {
 	mock.lockContext.RLock()
 	calls = mock.calls.Context
 	mock.lockContext.RUnlock()
+	return calls
+}
+
+// GetPathValue calls GetPathValueFunc.
+func (mock *EventMock) GetPathValue(path string) (interface{}, interface{}, string) {
+	if mock.GetPathValueFunc == nil {
+		panic("EventMock.GetPathValueFunc: method is nil but Event.GetPathValue was just called")
+	}
+	callInfo := struct {
+		Path string
+	}{
+		Path: path,
+	}
+	mock.lockGetPathValue.Lock()
+	mock.calls.GetPathValue = append(mock.calls.GetPathValue, callInfo)
+	mock.lockGetPathValue.Unlock()
+	return mock.GetPathValueFunc(path)
+}
+
+// GetPathValueCalls gets all the calls that were made to GetPathValue.
+// Check the length with:
+//     len(mockedEvent.GetPathValueCalls())
+func (mock *EventMock) GetPathValueCalls() []struct {
+	Path string
+} {
+	var calls []struct {
+		Path string
+	}
+	mock.lockGetPathValue.RLock()
+	calls = mock.calls.GetPathValue
+	mock.lockGetPathValue.RUnlock()
 	return calls
 }
 
@@ -310,41 +355,6 @@ func (mock *EventMock) PayloadCalls() []struct {
 	return calls
 }
 
-// SetAck calls SetAckFunc.
-func (mock *EventMock) SetAck(handledFn func(), errFn func(error)) error {
-	if mock.SetAckFunc == nil {
-		panic("EventMock.SetAckFunc: method is nil but Event.SetAck was just called")
-	}
-	callInfo := struct {
-		HandledFn func()
-		ErrFn     func(error)
-	}{
-		HandledFn: handledFn,
-		ErrFn:     errFn,
-	}
-	mock.lockSetAck.Lock()
-	mock.calls.SetAck = append(mock.calls.SetAck, callInfo)
-	mock.lockSetAck.Unlock()
-	return mock.SetAckFunc(handledFn, errFn)
-}
-
-// SetAckCalls gets all the calls that were made to SetAck.
-// Check the length with:
-//     len(mockedEvent.SetAckCalls())
-func (mock *EventMock) SetAckCalls() []struct {
-	HandledFn func()
-	ErrFn     func(error)
-} {
-	var calls []struct {
-		HandledFn func()
-		ErrFn     func(error)
-	}
-	mock.lockSetAck.RLock()
-	calls = mock.calls.SetAck
-	mock.lockSetAck.RUnlock()
-	return calls
-}
-
 // SetContext calls SetContextFunc.
 func (mock *EventMock) SetContext(ctx context.Context) error {
 	if mock.SetContextFunc == nil {
@@ -404,6 +414,45 @@ func (mock *EventMock) SetMetadataCalls() []struct {
 	mock.lockSetMetadata.RLock()
 	calls = mock.calls.SetMetadata
 	mock.lockSetMetadata.RUnlock()
+	return calls
+}
+
+// SetPathValue calls SetPathValueFunc.
+func (mock *EventMock) SetPathValue(path string, val interface{}, createPath bool) (interface{}, string) {
+	if mock.SetPathValueFunc == nil {
+		panic("EventMock.SetPathValueFunc: method is nil but Event.SetPathValue was just called")
+	}
+	callInfo := struct {
+		Path       string
+		Val        interface{}
+		CreatePath bool
+	}{
+		Path:       path,
+		Val:        val,
+		CreatePath: createPath,
+	}
+	mock.lockSetPathValue.Lock()
+	mock.calls.SetPathValue = append(mock.calls.SetPathValue, callInfo)
+	mock.lockSetPathValue.Unlock()
+	return mock.SetPathValueFunc(path, val, createPath)
+}
+
+// SetPathValueCalls gets all the calls that were made to SetPathValue.
+// Check the length with:
+//     len(mockedEvent.SetPathValueCalls())
+func (mock *EventMock) SetPathValueCalls() []struct {
+	Path       string
+	Val        interface{}
+	CreatePath bool
+} {
+	var calls []struct {
+		Path       string
+		Val        interface{}
+		CreatePath bool
+	}
+	mock.lockSetPathValue.RLock()
+	calls = mock.calls.SetPathValue
+	mock.lockSetPathValue.RUnlock()
 	return calls
 }
 

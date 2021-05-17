@@ -42,7 +42,7 @@
       "plugin" : "unwrap",
       "name" : "simpleFilterUnwrapRouteUnwrapper",
       "config" : {
-        "unwrapPath" : "content"
+        "path" : ".content"
       }
     }
   ],

@@ -19,72 +19,45 @@ import (
 	"fmt"
 	"github.com/xmidt-org/ears/pkg/event"
 	"github.com/xmidt-org/ears/pkg/filter"
-	"strings"
 )
 
-// a SplitFilter splits and event into two or more events
-/*type SplitFilter struct {
-	SplitPath string // path to split array in payload
-}*/
-
 func NewFilter(config interface{}) (*Filter, error) {
-
 	cfg, err := NewConfig(config)
-
 	if err != nil {
 		return nil, &filter.InvalidConfigError{
 			Err: err,
 		}
 	}
-
 	cfg = cfg.WithDefaults()
-
 	err = cfg.Validate()
 	if err != nil {
 		return nil, err
 	}
-
 	f := &Filter{
 		config: *cfg,
 	}
-
 	return f, nil
 }
 
 // Filter splits an event containing an array into multiple events
 func (f *Filter) Filter(evt event.Event) []event.Event {
-	//TODO: add validation logic to filter
-	//TODO: maybe replace with jq filter
 	if f == nil {
 		evt.Nack(&filter.InvalidConfigError{
 			Err: fmt.Errorf("<nil> pointer filter"),
 		})
 		return nil
 	}
-	events := []event.Event{}
-	if f.config.UnwrapPath == "" {
-		events = append(events, evt)
-	} else if f.config.UnwrapPath == "." {
-		events = append(events, evt)
-	} else {
-		path := strings.Split(f.config.UnwrapPath, ".")
-		obj := evt.Payload()
-		for _, p := range path {
-			var ok bool
-			obj, ok = obj.(map[string]interface{})[p]
-			if !ok {
-				evt.Nack(errors.New("invalid object in filter path"))
-				return nil
-			}
-		}
-		err := evt.SetPayload(obj)
-		if err != nil {
-			evt.Nack(err)
-			return nil
-		}
-		events = append(events, evt)
+	obj, _, _ := evt.GetPathValue(f.config.Path)
+	if obj == nil {
+		evt.Nack(errors.New("nil object at path " + f.config.Path))
+		return []event.Event{}
 	}
-	return events
+	err := evt.SetPayload(obj)
+	if err != nil {
+		evt.Nack(err)
+		return nil
+	}
+	return []event.Event{evt}
 }
 
 func (f *Filter) Config() Config {

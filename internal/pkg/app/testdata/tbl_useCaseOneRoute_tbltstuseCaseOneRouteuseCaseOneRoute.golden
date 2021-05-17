@@ -1,0 +1,152 @@
+{
+  "status": {
+    "code": 200,
+    "message": "OK"
+  },
+  "item": {
+    "deliveryMode": "whoCares",
+    "filterChain": [
+      {
+        "config": {
+          "matcher": "patternregex",
+          "mode": "allow",
+          "pattern": {
+            "TopicArn": ".*_ACCOUNT$|.*_ACCOUNTPRODUCT$"
+          }
+        },
+        "name": "useCaseOneRouteRegexMatcher",
+        "plugin": "match"
+      },
+      {
+        "config": {
+          "fromPath": ".Message"
+        },
+        "name": "useCaseOneRouteDecoder",
+        "plugin": "decode"
+      },
+      {
+        "config": {
+          "matcher": "pattern",
+          "mode": "allow",
+          "pattern": {
+            "Message": {
+              "header": {
+                "partner": "Partner",
+                "type": "ACCOUNT_PRODUCT"
+              }
+            }
+          }
+        },
+        "name": "useCaseOneRouteAccountMatcher",
+        "plugin": "match"
+      },
+      {
+        "config": {
+          "transformation": {
+            "message": {
+              "op": "process",
+              "payload": {
+                "body": {
+                  "addedAccountProducts": "{.Message.body.addedAccountProducts}",
+                  "removedAccountProducts": "{.Message.body.removedAccountProducts}"
+                },
+                "metadata": {
+                  "event": "{.Message.header.event}",
+                  "id": "{.Message.body.account.id}",
+                  "timestamp": "{.Message.header.timestampMs}",
+                  "type": "{.Message.header.type}"
+                }
+              },
+              "uses": "xbo_account"
+            },
+            "to": {
+              "app": "myapp",
+              "location": "{.Message.body.account.id}"
+            },
+            "tx": {
+              "traceId": "{trace.id}"
+            }
+          }
+        },
+        "name": "useCaseOneRouteTransformer",
+        "plugin": "transform"
+      },
+      {
+        "config": {
+          "matcher": "pattern",
+          "mode": "deny",
+          "pattern": {
+            "message": {
+              "payload": {
+                "body": {
+                  "addedAccountProducts": [],
+                  "removedAccountProducts": []
+                }
+              }
+            }
+          }
+        },
+        "name": "useCaseOneRouteEmptyMatcher",
+        "plugin": "match"
+      },
+      {
+        "config": {
+          "fromPath": ".to.location",
+          "hashAlgorithm": "fnv",
+          "toPath": "metadata.kafka.partition"
+        },
+        "name": "useCaseOneRouteHasher",
+        "plugin": "hash"
+      },
+      {
+        "name": "useCaseOneRouteLogger",
+        "plugin": "log"
+      }
+    ],
+    "id": "u101",
+    "name": "tbltstuseCaseOneRouteuseCaseOneRoute",
+    "receiver": {
+      "config": {
+        "intervalMs": 10,
+        "maxHistory": 100,
+        "payload": {
+          "Message": "ewogICJoZWFkZXIiOiB7CiAgICAidHlwZSI6ICJBQ0NPVU5UX1BST0RVQ1QiLAogICAgImV2ZW50IjogIkNSRUFURSIsCiAgICAicGFydG5lciI6ICJQYXJ0bmVyIiwKICAgICJ0cmFja2luZ0lkIjogIjEyMyIsCiAgICAidGltZXN0YW1wIjogIk5vdiAxOSwgMjAyMCA3OjQzOjAyIFBNIiwKICAgICJ0aW1lc3RhbXBNcyI6IDE2MDU4MTQ5ODI1MDMsCiAgICAic2NoZW1hIjogIjEuMCIsCiAgICAiYm9keUVuY3J5cHRlZCI6IGZhbHNlLAogICAgInN1Y2Nlc3MiOiB0cnVlCiAgfSwKICAiYm9keSI6IHsKICAgICJhY2NvdW50IjogewogICAgICAiaWQiOiAiMTIzIiwKICAgICAgInNvdXJjZSI6ICJBQkMiLAogICAgICAic291cmNlSWQiOiAiMTIzLklNUyIsCiAgICAgICJiaWxsaW5nQWNjb3VudElkIjogIjEyMyIsCiAgICAgICJzdGF0dXMiOiAiQWN0aXZlIiwKICAgICAgImVuYWJsZWQiOiB0cnVlCiAgICB9LAogICAgImFkZGVkQWNjb3VudFByb2R1Y3RzIjogWwogICAgICB7CiAgICAgICAgInNvdXJjZSI6ICJBQkMiLAogICAgICAgICJhY2NvdW50UHJvZHVjdElkIjogImEuYiIKICAgICAgfQogICAgXSwKICAgICJyZW1vdmVkQWNjb3VudFByb2R1Y3RzIjogW10sCiAgICAiYWNjb3VudFByb2R1Y3RzIjogWwogICAgICB7CiAgICAgICAgInNvdXJjZSI6ICJBQkMiLAogICAgICAgICJhY2NvdW50UHJvZHVjdElkIjogImEtYiIKICAgICAgfSwKICAgICAgewogICAgICAgICJzb3VyY2UiOiAiQUJDIiwKICAgICAgICAiYWNjb3VudFByb2R1Y3RJZCI6ICJhLmIiCiAgICAgIH0sCiAgICAgIHsKICAgICAgICAic291cmNlIjogIkFCQyIsCiAgICAgICAgImFjY291bnRQcm9kdWN0SWQiOiAiYS5iIgogICAgICB9LAogICAgICB7CiAgICAgICAgInNvdXJjZSI6ICJERUYiLAogICAgICAgICJhY2NvdW50UHJvZHVjdElkIjogImEuYiIKICAgICAgfSwKICAgICAgewogICAgICAgICJzb3VyY2UiOiAiQUJDIiwKICAgICAgICAiYWNjb3VudFByb2R1Y3RJZCI6ICJhLmIiCiAgICAgIH0sCiAgICAgIHsKICAgICAgICAic291cmNlIjogIkFCQyIsCiAgICAgICAgImFjY291bnRQcm9kdWN0SWQiOiAiYS5iIgogICAgICB9LAogICAgICB7CiAgICAgICAgInNvdXJjZSI6ICJBQkMiLAogICAgICAgICJhY2NvdW50UHJvZHVjdElkIjogImEuYiIKICAgICAgfSwKICAgICAgewogICAgICAgICJzb3VyY2UiOiAiR0hJIiwKICAgICAgICAiYWNjb3VudFByb2R1Y3RJZCI6ICJhLmIiCiAgICAgIH0KICAgIF0KICB9Cn0=",
+          "MessageAttributes": {
+            "header.event": {
+              "Type": "String",
+              "Value": "CREATE"
+            },
+            "header.partner": {
+              "Type": "String",
+              "Value": "Partner"
+            }
+          },
+          "MessageId": "e684b540-9101-530b-9e85-ed705c063207",
+          "Signature": "signature",
+          "SignatureVersion": "1",
+          "SigningCertURL": "http://123.pem",
+          "Timestamp": "2020-11-19T19:43:03.236Z",
+          "TopicArn": "topicarn_ACCOUNT",
+          "Type": "Notification",
+          "UnsubscribeURL": "http://unsubscribe"
+        },
+        "rounds": 1
+      },
+      "name": "tbltstuseCaseOneRouteuseCaseRouteReceiver",
+      "plugin": "debug"
+    },
+    "sender": {
+      "config": {
+        "destination": "stdout",
+        "maxHistory": 100
+      },
+      "name": "tbltstuseCaseOneRouteuseCaseOneRouteSender",
+      "plugin": "debug"
+    },
+    "tenant": {
+      "appId": "myapp",
+      "orgId": "myorg"
+    },
+    "userId": "boris"
+  }
+}

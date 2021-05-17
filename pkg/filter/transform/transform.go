@@ -42,8 +42,6 @@ func NewFilter(config interface{}) (*Filter, error) {
 
 // Filter splits an event containing an array into multiple events
 func (f *Filter) Filter(evt event.Event) []event.Event {
-	//TODO: add validation logic to filter
-	//TODO: maybe replace with jq filter
 	if f == nil {
 		evt.Nack(&filter.InvalidConfigError{
 			Err: fmt.Errorf("<nil> pointer filter"),
@@ -54,13 +52,9 @@ func (f *Filter) Filter(evt event.Event) []event.Event {
 	if f.config.Transformation == nil {
 		events = append(events, evt)
 	} else {
-		thisTransfrom := deepcopy.Copy(f.config.Transformation)
-		transform(evt.Payload(), thisTransfrom, nil, "", -1)
-		err := evt.SetPayload(thisTransfrom)
-		if err != nil {
-			evt.Nack(err)
-			return nil
-		}
+		thisTransform := deepcopy.Copy(f.config.Transformation)
+		transform(evt, thisTransform, nil, "", -1)
+		evt.SetPathValue(f.config.ToPath, thisTransform, true)
 		events = append(events, evt)
 	}
 	return events
@@ -73,32 +67,24 @@ func (f *Filter) Config() Config {
 	return f.config
 }
 
-// transform is a helper function to perfrom a simple transformation
-func transform(a interface{}, t interface{}, parent interface{}, key string, idx int) {
-	if a == nil || t == nil {
+// transform is a helper function to perform a simple transformation
+func transform(evt event.Event, t interface{}, parent interface{}, key string, idx int) {
+	if evt == nil || t == nil {
 		return
 	}
 	switch t.(type) {
 	case map[string]interface{}:
 		for key, st := range t.(map[string]interface{}) {
-			transform(a, st, t, key, -1)
+			transform(evt, st, t, key, -1)
 		}
 	case []interface{}:
 		for idx, st := range t.([]interface{}) {
-			transform(a, st, t, "", idx)
+			transform(evt, st, t, "", idx)
 		}
 	case string:
 		expr := t.(string)
 		if strings.HasPrefix(expr, "{") && strings.HasSuffix(expr, "}") {
-			path := strings.Split(expr[1:len(expr)-1], ".")
-			repl := a
-			for _, p := range path {
-				var ok bool
-				repl, ok = repl.(map[string]interface{})[p]
-				if !ok {
-					break
-				}
-			}
+			repl, _, _ := evt.GetPathValue(expr[1:len(expr)-1])
 			if parent != nil {
 				if key != "" {
 					parent.(map[string]interface{})[key] = repl

@@ -25,6 +25,16 @@ import (
 //go:generate rm -f testing_mock.go
 //go:generate moq -out testing_mock.go . Event
 
+// prefixes for json path expressions
+
+const (
+	PAYLOAD = "payload"
+	METADATA = "metadata"
+	TRACE = "trace"
+	TENANT = "tenant"
+)
+
+
 type Event interface {
 	//Get the event payload
 	Payload() interface{}
@@ -42,6 +52,14 @@ type Event interface {
 	//Set the event metadata
 	//Will return an error if the event is done
 	SetMetadata(metadata interface{}) error
+
+	// SetPathValue sets object value at path in either payload or metadata and returns its parent
+	// object and parent key if those exist
+	SetPathValue(path string, val interface{}, createPath bool) (interface{}, string)
+
+	// GetPathValue finds object at path in either payload or metadata and returns such object
+	// if one exists along with its parent object and parent key if those exist
+	GetPathValue(path string) (interface{}, interface{}, string)
 
 	//Replace the current event context
 	//Will return an error if the event is done

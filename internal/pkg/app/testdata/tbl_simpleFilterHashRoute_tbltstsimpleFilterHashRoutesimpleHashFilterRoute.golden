@@ -1,0 +1,112 @@
+{
+  "status": {
+    "code": 200,
+    "message": "OK"
+  },
+  "item": {
+    "deliveryMode": "whoCares",
+    "filterChain": [
+      {
+        "config": {
+          "encoding": "hex",
+          "fromPath": ".content.accountId",
+          "hashAlgorithm": "md5",
+          "toPath": ".content.hash.accountIdHashMd5Hex"
+        },
+        "name": "simpleHashMd5HexFilterRouteFilter",
+        "plugin": "hash"
+      },
+      {
+        "config": {
+          "encoding": "base64",
+          "fromPath": ".content.accountId",
+          "hashAlgorithm": "md5",
+          "toPath": ".content.hash.accountIdHashMd5Base64"
+        },
+        "name": "simpleHashMd5B64FilterRouteFilter",
+        "plugin": "hash"
+      },
+      {
+        "config": {
+          "encoding": "hex",
+          "fromPath": ".content.accountId",
+          "hashAlgorithm": "sha1",
+          "toPath": ".content.hash.accountIdHashSha1Hex"
+        },
+        "name": "simpleHashSha1HexFilterRouteFilter",
+        "plugin": "hash"
+      },
+      {
+        "config": {
+          "encoding": "base64",
+          "fromPath": ".content.accountId",
+          "hashAlgorithm": "sha1",
+          "toPath": ".content.hash.accountIdHashSha1Base64"
+        },
+        "name": "simpleHashSha1B64FilterRouteFilter",
+        "plugin": "hash"
+      },
+      {
+        "config": {
+          "encoding": "hex",
+          "fromPath": ".content.accountId",
+          "hashAlgorithm": "sha256",
+          "toPath": ".content.hash.accountIdHashSha256Hex"
+        },
+        "name": "simpleHashSha256HexFilterRouteFilter",
+        "plugin": "hash"
+      },
+      {
+        "config": {
+          "encoding": "base64",
+          "fromPath": ".content.accountId",
+          "hashAlgorithm": "sha256",
+          "toPath": ".content.hash.accountIdHashSha256Base64"
+        },
+        "name": "simpleHashSha256B64FilterRouteFilter",
+        "plugin": "hash"
+      }
+    ],
+    "id": "hash101",
+    "name": "tbltstsimpleFilterHashRoutesimpleHashFilterRoute",
+    "receiver": {
+      "config": {
+        "intervalMs": 10,
+        "maxHistory": 100,
+        "payload": {
+          "content": {
+            "accountId": "SomeAccountId",
+            "adapterId": "foo-adapter",
+            "description": "operation",
+            "deviceId": "",
+            "eventId": "468adf80-dc9d-11e4-989a-41f236438965",
+            "name": "name",
+            "timestamp": 1428352877944,
+            "title": "title",
+            "type": "type",
+            "value": "name"
+          },
+          "sequence": 1428352877944,
+          "timestamp": 1428352877944,
+          "topic": "some/test/topic"
+        },
+        "rounds": 5
+      },
+      "name": "tbltstsimpleFilterHashRoutesimpleEncodeFilterRouteReceiver",
+      "plugin": "debug"
+    },
+    "sender": {
+      "config": {
+        "destination": "stdout",
+        "maxHistory": 100
+      },
+      "name": "tbltstsimpleFilterHashRoutesimpleHashFilterRouteSender",
+      "plugin": "debug"
+    },
+    "tenant": {
+      "appId": "myapp",
+      "orgId": "myorg"
+    },
+    "userId": "boris"
+  }
+}
