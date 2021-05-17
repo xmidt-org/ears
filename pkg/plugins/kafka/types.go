@@ -111,6 +111,7 @@ var DefaultSenderConfig = SenderConfig{
 	AccessKey:         "",
 	Version:           "",
 	SenderPoolSize:    pointer.Int(1),
+	PartitionPath:     "",
 }
 
 // SenderConfig can be passed into NewSender() in order to configure
@@ -119,7 +120,8 @@ type SenderConfig struct {
 	Brokers           string `json:"brokers,omitempty"`
 	Topic             string `json:"topic,omitempty"`
 	Partition         *int   `json:"partition,omitempty"`
-	Username          string `json:"username,omitempty"` // yaml
+	PartitionPath     string `json:"partitionPath,omitempty"` // if path is set look up partition from event rather than using the hard coded partition id
+	Username          string `json:"username,omitempty"`
 	Password          string `json:"password,omitempty"`
 	CACert            string `json:"caCert,omitempty"`
 	AccessCert        string `json:"accessCert,omitempty"`

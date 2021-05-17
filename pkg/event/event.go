@@ -20,6 +20,7 @@ package event
 import (
 	"context"
 	"github.com/xmidt-org/ears/internal/pkg/ack"
+	"strings"
 
 	"github.com/mohae/deepcopy"
 )
@@ -46,7 +47,6 @@ func New(ctx context.Context, payload interface{}, options ...EventOption) (Even
 			return nil, err
 		}
 	}
-
 	return e, nil
 }
 
@@ -65,7 +65,6 @@ func WithAck(handledFn func(Event), errFn func(Event, error)) EventOption {
 		if handledFn == nil || errFn == nil {
 			return &NoAckHandlersError{}
 		}
-
 		e.ack = ack.NewAckTree(e.ctx, func() {
 			handledFn(e)
 		}, func(err error) {
@@ -105,6 +104,99 @@ func (e *event) SetMetadata(metadata interface{}) error {
 	e.metadata = metadata
 	return nil
 }
+
+func (e *event) GetPathValue(path string) (interface{}, interface{}, string) {
+	// in the future we need proper evaluation of tenant and trace paths here
+	if path == TRACE + ".id" {
+		return "123-456-789-000", nil, ""
+	}
+	obj := e.Payload()
+	if strings.HasPrefix(path, METADATA + ".") || path == METADATA {
+		obj = e.Metadata()
+	}
+	if obj == nil {
+		return nil, nil, ""
+	}
+	if path == "" || path == "." || path == PAYLOAD || path == METADATA {
+		return obj, nil, ""
+	}
+	if strings.HasPrefix(path, ".") {
+		path = PAYLOAD + path
+	}
+	if !strings.HasPrefix(path, PAYLOAD + ".") && !strings.HasPrefix(path, METADATA + ".") {
+		return nil, nil, ""
+	}
+	var parent interface{}
+	var key string
+	var ok bool
+	segments := strings.Split(path, ".")
+	if len(segments) < 2 {
+		return nil, nil, ""
+	}
+	for i := 1; i < len(segments); i++ {
+		s := segments[i]
+		parent = obj
+		key = s
+		obj, ok = obj.(map[string]interface{})[s]
+		if !ok {
+			return nil, parent, key
+		}
+	}
+	return obj, parent, key
+}
+
+func (e *event) SetPathValue(path string, val interface{}, createPath bool) (interface{}, string) {
+	obj := e.Payload()
+	if strings.HasPrefix(path, METADATA + ".") || path == METADATA {
+		obj = e.Metadata()
+		if obj == nil && createPath {
+			e.SetMetadata(make(map[string]interface{}, 0))
+			obj = e.Metadata()
+		} else {
+			return nil, ""
+		}
+	}
+	if strings.HasPrefix(path, ".") {
+		path = PAYLOAD +  path
+	}
+	if path == "" {
+		path = PAYLOAD
+	}
+	if path == PAYLOAD {
+		e.SetPayload(val)
+		return nil, ""
+	} else if path == METADATA {
+		e.SetMetadata(val)
+		return nil, ""
+	}
+	if !strings.HasPrefix(path, PAYLOAD + ".") && !strings.HasPrefix(path, METADATA + ".") {
+		return nil, ""
+	}
+	var parent interface{}
+	var key string
+	var ok bool
+	segments := strings.Split(path, ".")
+	for i := 1; i < len(segments); i++ {
+		s := segments[i]
+		parent = obj
+		key = s
+		if i == len(segments)-1 {
+			break
+		}
+		obj, ok = obj.(map[string]interface{})[s]
+		if !ok {
+			if createPath && i < len(segments)-1 {
+				parent.(map[string]interface{})[key] = make(map[string]interface{})
+				obj = parent.(map[string]interface{})[key]
+			} else {
+				return nil, ""
+			}
+		}
+	}
+	obj.(map[string]interface{})[key] = val
+	return parent, key
+}
+
 func (e *event) Context() context.Context {
 	return e.ctx
 }

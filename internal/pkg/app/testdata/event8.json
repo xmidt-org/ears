@@ -1,0 +1,17 @@
+{
+  "topic": "/iot/FF6AF0AD873B4FEA94DC31BCC991DB18/jarvis-lutron-iot-adapter/command/stateChange",
+  "content": {
+    "eventId": "468adf80-dc9d-11e4-989a-41f236438965",
+    "accountId": "FF6AF0AD873B4FEA94DC31BCC991DB18",
+    "adapterId": "jarvis-lutron-iot-adapter",
+    "deviceId": "",
+    "type": "type",
+    "value": "name",
+    "timestamp": 1428352877944,
+    "name": "name",
+    "title": "title",
+    "description": "operation"
+  },
+  "sequence": 1428352877944,
+  "timestamp": 1428352877944
+}

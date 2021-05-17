@@ -31,6 +31,9 @@ func (sc SenderConfig) WithDefaults() SenderConfig {
 	if cfg.Partition == nil {
 		cfg.Partition = DefaultSenderConfig.Partition
 	}
+	if cfg.PartitionPath == "" {
+		cfg.PartitionPath = DefaultSenderConfig.PartitionPath
+	}
 	if cfg.ChannelBufferSize == nil {
 		cfg.ChannelBufferSize = DefaultSenderConfig.ChannelBufferSize
 	}
@@ -74,6 +77,12 @@ const senderSchema = `
                 },
                 "partition": {
                     "type": "integer"
+                },
+                "partitionPath": {
+                    "type": "string"
+                },
+                "metadata": {
+                    "type": "boolean"
                 },
                 "username": {
                     "type": "string"

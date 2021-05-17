@@ -1,5 +1,6 @@
 {
   "mode": "allow",
   "matcher": "regex",
-  "pattern": "^.*$"
+  "pattern": "^.*$",
+  "exactArrayMatch": true
 }

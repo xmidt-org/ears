@@ -1,0 +1,36 @@
+{
+  "id" : "batch101",
+  "userId" : "boris",
+  "name" : "simpleBatchFilterRoute",
+  "receiver" : {
+    "plugin" : "debug",
+    "name" : "simpleBatchFilterRouteReceiver",
+    "config" :
+    {
+      "rounds" : 10,
+      "intervalMs" : 10,
+      "payload" : {
+        "foo" : "bar"
+      },
+      "maxHistory": 100
+    }
+  },
+  "sender" : {
+    "plugin" : "debug",
+    "name" : "simpleBatchFilterRouteSender",
+    "config" : {
+      "destination" : "stdout",
+      "maxHistory": 100
+    }
+  },
+  "filterChain" : [
+    {
+      "plugin" : "batch",
+      "name" : "simpleBatchFilterRouteFilter",
+      "config" : {
+        "batchSize" : 5
+      }
+    }
+  ],
+  "deliveryMode" : "whoCares"
+}

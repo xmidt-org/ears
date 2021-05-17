@@ -35,16 +35,24 @@ import (
 	"github.com/xmidt-org/ears/internal/pkg/tablemgr"
 	pkgplugin "github.com/xmidt-org/ears/pkg/plugin"
 	"github.com/xmidt-org/ears/pkg/plugin/manager"
+	"github.com/xmidt-org/ears/pkg/plugins/batch"
 	"github.com/xmidt-org/ears/pkg/plugins/block"
 	"github.com/xmidt-org/ears/pkg/plugins/debug"
+	"github.com/xmidt-org/ears/pkg/plugins/decode"
+	"github.com/xmidt-org/ears/pkg/plugins/dedup"
+	"github.com/xmidt-org/ears/pkg/plugins/encode"
+	"github.com/xmidt-org/ears/pkg/plugins/hash"
 	"github.com/xmidt-org/ears/pkg/plugins/js"
 	"github.com/xmidt-org/ears/pkg/plugins/kafka"
 	"github.com/xmidt-org/ears/pkg/plugins/match"
 	"github.com/xmidt-org/ears/pkg/plugins/pass"
 	goredis "github.com/xmidt-org/ears/pkg/plugins/redis"
+	plog "github.com/xmidt-org/ears/pkg/plugins/log"
 	"github.com/xmidt-org/ears/pkg/plugins/split"
 	"github.com/xmidt-org/ears/pkg/plugins/sqs"
+	"github.com/xmidt-org/ears/pkg/plugins/trace"
 	"github.com/xmidt-org/ears/pkg/plugins/transform"
+	"github.com/xmidt-org/ears/pkg/plugins/ttl"
 	"github.com/xmidt-org/ears/pkg/plugins/unwrap"
 	"github.com/xmidt-org/ears/pkg/route"
 	"io/ioutil"
@@ -470,8 +478,40 @@ func setupRestApi(config config.Config, storageMgr route.RouteStorer) (*EarsRunt
 			plugin: toArr(pass.NewPluginVersion("pass", "", ""))[0].(pkgplugin.Pluginer),
 		},
 		{
+			name:   "log",
+			plugin: toArr(plog.NewPluginVersion("log", "", ""))[0].(pkgplugin.Pluginer),
+		},
+		{
 			name:   "js",
 			plugin: toArr(js.NewPluginVersion("js", "", ""))[0].(pkgplugin.Pluginer),
+		},
+		{
+			name:   "dedup",
+			plugin: toArr(dedup.NewPluginVersion("dedup", "", ""))[0].(pkgplugin.Pluginer),
+		},
+		{
+			name:   "batch",
+			plugin: toArr(batch.NewPluginVersion("batch", "", ""))[0].(pkgplugin.Pluginer),
+		},
+		{
+			name:   "ttl",
+			plugin: toArr(ttl.NewPluginVersion("ttl", "", ""))[0].(pkgplugin.Pluginer),
+		},
+		{
+			name:   "trace",
+			plugin: toArr(trace.NewPluginVersion("trace", "", ""))[0].(pkgplugin.Pluginer),
+		},
+		{
+			name:   "decode",
+			plugin: toArr(decode.NewPluginVersion("decode", "", ""))[0].(pkgplugin.Pluginer),
+		},
+		{
+			name:   "encode",
+			plugin: toArr(encode.NewPluginVersion("encode", "", ""))[0].(pkgplugin.Pluginer),
+		},
+		{
+			name:   "hash",
+			plugin: toArr(hash.NewPluginVersion("hash", "", ""))[0].(pkgplugin.Pluginer),
 		},
 		{
 			name:   "block",
@@ -633,6 +673,49 @@ func TestRestVersionHandler(t *testing.T) {
 		t.Fatalf("cannot unmarshal response %s into json %s", string(w.Body.Bytes()), err.Error())
 	}
 	g.AssertJson(t, "version", data)
+}
+
+// update route test
+
+func TestRestUpdateRoutesHandler(t *testing.T) {
+	Version = "v1.0.2"
+	runtime := setupSimpleApi(t, "inmemory")
+	files := []string{"update1", "update2", "update3", "update4"}
+	for _, fn := range files {
+		w := httptest.NewRecorder()
+		routeFileName := "testdata/" + fn + ".json"
+		simpleRouteReader, err := os.Open(routeFileName)
+		if err != nil {
+			t.Fatalf("cannot read file: %s", err.Error())
+		}
+		r := httptest.NewRequest(http.MethodPost, "/ears/v1"+tenantPath+"/routes", simpleRouteReader)
+		runtime.apiManager.muxRouter.ServeHTTP(w, r)
+		var data Response
+		err = json.Unmarshal(w.Body.Bytes(), &data)
+		if err != nil {
+			t.Fatalf("cannot unmarshal response %s into json %s", string(w.Body.Bytes()), err.Error())
+		}
+	}
+	err := checkNumRoutes(runtime.apiManager, t.Name(), 1)
+	if err != nil {
+		t.Fatalf("%s test: route count issue: %s", t.Name(), err.Error())
+	}
+	// check number of events received by output plugin
+	time.Sleep(time.Duration(100) * time.Millisecond)
+	routeFileName := "testdata/update4.json"
+	err = checkEventsSent(routeFileName, "", runtime.pluginManger, 5, "testdata/event1.json", 0)
+	if err != nil {
+		t.Fatalf("check events sent error: %s", err.Error())
+	}
+	// delete route
+	r := httptest.NewRequest(http.MethodDelete, "/ears/v1"+tenantPath+"/routes/update101", nil)
+	w := httptest.NewRecorder()
+	runtime.apiManager.muxRouter.ServeHTTP(w, r)
+	err = checkNumRoutes(runtime.apiManager, t.Name(), 0)
+	if err != nil {
+		t.Fatalf("%s test: route count issue: %s", t.Name(), err.Error())
+	}
+	t.Logf("deleted route with id: %s", "update101")
 }
 
 // single route tests

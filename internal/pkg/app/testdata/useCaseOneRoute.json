@@ -1,0 +1,143 @@
+{
+  "id": "u101",
+  "userId": "boris",
+  "name": "useCaseOneRoute",
+  "receiver": {
+    "plugin": "debug",
+    "name": "useCaseRouteReceiver",
+    "config": {
+      "rounds": 1,
+      "intervalMs": 10,
+      "payload": {
+        "Type": "Notification",
+        "MessageId": "e684b540-9101-530b-9e85-ed705c063207",
+        "TopicArn": "topicarn_ACCOUNT",
+        "Message": "ewogICJoZWFkZXIiOiB7CiAgICAidHlwZSI6ICJBQ0NPVU5UX1BST0RVQ1QiLAogICAgImV2ZW50IjogIkNSRUFURSIsCiAgICAicGFydG5lciI6ICJQYXJ0bmVyIiwKICAgICJ0cmFja2luZ0lkIjogIjEyMyIsCiAgICAidGltZXN0YW1wIjogIk5vdiAxOSwgMjAyMCA3OjQzOjAyIFBNIiwKICAgICJ0aW1lc3RhbXBNcyI6IDE2MDU4MTQ5ODI1MDMsCiAgICAic2NoZW1hIjogIjEuMCIsCiAgICAiYm9keUVuY3J5cHRlZCI6IGZhbHNlLAogICAgInN1Y2Nlc3MiOiB0cnVlCiAgfSwKICAiYm9keSI6IHsKICAgICJhY2NvdW50IjogewogICAgICAiaWQiOiAiMTIzIiwKICAgICAgInNvdXJjZSI6ICJBQkMiLAogICAgICAic291cmNlSWQiOiAiMTIzLklNUyIsCiAgICAgICJiaWxsaW5nQWNjb3VudElkIjogIjEyMyIsCiAgICAgICJzdGF0dXMiOiAiQWN0aXZlIiwKICAgICAgImVuYWJsZWQiOiB0cnVlCiAgICB9LAogICAgImFkZGVkQWNjb3VudFByb2R1Y3RzIjogWwogICAgICB7CiAgICAgICAgInNvdXJjZSI6ICJBQkMiLAogICAgICAgICJhY2NvdW50UHJvZHVjdElkIjogImEuYiIKICAgICAgfQogICAgXSwKICAgICJyZW1vdmVkQWNjb3VudFByb2R1Y3RzIjogW10sCiAgICAiYWNjb3VudFByb2R1Y3RzIjogWwogICAgICB7CiAgICAgICAgInNvdXJjZSI6ICJBQkMiLAogICAgICAgICJhY2NvdW50UHJvZHVjdElkIjogImEtYiIKICAgICAgfSwKICAgICAgewogICAgICAgICJzb3VyY2UiOiAiQUJDIiwKICAgICAgICAiYWNjb3VudFByb2R1Y3RJZCI6ICJhLmIiCiAgICAgIH0sCiAgICAgIHsKICAgICAgICAic291cmNlIjogIkFCQyIsCiAgICAgICAgImFjY291bnRQcm9kdWN0SWQiOiAiYS5iIgogICAgICB9LAogICAgICB7CiAgICAgICAgInNvdXJjZSI6ICJERUYiLAogICAgICAgICJhY2NvdW50UHJvZHVjdElkIjogImEuYiIKICAgICAgfSwKICAgICAgewogICAgICAgICJzb3VyY2UiOiAiQUJDIiwKICAgICAgICAiYWNjb3VudFByb2R1Y3RJZCI6ICJhLmIiCiAgICAgIH0sCiAgICAgIHsKICAgICAgICAic291cmNlIjogIkFCQyIsCiAgICAgICAgImFjY291bnRQcm9kdWN0SWQiOiAiYS5iIgogICAgICB9LAogICAgICB7CiAgICAgICAgInNvdXJjZSI6ICJBQkMiLAogICAgICAgICJhY2NvdW50UHJvZHVjdElkIjogImEuYiIKICAgICAgfSwKICAgICAgewogICAgICAgICJzb3VyY2UiOiAiR0hJIiwKICAgICAgICAiYWNjb3VudFByb2R1Y3RJZCI6ICJhLmIiCiAgICAgIH0KICAgIF0KICB9Cn0=",
+        "Timestamp": "2020-11-19T19:43:03.236Z",
+        "SignatureVersion": "1",
+        "Signature": "signature",
+        "SigningCertURL": "http://123.pem",
+        "UnsubscribeURL": "http://unsubscribe",
+        "MessageAttributes": {
+          "header.partner": {
+            "Type": "String",
+            "Value": "Partner"
+          },
+          "header.event": {
+            "Type": "String",
+            "Value": "CREATE"
+          }
+        }
+      },
+      "maxHistory": 100
+    }
+  },
+  "sender": {
+    "plugin": "debug",
+    "name": "useCaseOneRouteSender",
+    "config": {
+      "destination": "stdout",
+      "maxHistory": 100
+    }
+  },
+  "filterChain": [
+    {
+      "plugin": "match",
+      "name": "useCaseOneRouteRegexMatcher",
+      "config": {
+        "mode": "allow",
+        "matcher": "patternregex",
+        "pattern": {
+          "TopicArn": ".*_ACCOUNT$|.*_ACCOUNTPRODUCT$"
+        }
+      }
+    },
+    {
+      "plugin": "decode",
+      "name": "useCaseOneRouteDecoder",
+      "config": {
+        "fromPath": ".Message"
+      }
+    },
+    {
+      "plugin": "match",
+      "name": "useCaseOneRouteAccountMatcher",
+      "config": {
+        "mode": "allow",
+        "matcher": "pattern",
+        "pattern": {
+          "Message": {
+            "header": {
+              "partner": "Partner",
+              "type": "ACCOUNT_PRODUCT"
+            }
+          }
+        }
+      }
+    },
+    {
+      "plugin": "transform",
+      "name": "useCaseOneRouteTransformer",
+      "config": {
+        "transformation": {
+          "message": {
+            "op": "process",
+            "uses": "xbo_account",
+            "payload": {
+              "metadata": {
+                "type": "{.Message.header.type}",
+                "event": "{.Message.header.event}",
+                "timestamp": "{.Message.header.timestampMs}",
+                "id": "{.Message.body.account.id}"
+              },
+              "body": {
+                "addedAccountProducts": "{.Message.body.addedAccountProducts}",
+                "removedAccountProducts": "{.Message.body.removedAccountProducts}"
+              }
+            }
+          },
+          "to": {
+            "location": "{.Message.body.account.id}",
+            "app": "myapp"
+          },
+          "tx": {
+            "traceId" : "{trace.id}"
+          }
+        }
+      }
+    },
+    {
+      "plugin": "match",
+      "name": "useCaseOneRouteEmptyMatcher",
+      "config": {
+        "mode": "deny",
+        "matcher": "pattern",
+        "pattern": {
+          "message": {
+            "payload" : {
+              "body" : {
+                "addedAccountProducts" : [],
+                "removedAccountProducts": []
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "plugin": "hash",
+      "name": "useCaseOneRouteHasher",
+      "config": {
+        "fromPath": ".to.location",
+        "toPath": "metadata.kafka.partition",
+        "hashAlgorithm": "fnv"
+      }
+    },
+    {
+      "plugin": "log",
+      "name": "useCaseOneRouteLogger",
+      "config": null
+    }
+  ],
+  "deliveryMode": "whoCares"
+}

@@ -20,16 +20,24 @@ import (
 	p "github.com/xmidt-org/ears/internal/pkg/plugin"
 	"github.com/xmidt-org/ears/internal/pkg/quota"
 	"github.com/xmidt-org/ears/pkg/plugin/manager"
+	"github.com/xmidt-org/ears/pkg/plugins/batch"
 	"github.com/xmidt-org/ears/pkg/plugins/block"
 	"github.com/xmidt-org/ears/pkg/plugins/debug"
+	"github.com/xmidt-org/ears/pkg/plugins/decode"
+	"github.com/xmidt-org/ears/pkg/plugins/dedup"
+	"github.com/xmidt-org/ears/pkg/plugins/encode"
+	"github.com/xmidt-org/ears/pkg/plugins/hash"
 	"github.com/xmidt-org/ears/pkg/plugins/js"
 	"github.com/xmidt-org/ears/pkg/plugins/kafka"
+	"github.com/xmidt-org/ears/pkg/plugins/log"
 	"github.com/xmidt-org/ears/pkg/plugins/match"
 	"github.com/xmidt-org/ears/pkg/plugins/pass"
 	"github.com/xmidt-org/ears/pkg/plugins/redis"
 	"github.com/xmidt-org/ears/pkg/plugins/split"
 	"github.com/xmidt-org/ears/pkg/plugins/sqs"
+	"github.com/xmidt-org/ears/pkg/plugins/trace"
 	"github.com/xmidt-org/ears/pkg/plugins/transform"
+	"github.com/xmidt-org/ears/pkg/plugins/ttl"
 	"github.com/xmidt-org/ears/pkg/plugins/unwrap"
 
 	pkgplugin "github.com/xmidt-org/ears/pkg/plugin"
@@ -95,8 +103,40 @@ func ProvidePluginManager(in PluginIn) (PluginOut, error) {
 			plugin: toArr(pass.NewPluginVersion("pass", "", ""))[0].(pkgplugin.Pluginer),
 		},
 		{
+			name:   "log",
+			plugin: toArr(log.NewPluginVersion("log", "", ""))[0].(pkgplugin.Pluginer),
+		},
+		{
 			name:   "js",
 			plugin: toArr(js.NewPluginVersion("js", "", ""))[0].(pkgplugin.Pluginer),
+		},
+		{
+			name:   "dedup",
+			plugin: toArr(dedup.NewPluginVersion("dedup", "", ""))[0].(pkgplugin.Pluginer),
+		},
+		{
+			name:   "batch",
+			plugin: toArr(batch.NewPluginVersion("batch", "", ""))[0].(pkgplugin.Pluginer),
+		},
+		{
+			name:   "ttl",
+			plugin: toArr(ttl.NewPluginVersion("ttl", "", ""))[0].(pkgplugin.Pluginer),
+		},
+		{
+			name:   "trace",
+			plugin: toArr(trace.NewPluginVersion("trace", "", ""))[0].(pkgplugin.Pluginer),
+		},
+		{
+			name:   "decode",
+			plugin: toArr(decode.NewPluginVersion("decode", "", ""))[0].(pkgplugin.Pluginer),
+		},
+		{
+			name:   "encode",
+			plugin: toArr(encode.NewPluginVersion("encode", "", ""))[0].(pkgplugin.Pluginer),
+		},
+		{
+			name:   "hash",
+			plugin: toArr(hash.NewPluginVersion("hash", "", ""))[0].(pkgplugin.Pluginer),
 		},
 		{
 			name:   "block",
