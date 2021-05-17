@@ -30,7 +30,6 @@ import (
 	"github.com/xmidt-org/ears/internal/pkg/db/dynamo"
 	"github.com/xmidt-org/ears/internal/pkg/db/redis"
 	"github.com/xmidt-org/ears/internal/pkg/plugin"
-	"github.com/xmidt-org/ears/internal/pkg/quota"
 	"github.com/xmidt-org/ears/internal/pkg/syncer"
 	"github.com/xmidt-org/ears/internal/pkg/tablemgr"
 	pkgplugin "github.com/xmidt-org/ears/pkg/plugin"
@@ -44,10 +43,10 @@ import (
 	"github.com/xmidt-org/ears/pkg/plugins/hash"
 	"github.com/xmidt-org/ears/pkg/plugins/js"
 	"github.com/xmidt-org/ears/pkg/plugins/kafka"
+	plog "github.com/xmidt-org/ears/pkg/plugins/log"
 	"github.com/xmidt-org/ears/pkg/plugins/match"
 	"github.com/xmidt-org/ears/pkg/plugins/pass"
 	goredis "github.com/xmidt-org/ears/pkg/plugins/redis"
-	plog "github.com/xmidt-org/ears/pkg/plugins/log"
 	"github.com/xmidt-org/ears/pkg/plugins/split"
 	"github.com/xmidt-org/ears/pkg/plugins/sqs"
 	"github.com/xmidt-org/ears/pkg/plugins/trace"
@@ -382,7 +381,7 @@ func getConfig() (config.Config, error) {
 // if storageType is blank choose storag elayer specified in ears.yaml
 func getStorageLayer(config config.Config, storageType string) (route.RouteStorer, error) {
 	if storageType == "" {
-		storageType = config.GetString("ears.storage.type")
+		storageType = config.GetString("ears.storage.route.type")
 	}
 	var storageMgr route.RouteStorer
 	var err error
@@ -543,9 +542,8 @@ func setupRestApi(config config.Config, storageMgr route.RouteStorer) (*EarsRunt
 	routingMgr := tablemgr.NewRoutingTableManager(pluginMgr, storageMgr, tableSyncer, &log.Logger, config)
 
 	tenantStorer := db.NewTenantInmemoryStorer()
-	quotaManager, _ := quota.NewQuotaManager(tenantStorer, tableSyncer, config)
 
-	apiMgr, err := NewAPIManager(routingMgr, tenantStorer, quotaManager)
+	apiMgr, err := NewAPIManager(routingMgr, tenantStorer, nil)
 	if err != nil {
 		return &EarsRuntime{config, nil, nil, storageMgr, nil, nil}, err
 	}

@@ -6,9 +6,12 @@ ears:
     port: 3000
 
   storage:
-    type: inmemory
-#    type: redis
-    endpoint: localhost:6379
+    route:
+      type: inmemory
+      #      type: redis
+      endpoint: localhost:6379
+    tenant:
+      type: inmemory
 
   synchronization:
     type: inmemory
