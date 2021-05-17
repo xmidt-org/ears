@@ -169,12 +169,7 @@ func TestRouteTable(t *testing.T) {
 		if err != nil {
 			t.Fatalf("cannot create passive ears runtime: %s\n", err.Error())
 		}
-		// should review this
-		if getTableSyncerType(config, "") != "inmemory" {
-			rt.deltaSyncer.StartListeningForSyncRequests()
-		} else {
-			runtime.deltaSyncer.RegisterLocalSyncer("route", rt.routingTableManager)
-		}
+		rt.deltaSyncer.StartListeningForSyncRequests()
 		t.Logf("started passive ears runtime %d", i)
 		passiveRuntimes = append(passiveRuntimes, rt)
 	}
