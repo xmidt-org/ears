@@ -18,6 +18,7 @@ import (
 	"fmt"
 	"github.com/rs/zerolog"
 	p "github.com/xmidt-org/ears/internal/pkg/plugin"
+	"github.com/xmidt-org/ears/internal/pkg/quota"
 	"github.com/xmidt-org/ears/pkg/plugin/manager"
 	"github.com/xmidt-org/ears/pkg/plugins/batch"
 	"github.com/xmidt-org/ears/pkg/plugins/block"
@@ -52,7 +53,8 @@ var Module = fx.Options(
 type PluginIn struct {
 	fx.In
 
-	Logger *zerolog.Logger
+	Logger       *zerolog.Logger
+	QuotaManager *quota.QuotaManager
 }
 
 type PluginOut struct {
@@ -161,7 +163,9 @@ func ProvidePluginManager(in PluginIn) (PluginOut, error) {
 		}
 	}
 
-	m, err := p.NewManager(p.WithPluginManager(mgr), p.WithLogger(in.Logger))
+	m, err := p.NewManager(p.WithPluginManager(mgr),
+		p.WithLogger(in.Logger),
+		p.WithQuotaManager(in.QuotaManager))
 	if err != nil {
 		return out, fmt.Errorf("could not provide plugin manager: %w", err)
 	}

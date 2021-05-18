@@ -18,6 +18,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/xmidt-org/ears/pkg/tenant"
 	"sync"
 	"testing"
 
@@ -44,6 +45,7 @@ func TestFilterRegisterErrors(t *testing.T) {
 		plugin string
 		config interface{}
 		err    *plugin.RegistrationError
+		tid    tenant.Id
 	}{
 		{
 			id:     "no-plugin",
@@ -53,6 +55,7 @@ func TestFilterRegisterErrors(t *testing.T) {
 			err: &plugin.RegistrationError{
 				Message: "could not get plugin",
 			},
+			tid: tenant.Id{"myOrg", "myApp"},
 		},
 	}
 
@@ -61,7 +64,7 @@ func TestFilterRegisterErrors(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.id, func(t *testing.T) {
 			a := NewWithT(t)
-			_, err := m.RegisterFilter(ctx, tc.plugin, tc.name, tc.config)
+			_, err := m.RegisterFilter(ctx, tc.plugin, tc.name, tc.config, tc.tid)
 			var re *plugin.RegistrationError
 			if errors.As(err, &re) {
 				// TODO: Once we start cueing off of messages, it's time to
@@ -83,16 +86,18 @@ func TestFilterRegister(t *testing.T) {
 
 	m := newManager(t)
 
+	tid := tenant.Id{"myOrg", "myApp"}
+
 	fMap := m.Filters()
 	a.Expect(len(fMap)).To(Equal(0))
 
-	_, err := m.RegisterFilter(ctx, "filter", "testfilter-1", "noconfig")
+	_, err := m.RegisterFilter(ctx, "filter", "testfilter-1", "noconfig", tid)
 	a.Expect(err).To(BeNil())
 
 	fMap = m.Filters()
 	a.Expect(len(fMap)).To(Equal(1))
 
-	_, err = m.RegisterFilter(ctx, "filter", "testfilter-2", "noconfig")
+	_, err = m.RegisterFilter(ctx, "filter", "testfilter-2", "noconfig", tid)
 	a.Expect(err).To(BeNil())
 
 	fMap = m.Filters()
@@ -105,10 +110,12 @@ func TestFilterUnregister(t *testing.T) {
 
 	m := newManager(t)
 
+	tid := tenant.Id{"myOrg", "myApp"}
+
 	fMap := m.Filters()
 	a.Expect(len(fMap)).To(Equal(0))
 
-	f, err := m.RegisterFilter(ctx, "filter", "testfilter-1", "noconfig")
+	f, err := m.RegisterFilter(ctx, "filter", "testfilter-1", "noconfig", tid)
 	a.Expect(err).To(BeNil())
 
 	fMap = m.Filters()
@@ -128,17 +135,19 @@ func TestFilterLifecycle(t *testing.T) {
 
 	m := newManager(t)
 
+	tid := tenant.Id{"myOrg", "myApp"}
+
 	fMap := m.Filters()
 	a.Expect(len(fMap)).To(Equal(0))
 
 	// Register the same filter twice, will only have one unique
-	f1, err := m.RegisterFilter(ctx, "filter", "testfilter-1", "noconfig")
+	f1, err := m.RegisterFilter(ctx, "filter", "testfilter-1", "noconfig", tid)
 	a.Expect(err).To(BeNil())
 
 	fMap = m.Filters()
 	a.Expect(len(fMap)).To(Equal(1))
 
-	f2, err := m.RegisterFilter(ctx, "filter", "testfilter-1", "noconfig")
+	f2, err := m.RegisterFilter(ctx, "filter", "testfilter-1", "noconfig", tid)
 	a.Expect(err).To(BeNil())
 
 	fMap = m.Filters()
@@ -168,6 +177,7 @@ func TestSenderRegisterErrors(t *testing.T) {
 		plugin string
 		config interface{}
 		err    *plugin.RegistrationError
+		tid    tenant.Id
 	}{
 		{
 			id:     "no-plugin",
@@ -177,6 +187,7 @@ func TestSenderRegisterErrors(t *testing.T) {
 			err: &plugin.RegistrationError{
 				Message: "could not get plugin",
 			},
+			tid: tenant.Id{"myOrg", "myApp"},
 		},
 	}
 
@@ -185,7 +196,7 @@ func TestSenderRegisterErrors(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.id, func(t *testing.T) {
 			a := NewWithT(t)
-			_, err := m.RegisterSender(ctx, tc.plugin, tc.name, tc.config)
+			_, err := m.RegisterSender(ctx, tc.plugin, tc.name, tc.config, tc.tid)
 			var re *plugin.RegistrationError
 			if errors.As(err, &re) {
 				// TODO: Once we start cueing off of messages, it's time to
@@ -207,16 +218,18 @@ func TestSenderRegister(t *testing.T) {
 
 	m := newManager(t)
 
+	tid := tenant.Id{"myOrg", "myApp"}
+
 	sMap := m.Senders()
 	a.Expect(len(sMap)).To(Equal(0))
 
-	_, err := m.RegisterSender(ctx, "sender", "testsender-1", "noconfig")
+	_, err := m.RegisterSender(ctx, "sender", "testsender-1", "noconfig", tid)
 	a.Expect(err).To(BeNil())
 
 	sMap = m.Senders()
 	a.Expect(len(sMap)).To(Equal(1))
 
-	_, err = m.RegisterSender(ctx, "sender", "testsender-2", "noconfig")
+	_, err = m.RegisterSender(ctx, "sender", "testsender-2", "noconfig", tid)
 	a.Expect(err).To(BeNil())
 
 	sMap = m.Senders()
@@ -230,10 +243,12 @@ func TestSenderUnregister(t *testing.T) {
 
 	m := newManager(t)
 
+	tid := tenant.Id{"myOrg", "myApp"}
+
 	sMap := m.Senders()
 	a.Expect(len(sMap)).To(Equal(0))
 
-	s, err := m.RegisterSender(ctx, "sender", "testsender-1", "noconfig")
+	s, err := m.RegisterSender(ctx, "sender", "testsender-1", "noconfig", tid)
 	a.Expect(err).To(BeNil())
 
 	sMap = m.Senders()
@@ -254,17 +269,19 @@ func TestSenderLifecycle(t *testing.T) {
 
 	m := newManager(t)
 
+	tid := tenant.Id{"myOrg", "myApp"}
+
 	sMap := m.Senders()
 	a.Expect(len(sMap)).To(Equal(0))
 
 	// Register the same sender twice
-	s1, err := m.RegisterSender(ctx, "sender", "testsender-1", "noconfig")
+	s1, err := m.RegisterSender(ctx, "sender", "testsender-1", "noconfig", tid)
 	a.Expect(err).To(BeNil())
 
 	sMap = m.Senders()
 	a.Expect(len(sMap)).To(Equal(1))
 
-	s2, err := m.RegisterSender(ctx, "sender", "testsender-1", "noconfig")
+	s2, err := m.RegisterSender(ctx, "sender", "testsender-1", "noconfig", tid)
 	a.Expect(err).To(BeNil())
 
 	sMap = m.Senders()
@@ -294,6 +311,7 @@ func TestReceiverRegisterErrors(t *testing.T) {
 		plugin string
 		config interface{}
 		err    *plugin.RegistrationError
+		tid    tenant.Id
 	}{
 		{
 			id:     "no-plugin",
@@ -303,6 +321,7 @@ func TestReceiverRegisterErrors(t *testing.T) {
 			err: &plugin.RegistrationError{
 				Message: "could not get plugin",
 			},
+			tid: tenant.Id{"myOrg", "myApp"},
 		},
 	}
 
@@ -311,7 +330,7 @@ func TestReceiverRegisterErrors(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.id, func(t *testing.T) {
 			a := NewWithT(t)
-			_, err := m.RegisterReceiver(ctx, tc.plugin, tc.name, tc.config)
+			_, err := m.RegisterReceiver(ctx, tc.plugin, tc.name, tc.config, tc.tid)
 			var re *plugin.RegistrationError
 			if errors.As(err, &re) {
 				// TODO: Once we start cueing off of messages, it's time to
@@ -333,16 +352,18 @@ func TestReceiverRegister(t *testing.T) {
 
 	m := newManager(t)
 
+	tid := tenant.Id{"myOrg", "myApp"}
+
 	rMap := m.Receivers()
 	a.Expect(len(rMap)).To(Equal(0))
 
-	_, err := m.RegisterReceiver(ctx, "receiver", "testreceiver-1", "noconfig")
+	_, err := m.RegisterReceiver(ctx, "receiver", "testreceiver-1", "noconfig", tid)
 	a.Expect(err).To(BeNil())
 
 	rMap = m.Receivers()
 	a.Expect(len(rMap)).To(Equal(1))
 
-	_, err = m.RegisterReceiver(ctx, "receiver", "testreceiver-2", "noconfig")
+	_, err = m.RegisterReceiver(ctx, "receiver", "testreceiver-2", "noconfig", tid)
 	a.Expect(err).To(BeNil())
 
 	rMap = m.Receivers()
@@ -357,10 +378,12 @@ func TestReceiverUnregister(t *testing.T) {
 
 	m := newManager(t)
 
+	tid := tenant.Id{"myOrg", "myApp"}
+
 	rMap := m.Receivers()
 	a.Expect(len(rMap)).To(Equal(0))
 
-	r, err := m.RegisterReceiver(ctx, "receiver", "testreceiver-1", "noconfig")
+	r, err := m.RegisterReceiver(ctx, "receiver", "testreceiver-1", "noconfig", tid)
 	a.Expect(err).To(BeNil())
 
 	rMap = m.Receivers()

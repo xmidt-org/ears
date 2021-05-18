@@ -17,11 +17,13 @@ package log
 import (
 	"encoding/json"
 	"fmt"
+	"sync"
 	"testing"
 	"time"
 )
 
 type LogListener struct {
+	sync.Mutex
 	lastLogLine string
 	listener    chan string
 }
@@ -33,6 +35,8 @@ func NewLogListener() *LogListener {
 }
 
 func (l *LogListener) Write(p []byte) (n int, err error) {
+	l.Lock()
+	defer l.Unlock()
 	l.lastLogLine = string(p)
 	l.listener <- l.lastLogLine
 	return len(p), nil

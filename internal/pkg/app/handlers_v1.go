@@ -16,8 +16,10 @@ package app
 
 import (
 	"context"
+	"errors"
 	"github.com/goccy/go-yaml"
 	"github.com/xmidt-org/ears/internal/pkg/logs"
+	"github.com/xmidt-org/ears/internal/pkg/quota"
 	"github.com/xmidt-org/ears/internal/pkg/tablemgr"
 	"github.com/xmidt-org/ears/pkg/tenant"
 	"io/ioutil"
@@ -32,12 +34,16 @@ import (
 type APIManager struct {
 	muxRouter       *mux.Router
 	routingTableMgr tablemgr.RoutingTableManager
+	tenantStorer    tenant.TenantStorer
+	quotaManager    *quota.QuotaManager
 }
 
-func NewAPIManager(routingMgr tablemgr.RoutingTableManager) (*APIManager, error) {
+func NewAPIManager(routingMgr tablemgr.RoutingTableManager, tenantStorer tenant.TenantStorer, quotaManager *quota.QuotaManager) (*APIManager, error) {
 	api := &APIManager{
 		muxRouter:       mux.NewRouter(),
 		routingTableMgr: routingMgr,
+		tenantStorer:    tenantStorer,
+		quotaManager:    quotaManager,
 	}
 	api.muxRouter.HandleFunc("/ears/version", api.versionHandler).Methods(http.MethodGet)
 	api.muxRouter.HandleFunc("/ears/v1/orgs/{orgId}/applications/{appId}/routes/{routeId}", api.addRouteHandler).Methods(http.MethodPut)
@@ -45,6 +51,9 @@ func NewAPIManager(routingMgr tablemgr.RoutingTableManager) (*APIManager, error)
 	api.muxRouter.HandleFunc("/ears/v1/orgs/{orgId}/applications/{appId}/routes/{routeId}", api.removeRouteHandler).Methods(http.MethodDelete)
 	api.muxRouter.HandleFunc("/ears/v1/orgs/{orgId}/applications/{appId}/routes/{routeId}", api.getRouteHandler).Methods(http.MethodGet)
 	api.muxRouter.HandleFunc("/ears/v1/orgs/{orgId}/applications/{appId}/routes", api.getAllTenantRoutesHandler).Methods(http.MethodGet)
+	api.muxRouter.HandleFunc("/ears/v1/orgs/{orgId}/applications/{appId}/config", api.getTenantConfigHandler).Methods(http.MethodGet)
+	api.muxRouter.HandleFunc("/ears/v1/orgs/{orgId}/applications/{appId}/config", api.setTenantConfigHandler).Methods(http.MethodPut)
+	api.muxRouter.HandleFunc("/ears/v1/orgs/{orgId}/applications/{appId}/config", api.deleteTenantConfigHandler).Methods(http.MethodDelete)
 	api.muxRouter.HandleFunc("/ears/v1/senders", api.getAllSendersHandler).Methods(http.MethodGet)
 	api.muxRouter.HandleFunc("/ears/v1/receivers", api.getAllReceiversHandler).Methods(http.MethodGet)
 	api.muxRouter.HandleFunc("/ears/v1/filters", api.getAllFiltersHandler).Methods(http.MethodGet)
@@ -243,4 +252,109 @@ func (a *APIManager) getAllFiltersHandler(w http.ResponseWriter, r *http.Request
 	}
 	resp := ItemsResponse(allFilters)
 	resp.Respond(ctx, w)
+}
+
+func (a *APIManager) getTenantConfigHandler(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	vars := mux.Vars(r)
+
+	tid, err := getTenant(ctx, vars)
+	if err != nil {
+		log.Ctx(ctx).Error().Str("op", "getTenantConfigHandler").Str("error", err.Error()).Msg("orgId or appId empty")
+		resp := ErrorResponse(err)
+		resp.Respond(ctx, w)
+		return
+	}
+
+	config, err := a.tenantStorer.GetConfig(ctx, *tid)
+	if err != nil {
+		log.Ctx(ctx).Error().Str("op", "getTenantConfigHandler").Str("error", err.Error()).Msg("error getting tenant config")
+		resp := ErrorResponse(convertToApiError(err))
+		resp.Respond(ctx, w)
+		return
+	}
+	resp := ItemResponse(config)
+	resp.Respond(ctx, w)
+}
+
+func (a *APIManager) setTenantConfigHandler(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	vars := mux.Vars(r)
+
+	tid, err := getTenant(ctx, vars)
+	if err != nil {
+		log.Ctx(ctx).Error().Str("op", "setTenantConfigHandler").Str("error", err.Error()).Msg("orgId or appId empty")
+		resp := ErrorResponse(err)
+		resp.Respond(ctx, w)
+		return
+	}
+
+	body, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		log.Ctx(ctx).Error().Str("op", "setTenantConfigHandler").Str("error", err.Error()).Msg("error reading request body")
+		resp := ErrorResponse(err)
+		resp.Respond(ctx, w)
+		return
+	}
+
+	var tenantConfig tenant.Config
+	err = yaml.Unmarshal(body, &tenantConfig)
+	if err != nil {
+		log.Ctx(ctx).Error().Str("op", "setTenantConfigHandler").Str("error", err.Error()).Msg("error unmarshal request body")
+		err = &BadRequestError{"Cannot unmarshal request body", err}
+		resp := ErrorResponse(err)
+		resp.Respond(ctx, w)
+		return
+	}
+
+	tenantConfig.Tenant = *tid
+	err = a.tenantStorer.SetConfig(ctx, tenantConfig)
+	if err != nil {
+		log.Ctx(ctx).Error().Str("op", "setTenantConfigHandler").Str("error", err.Error()).Msg("error setting tenant config")
+		resp := ErrorResponse(convertToApiError(err))
+		resp.Respond(ctx, w)
+		return
+	}
+
+	a.quotaManager.PublishQuota(ctx, *tid)
+
+	resp := ItemResponse(tenantConfig)
+	resp.Respond(ctx, w)
+}
+
+func (a *APIManager) deleteTenantConfigHandler(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	vars := mux.Vars(r)
+
+	tid, err := getTenant(ctx, vars)
+	if err != nil {
+		log.Ctx(ctx).Error().Str("op", "deleteTenantConfigHandler").Str("error", err.Error()).Msg("orgId or appId empty")
+		resp := ErrorResponse(err)
+		resp.Respond(ctx, w)
+		return
+	}
+
+	err = a.tenantStorer.DeleteConfig(ctx, *tid)
+	if err != nil {
+		log.Ctx(ctx).Error().Str("op", "deleteTenantConfigHandler").Str("error", err.Error()).Msg("error deleting tenant config")
+		resp := ErrorResponse(convertToApiError(err))
+		resp.Respond(ctx, w)
+		return
+	}
+
+	resp := ItemResponse(tid)
+	resp.Respond(ctx, w)
+}
+
+func convertToApiError(err error) ApiError {
+	var tenantNotFound *tenant.TenantNotFoundError
+	var badConfig *tenant.BadConfigError
+	if errors.As(err, &tenantNotFound) {
+		return &NotFoundError{"tenant " + tenantNotFound.Tenant.ToString() + " not found"}
+	} else if errors.As(err, &badConfig) {
+		return &BadRequestError{"bad tenant config", err}
+	}
+
+	//Something we don't recognize
+	return &InternalServerError{err}
 }

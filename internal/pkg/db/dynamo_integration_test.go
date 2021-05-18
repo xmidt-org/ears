@@ -25,8 +25,8 @@ import (
 
 func dynamoDbConfig() config.Config {
 	v := viper.New()
-	v.Set("ears.db.region", "us-west-2")
-	v.Set("ears.db.tableName", "gears.dev.ears")
+	v.Set("ears.storage.route.region", "us-west-2")
+	v.Set("ears.storage.route.tableName", "dev.ears.routes")
 	return v
 }
 

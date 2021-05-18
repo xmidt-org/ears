@@ -1,4 +1,4 @@
-// Copyright 2020 Comcast Cable Communications Management, LLC
+// Copyright 2021 Comcast Cable Communications Management, LLC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,43 +12,48 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package routetablesyncerfx
+package tenantstorerfx
 
 import (
-	"errors"
 	"github.com/rs/zerolog"
 	"github.com/xmidt-org/ears/internal/pkg/config"
-	"github.com/xmidt-org/ears/internal/pkg/tablemgr"
+	"github.com/xmidt-org/ears/internal/pkg/db"
+	"github.com/xmidt-org/ears/internal/pkg/db/dynamo"
+	"github.com/xmidt-org/ears/pkg/tenant"
 	"go.uber.org/fx"
 )
 
 var Module = fx.Options(
 	fx.Provide(
-		ProvideRouteTableSyncer,
+		ProvideTenantStorer,
 	),
 )
 
-type TableSyncerIn struct {
+type StorageIn struct {
 	fx.In
 	Config config.Config
 	Logger *zerolog.Logger
 }
 
-type TableSyncerOut struct {
+type StorageOut struct {
 	fx.Out
-	RoutingTableDeltaSyncer tablemgr.RoutingTableDeltaSyncer
+	TenantStorer tenant.TenantStorer
 }
 
-func ProvideRouteTableSyncer(in TableSyncerIn) (TableSyncerOut, error) {
-	out := TableSyncerOut{}
-	tableSyncerType := in.Config.GetString("ears.synchronization.type")
-	switch tableSyncerType {
+func ProvideTenantStorer(in StorageIn) (StorageOut, error) {
+	out := StorageOut{}
+	storageType := in.Config.GetString("ears.storage.route.type")
+	switch storageType {
 	case "inmemory":
-		out.RoutingTableDeltaSyncer = tablemgr.NewInMemoryDeltaSyncer(in.Logger, in.Config)
-	case "redis":
-		out.RoutingTableDeltaSyncer = tablemgr.NewRedisDeltaSyncer(in.Logger, in.Config)
+		out.TenantStorer = db.NewTenantInmemoryStorer()
+	case "dynamodb":
+		tenantStorer, err := dynamo.NewTenantStorer(in.Config)
+		if err != nil {
+			return out, err
+		}
+		out.TenantStorer = tenantStorer
 	default:
-		return out, errors.New("unsupported table syncer type " + tableSyncerType)
+		return out, &UnsupportedTenantStorageError{storageType}
 	}
 	return out, nil
 }
