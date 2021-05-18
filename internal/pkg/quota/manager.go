@@ -17,6 +17,7 @@ package quota
 import (
 	"context"
 	"errors"
+	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"github.com/xmidt-org/ears/internal/pkg/config"
 	"github.com/xmidt-org/ears/internal/pkg/syncer"
@@ -32,13 +33,14 @@ type QuotaManager struct {
 	lock               *sync.Mutex
 	backendLimiterType string
 	redisAddr          string
+	logger             *zerolog.Logger
 
 	ticker *time.Ticker
 	done   context.CancelFunc
 	ctx    context.Context
 }
 
-func NewQuotaManager(tenantStorer tenant.TenantStorer, syncer syncer.DeltaSyncer, config config.Config) (*QuotaManager, error) {
+func NewQuotaManager(logger *zerolog.Logger, tenantStorer tenant.TenantStorer, syncer syncer.DeltaSyncer, config config.Config) (*QuotaManager, error) {
 	backendLimiterType := config.GetString("ears.ratelimiter.type")
 
 	if backendLimiterType != "redis" && backendLimiterType != "inmemory" {
@@ -60,6 +62,7 @@ func NewQuotaManager(tenantStorer tenant.TenantStorer, syncer syncer.DeltaSyncer
 		lock:               &sync.Mutex{},
 		backendLimiterType: backendLimiterType,
 		redisAddr:          redisAddr,
+		logger:             logger,
 	}, nil
 }
 
@@ -77,6 +80,7 @@ func (m *QuotaManager) Start() {
 
 	go func() {
 		for {
+			m.logger.Info().Str("op", "PeriodicQuotaSync").Msg("Periodically sync tenant quotas")
 			select {
 			case <-m.ctx.Done():
 				return
@@ -164,7 +168,7 @@ func (m *QuotaManager) getLimiter(ctx context.Context, tid tenant.Id) (*QuotaLim
 
 	instanceCount := m.syncer.GetInstanceCount(ctx)
 	if instanceCount == 0 {
-		return nil, &BadStateError{"Zero ears instance in cluster"}
+		return nil, &NoEarsInstances{}
 	}
 
 	initialRqs := tenantRqs / instanceCount

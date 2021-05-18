@@ -64,10 +64,16 @@ func (r *AdaptiveRateLimiter) SetLimit(newLimit int) error {
 }
 
 func (r *AdaptiveRateLimiter) Limit() int {
+	r.lock.Lock()
+	defer r.lock.Unlock()
+
 	return r.totalRqs
 }
 
 func (r *AdaptiveRateLimiter) AdaptiveLimit() int {
+	r.lock.Lock()
+	defer r.lock.Unlock()
+
 	return r.currentRqs
 }
 

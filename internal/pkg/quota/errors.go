@@ -33,10 +33,9 @@ func (e *BadConfigError) Error() string {
 	return errs.String("BadConfigError", map[string]interface{}{"configKey": e.configKey, "configValue": e.configValue}, nil)
 }
 
-type BadStateError struct {
-	message string
+type NoEarsInstances struct {
 }
 
-func (e *BadStateError) Error() string {
-	return errs.String("BadStateError", map[string]interface{}{"message": e.message}, nil)
+func (e *NoEarsInstances) Error() string {
+	return errs.String("NoEarsInstances", nil, nil)
 }

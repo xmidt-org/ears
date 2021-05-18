@@ -17,13 +17,14 @@ package quota_test
 import (
 	"context"
 	"errors"
-	"github.com/rs/zerolog/log"
+	"github.com/rs/zerolog"
 	"github.com/spf13/viper"
 	"github.com/xmidt-org/ears/internal/pkg/config"
 	"github.com/xmidt-org/ears/internal/pkg/db"
 	"github.com/xmidt-org/ears/internal/pkg/quota"
 	"github.com/xmidt-org/ears/internal/pkg/syncer"
 	"github.com/xmidt-org/ears/pkg/tenant"
+	"os"
 	"testing"
 	"time"
 )
@@ -41,10 +42,12 @@ func testConfig() config.Config {
 }
 
 func setup(tenantStorer tenant.TenantStorer) (*quota.QuotaManager, error) {
+	testLogger := zerolog.New(os.Stdout)
+
 	config := testConfig()
-	syncer := syncer.NewInMemoryDeltaSyncer(&log.Logger, config)
+	syncer := syncer.NewInMemoryDeltaSyncer(&testLogger, config)
 	syncer.StartListeningForSyncRequests()
-	return quota.NewQuotaManager(tenantStorer, syncer, config)
+	return quota.NewQuotaManager(&testLogger, tenantStorer, syncer, config)
 }
 
 func TestQuotaManagerSyncing(t *testing.T) {
