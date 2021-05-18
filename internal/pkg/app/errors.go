@@ -36,10 +36,14 @@ type ApiError interface {
 }
 
 type NotFoundError struct {
+	message string
 }
 
 func (e *NotFoundError) Error() string {
-	return "Item not found"
+	if e.message == "" {
+		return "Item not found"
+	}
+	return e.message
 }
 
 func (e *NotFoundError) StatusCode() int {
@@ -68,4 +72,16 @@ func (e *BadRequestError) Error() string {
 
 func (e *BadRequestError) StatusCode() int {
 	return http.StatusBadRequest
+}
+
+type InternalServerError struct {
+	Wrapped error
+}
+
+func (e *InternalServerError) Error() string {
+	return errs.String("InternalServerError", nil, e.Wrapped)
+}
+
+func (e *InternalServerError) StatusCode() int {
+	return http.StatusInternalServerError
 }

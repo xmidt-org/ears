@@ -16,6 +16,7 @@ package tablemgr
 
 import (
 	"context"
+	"github.com/xmidt-org/ears/internal/pkg/syncer"
 	"github.com/xmidt-org/ears/pkg/filter"
 	"github.com/xmidt-org/ears/pkg/receiver"
 	"github.com/xmidt-org/ears/pkg/route"
@@ -23,29 +24,12 @@ import (
 	"github.com/xmidt-org/ears/pkg/tenant"
 )
 
-const (
-	EARS_ADD_ROUTE_CMD = "add"
-
-	EARS_REMOVE_ROUTE_CMD = "rem"
-
-	EARS_STOP_LISTENING_CMD = "stop"
-)
-
-type SyncCommand struct {
-	Cmd        string
-	RouteId    string
-	InstanceId string
-	Sid        string
-	Tenant     tenant.Id
-}
-
 type (
 
 	// A RoutingTableManager supports modifying and querying an EARS routing table
 	RoutingTableManager interface {
-		RoutingTableDeltaSyncer  // routing table manager delegates to routing table delta syncer for fanning out changes
 		RoutingTableGlobalSyncer // routing table manager delegates to routing table global syncer for startup and tear down
-		RoutingTableLocalSyncer  // to sync routing table upon receipt of an update notification for a single route
+		syncer.LocalSyncer       // to sync routing table upon receipt of an update notification for a single route
 		// AddRoute adds a route to live routing table and runs it and also stores the route in the persistence layer
 		AddRoute(ctx context.Context, route *route.Config) error
 		// RemoveRoute removes a route from a live routing table and stops it and also removes the route from the persistence layer
@@ -62,8 +46,6 @@ type (
 		GetAllReceivers(ctx context.Context) (map[string]receiver.Receiver, error)
 		// GetAllFilters gets all filters currently present in the system
 		GetAllFilters(ctx context.Context) (map[string]filter.Filterer, error)
-		// GetInstanceId
-		GetInstanceId() string
 	}
 
 	RoutingTableGlobalSyncer interface {
@@ -79,27 +61,5 @@ type (
 		IsSynchronized() (bool, error)
 		// GetAllRegisteredRoutes gets all routes that are currently registered and running on ears instance
 		GetAllRegisteredRoutes() ([]route.Config, error)
-	}
-
-	RoutingTableLocalSyncer interface {
-		// SyncRoute
-		SyncRoute(ctx context.Context, tid tenant.Id, routeId string, add bool) error
-		// GetInstanceId
-		GetInstanceId() string
-	}
-
-	RoutingTableDeltaSyncer interface {
-		// StartListeningForSyncRequests
-		StartListeningForSyncRequests(instanceId string) // do we need this still?
-		// StopListeningForSyncRequests
-		StopListeningForSyncRequests(instanceId string) // do we need this still?
-		// RegisterLocalTableSyncer
-		RegisterLocalTableSyncer(localTableSyncer RoutingTableLocalSyncer)
-		// UnregisterLocalTableSyncer
-		UnregisterLocalTableSyncer(localTableSyncer RoutingTableLocalSyncer)
-		// PublishSyncRequest
-		PublishSyncRequest(ctx context.Context, tenantId tenant.Id, routeId string, instanceId string, add bool)
-		// GetInstanceCount
-		GetInstanceCount(ctx context.Context) int
 	}
 )

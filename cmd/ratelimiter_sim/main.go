@@ -1,9 +1,26 @@
+// Copyright 2021 Comcast Cable Communications Management, LLC
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package main
 
 import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/rs/zerolog/log"
+	"github.com/xmidt-org/ears/pkg/ratelimit"
+	"github.com/xmidt-org/ears/pkg/tenant"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -20,7 +37,7 @@ func main() {
 	numWorker := 5
 	wg.Add(numWorker)
 
-	duration := 10
+	duration := 20
 	quota := 1000
 
 	go worker("0", &wg, 300, duration, quota/numWorker, quota)
@@ -29,7 +46,7 @@ func main() {
 	go worker("3", &wg, 100, duration, quota/numWorker, quota)
 	go worker("4", &wg, 20, duration, quota/numWorker, quota)
 
-	reporter(duration)
+	reporter(duration + 10)
 	wg.Wait()
 
 	fmt.Printf("Total success %d, fail %d, error %d\n", successCount, failCount, errCount)
@@ -48,10 +65,12 @@ func errStr(err error) string {
 
 func worker(workerName string, wg *sync.WaitGroup, rps int, second int, initialRps, maxRps int) {
 	defer wg.Done()
-	backendLimiter := NewRedisRateLimiter(workerName, "mchiang", redisAddr, maxRps)
-	limiter := NewAdaptiveRateLimiter(workerName, backendLimiter, initialRps, maxRps)
+	backendLimiter := ratelimit.NewRedisRateLimiter(tenant.Id{"myOrg", "mchiang"}, redisAddr, maxRps)
+	limiter := ratelimit.NewAdaptiveRateLimiter(backendLimiter, initialRps, maxRps)
 
 	ctx := context.Background()
+	logger := log.With().Str("workerName", workerName).Int("desired", rps).Logger()
+	ctx = logger.WithContext(ctx)
 
 	total := rps * second
 	for i := 0; i < total; i++ {
@@ -62,7 +81,7 @@ func worker(workerName string, wg *sync.WaitGroup, rps int, second int, initialR
 		//fmt.Printf("(%s) start %s, end %s, (%s)\n", workerName, ts(start), ts(end), errStr(err))
 		if err != nil {
 			//fmt.Printf("(%s) start %s, end %s, (%s)\n", workerName, ts(start), ts(end), errStr(err))
-			var limitReachErr *LimitReached
+			var limitReachErr *ratelimit.LimitReached
 			if errors.As(err, &limitReachErr) {
 				atomic.AddInt32(&failCount, 1)
 			} else {

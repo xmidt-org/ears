@@ -1,0 +1,9 @@
+{
+  "tenant": {
+    "orgId": "myOrg",
+    "appId": "myApp2"
+  },
+  "quota": {
+    "eventsPerSec": 15
+  }
+}

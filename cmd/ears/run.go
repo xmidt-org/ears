@@ -21,8 +21,10 @@ import (
 	"github.com/xmidt-org/ears/internal/pkg/app"
 	"github.com/xmidt-org/ears/internal/pkg/config"
 	"github.com/xmidt-org/ears/internal/pkg/fx/pluginmanagerfx"
+	"github.com/xmidt-org/ears/internal/pkg/fx/quotamanagerfx"
 	"github.com/xmidt-org/ears/internal/pkg/fx/routestorerfx"
-	"github.com/xmidt-org/ears/internal/pkg/fx/routetablesyncerfx"
+	"github.com/xmidt-org/ears/internal/pkg/fx/syncerfx"
+	"github.com/xmidt-org/ears/internal/pkg/fx/tenantstorerfx"
 	"github.com/xmidt-org/ears/internal/pkg/tablemgr"
 	"github.com/xmidt-org/ears/pkg/cli"
 	"github.com/xmidt-org/ears/pkg/panics"
@@ -52,7 +54,9 @@ var runCmd = &cobra.Command{
 		earsApp := fx.New(
 			pluginmanagerfx.Module,
 			routestorerfx.Module,
-			routetablesyncerfx.Module,
+			syncerfx.Module,
+			tenantstorerfx.Module,
+			quotamanagerfx.Module,
 			fx.Provide(
 				AppConfig,
 				app.ProvideLogger,
@@ -62,8 +66,10 @@ var runCmd = &cobra.Command{
 				app.NewMux,
 			),
 			fx.Logger(logger),
-			fx.Invoke(app.SetupAPIServer),
+			fx.Invoke(syncerfx.SetupDeltaSyncer),
 			fx.Invoke(tablemgr.SetupRoutingManager),
+			fx.Invoke(quotamanagerfx.SetupQuotaManager),
+			fx.Invoke(app.SetupAPIServer),
 		)
 		earsApp.Run()
 	},
@@ -89,19 +95,34 @@ func init() {
 				Description: "API port",
 			},
 			cli.Argument{
-				Name: "storageType", Shorthand: "", Type: cli.ArgTypeString,
-				Default: "inmemory", LookupKey: "ears.storage.type",
-				Description: "persistence layer storage type (inmemory, dynamodb)",
+				Name: "routeStorageType", Shorthand: "", Type: cli.ArgTypeString,
+				Default: "inmemory", LookupKey: "ears.storage.route.type",
+				Description: "persistence layer storage type for routes (inmemory, dynamodb)",
 			},
 			cli.Argument{
-				Name: "storageDynamoRegion", Shorthand: "", Type: cli.ArgTypeString,
-				Default: "us-west-2", LookupKey: "ears.storage.region",
-				Description: "dynamodb region",
+				Name: "routeStorageDynamoRegion", Shorthand: "", Type: cli.ArgTypeString,
+				Default: "us-west-2", LookupKey: "ears.storage.route.region",
+				Description: "route dynamodb region",
 			},
 			cli.Argument{
-				Name: "storageDynamoTable", Shorthand: "", Type: cli.ArgTypeString,
-				Default: "gears.dev.ears", LookupKey: "ears.storage.table",
-				Description: "dynamodb table name",
+				Name: "routeStorageDynamoTable", Shorthand: "", Type: cli.ArgTypeString,
+				Default: "dev.ears.routes", LookupKey: "ears.storage.route.table",
+				Description: "route dynamodb table name",
+			},
+			cli.Argument{
+				Name: "tenantStorageType", Shorthand: "", Type: cli.ArgTypeString,
+				Default: "inmemory", LookupKey: "ears.storage.tenant.type",
+				Description: "persistence layer storage type for tenants (inmemory, dynamodb)",
+			},
+			cli.Argument{
+				Name: "tenantStorageDynamoRegion", Shorthand: "", Type: cli.ArgTypeString,
+				Default: "us-west-2", LookupKey: "ears.storage.tenant.region",
+				Description: "tenant dynamodb region",
+			},
+			cli.Argument{
+				Name: "tenantStorageDynamoTable", Shorthand: "", Type: cli.ArgTypeString,
+				Default: "dev.ears.tenant", LookupKey: "ears.storage.tenant.table",
+				Description: "tenant dynamodb table name",
 			},
 			cli.Argument{
 				Name: "redisEndpoint", Shorthand: "", Type: cli.ArgTypeString,

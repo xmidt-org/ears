@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package tablemgr
+package syncer
 
 import (
 	"context"
@@ -24,6 +24,7 @@ import (
 	"github.com/xmidt-org/ears/internal/pkg/config"
 	"github.com/xmidt-org/ears/internal/pkg/logs"
 	"github.com/xmidt-org/ears/pkg/tenant"
+	"os"
 	"sync"
 	"time"
 )
@@ -31,11 +32,9 @@ import (
 const (
 
 	// used by one instance of ears to ask others to sync routing table
-
 	EARS_REDIS_SYNC_CHANNEL = "ears_sync"
 
 	// used by one instance of ears to tell all others that it just finished syncing its routing table
-
 	EARS_REDIS_ACK_CHANNEL = "ears_ack"
 
 	EARS_REDIS_RETRY_INTERVAL_SECONDS = 10 * time.Second
@@ -44,21 +43,24 @@ const (
 type (
 	RedisDeltaSyncer struct {
 		sync.Mutex
-		redisEndpoint     string
-		active            bool
-		client            *redis.Client
-		localTableSyncers map[RoutingTableLocalSyncer]struct{}
-		logger            *zerolog.Logger
-		config            config.Config
+		redisEndpoint string
+		active        bool
+		client        *redis.Client
+		localSyncers  map[string][]LocalSyncer
+		logger        *zerolog.Logger
+		config        config.Config
+		instanceId    string
 	}
 )
 
-func NewRedisDeltaSyncer(logger *zerolog.Logger, config config.Config) RoutingTableDeltaSyncer {
+func NewRedisDeltaSyncer(logger *zerolog.Logger, config config.Config) DeltaSyncer {
 	s := new(RedisDeltaSyncer)
 	s.logger = logger
 	s.config = config
 	s.redisEndpoint = config.GetString("ears.synchronization.endpoint")
-	s.localTableSyncers = make(map[RoutingTableLocalSyncer]struct{}, 0)
+	s.localSyncers = make(map[string][]LocalSyncer, 0)
+	hostname, _ := os.Hostname()
+	s.instanceId = hostname + "_" + uuid.New().String()
 	s.active = config.GetBool("ears.synchronization.active")
 	if !s.active {
 		logger.Info().Msg("Redis Delta Syncer Not Activated")
@@ -73,30 +75,44 @@ func NewRedisDeltaSyncer(logger *zerolog.Logger, config config.Config) RoutingTa
 	return s
 }
 
-func (s *RedisDeltaSyncer) RegisterLocalTableSyncer(localTableSyncer RoutingTableLocalSyncer) {
+func (s *RedisDeltaSyncer) RegisterLocalSyncer(itemType string, localSyncer LocalSyncer) {
 	// the redis implementation should only ever register itself
 	s.Lock()
 	defer s.Unlock()
-	s.localTableSyncers[localTableSyncer] = struct{}{}
+	s.localSyncers[itemType] = append(s.localSyncers[itemType], localSyncer)
 }
 
-func (s *RedisDeltaSyncer) UnregisterLocalTableSyncer(localTableSyncer RoutingTableLocalSyncer) {
+func (s *RedisDeltaSyncer) UnregisterLocalSyncer(itemType string, localSyncer LocalSyncer) {
 	s.Lock()
 	defer s.Unlock()
-	delete(s.localTableSyncers, localTableSyncer)
+
+	syncers, ok := s.localSyncers[itemType]
+	if !ok {
+		return
+	}
+
+	for i, s := range syncers {
+		if s == localSyncer {
+			//delete by copy the last element to the current pos and then
+			//shorten the array by one
+			syncers[i] = syncers[len(syncers)-1]
+			syncers[len(syncers)-1] = nil
+			syncers = syncers[:len(syncers)-1]
+			return
+		}
+	}
 }
 
 // PublishSyncRequest asks others to sync their routing tables
-
-func (s *RedisDeltaSyncer) PublishSyncRequest(ctx context.Context, tid tenant.Id, routeId string, instanceId string, add bool) {
+func (s *RedisDeltaSyncer) PublishSyncRequest(ctx context.Context, tid tenant.Id, itemType string, itemId string, add bool) {
 	if !s.active {
 		return
 	}
 	cmd := ""
 	if add {
-		cmd = EARS_ADD_ROUTE_CMD
+		cmd = EARS_ADD_ITEM_CMD
 	} else {
-		cmd = EARS_REMOVE_ROUTE_CMD
+		cmd = EARS_REMOVE_ITEM_CMD
 	}
 	sid := uuid.New().String() // session id
 	numSubscribers := s.GetInstanceCount(ctx)
@@ -142,7 +158,7 @@ func (s *RedisDeltaSyncer) PublishSyncRequest(ctx context.Context, tid tenant.Id
 					}
 
 					// only collect acks for this session
-					if cmd == syncCmd.Cmd && routeId == syncCmd.RouteId && syncCmd.Sid == sid && tid.Equal(syncCmd.Tenant) {
+					if cmd == syncCmd.Cmd && itemType == syncCmd.ItemType && itemId == syncCmd.ItemId && syncCmd.Sid == sid && tid.Equal(syncCmd.Tenant) {
 						received[syncCmd.InstanceId] = true
 						// wait until we received an ack from each subscriber (except the one originating the request)
 						if len(received) >= numSubscribers-1 {
@@ -170,8 +186,9 @@ func (s *RedisDeltaSyncer) PublishSyncRequest(ctx context.Context, tid tenant.Id
 			// ... then request all flow apis to sync
 			syncCmd := &SyncCommand{
 				cmd,
-				routeId,
-				instanceId,
+				itemType,
+				itemId,
+				s.instanceId,
 				sid,
 				tid,
 			}
@@ -188,22 +205,28 @@ func (s *RedisDeltaSyncer) PublishSyncRequest(ctx context.Context, tid tenant.Id
 }
 
 // StopListeningForSyncRequests stops listening for sync requests
-func (s *RedisDeltaSyncer) StopListeningForSyncRequests(instanceId string) {
+func (s *RedisDeltaSyncer) StopListeningForSyncRequests() {
 	if !s.active {
 		return
 	}
-	msg := EARS_STOP_LISTENING_CMD + ",," + instanceId + ","
-	err := s.client.Publish(EARS_REDIS_SYNC_CHANNEL, msg).Err()
+	syncCmd := &SyncCommand{
+		Cmd:        EARS_STOP_LISTENING_CMD,
+		InstanceId: s.instanceId,
+	}
+	msg, _ := json.Marshal(syncCmd)
+	err := s.client.Publish(EARS_REDIS_SYNC_CHANNEL, string(msg)).Err()
 	if err != nil {
 		s.logger.Error().Str("op", "StopListeningForSyncRequests").Msg(err.Error())
 	}
 }
 
 // ListenForSyncRequests listens for sync request
-func (s *RedisDeltaSyncer) StartListeningForSyncRequests(instanceId string) {
+func (s *RedisDeltaSyncer) StartListeningForSyncRequests() {
 	if !s.active {
 		return
 	}
+	subscribeComplete := sync.WaitGroup{}
+	subscribeComplete.Add(1)
 	go func() {
 		ctx := context.Background()
 		ctx = logs.SubLoggerCtx(ctx, s.logger)
@@ -215,6 +238,8 @@ func (s *RedisDeltaSyncer) StartListeningForSyncRequests(instanceId string) {
 		defer lrc.Close()
 		pubsub := lrc.Subscribe(EARS_REDIS_SYNC_CHANNEL)
 		defer pubsub.Close()
+
+		subscribeComplete.Done()
 		for {
 			msg, err := pubsub.ReceiveMessage()
 			if err != nil {
@@ -232,63 +257,72 @@ func (s *RedisDeltaSyncer) StartListeningForSyncRequests(instanceId string) {
 				}
 				// leave sync loop if asked
 				if syncCmd.Cmd == EARS_STOP_LISTENING_CMD {
-					if syncCmd.InstanceId == instanceId || syncCmd.InstanceId == "" {
-						s.logger.Info().Str("op", "ListenForSyncRequests").Str("instanceId", instanceId).Msg("received stop listening message")
+					if syncCmd.InstanceId == s.instanceId || syncCmd.InstanceId == "" {
+						s.logger.Info().Str("op", "ListenForSyncRequests").Str("instanceId", s.instanceId).Msg("received stop listening message")
 						return
 					}
 				}
 				// sync only whats needed
-				if syncCmd.InstanceId != instanceId {
+				if syncCmd.InstanceId != s.instanceId {
 					s.GetInstanceCount(ctx) // just for logging
-					if syncCmd.Cmd == EARS_ADD_ROUTE_CMD {
-						s.logger.Info().Str("op", "ListenForSyncRequests").Str("instanceId", instanceId).Str("routeId", syncCmd.RouteId).Str("sid", syncCmd.Sid).Msg("received message to add route")
+					if syncCmd.Cmd == EARS_ADD_ITEM_CMD {
+						s.logger.Info().Str("op", "ListenForSyncRequests").Str("instanceId", s.instanceId).Str("routeId", syncCmd.ItemId).Str("sid", syncCmd.Sid).Msg("received message to add route")
 
 						s.Lock()
-						for localTableSyncer, _ := range s.localTableSyncers {
-							err = localTableSyncer.SyncRoute(ctx, syncCmd.Tenant, syncCmd.RouteId, true)
-							if err != nil {
-								s.logger.Error().Str("op", "ListenForSyncRequests").Str("instanceId", instanceId).Str("routeId", syncCmd.RouteId).Str("sid", syncCmd.Sid).Msg("failed to sync route: " + err.Error())
+						syncers, ok := s.localSyncers[syncCmd.ItemType]
+						if ok {
+							for _, localSyncer := range syncers {
+								err = localSyncer.SyncItem(ctx, syncCmd.Tenant, syncCmd.ItemId, true)
+								if err != nil {
+									s.logger.Error().Str("op", "ListenForSyncRequests").Str("instanceId", s.instanceId).Str("routeId", syncCmd.ItemId).Str("sid", syncCmd.Sid).Msg("failed to sync route: " + err.Error())
+								}
 							}
 						}
 						s.Unlock()
-						s.publishAckMessage(ctx, syncCmd.Cmd, syncCmd.RouteId, instanceId, syncCmd.Sid, syncCmd.Tenant)
-					} else if syncCmd.Cmd == EARS_REMOVE_ROUTE_CMD {
-						s.logger.Info().Str("op", "ListenForSyncRequests").Str("instanceId", instanceId).Str("routeId", syncCmd.RouteId).Str("sid", syncCmd.Sid).Msg("received message to remove route")
+						s.publishAckMessage(ctx, syncCmd.Cmd, syncCmd.ItemType, syncCmd.ItemId, syncCmd.Sid, syncCmd.Tenant)
+					} else if syncCmd.Cmd == EARS_REMOVE_ITEM_CMD {
+						s.logger.Info().Str("op", "ListenForSyncRequests").Str("instanceId", s.instanceId).Str("routeId", syncCmd.ItemId).Str("sid", syncCmd.Sid).Msg("received message to remove route")
 
 						s.Lock()
-						for localTableSyncer, _ := range s.localTableSyncers {
-							err = localTableSyncer.SyncRoute(ctx, syncCmd.Tenant, syncCmd.RouteId, false)
-							if err != nil {
-								s.logger.Error().Str("op", "ListenForSyncRequests").Str("instanceId", instanceId).Str("routeId", syncCmd.RouteId).Str("sid", syncCmd.Sid).Msg("failed to sync route: " + err.Error())
+						syncers, ok := s.localSyncers[syncCmd.ItemType]
+						if ok {
+							for _, localSyncer := range syncers {
+								err = localSyncer.SyncItem(ctx, syncCmd.Tenant, syncCmd.ItemId, false)
+								if err != nil {
+									s.logger.Error().Str("op", "ListenForSyncRequests").Str("instanceId", s.instanceId).Str("routeId", syncCmd.ItemId).Str("sid", syncCmd.Sid).Msg("failed to sync route: " + err.Error())
+								}
 							}
 						}
 						s.Unlock()
-						s.publishAckMessage(ctx, syncCmd.Cmd, syncCmd.RouteId, instanceId, syncCmd.Sid, syncCmd.Tenant)
+						s.publishAckMessage(ctx, syncCmd.Cmd, syncCmd.ItemType, syncCmd.ItemId, syncCmd.Sid, syncCmd.Tenant)
 					} else if syncCmd.Cmd == EARS_STOP_LISTENING_CMD {
-						s.logger.Info().Str("op", "ListenForSyncRequests").Str("instanceId", instanceId).Msg("stop message ignored")
+						s.logger.Info().Str("op", "ListenForSyncRequests").Str("instanceId", s.instanceId).Msg("stop message ignored")
 						// already handled above
 					} else {
-						s.logger.Error().Str("op", "ListenForSyncRequests").Str("instanceId", instanceId).Str("routeId", syncCmd.RouteId).Str("sid", syncCmd.Sid).Msg("bad command " + syncCmd.Cmd)
+						s.logger.Error().Str("op", "ListenForSyncRequests").Str("instanceId", s.instanceId).Str("routeId", syncCmd.ItemId).Str("sid", syncCmd.Sid).Msg("bad command " + syncCmd.Cmd)
 					}
 				} else {
-					s.logger.Info().Str("op", "ListenForSyncRequests").Str("instanceId", instanceId).Msg("no need to sync myself")
+					s.logger.Info().Str("op", "ListenForSyncRequests").Str("instanceId", s.instanceId).Msg("no need to sync myself")
 				}
 			}
 		}
 	}()
+
+	subscribeComplete.Wait()
 }
 
 // PublishAckMessage confirm successful syncing of routing table
 
-func (s *RedisDeltaSyncer) publishAckMessage(ctx context.Context, cmd string, routeId string, instanceId string, sid string, tid tenant.Id) error {
+func (s *RedisDeltaSyncer) publishAckMessage(ctx context.Context, cmd string, itemType string, itemId string, sid string, tid tenant.Id) error {
 	if !s.active {
 		return nil
 	}
 
 	syncCmd := &SyncCommand{
 		cmd,
-		routeId,
-		instanceId,
+		itemType,
+		itemId,
+		s.instanceId,
 		sid,
 		tid,
 	}

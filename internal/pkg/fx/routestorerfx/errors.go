@@ -14,10 +14,10 @@
 
 package routestorerfx
 
-type UnsupportedStorageError struct {
+type UnsupportedRouteStorageError struct {
 	storageType string
 }
 
-func (e *UnsupportedStorageError) Error() string {
+func (e *UnsupportedRouteStorageError) Error() string {
 	return "UnsupportedStorageError: (storageType=" + e.storageType + ")"
 }

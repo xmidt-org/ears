@@ -26,7 +26,7 @@ import (
 
 func redisConfig() config.Config {
 	v := viper.New()
-	v.Set("ears.storage.endpoint", "127.0.0.1:6379")
+	v.Set("ears.storage.route.endpoint", "127.0.0.1:6379")
 	return v
 }
 

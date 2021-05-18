@@ -20,7 +20,9 @@ import (
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"github.com/xmidt-org/ears/internal/pkg/logs"
+	"github.com/xmidt-org/ears/internal/pkg/quota"
 	"github.com/xmidt-org/ears/pkg/panics"
+	"github.com/xmidt-org/ears/pkg/tenant"
 	"sync"
 	"time"
 
@@ -54,6 +56,8 @@ type manager struct {
 	nextFnDeadline time.Duration
 
 	logger *zerolog.Logger
+
+	quotaManager *quota.QuotaManager
 }
 
 // === Initialization ================================================
@@ -102,6 +106,7 @@ func (m *manager) Receiverers() map[string]pkgreceiver.NewReceiverer {
 func (m *manager) RegisterReceiver(
 	ctx context.Context, plugin string,
 	name string, config interface{},
+	tid tenant.Id,
 ) (pkgreceiver.Receiver, error) {
 
 	ns, err := m.pm.Receiverer(plugin)
@@ -147,6 +152,14 @@ func (m *manager) RegisterReceiver(
 
 		go func() {
 			r.Receive(func(e event.Event) {
+				if m.quotaManager != nil {
+					//ratelimit
+					err = m.quotaManager.Wait(e.Context(), tid)
+					if err != nil {
+						e.Nack(err)
+						return
+					}
+				}
 				m.next(key, e)
 			})
 		}()
@@ -314,6 +327,7 @@ func (m *manager) Filterers() map[string]pkgfilter.NewFilterer {
 func (m *manager) RegisterFilter(
 	ctx context.Context, plugin string,
 	name string, config interface{},
+	tid tenant.Id,
 ) (pkgfilter.Filterer, error) {
 
 	factory, err := m.pm.Filterer(plugin)
@@ -445,6 +459,7 @@ func (m *manager) Senderers() map[string]pkgsender.NewSenderer {
 func (m *manager) RegisterSender(
 	ctx context.Context, plugin string,
 	name string, config interface{},
+	tid tenant.Id,
 ) (pkgsender.Sender, error) {
 
 	ns, err := m.pm.Senderer(plugin)

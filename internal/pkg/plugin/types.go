@@ -17,6 +17,8 @@ package plugin
 import (
 	"context"
 	"github.com/rs/zerolog"
+	"github.com/xmidt-org/ears/internal/pkg/quota"
+	"github.com/xmidt-org/ears/pkg/tenant"
 	"time"
 
 	pkgfilter "github.com/xmidt-org/ears/pkg/filter"
@@ -30,6 +32,7 @@ type Manager interface {
 	RegisterReceiver(
 		ctx context.Context, plugin string,
 		name string, config interface{},
+		tid tenant.Id,
 	) (pkgreceiver.Receiver, error)
 	Receivers() map[string]pkgreceiver.Receiver
 	UnregisterReceiver(ctx context.Context, r pkgreceiver.Receiver) error
@@ -38,6 +41,7 @@ type Manager interface {
 	RegisterFilter(
 		ctx context.Context, plugin string,
 		name string, config interface{},
+		tid tenant.Id,
 	) (pkgfilter.Filterer, error)
 	Filters() map[string]pkgfilter.Filterer
 	UnregisterFilter(ctx context.Context, f pkgfilter.Filterer) error
@@ -46,6 +50,7 @@ type Manager interface {
 	RegisterSender(
 		ctx context.Context, plugin string,
 		name string, config interface{},
+		tid tenant.Id,
 	) (pkgsender.Sender, error)
 	Senders() map[string]pkgsender.Sender
 	UnregisterSender(ctx context.Context, s pkgsender.Sender) error
@@ -68,6 +73,13 @@ func WithPluginManager(p pkgmanager.Manager) ManagerOption {
 func WithLogger(l *zerolog.Logger) ManagerOption {
 	return func(m *manager) error {
 		m.logger = l
+		return nil
+	}
+}
+
+func WithQuotaManager(q *quota.QuotaManager) ManagerOption {
+	return func(m *manager) error {
+		m.quotaManager = q
 		return nil
 	}
 }
