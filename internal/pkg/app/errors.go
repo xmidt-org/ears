@@ -73,3 +73,15 @@ func (e *BadRequestError) Error() string {
 func (e *BadRequestError) StatusCode() int {
 	return http.StatusBadRequest
 }
+
+type InternalServerError struct {
+	Wrapped error
+}
+
+func (e *InternalServerError) Error() string {
+	return errs.String("InternalServerError", nil, e.Wrapped)
+}
+
+func (e *InternalServerError) StatusCode() int {
+	return http.StatusInternalServerError
+}

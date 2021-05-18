@@ -269,15 +269,8 @@ func (a *APIManager) getTenantConfigHandler(w http.ResponseWriter, r *http.Reque
 	config, err := a.tenantStorer.GetConfig(ctx, *tid)
 	if err != nil {
 		log.Ctx(ctx).Error().Str("op", "getTenantConfigHandler").Str("error", err.Error()).Msg("error getting tenant config")
-
-		var tenantNotFound *tenant.TenantNotFoundError
-		if errors.As(err, &tenantNotFound) {
-			resp := ErrorResponse(&NotFoundError{"tenant " + tenantNotFound.Tenant.ToString() + " not found"})
-			resp.Respond(ctx, w)
-		} else {
-			resp := ErrorResponse(err)
-			resp.Respond(ctx, w)
-		}
+		resp := ErrorResponse(convertToApiError(err))
+		resp.Respond(ctx, w)
 		return
 	}
 	resp := ItemResponse(config)
@@ -318,19 +311,8 @@ func (a *APIManager) setTenantConfigHandler(w http.ResponseWriter, r *http.Reque
 	err = a.tenantStorer.SetConfig(ctx, tenantConfig)
 	if err != nil {
 		log.Ctx(ctx).Error().Str("op", "setTenantConfigHandler").Str("error", err.Error()).Msg("error setting tenant config")
-
-		var tenantNotFound *tenant.TenantNotFoundError
-		var badConfig *tenant.BadConfigError
-		if errors.As(err, &tenantNotFound) {
-			resp := ErrorResponse(&NotFoundError{"tenant " + tenantNotFound.Tenant.ToString() + " not found"})
-			resp.Respond(ctx, w)
-		} else if errors.As(err, &badConfig) {
-			resp := ErrorResponse(&BadRequestError{"bad tenant config", err})
-			resp.Respond(ctx, w)
-		} else {
-			resp := ErrorResponse(err)
-			resp.Respond(ctx, w)
-		}
+		resp := ErrorResponse(convertToApiError(err))
+		resp.Respond(ctx, w)
 		return
 	}
 
@@ -355,18 +337,24 @@ func (a *APIManager) deleteTenantConfigHandler(w http.ResponseWriter, r *http.Re
 	err = a.tenantStorer.DeleteConfig(ctx, *tid)
 	if err != nil {
 		log.Ctx(ctx).Error().Str("op", "deleteTenantConfigHandler").Str("error", err.Error()).Msg("error deleting tenant config")
-
-		var tenantNotFound *tenant.TenantNotFoundError
-		if errors.As(err, &tenantNotFound) {
-			resp := ErrorResponse(&NotFoundError{"tenant " + tenantNotFound.Tenant.ToString() + " not found"})
-			resp.Respond(ctx, w)
-		} else {
-			resp := ErrorResponse(err)
-			resp.Respond(ctx, w)
-		}
+		resp := ErrorResponse(convertToApiError(err))
+		resp.Respond(ctx, w)
 		return
 	}
 
 	resp := ItemResponse(tid)
 	resp.Respond(ctx, w)
+}
+
+func convertToApiError(err error) ApiError {
+	var tenantNotFound *tenant.TenantNotFoundError
+	var badConfig *tenant.BadConfigError
+	if errors.As(err, &tenantNotFound) {
+		return &NotFoundError{"tenant " + tenantNotFound.Tenant.ToString() + " not found"}
+	} else if errors.As(err, &badConfig) {
+		return &BadRequestError{"bad tenant config", err}
+	}
+
+	//Something we don't recognize
+	return &InternalServerError{err}
 }
