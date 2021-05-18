@@ -35,6 +35,7 @@ type QuotaManagerIn struct {
 	Config       config.Config
 	TenantStorer tenant.TenantStorer
 	Syncer       syncer.DeltaSyncer
+	Logger       *zerolog.Logger
 }
 
 type QuotaManagerOut struct {
@@ -45,7 +46,7 @@ type QuotaManagerOut struct {
 func ProvideQuotaManager(in QuotaManagerIn) (QuotaManagerOut, error) {
 	out := QuotaManagerOut{}
 
-	quotaMgr, err := quota.NewQuotaManager(in.TenantStorer, in.Syncer, in.Config)
+	quotaMgr, err := quota.NewQuotaManager(in.Logger, in.TenantStorer, in.Syncer, in.Config)
 	if err != nil {
 		return out, err
 	}
