@@ -18,7 +18,6 @@ import (
 	"github.com/rs/zerolog"
 	"github.com/xmidt-org/ears/internal/pkg/config"
 	"github.com/xmidt-org/ears/internal/pkg/db"
-	"github.com/xmidt-org/ears/internal/pkg/db/bolt"
 	"github.com/xmidt-org/ears/internal/pkg/db/dynamo"
 	"github.com/xmidt-org/ears/internal/pkg/db/redis"
 	"github.com/xmidt-org/ears/pkg/route"
@@ -50,12 +49,6 @@ func ProvideRouteStorer(in StorageIn) (StorageOut, error) {
 		out.RouteStorer = db.NewInMemoryRouteStorer(in.Config)
 	case "dynamodb":
 		routeStorer, err := dynamo.NewDynamoDbStorer(in.Config)
-		if err != nil {
-			return out, err
-		}
-		out.RouteStorer = routeStorer
-	case "boltdb":
-		routeStorer, err := bolt.NewBoltDbStorer(in.Config)
 		if err != nil {
 			return out, err
 		}
