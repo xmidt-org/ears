@@ -165,8 +165,9 @@ func (s *Sender) StopSending(ctx context.Context) {
 	s.Lock()
 	if s.done != nil {
 		s.done <- struct{}{}
+		close(s.work)
+		s.done = nil
 	}
-	close(s.work)
 	s.Unlock()
 }
 
