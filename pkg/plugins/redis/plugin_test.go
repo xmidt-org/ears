@@ -1,5 +1,3 @@
-package redis_test
-
 // Copyright 2020 Comcast Cable Communications Management, LLC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -14,7 +12,9 @@ package redis_test
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//
+// +build integration
+
+package redis_test
 
 import (
 	"context"
