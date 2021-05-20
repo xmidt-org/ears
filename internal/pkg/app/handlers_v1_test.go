@@ -26,7 +26,6 @@ import (
 	"github.com/spf13/viper"
 	"github.com/xmidt-org/ears/internal/pkg/config"
 	"github.com/xmidt-org/ears/internal/pkg/db"
-	"github.com/xmidt-org/ears/internal/pkg/db/bolt"
 	"github.com/xmidt-org/ears/internal/pkg/db/dynamo"
 	"github.com/xmidt-org/ears/internal/pkg/db/redis"
 	"github.com/xmidt-org/ears/internal/pkg/plugin"
@@ -390,11 +389,6 @@ func getStorageLayer(config config.Config, storageType string) (route.RouteStore
 		}
 	case "dynamodb":
 		storageMgr, err = dynamo.NewDynamoDbStorer(config)
-		if err != nil {
-			return nil, err
-		}
-	case "boltdb":
-		storageMgr, err = bolt.NewBoltDbStorer(config)
 		if err != nil {
 			return nil, err
 		}
