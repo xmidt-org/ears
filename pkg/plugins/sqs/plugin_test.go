@@ -73,7 +73,7 @@ func TestSQSSenderReceiver(t *testing.T) {
 				a.Expect(err).To(BeNil())
 				sender.Send(e)
 			}
-			//time.Sleep(2 * time.Second)
+			time.Sleep(2 * time.Second)
 			sqsSender, ok := sender.(*sqs.Sender)
 			a.Expect(ok).To(BeTrue())
 			a.Expect(sqsSender.Count()).To(BeIdenticalTo(tc.numMessages))
