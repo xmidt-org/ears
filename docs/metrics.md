@@ -57,9 +57,89 @@ struct embeds `fx.In`, with each metric tagged.  Then, [`ProvideMetrics()` is
 called](https://github.com/xmidt-org/glaukos/blob/16c6eba0b81ec0e1d870bcfa771a10cccd6fc9de/events/provide.go#L67)
 as an `fx.Option` somewhere in the application.
 
-Below is some example code explaining the various pieces explained above:
+Below is some example code explaining the various pieces summarized above:
 ```go
-// TODO: add this.
+// in metrics.go
+
+const(
+  // ResultLabel tells us how our example did.  It is helpful as a const, so
+  // the same string isn't used in multiple places.  It only needs to be
+  // exported if it is needed outside of the package.
+  ResultLabel = "result"
+)
+
+// Result label values
+const (
+  SuccessResult = "success"
+  FailureResult = "failure"
+)
+
+// Measures contains the metrics needed for our example struct.
+type Measures struct {
+  fx.In
+  ExampleCount *prometheus.CounterVec `name:"example_count"`
+}
+
+// ProvideMetrics builds the example-related metrics and makes them available
+// to the container.
+func ProvideMetrics() fx.Option {
+  return fx.Options(
+    // touchstone has already been provided, so using CounterVec() allows us to
+    // have touchstone manage registering the metric.
+    touchstone.CounterVec(
+      prometheus.CounterOpts{
+        Name: "example_count", // name should match the tag in Measures.
+        Help: "Number of times something happens in our example",
+      },
+      ResultLabel,
+      // any number of labels can be added here, but they all need to be given
+      // values when this metric is used.
+    ),
+  )
+}
+```
+
+```go
+// in example.go
+
+// Example adds to its internal counter, resetting on overflow. This is not
+// concurrency safe.
+type Example struct {
+  count int
+  max int
+  M Measures
+}
+
+// Inc adds to the internal counter in Example.  If the count hits the maximum,
+// an error is returned and the counter is reset.
+func (e *Example) Inc() error {
+  if e.count >= e.max {
+    e.count = 0
+    e.M.ExampleCount.With(prometheus.Labels{ // Labels is just a map.
+      ResultLabel: FailureResult,
+    }).Add(1.0)
+    return errors.New("overflow")
+  }
+  e.count++
+  e.M.ExampleCount.With(prometheus.Labels{ // Labels is just a map.
+    ResultLabel: SuccessResult,
+  }).Add(1.0)
+  return nil
+}
+
+// NewExample create an example with the given measures and maximum.
+func NewExample(m Measures, max int) (*Example, error) {
+  if m == nil {
+    return nil, errors.New("measures cannot be nil")
+  }
+  if max < 1 {
+    return nil, errors.New("max must be greater than 1")
+  }
+  return &Example{
+    max: max,
+    M: m,
+  }, nil
+}
 ```
 
 ## Exporting Metrics
@@ -88,6 +168,64 @@ These are the general steps for wiring and exporting metrics:
    to [build our
    routers](https://github.com/xmidt-org/glaukos/blob/16c6eba0b81ec0e1d870bcfa771a10cccd6fc9de/main.go#L97)
    from configuration.
+
+An example that expands on the code provided in [Metric Code](#Metric-Code) is shown below:
+
+```go
+// in main.go
+func main() {
+  v := viper.New()
+  app := fx.New(
+    arrange.ForViper(v), // metrics related configuration is needed, so viper is too.
+    touchstone.Provide(), // provides the metric registry.
+    touchhttp.Provide(), // provides the metric handler and some other http metric middleware.
+    ProvideMetrics(), // the metrics for Example
+		arrangehttp.Server{
+			Name: "server_metrics",
+			Key:  "servers.metrics",
+		}.Provide(), // provides the router for metrics
+    fx.Provide(
+      NewExample,
+    ),
+		fx.Invoke(
+			handleMetricEndpoint,
+      // this is fine for an example, but long running goroutines should have
+      // an exit strategy.
+			func(e *Example) {
+				for {
+          // errors shouldn't be thrown away either.
+          _ := e.Inc()
+          time.Sleep(time.Second)
+        }
+			},
+		),
+  )
+
+  // general app stuff below - not a concern metrics-wise.
+	if err := app.Err(); err == nil {
+		app.Run()
+	} else if errors.Is(err, pflag.ErrHelp) {
+		return
+	} else {
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(2)
+	}
+}
+```
+
+```go
+// in routes.go
+
+type MetricRouterIn struct {
+	fx.In
+	Router  *mux.Router `name:"server_metrics"`
+	Handler touchhttp.Handler
+}
+
+func handleMetricEndpoint(in MetricRouterIn) {
+	in.Router.Handle("/metrics", in.Handler).Methods("GET")
+}
+```
 
 ## Prometheus Deployment
 
