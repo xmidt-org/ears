@@ -224,10 +224,11 @@ func (s *Sender) Send(e event.Event) {
 	}
 	s.eventBatch = append(s.eventBatch, e)
 	if len(s.eventBatch) >= *s.config.MaxNumberOfMessages {
-		s.Unlock()
-		s.work <- s.eventBatch
-		s.Lock()
+		eventBatch := s.eventBatch
 		s.eventBatch = make([]event.Event, 0)
+		s.Unlock()
+		s.work <- eventBatch
+	} else {
+		s.Unlock()
 	}
-	s.Unlock()
 }
