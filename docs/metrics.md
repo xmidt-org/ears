@@ -246,7 +246,7 @@ data in addition to output.
 
 ### Prod
 
-For production, prometheus is deployed and configured to find services to scrape using consul.
+For production, prometheus is deployed and configured to find services to scrape using [consul](https://prometheus.io/docs/prometheus/latest/configuration/configuration/#consul_sd_config).
 
 ## Where to Add Metrics
 
