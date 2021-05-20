@@ -150,7 +150,7 @@ code around enabling metrics in our services.  For uber fx applications, calling
 and
 [`touchhttp.Provide()`](https://pkg.go.dev/github.com/xmidt-org/touchstone@v0.0.3/touchhttp#Provide)
 provides everything you need for setting up a registry and handling a metrics
-endpoint.  The documentation explain what each function is providing.
+endpoint.  The documentation explains what each function is providing.
 
 These are the general steps for wiring and exporting metrics:
 
