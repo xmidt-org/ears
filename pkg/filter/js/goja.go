@@ -190,6 +190,7 @@ func MakeFileLibraryProvider(dir string) func(*Interpreter, string) (string, err
 			if err != nil {
 				return "", err
 			}
+			defer resp.Body.Close()
 			switch resp.StatusCode {
 			case http.StatusOK:
 				bs, err := ioutil.ReadAll(resp.Body)
@@ -401,13 +402,13 @@ func (interpreter *Interpreter) Exec(evt event.Event, code string) ([]event.Even
 		defer func() {
 			// to avoid panic from goja
 			if r := recover(); r != nil {
-				err = fmt.Errorf("panic from code: %s", code)
 				trace := bytes.NewBuffer(debug.Stack()).String()
 				//limit the stack track to 16k in case crash ES
 				maxStackSize := 16 * 1024
 				if maxStackSize < len(trace) {
 					trace = trace[:maxStackSize]
 				}
+				err = fmt.Errorf("panic from code: %s: %s", code, trace)
 				wg.Done()
 			}
 		}()
@@ -433,7 +434,7 @@ func (interpreter *Interpreter) Exec(evt event.Event, code string) ([]event.Even
 		return nil, err
 	}
 	x := v.Export()
-	switch x.(type) {
+	switch x := x.(type) {
 	case goja.Value:
 		return nil, nil
 	case *goja.InterruptedError:
@@ -442,8 +443,7 @@ func (interpreter *Interpreter) Exec(evt event.Event, code string) ([]event.Even
 		return nil, nil
 	case []interface{}:
 		events := make([]event.Event, 0)
-		results := x.([]interface{})
-		for _, r := range results {
+		for _, r := range x {
 			m, is := r.(map[string]interface{})
 			if !is {
 				return nil, errors.New("array element is not map")
@@ -465,13 +465,12 @@ func (interpreter *Interpreter) Exec(evt event.Event, code string) ([]event.Even
 		}
 		return events, nil
 	case map[string]interface{}:
-		m := x.(map[string]interface{})
 		//m = deepcopy.Copy(m).(map[string]interface{})
-		err = evt.SetPayload(m["payload"])
+		err = evt.SetPayload(x["payload"])
 		if err != nil {
 			return nil, err
 		}
-		err = evt.SetMetadata(m["metadata"])
+		err = evt.SetMetadata(x["metadata"])
 		if err != nil {
 			return nil, err
 		}
