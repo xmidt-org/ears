@@ -65,7 +65,7 @@ func TestParseUrl(t *testing.T) {
 		}
 
 		switch {
-		case err == test.expectedErr:
+		case errors.Is(err, test.expectedErr):
 			// all good
 		case err == nil && test.expectedErr != nil,
 			err != nil && test.expectedErr == nil,
