@@ -269,12 +269,12 @@ namespace_subsystem_example_count{result="failure"} 11
 namespace_subsystem_example_count{result="success"} 116
 ```
 
-There will be additional metrics included in the response that are included as a
-part of the golang prometheus client and our metric handler. The metrics are
-provided in the http response in alphabetical order. In the response above,
-`namespace` and `subsystem` are placeholders for whatever is configured. If
-neither are configured, the metric name would be `example_count`. Usually, we
-set the `namespace` to be the project name and `subsystem` as the service name.
+There will be additional metrics included in the response that are a part of the
+golang prometheus client and our metric handler. The metrics are provided in the
+http response in alphabetical order. In the response above, `namespace` and
+`subsystem` are placeholders for whatever values are configured. If neither are
+set, the metric name would be `example_count`. Usually, we set the `namespace`
+to be the project name and `subsystem` as the service name.
 
 ## Prometheus Deployment
 
