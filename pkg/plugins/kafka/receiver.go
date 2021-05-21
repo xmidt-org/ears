@@ -125,7 +125,7 @@ func (r *Receiver) Start(handler func(*sarama.ConsumerMessage) bool) {
 		} else {
 			r.logger.Info().Str("op", "kafka.Start").Msg("kafka consumer finished without error")
 		}
-		// check if context was cancelled, signaling that the consumer should stop
+		// check if context was canceled, signaling that the consumer should stop
 		if nil != r.ctx.Err() {
 			r.logger.Error().Str("op", "kafka.Start").Msg("context canceled, stopping consumption")
 			return

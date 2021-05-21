@@ -16,19 +16,15 @@ package route_test
 
 import (
 	"context"
-	"reflect"
-	"testing"
-	"time"
-
 	"github.com/xmidt-org/ears/pkg/filter"
 	"github.com/xmidt-org/ears/pkg/receiver"
 	"github.com/xmidt-org/ears/pkg/route"
 	"github.com/xmidt-org/ears/pkg/sender"
+	"reflect"
+	"testing"
 
 	. "github.com/onsi/gomega"
 )
-
-var defaultTestTimeout = 3 * time.Second
 
 func TestErrorCases(t *testing.T) {
 	testCases := []struct {
