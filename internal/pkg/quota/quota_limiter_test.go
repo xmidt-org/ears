@@ -127,5 +127,5 @@ func validateRps(limiter *quota.QuotaLimiter, rps int) error {
 	if start.Add(time.Second + time.Millisecond*100).After(time.Now()) {
 		return nil
 	}
-	return errors.New("Cannot reach desired RPS")
+	return TestErr_FailToReachRps
 }
