@@ -106,9 +106,6 @@ func (r *Receiver) ConsumeClaim(session sarama.ConsumerGroupSession, claim saram
 	for message := range claim.Messages() {
 		if r.handler(message) {
 			session.MarkMessage(message, "")
-			//r.logger.Info().Str("op", "kafka.ConsumeClaim").Msg("marked message")
-		} else {
-			//r.logger.Info().Str("op", "kafka.ConsumeClaim").Msg("not marking message")
 		}
 	}
 	return nil
@@ -189,6 +186,7 @@ func (r *Receiver) getSaramaConfig(commitIntervalSec int) (*sarama.Config, error
 		tlsConfig := &tls.Config{
 			Certificates: []tls.Certificate{keypair},
 			RootCAs:      caAuthorityPool,
+			MinVersion:   tls.VersionTLS12,
 		}
 		config.Net.TLS.Enable = true
 		config.Net.TLS.Config = tlsConfig
@@ -229,13 +227,15 @@ func (r *Receiver) Receive(next receiver.NextFn) error {
 				r.logger.Error().Str("op", "kafka.Receive").Msg("cannot parse payload: " + err.Error())
 				return false
 			}
-			tctx, _ := context.WithTimeout(context.Background(), time.Duration(5)*time.Second)
+			tctx, cancel := context.WithTimeout(context.Background(), time.Duration(5)*time.Second)
 			e, err := event.New(tctx, pl, event.WithAck(
 				func(e event.Event) {
 					r.logger.Info().Str("op", "kafka.Receive").Msg("processed message from kafka topic")
+					cancel()
 				},
 				func(e event.Event, err error) {
 					r.logger.Error().Str("op", "kafka.Receive").Msg("failed to process message: " + err.Error())
+					cancel()
 				}))
 			if err != nil {
 				r.logger.Error().Str("op", "kafka.Receive").Msg("cannot create event: " + err.Error())

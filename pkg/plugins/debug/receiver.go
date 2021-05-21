@@ -30,6 +30,7 @@ import (
 )
 
 //TODO a configuration option to make this configurable
+
 var debugMaxTO = time.Second * 10 //Default acknowledge timeout (10 seconds)
 
 func (r *Receiver) Receive(next receiver.NextFn) error {
@@ -62,13 +63,15 @@ func (r *Receiver) Receive(next receiver.NextFn) error {
 			case <-r.done:
 				return
 			case <-time.After(time.Duration(*r.config.IntervalMs) * time.Millisecond):
-				ctx, _ := context.WithTimeout(context.Background(), debugMaxTO)
+				ctx, cancel := context.WithTimeout(context.Background(), debugMaxTO)
 				e, err := event.New(ctx, r.config.Payload, event.WithAck(
 					func(evt event.Event) {
 						eventsDone.Done()
+						cancel()
 					}, func(evt event.Event, err error) {
 						r.logger.Error().Str("op", "debug.Receive").Msg("failed to process message: " + err.Error())
 						eventsDone.Done()
+						cancel()
 					}))
 				if err != nil {
 					return
@@ -89,8 +92,8 @@ func (r *Receiver) StopReceiving(ctx context.Context) error {
 	r.Lock()
 	defer r.Unlock()
 	if r.done != nil {
-		//BW
-		//close(r.done)
+		close(r.done)
+		r.done = nil
 	}
 	return nil
 }
