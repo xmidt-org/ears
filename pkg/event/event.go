@@ -107,11 +107,11 @@ func (e *event) SetMetadata(metadata interface{}) error {
 
 func (e *event) GetPathValue(path string) (interface{}, interface{}, string) {
 	// in the future we need proper evaluation of tenant and trace paths here
-	if path == TRACE + ".id" {
+	if path == TRACE+".id" {
 		return "123-456-789-000", nil, ""
 	}
 	obj := e.Payload()
-	if strings.HasPrefix(path, METADATA + ".") || path == METADATA {
+	if strings.HasPrefix(path, METADATA+".") || path == METADATA {
 		obj = e.Metadata()
 	}
 	if obj == nil {
@@ -123,7 +123,7 @@ func (e *event) GetPathValue(path string) (interface{}, interface{}, string) {
 	if strings.HasPrefix(path, ".") {
 		path = PAYLOAD + path
 	}
-	if !strings.HasPrefix(path, PAYLOAD + ".") && !strings.HasPrefix(path, METADATA + ".") {
+	if !strings.HasPrefix(path, PAYLOAD+".") && !strings.HasPrefix(path, METADATA+".") {
 		return nil, nil, ""
 	}
 	var parent interface{}
@@ -147,17 +147,17 @@ func (e *event) GetPathValue(path string) (interface{}, interface{}, string) {
 
 func (e *event) SetPathValue(path string, val interface{}, createPath bool) (interface{}, string) {
 	obj := e.Payload()
-	if strings.HasPrefix(path, METADATA + ".") || path == METADATA {
+	if strings.HasPrefix(path, METADATA+".") || path == METADATA {
 		obj = e.Metadata()
 		if obj == nil && createPath {
-			e.SetMetadata(make(map[string]interface{}, 0))
+			e.SetMetadata(make(map[string]interface{}))
 			obj = e.Metadata()
 		} else {
 			return nil, ""
 		}
 	}
 	if strings.HasPrefix(path, ".") {
-		path = PAYLOAD +  path
+		path = PAYLOAD + path
 	}
 	if path == "" {
 		path = PAYLOAD
@@ -169,7 +169,7 @@ func (e *event) SetPathValue(path string, val interface{}, createPath bool) (int
 		e.SetMetadata(val)
 		return nil, ""
 	}
-	if !strings.HasPrefix(path, PAYLOAD + ".") && !strings.HasPrefix(path, METADATA + ".") {
+	if !strings.HasPrefix(path, PAYLOAD+".") && !strings.HasPrefix(path, METADATA+".") {
 		return nil, ""
 	}
 	var parent interface{}
