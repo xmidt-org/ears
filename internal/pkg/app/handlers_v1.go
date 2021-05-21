@@ -82,7 +82,7 @@ func getTenant(ctx context.Context, vars map[string]string) (*tenant.Id, error) 
 		}
 		return nil, err
 	}
-	return &tenant.Id{orgId, appId}, nil
+	return &tenant.Id{OrgId: orgId, AppId: appId}, nil
 }
 
 func (a *APIManager) addRouteHandler(w http.ResponseWriter, r *http.Request) {
