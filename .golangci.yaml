@@ -84,4 +84,7 @@ issues:
       text: "weak cryptographic primitive"
       linters:
         - gosec
-
+    - path: internal/pkg/aws/s3/*\.go
+      text": "type assertion on error"
+      linters:
+        - errorlint
