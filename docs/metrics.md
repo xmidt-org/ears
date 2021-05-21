@@ -28,7 +28,7 @@ prometheus package are all
 [Collectors](https://pkg.go.dev/github.com/prometheus/client_golang/prometheus#Collector).
 
 *Registry*: A registry has all metrics registered to it on service startup,
-gathering data from them while the service runs.  It is both a
+gathering data from them while the service runs. It is both a
 [Registerer](https://pkg.go.dev/github.com/prometheus/client_golang/prometheus#Registerer)
 and a
 [Gatherer](https://pkg.go.dev/github.com/prometheus/client_golang/prometheus#Gatherer).
@@ -38,8 +38,8 @@ calls](https://pkg.go.dev/github.com/prometheus/client_golang@v1.10.0/prometheus
 ## Summary
 
 Metrics work happens on service startup and throughout the time the service is
-running.  Startup work involves creating a registry and registering all metrics
-to it.  As the service runs, metrics are updated as things happen. During this
+running. Startup work involves creating a registry and registering all metrics
+to it. As the service runs, metrics are updated as things happen. During this
 time, the registry gathers data from all known metrics and provides them in a
 consumable way.
 
@@ -53,7 +53,7 @@ With uber fx, each measure is created independently with a
 [`ProvideMetrics()`](https://github.com/xmidt-org/glaukos/blob/16c6eba0b81ec0e1d870bcfa771a10cccd6fc9de/events/metrics.go#L41)
 function. The
 [`Measures`](https://github.com/xmidt-org/glaukos/blob/16c6eba0b81ec0e1d870bcfa771a10cccd6fc9de/events/metrics.go#L32-L38)
-struct embeds `fx.In`, with each metric tagged.  Then, [`ProvideMetrics()` is
+struct embeds `fx.In`, with each metric tagged. Then, [`ProvideMetrics()` is
 called](https://github.com/xmidt-org/glaukos/blob/16c6eba0b81ec0e1d870bcfa771a10cccd6fc9de/events/provide.go#L67)
 as an `fx.Option` somewhere in the application.
 
@@ -62,8 +62,8 @@ Below is some example code explaining the various pieces summarized above:
 // in metrics.go
 
 const(
-  // ResultLabel tells us how our example did.  It is helpful as a const, so
-  // the same string isn't used in multiple places.  It only needs to be
+  // ResultLabel tells us how our example did. It is helpful as a const, so
+  // the same string isn't used in multiple places. It only needs to be
   // exported if it is needed outside of the package.
   ResultLabel = "result"
 )
@@ -110,7 +110,7 @@ type Example struct {
   M Measures
 }
 
-// Inc adds to the internal counter in Example.  If the count hits the maximum,
+// Inc adds to the internal counter in Example. If the count hits the maximum,
 // an error is returned and the counter is reset.
 func (e *Example) Inc() error {
   if e.count >= e.max {
@@ -145,17 +145,17 @@ func NewExample(m Measures, max int) (*Example, error) {
 ## Exporting Metrics
 
 We use the `touchstone` and `touchhttp` packages to handle the wiring and common
-code around enabling metrics in our services.  For uber fx applications, calling
+code around enabling metrics in our services. For uber fx applications, calling
 [`touchstone.Provide()`](https://pkg.go.dev/github.com/xmidt-org/touchstone@v0.0.3#Provide)
 and
 [`touchhttp.Provide()`](https://pkg.go.dev/github.com/xmidt-org/touchstone@v0.0.3/touchhttp#Provide)
 provides everything you need for setting up a registry and handling a metrics
-endpoint.  The documentation explains what each function is providing.
+endpoint. The documentation explains what each function is providing.
 
 These are the general steps for wiring and exporting metrics:
 
 1. Set up a registry. `touchstone.Provide()` provides this.
-1. Register all desired metrics.  This is done by calling various metrics'
+1. Register all desired metrics. This is done by calling various metrics'
    `Provide()` functions as created in your code (see [Metric
    Code](#Metric-Code) for more information).
 1. Set up a
@@ -163,7 +163,7 @@ These are the general steps for wiring and exporting metrics:
    for a metrics endpoint. `touchhttp.Provide()` provides this.
 1. [Attach the
    handler](https://github.com/xmidt-org/glaukos/blob/16c6eba0b81ec0e1d870bcfa771a10cccd6fc9de/routes.go#L36)
-   to a router or otherwise invoke it to handle your metrics endpoint.  We use
+   to a router or otherwise invoke it to handle your metrics endpoint. We use
    [`arrange-http`](https://pkg.go.dev/github.com/xmidt-org/arrange@v0.3.0/arrangehttp)
    to [build our
    routers](https://github.com/xmidt-org/glaukos/blob/16c6eba0b81ec0e1d870bcfa771a10cccd6fc9de/main.go#L97)
@@ -173,6 +173,7 @@ An example that expands on the code provided in [Metric Code](#Metric-Code) is s
 
 ```go
 // in main.go
+
 func main() {
   v := viper.New()
   app := fx.New(
@@ -180,36 +181,36 @@ func main() {
     touchstone.Provide(), // provides the metric registry.
     touchhttp.Provide(), // provides the metric handler and some other http metric middleware.
     ProvideMetrics(), // the metrics for Example
-		arrangehttp.Server{
-			Name: "server_metrics",
-			Key:  "servers.metrics",
-		}.Provide(), // provides the router for metrics
+    arrangehttp.Server{
+      Name: "server_metrics",
+      Key:  "servers.metrics",
+    }.Provide(), // provides the router for metrics
     fx.Provide(
       NewExample,
     ),
-		fx.Invoke(
-			handleMetricEndpoint,
+    fx.Invoke(
+      handleMetricEndpoint,
       // this is fine for an example, but long running goroutines should have
       // an exit strategy.
-			func(e *Example) {
-				for {
+      func(e *Example) {
+        for {
           // errors shouldn't be thrown away either.
           _ := e.Inc()
           time.Sleep(time.Second)
         }
-			},
-		),
+      },
+    ),
   )
 
   // general app stuff below - not a concern metrics-wise.
-	if err := app.Err(); err == nil {
-		app.Run()
-	} else if errors.Is(err, pflag.ErrHelp) {
-		return
-	} else {
-		fmt.Fprintln(os.Stderr, err)
-		os.Exit(2)
-	}
+  if err := app.Err(); err == nil {
+    app.Run()
+  } else if errors.Is(err, pflag.ErrHelp) {
+    return
+  } else {
+    fmt.Fprintln(os.Stderr, err)
+    os.Exit(2)
+  }
 }
 ```
 
@@ -217,13 +218,13 @@ func main() {
 // in routes.go
 
 type MetricRouterIn struct {
-	fx.In
-	Router  *mux.Router `name:"server_metrics"`
-	Handler touchhttp.Handler
+  fx.In
+  Router  *mux.Router `name:"server_metrics"`
+  Handler touchhttp.Handler
 }
 
 func handleMetricEndpoint(in MetricRouterIn) {
-	in.Router.Handle("/metrics", in.Handler).Methods("GET")
+  in.Router.Handle("/metrics", in.Handler).Methods("GET")
 }
 ```
 
@@ -231,7 +232,8 @@ func handleMetricEndpoint(in MetricRouterIn) {
 
 ### Dev
 
-Any manual testing we do while developing is done with a local docker setup.  A few examples of our various docker setups:
+Any manual testing we do while developing is done with a local docker setup. A
+few examples of our various docker setups:
 
 - [Glaukos](https://github.com/xmidt-org/glaukos/blob/main/deploy/docker-compose/docker-compose.yml)
 - [Svalinn](https://github.com/xmidt-org/codex-deploy/blob/main/deploy/docker-compose/docker-compose.yml)
@@ -241,7 +243,7 @@ A prometheus instance is included in the docker setup and can be reached at
 `http://localhost:9090/`. All services involved have exposed their metric port,
 and Prometheus is
 [configured](https://github.com/xmidt-org/glaukos/blob/main/deploy/docker-compose/docFiles/prometheus.yml)
-to scrape them.  Then, while testing, the developer has visibility into metric
+to scrape them. Then, while testing, the developer has visibility into metric
 data in addition to output.
 
 ### Prod
@@ -255,14 +257,14 @@ Generally, we add metrics to track these types of things:
   (server)](https://pkg.go.dev/github.com/xmidt-org/touchstone@v0.0.3/touchhttp#ServerBundle)
   and [outgoing
   (client)](https://pkg.go.dev/github.com/xmidt-org/touchstone@v0.0.3/touchhttp#ClientBundle);
-  tracking the size and duration of a request as well as the response code.  Our
+  tracking the size and duration of a request as well as the response code. Our
   services share some general metrics but often implement their own based on
   what is being done - a common one is counting retries for client requests.
 - **Auth**: tracking the
   [result](https://github.com/xmidt-org/bascule/blob/c011b128d6b95fa8358228535c63d1945347adaa/basculehttp/metrics.go#L49)
   of auth middleware on http requests, including
   [why](https://github.com/xmidt-org/bascule/blob/c011b128d6b95fa8358228535c63d1945347adaa/basculehttp/errorResponseReason.go#L24-L34)
-  a request was considered unauthorized.  With capability checking, we have even
+  a request was considered unauthorized. With capability checking, we have even
   [more
   data](https://github.com/xmidt-org/bascule/blob/c011b128d6b95fa8358228535c63d1945347adaa/basculechecks/metrics.go#L73-L82),
   showing the client id and partner in addition to the result.
@@ -279,20 +281,21 @@ Generally, we add metrics to track these types of things:
     There may also be a limited number of workers for the queue, in which case
     we track the [current number of
     workers](https://github.com/xmidt-org/caduceus/blob/55bce1ccebe0312e1477ddb8a5c58203211b3214/metrics.go#L129-L132).
-- **Complex logic**: this varies by what is trying to be accomplished.  Some common motivations for adding metrics:
+- **Complex logic**: this varies by what is trying to be accomplished. Some
+  common motivations for adding metrics:
   - if an object being used has a type or enum, there may be a counter with the
     type label, showing the breakdown of what types are being worked with.
   - if there is something long lived (ie connections), a counter of that and any
     easily-grouped metadata is helpful.
 
 ### A Few Tips
-  - Generally, greater insight into failures is common.  Successes are great and
+  - Generally, greater insight into failures is common. Successes are great and
     are counted, but usually we want the most data into things that go wrong.
   - [Labels](https://prometheus.io/docs/practices/naming/#labels) add
-    cardinality to metrics.  The cardinality of a metric is the cardinality
+    cardinality to metrics. The cardinality of a metric is the cardinality
     (number of possible values) for each label of that metric multiplied
-    together.  The reason or "why" of a failure in the context of metrics is
-    more like a category of failure rather than something as detailed as an
-    error message. Enums don't have to be the only label values, but anything
-    that can grow without bounds should be considered carefully before being
-    added as a metric label value.
+    together. The reason or "why" of a failure in the context of metrics is more
+    like a category of failure rather than something as detailed as an error
+    message. Enums don't have to be the only label values, but anything that can
+    grow without bounds should be considered carefully before being added as a
+    metric label value.
