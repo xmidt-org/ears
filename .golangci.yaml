@@ -1,7 +1,14 @@
 ---
+run:
+  skip-dirs:
+    - internal/pkg/app/docs
+
 linters-settings:
   misspell:
     locale: US
+  errorlint:
+    # Report non-wrapping error creation using fmt.Errorf
+    errorf: false
 
 linters:
   enable:
@@ -14,18 +21,51 @@ linters:
     - misspell
     - unconvert
     - prealloc
+    - deadcode
   disable:
     - errcheck
     - ineffassign
 
 issues:
   exclude-rules:
-    - path: _test.go
+    - path: _test\.go
       linters:
         - dupl
         - funlen
+    - path: internal/pkg/app/handlers_v1\.go
+      linters:
+        - funlen
+    - path: pkg/filter/match/patternregex/patternregex\.go
+      linters:
+        - funlen
+    - path: pkg/filter/js/goja\.go
+      linters:
+        - funlen
+    - path: pkg/filter/hash/hash\.go
+      linters:
+        - funlen
+    - path: pkg/plugin/manager/manager\.go
+      linters:
+        - funlen
+    - path: pkg/plugin/manager\.go
+      linters:
+        - funlen
+    - path: pkg/plugins/sqs/receiver\.go
+      linters:
+        - funlen
+    - path: pkg/plugins/redis/receiver\.go
+      linters:
+        - funlen
+    - path: pkg/ratelimit/adaptive_limiter\.go
+      linters:
+        - funlen
+    - path: internal/pkg/syncer/redis_delta_syncer\.go
+      linters:
+        - funlen
+    - path: pkg/cli/viper\.go
+      linters:
+        - funlen
+    - path: internal/pkg/fx/pluginmanagerfx/module\.go
+      linters:
+        - funlen
 
-linters-settings:
-  errorlint:
-    # Report non-wrapping error creation using fmt.Errorf
-    errorf: false
