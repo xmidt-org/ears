@@ -42,18 +42,18 @@ func (m *Matcher) contains(a interface{}, b interface{}) bool {
 	if a == nil || b == nil {
 		return false
 	}
-	switch b.(type) {
+	switch b := b.(type) {
 	case string:
-		if b.(string) == "*" && a != nil {
+		if b == "*" && a != nil {
 			return true
 		}
 	}
-	switch b.(type) {
+	switch b := b.(type) {
 	case map[string]interface{}:
-		switch a.(type) {
+		switch a := a.(type) {
 		case map[string]interface{}:
-			for k, vb := range b.(map[string]interface{}) {
-				c := m.contains(a.(map[string]interface{})[k], vb)
+			for k, vb := range b {
+				c := m.contains(a[k], vb)
 				if !c {
 					return false
 				}
@@ -62,18 +62,18 @@ func (m *Matcher) contains(a interface{}, b interface{}) bool {
 			return false
 		}
 	case []interface{}:
-		switch a.(type) {
+		switch a := a.(type) {
 		case []interface{}:
 			// enforce exact array match
 			if m.exactArrayMatch {
-				if len(a.([]interface{})) != len(b.([]interface{})) {
+				if len(a) != len(b) {
 					return false
 				}
 			}
 			// check if all fields in b are in a (in any order)
-			for _, vb := range b.([]interface{}) {
+			for _, vb := range b {
 				present := false
-				for _, va := range a.([]interface{}) {
+				for _, va := range a {
 					// this supports partial matches in deeply structured array elements
 					c := m.contains(va, vb)
 					if c {
