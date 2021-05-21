@@ -57,8 +57,8 @@ func TestQuotaManagerSyncing(t *testing.T) {
 	ctx := context.Background()
 	tenantConfig := tenant.Config{
 		Tenant: tenant.Id{
-			"myOrg",
-			"myApp",
+			OrgId: "myOrg",
+			AppId: "myApp",
 		},
 		Quota: tenant.Quota{
 			EventsPerSec: 10,
@@ -89,8 +89,8 @@ func TestQuotaManagerSyncing(t *testing.T) {
 	//update the limit to 20
 	tenantConfig = tenant.Config{
 		Tenant: tenant.Id{
-			"myOrg",
-			"myApp",
+			OrgId: "myOrg",
+			AppId: "myApp",
 		},
 		Quota: tenant.Quota{
 			EventsPerSec: 20,
@@ -121,8 +121,8 @@ func TestQuotaManagerRateLimit(t *testing.T) {
 	ctx := context.Background()
 	tenantConfig := tenant.Config{
 		Tenant: tenant.Id{
-			"myOrg",
-			"myApp",
+			OrgId: "myOrg",
+			AppId: "myApp",
 		},
 		Quota: tenant.Quota{
 			EventsPerSec: 10,
@@ -145,7 +145,7 @@ func TestQuotaManagerRateLimit(t *testing.T) {
 		if err == nil {
 			break
 		}
-		if err.Error() == "Cannot reach desired RPS" {
+		if errors.Is(err, TestErr_FailToReachRps) {
 			continue
 		}
 		t.Fatalf("Fail to reach the desired rps, error=%s\n", err.Error())
@@ -157,9 +157,12 @@ func TestQuotaManagerRateLimit(t *testing.T) {
 	quotaMgr.Stop()
 }
 
+var TestErr_FailToReachRps = errors.New("Cannot reach desired RPS")
+
 func validateQuotaMgrRps(mgr *quota.QuotaManager, tid tenant.Id, rps int) error {
 	ctx := context.Background()
-	ctx, _ = context.WithTimeout(ctx, 2*time.Second)
+	ctx, cancel := context.WithTimeout(ctx, 2*time.Second)
+	defer cancel()
 
 	start := time.Now()
 
@@ -175,5 +178,5 @@ func validateQuotaMgrRps(mgr *quota.QuotaManager, tid tenant.Id, rps int) error 
 	if start.Add(time.Second + time.Millisecond*100).After(time.Now()) {
 		return nil
 	}
-	return errors.New("Cannot reach desired RPS")
+	return TestErr_FailToReachRps
 }

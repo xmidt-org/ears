@@ -25,7 +25,7 @@ import (
 )
 
 func TestQuotaLimiter(t *testing.T) {
-	limiter := quota.NewQuotaLimiter(tenant.Id{"myOrg", "myApp"}, "inmemory", "", 1, 12)
+	limiter := quota.NewQuotaLimiter(tenant.Id{OrgId: "myOrg", AppId: "myApp"}, "inmemory", "", 1, 12)
 
 	var err error
 	for i := 0; i < 3; i++ {
@@ -34,7 +34,7 @@ func TestQuotaLimiter(t *testing.T) {
 		if err == nil {
 			break
 		}
-		if err.Error() == "Cannot reach desired RPS" {
+		if errors.Is(err, TestErr_FailToReachRps) {
 			continue
 		}
 		t.Fatalf("Fail to reach the desired rps, error=%s\n", err.Error())
@@ -49,7 +49,7 @@ func TestQuotaLimiter(t *testing.T) {
 		if err == nil {
 			break
 		}
-		if err.Error() == "Cannot reach desired RPS" {
+		if errors.Is(err, TestErr_FailToReachRps) {
 			time.Sleep(time.Second)
 			continue
 		}
@@ -65,7 +65,7 @@ func TestQuotaLimiter(t *testing.T) {
 		if err == nil {
 			break
 		}
-		if err.Error() == "Cannot reach desired RPS" {
+		if errors.Is(err, TestErr_FailToReachRps) {
 			continue
 		}
 		t.Fatalf("Fail to reach the desired rps, error=%s\n", err.Error())
@@ -109,7 +109,8 @@ func TestQuotaLimiter(t *testing.T) {
 
 func validateRps(limiter *quota.QuotaLimiter, rps int) error {
 	ctx := context.Background()
-	ctx, _ = context.WithTimeout(ctx, 2*time.Second)
+	ctx, cancel := context.WithTimeout(ctx, 2*time.Second)
+	defer cancel()
 
 	start := time.Now()
 
@@ -122,7 +123,7 @@ func validateRps(limiter *quota.QuotaLimiter, rps int) error {
 		count++
 	}
 
-	fmt.Printf("elapsed time=%dms, adaptiveLimit=%d\n", time.Now().Sub(start).Milliseconds(), limiter.AdaptiveLimit())
+	fmt.Printf("elapsed time=%dms, adaptiveLimit=%d\n", time.Since(start).Milliseconds(), limiter.AdaptiveLimit())
 	if start.Add(time.Second + time.Millisecond*100).After(time.Now()) {
 		return nil
 	}

@@ -170,7 +170,7 @@ func level1Worker(t *testing.T, ch chan *TestWork, ch2 chan *TestWork) {
 		for i := 0; i < 10; i++ {
 			subTree, err := work.ack.NewSubTree()
 			if err != nil {
-				t.Fatalf("Fail to create subtree %s\n", err.Error())
+				t.Errorf("Fail to create subtree %s\n", err.Error())
 			}
 			ch2 <- &TestWork{ack: subTree, workTime: 0 * time.Millisecond, doNack: work.doNack}
 		}
@@ -204,7 +204,7 @@ func Test2LevelSubTree(t *testing.T) {
 	for i := 0; i < 100; i++ {
 		subTree, err := ack.NewSubTree()
 		if err != nil {
-			t.Fatalf("Fail to create subtree %s\n", err.Error())
+			t.Errorf("Fail to create subtree %s\n", err.Error())
 		}
 		workChan <- &TestWork{ack: subTree, workTime: 1 * time.Millisecond}
 	}
@@ -241,7 +241,7 @@ func Test2LevelSubTreeWithNack(t *testing.T) {
 	for i := 0; i < 100; i++ {
 		subTree, err := ack.NewSubTree()
 		if err != nil {
-			t.Fatalf("Fail to create subtree %s\n", err.Error())
+			t.Errorf("Fail to create subtree %s\n", err.Error())
 		}
 		doNack := false
 		if i == 55 {
