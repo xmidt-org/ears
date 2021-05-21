@@ -68,4 +68,20 @@ issues:
     - path: internal/pkg/fx/pluginmanagerfx/module\.go
       linters:
         - funlen
+    - path: pkg/filter/hash/hash\.go
+      text: "weak cryptographic primitive"
+      linters:
+        - gosec
+    - path: pkg/hasher/hasher\.go
+      text: "weak cryptographic primitive"
+      linters:
+        - gosec
+    - path: pkg/filter/dedup/filter\.go
+      text: "weak cryptographic primitive"
+      linters:
+        - gosec
+    - path: pkg/filter/js/goja\.go
+      text: "weak cryptographic primitive"
+      linters:
+        - gosec
 
