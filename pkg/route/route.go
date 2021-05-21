@@ -83,6 +83,7 @@ func fanOut(events []event.Event, next receiver.NextFn) error {
 		return nil
 	}
 	for _, e := range events {
+		e := e
 		go func(evt event.Event) {
 			defer func() {
 				p := recover()
