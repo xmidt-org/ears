@@ -62,6 +62,8 @@ import (
 	"time"
 )
 
+//const Version = "v1.0.2"
+
 type (
 	RouteTestTable struct {
 		Table                   map[string]*RouteTest `json:"table,omitempty"`
@@ -128,7 +130,6 @@ func prefixRouteConfig(routeConfig *route.Config, prefix string) {
 
 func TestRouteTable(t *testing.T) {
 	// global test settings
-	Version = "v1.0.2"
 	testTableName := "table"
 	// load test table
 	testTableFileName := "testdata/" + testTableName + ".json"
@@ -645,7 +646,6 @@ func checkEventsSent(routeFileName string, testPrefix string, pluginMgr plugin.M
 }
 
 func TestRestVersionHandler(t *testing.T) {
-	Version = "v1.0.2"
 	w := httptest.NewRecorder()
 	r := httptest.NewRequest(http.MethodGet, "/version", nil)
 	api, err := NewAPIManager(&tablemgr.DefaultRoutingTableManager{}, nil, nil)
@@ -665,7 +665,6 @@ func TestRestVersionHandler(t *testing.T) {
 // update route test
 
 func TestRestUpdateRoutesHandler(t *testing.T) {
-	Version = "v1.0.2"
 	runtime := setupSimpleApi(t, "inmemory")
 	//files := []string{"update1", "update2", "update3", "update4"}
 	files := []string{"update4"}
@@ -709,7 +708,6 @@ func TestRestUpdateRoutesHandler(t *testing.T) {
 // single route tests
 
 func TestRestPostSimpleRouteHandler(t *testing.T) {
-	Version = "v1.0.2"
 	w := httptest.NewRecorder()
 	routeFileName := "testdata/simpleRoute.json"
 	simpleRouteReader, err := os.Open(routeFileName)
@@ -757,7 +755,6 @@ func TestRestPostSimpleRouteHandler(t *testing.T) {
 }
 
 func TestRestPutSimpleRouteHandler(t *testing.T) {
-	Version = "v1.0.2"
 	w := httptest.NewRecorder()
 	name := "testdata/simpleRoute.json"
 	simpleRouteReader, err := os.Open(name)
@@ -799,7 +796,6 @@ func TestRestPutSimpleRouteHandler(t *testing.T) {
 }
 
 func TestRestPostFilterMatchAllowRouteHandler(t *testing.T) {
-	Version = "v1.0.2"
 	w := httptest.NewRecorder()
 	routeFileName := "testdata/simpleFilterMatchAllowRoute.json"
 	simpleRouteReader, err := os.Open(routeFileName)
@@ -847,7 +843,6 @@ func TestRestPostFilterMatchAllowRouteHandler(t *testing.T) {
 }
 
 func TestRestPostFilterMatchDenyRouteHandler(t *testing.T) {
-	Version = "v1.0.2"
 	w := httptest.NewRecorder()
 	routeFileName := "testdata/simpleFilterMatchDenyRoute.json"
 	simpleRouteReader, err := os.Open(routeFileName)
@@ -895,7 +890,6 @@ func TestRestPostFilterMatchDenyRouteHandler(t *testing.T) {
 }
 
 func TestRestPostFilterChainMatchRouteHandler(t *testing.T) {
-	Version = "v1.0.2"
 	w := httptest.NewRecorder()
 	routeFileName := "testdata/simpleFilterChainMatchRoute.json"
 	simpleRouteReader, err := os.Open(routeFileName)
@@ -943,7 +937,6 @@ func TestRestPostFilterChainMatchRouteHandler(t *testing.T) {
 }
 
 func TestRestPostFilterSplitRouteHandler(t *testing.T) {
-	Version = "v1.0.2"
 	w := httptest.NewRecorder()
 	routeFileName := "testdata/simpleFilterSplitRoute.json"
 	simpleRouteReader, err := os.Open(routeFileName)
@@ -991,7 +984,6 @@ func TestRestPostFilterSplitRouteHandler(t *testing.T) {
 }
 
 func TestRestPostFilterDeepSplitRouteHandler(t *testing.T) {
-	Version = "v1.0.2"
 	w := httptest.NewRecorder()
 	routeFileName := "testdata/simpleFilterDeepSplitRoute.json"
 	simpleRouteReader, err := os.Open(routeFileName)
@@ -1041,7 +1033,6 @@ func TestRestPostFilterDeepSplitRouteHandler(t *testing.T) {
 // various api tests
 
 func TestRestGetRouteHandler(t *testing.T) {
-	Version = "v1.0.2"
 	routeFileName := "testdata/simpleRoute.json"
 	simpleRouteReader, err := os.Open(routeFileName)
 	if err != nil {
@@ -1073,7 +1064,6 @@ func TestRestGetRouteHandler(t *testing.T) {
 }
 
 func TestRestGetMultipleRoutesHandler(t *testing.T) {
-	Version = "v1.0.2"
 	routeFileName := "testdata/simpleRoute.json"
 	simpleRouteReader, err := os.Open(routeFileName)
 	if err != nil {
@@ -1107,7 +1097,6 @@ func TestRestGetMultipleRoutesHandler(t *testing.T) {
 }
 
 func TestRestDeleteRouteHandler(t *testing.T) {
-	Version = "v1.0.2"
 	routeFileName := "testdata/simpleRoute.json"
 	simpleRouteReader, err := os.Open(routeFileName)
 	if err != nil {
@@ -1154,7 +1143,6 @@ func TestRestDeleteRouteHandler(t *testing.T) {
 // tests for various error conditions
 
 func TestRestRouteHandlerIdMismatch(t *testing.T) {
-	Version = "v1.0.2"
 	w := httptest.NewRecorder()
 	routeFileName := "testdata/simpleRoute.json"
 	simpleRouteReader, err := os.Open(routeFileName)
@@ -1174,7 +1162,6 @@ func TestRestRouteHandlerIdMismatch(t *testing.T) {
 }
 
 func TestRestMissingRouteHandler(t *testing.T) {
-	Version = "v1.0.2"
 	runtime := setupSimpleApi(t, "inmemory")
 	w := httptest.NewRecorder()
 	r := httptest.NewRequest(http.MethodGet, "/ears/v1"+tenantPath+"/routes/fakeid", nil)
@@ -1189,7 +1176,6 @@ func TestRestMissingRouteHandler(t *testing.T) {
 }
 
 func TestRestPostRouteHandlerBadName(t *testing.T) {
-	Version = "v1.0.2"
 	w := httptest.NewRecorder()
 	routeFileName := "testdata/simpleRouteBadName.json"
 	simpleRouteReader, err := os.Open(routeFileName)
@@ -1209,7 +1195,6 @@ func TestRestPostRouteHandlerBadName(t *testing.T) {
 }
 
 func TestRestPostRouteHandlerBadPluginName(t *testing.T) {
-	Version = "v1.0.2"
 	w := httptest.NewRecorder()
 	routeFileName := "testdata/simpleRouteBadPluginName.json"
 	simpleRouteReader, err := os.Open(routeFileName)
@@ -1229,7 +1214,6 @@ func TestRestPostRouteHandlerBadPluginName(t *testing.T) {
 }
 
 func TestRestPostRouteHandlerNoSender(t *testing.T) {
-	Version = "v1.0.2"
 	w := httptest.NewRecorder()
 	routeFileName := "testdata/simpleRouteNoSender.json"
 	simpleRouteReader, err := os.Open(routeFileName)
@@ -1249,7 +1233,6 @@ func TestRestPostRouteHandlerNoSender(t *testing.T) {
 }
 
 func TestRestPostRouteHandlerNoReceiver(t *testing.T) {
-	Version = "v1.0.2"
 	w := httptest.NewRecorder()
 	routeFileName := "testdata/simpleRouteNoReceiver.json"
 	simpleRouteReader, err := os.Open(routeFileName)
@@ -1269,7 +1252,6 @@ func TestRestPostRouteHandlerNoReceiver(t *testing.T) {
 }
 
 func TestRestPostRouteHandlerNoUser(t *testing.T) {
-	Version = "v1.0.2"
 	w := httptest.NewRecorder()
 	routeFileName := "testdata/simpleRouteNoUser.json"
 	simpleRouteReader, err := os.Open(routeFileName)
@@ -1289,7 +1271,6 @@ func TestRestPostRouteHandlerNoUser(t *testing.T) {
 }
 
 func TestRestMultipleTenants(t *testing.T) {
-	Version = "v1.0.2"
 	routeFileName := "testdata/simpleRoute.json"
 
 	tenantPaths := []string{
