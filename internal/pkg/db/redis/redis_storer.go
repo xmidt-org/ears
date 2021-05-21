@@ -123,12 +123,9 @@ func (d *RedisDbStorer) SetRoute(ctx context.Context, r route.Config) error {
 	if err != nil {
 		return err
 	}
-	isNew, err := d.client.HSet(d.tableName, r.TenantId.KeyWithRoute(r.Id), val).Result()
+	_, err = d.client.HSet(d.tableName, r.TenantId.KeyWithRoute(r.Id), val).Result()
 	if err != nil {
 		return fmt.Errorf("could not insert route into redis: %v", err)
-	}
-	if !isNew {
-		//return fmt.Errorf("could not insert route into redis")
 	}
 	return nil
 }
