@@ -74,18 +74,12 @@ func (r Response) Respond(ctx context.Context, w http.ResponseWriter) {
 	json.NewEncoder(w).Encode(r)
 }
 
-func ErrorResponse(err error) Response {
-	apiErr, ok := err.(ApiError)
-	statusCode := http.StatusInternalServerError
-	if ok {
-		statusCode = apiErr.StatusCode()
-	}
-
+func ErrorResponse(apiErr ApiError) Response {
 	return Response{
 		Status: &Status{
-			Code: statusCode,
+			Code: apiErr.StatusCode(),
 		},
-		Item: err.Error(),
+		Item: apiErr.Error(),
 	}
 }
 

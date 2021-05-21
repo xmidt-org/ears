@@ -1,5 +1,5 @@
 {
-  "item": "missing plugin type configuration",
+  "item": "InternalServerError: missing plugin type configuration",
   "status": {
     "code": 500,
     "message": "Internal Server Error"
