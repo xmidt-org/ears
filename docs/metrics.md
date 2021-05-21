@@ -129,9 +129,6 @@ func (e *Example) Inc() error {
 
 // NewExample create an example with the given measures and maximum.
 func NewExample(m Measures, max int) (*Example, error) {
-  if m == nil {
-    return nil, errors.New("measures cannot be nil")
-  }
   if max < 1 {
     return nil, errors.New("max must be greater than 1")
   }
@@ -174,30 +171,49 @@ An example that expands on the code provided in [Metric Code](#Metric-Code) is s
 ```go
 // in main.go
 
+const (
+  applicationName = "example"
+)
+
 func main() {
-  v := viper.New()
+  // setup needed to use viper to get configuration.
+  v, err := setupViper()
+  if err != nil {
+    fmt.Fprintln(os.Stderr, err)
+    os.Exit(1)
+  }
   app := fx.New(
-    arrange.ForViper(v), // metrics related configuration is needed, so viper is too.
-    touchstone.Provide(), // provides the metric registry.
-    touchhttp.Provide(), // provides the metric handler and some other http metric middleware.
-    ProvideMetrics(), // the metrics for Example
+    arrange.ForViper(v), // metrics related configuration is needed, so viper is too
+    fx.Provide(
+      // read in prometheus configuration from the config file
+      arrange.UnmarshalKey("prometheus", touchstone.Config{}),
+    ),
+    touchstone.Provide(), // provides the metric registry
+    touchhttp.Provide(),  // provides the metric handler and some other http metric middleware
+    ProvideMetrics(),     // the metrics for Example
     arrangehttp.Server{
-      Name: "server_metrics",
-      Key:  "servers.metrics",
+      Name: "server_metrics",  // for annotating our mux router
+      Key:  "servers.metrics", // key used in the config file
     }.Provide(), // provides the router for metrics
     fx.Provide(
       NewExample,
+      // provide the max number. In a real program, this would be annotated.
+      func() int {
+        return 10
+      },
     ),
     fx.Invoke(
       handleMetricEndpoint,
       // this is fine for an example, but long running goroutines should have
       // an exit strategy.
       func(e *Example) {
-        for {
-          // errors shouldn't be thrown away either.
-          _ := e.Inc()
-          time.Sleep(time.Second)
-        }
+        go func() {
+          for {
+            // errors shouldn't be thrown away either.
+            _ = e.Inc()
+            time.Sleep(time.Second)
+          }
+        }()
       },
     ),
   )
@@ -211,6 +227,21 @@ func main() {
     fmt.Fprintln(os.Stderr, err)
     os.Exit(2)
   }
+}
+
+func setupViper() (*viper.Viper, error) {
+  v := viper.New()
+
+  v.SetConfigName(applicationName)
+  v.AddConfigPath(fmt.Sprintf("/etc/%s", applicationName))
+  v.AddConfigPath(fmt.Sprintf("$HOME/.%s", applicationName))
+  v.AddConfigPath(".")
+  err := v.ReadInConfig()
+  if err != nil {
+    return v, fmt.Errorf("failed to read config file: %w", err)
+  }
+
+  return v, nil
 }
 ```
 
@@ -227,6 +258,23 @@ func handleMetricEndpoint(in MetricRouterIn) {
   in.Router.Handle("/metrics", in.Handler).Methods("GET")
 }
 ```
+
+Sending a request to the metrics endpoint would result in a response that
+includes our metric:
+
+```
+# HELP namespace_subsystem_example_count Number of times something happens in our example
+# TYPE namespace_subsystem_example_count counter
+namespace_subsystem_example_count{result="failure"} 11
+namespace_subsystem_example_count{result="success"} 116
+```
+
+There will be additional metrics included in the response that are included as a
+part of the golang prometheus client and our metric handler. The metrics are
+provided in the http response in alphabetical order. In the response above,
+`namespace` and `subsystem` are placeholders for whatever is configured. If
+neither are configured, the metric name would be `example_count`. Usually, we
+set the `namespace` to be the project name and `subsystem` as the service name.
 
 ## Prometheus Deployment
 
