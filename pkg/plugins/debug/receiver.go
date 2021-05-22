@@ -91,10 +91,10 @@ func (r *Receiver) Receive(next receiver.NextFn) error {
 func (r *Receiver) StopReceiving(ctx context.Context) error {
 	r.Lock()
 	defer r.Unlock()
-	if r.done != nil {
+	/*if r.done != nil {
 		close(r.done)
 		r.done = nil
-	}
+	}*/
 	return nil
 }
 
