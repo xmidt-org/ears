@@ -58,7 +58,7 @@ func NewRedisDeltaSyncer(logger *zerolog.Logger, config config.Config) DeltaSync
 	s.logger = logger
 	s.config = config
 	s.redisEndpoint = config.GetString("ears.synchronization.endpoint")
-	s.localSyncers = make(map[string][]LocalSyncer, 0)
+	s.localSyncers = make(map[string][]LocalSyncer)
 	hostname, _ := os.Hostname()
 	s.instanceId = hostname + "_" + uuid.New().String()
 	s.active = config.GetBool("ears.synchronization.active")
@@ -91,13 +91,14 @@ func (s *RedisDeltaSyncer) UnregisterLocalSyncer(itemType string, localSyncer Lo
 		return
 	}
 
-	for i, s := range syncers {
-		if s == localSyncer {
+	for i, syncer := range syncers {
+		if syncer == localSyncer {
 			//delete by copy the last element to the current pos and then
 			//shorten the array by one
 			syncers[i] = syncers[len(syncers)-1]
 			syncers[len(syncers)-1] = nil
 			syncers = syncers[:len(syncers)-1]
+			s.localSyncers[itemType] = syncers
 			return
 		}
 	}
@@ -128,7 +129,7 @@ func (s *RedisDeltaSyncer) PublishSyncRequest(ctx context.Context, tid tenant.Id
 		wg.Add(1)
 		// listen for ACKs first ...
 		go func() {
-			received := make(map[string]bool, 0)
+			received := make(map[string]bool)
 			lrc := redis.NewClient(&redis.Options{
 				Addr:     s.redisEndpoint,
 				Password: "",
@@ -146,8 +147,6 @@ func (s *RedisDeltaSyncer) PublishSyncRequest(ctx context.Context, tid tenant.Id
 					if err != nil {
 						s.logger.Error().Str("op", "PublishSyncRequest").Msg(err.Error())
 						break
-					} else {
-						//s.logger.Info().Str("op", "PublishSyncRequest").Msg("receive ack on channel " + EARS_REDIS_ACK_CHANNEL)
 					}
 
 					var syncCmd SyncCommand
@@ -164,8 +163,6 @@ func (s *RedisDeltaSyncer) PublishSyncRequest(ctx context.Context, tid tenant.Id
 						if len(received) >= numSubscribers-1 {
 							break
 						}
-					} else {
-						//s.logger.Info().Str("op", "PublishSyncRequest").Msg("ignoring unrelated ack: " + msg.Payload)
 					}
 				}
 				done <- true
@@ -197,8 +194,6 @@ func (s *RedisDeltaSyncer) PublishSyncRequest(ctx context.Context, tid tenant.Id
 			err := s.client.Publish(EARS_REDIS_SYNC_CHANNEL, string(msg)).Err()
 			if err != nil {
 				s.logger.Error().Str("op", "PublishSyncRequest").Msg(err.Error())
-			} else {
-				//s.logger.Info().Str("op", "PublishSyncRequest").Msg("publish on channel " + EARS_REDIS_SYNC_CHANNEL)
 			}
 		}
 	}()

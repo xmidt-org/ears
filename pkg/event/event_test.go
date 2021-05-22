@@ -44,7 +44,8 @@ func TestEventBasic(t *testing.T) {
 		t.Errorf("Fail to match payload +%v +%v\n", e.Payload(), payload)
 	}
 
-	ctx2, _ := context.WithCancel(ctx)
+	ctx2, cancel := context.WithCancel(ctx)
+	defer cancel()
 	payload2 := map[string]interface{}{
 		"field3": "efgh",
 		"field4": 5678,
@@ -228,6 +229,10 @@ func TestEventNack(t *testing.T) {
 			done <- true
 		}))
 
+	if err != nil {
+		t.Errorf("Fail to create a event %s\n", err.Error())
+	}
+
 	e2, err := e1.Clone(ctx)
 	if err != nil {
 		t.Errorf("Fail to clone event %s\n", err.Error())
@@ -255,7 +260,8 @@ func TestEventTimeout(t *testing.T) {
 		},
 	}
 
-	ctx, _ = context.WithTimeout(ctx, time.Millisecond*500)
+	ctx, cancel := context.WithTimeout(ctx, time.Millisecond*500)
+	defer cancel()
 
 	done := make(chan bool)
 	e1, err := event.New(ctx, payload, event.WithAck(
@@ -274,6 +280,10 @@ func TestEventTimeout(t *testing.T) {
 			}
 			done <- true
 		}))
+
+	if err != nil {
+		t.Errorf("Fail to create a event %s\n", err.Error())
+	}
 
 	_, err = e1.Clone(ctx)
 	if err != nil {

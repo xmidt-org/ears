@@ -161,7 +161,7 @@ func testRouteStorer(s route.RouteStorer, t *testing.T) {
 	time.Sleep(500 * time.Millisecond)
 
 	//Test Case: tenant does not exist
-	r, err := s.GetRoute(ctx, tenant.Id{"myOrg", "myApp"}, "does_not_exist")
+	r, err := s.GetRoute(ctx, tenant.Id{OrgId: "myOrg", AppId: "myApp"}, "does_not_exist")
 	if err == nil {
 		t.Fatalf("Expect an error but instead get no error")
 	}
@@ -201,7 +201,7 @@ func testRouteStorer(s route.RouteStorer, t *testing.T) {
 	g.AssertJson(t, "route", r)
 
 	//Test Case: route does not exist
-	r, err = s.GetRoute(ctx, tenant.Id{"myOrg", "myApp"}, "does_not_exist")
+	r, err = s.GetRoute(ctx, tenant.Id{OrgId: "myOrg", AppId: "myApp"}, "does_not_exist")
 	if err == nil {
 		t.Fatalf("Expect an error but instead get no error")
 	}
@@ -273,7 +273,7 @@ func testRouteStorer(s route.RouteStorer, t *testing.T) {
 	g.AssertJson(t, "allroutes", routes)
 
 	//Test Case: try to get route on a different tenant
-	r, err = s.GetRoute(ctx, tenant.Id{"myOrg", "myApp"}, config.Id)
+	r, err = s.GetRoute(ctx, tenant.Id{OrgId: "myOrg", AppId: "myApp"}, config.Id)
 	if err == nil {
 		t.Fatalf("Expect an error but instead get no error")
 	}
