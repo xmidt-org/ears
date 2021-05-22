@@ -164,18 +164,20 @@ func (r *Receiver) startReceiveWorker(svc *sqs.SQS, n int) {
 					entries <- &entry
 					continue
 				}
-				ctx, _ := context.WithTimeout(context.Background(), time.Duration(*r.config.AcknowledgeTimeout)*time.Second)
+				ctx, cancel := context.WithTimeout(context.Background(), time.Duration(*r.config.AcknowledgeTimeout)*time.Second)
 				e, err := event.New(ctx, payload, event.WithMetadata(*message), event.WithAck(
 					func(e event.Event) {
 						msg := e.Metadata().(sqs.Message) // get metadata associated with this event
 						//r.logger.Info().Str("op", "SQS.receiveWorker").Int("batchSize", len(sqsResp.Messages)).Int("workerNum", n).Msg("processed message " + (*msg.MessageId))
 						entry := sqs.DeleteMessageBatchRequestEntry{Id: msg.MessageId, ReceiptHandle: msg.ReceiptHandle}
 						entries <- &entry
+						cancel()
 					},
 					func(e event.Event, err error) {
 						msg := e.Metadata().(sqs.Message) // get metadata associated with this event
 						r.logger.Error().Str("op", "SQS.receiveWorker").Int("workerNum", n).Msg("failed to process message " + (*msg.MessageId) + ": " + err.Error())
 						// a nack below max retries - this is the only case where we do not delete the message yet
+						cancel()
 					}))
 				if err != nil {
 					r.logger.Error().Str("op", "SQS.receiveWorker").Int("workerNum", n).Msg("cannot create event: " + err.Error())
@@ -222,7 +224,7 @@ func (r *Receiver) Receive(next receiver.NextFn) error {
 	r.logger.Info().Str("op", "SQS.Receive").Msg("waiting for receive done")
 	<-r.done
 	r.Lock()
-	elapsedMs := time.Now().Sub(r.startTime).Milliseconds()
+	elapsedMs := time.Since(r.startTime).Milliseconds()
 	receiveThroughput := 1000 * r.receiveCount / (int(elapsedMs) + 1)
 	deleteThroughput := 1000 * r.deleteCount / (int(elapsedMs) + 1)
 	receiveCnt := r.receiveCount

@@ -69,7 +69,7 @@ func (d *DynamoDbStorer) getRoute(ctx context.Context, tid tenant.Id, routeId st
 	}
 
 	if result.Item == nil {
-		return nil, &route.RouteNotFoundError{tid, routeId}
+		return nil, &route.RouteNotFoundError{TenantId: tid, RouteId: routeId}
 	}
 
 	var item routeItem

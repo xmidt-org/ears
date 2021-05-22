@@ -25,10 +25,11 @@ var ackTO = time.Second * 10
 
 func FailOnNack(t *testing.T) EventOption {
 	return func(e *event) error {
-		ctx, _ := context.WithTimeout(e.ctx, ackTO)
+		ctx, cancel := context.WithTimeout(e.ctx, ackTO)
 		e.ack = ack.NewAckTree(ctx, func() {
-			//ok
+			cancel()
 		}, func(err error) {
+			cancel()
 			t.Error(err)
 		})
 		return nil
@@ -37,11 +38,12 @@ func FailOnNack(t *testing.T) EventOption {
 
 func FailOnAck(t *testing.T) EventOption {
 	return func(e *event) error {
-		ctx, _ := context.WithTimeout(e.ctx, ackTO)
+		ctx, cancel := context.WithTimeout(e.ctx, ackTO)
 		e.ack = ack.NewAckTree(ctx, func() {
+			cancel()
 			t.Error("expecting error")
 		}, func(err error) {
-			//ok
+			cancel()
 		})
 		return nil
 	}

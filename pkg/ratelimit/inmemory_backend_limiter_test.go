@@ -21,7 +21,7 @@ import (
 )
 
 func TestInMemoryBackendLimiter(t *testing.T) {
-	limiter := ratelimit.NewInMemoryBackendLimiter(tenant.Id{"myOrg", "myAPp"}, 0)
+	limiter := ratelimit.NewInMemoryBackendLimiter(tenant.Id{OrgId: "myOrg", AppId: "myApp"}, 0)
 
 	testBackendLimiter(limiter, t)
 }

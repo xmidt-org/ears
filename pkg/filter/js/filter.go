@@ -46,7 +46,7 @@ func (f *Filter) Filter(evt event.Event) []event.Event {
 		evt.Nack(err)
 		return []event.Event{}
 	}
-	if transformedEvts == nil || len(transformedEvts) == 0 {
+	if len(transformedEvts) == 0 {
 		evt.Ack()
 		return []event.Event{}
 	}

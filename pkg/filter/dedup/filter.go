@@ -40,6 +40,9 @@ func NewFilter(config interface{}) (*Filter, error) {
 		config: *cfg,
 	}
 	f.lruCache, err = lru.New(*cfg.CacheSize)
+	if err != nil {
+		return nil, err
+	}
 	return f, nil
 }
 

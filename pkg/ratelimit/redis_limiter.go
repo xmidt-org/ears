@@ -17,6 +17,7 @@ package ratelimit
 import (
 	"context"
 	"github.com/go-redis/redis/v8"
+	"github.com/pkg/errors"
 	"github.com/xmidt-org/ears/pkg/tenant"
 	"math/rand"
 	"strconv"
@@ -64,7 +65,7 @@ func (r *RedisRateLimiter) Take(ctx context.Context, unit int) error {
 		if err == nil {
 			return nil
 		}
-		if err != redis.TxFailedErr {
+		if errors.Is(err, redis.TxFailedErr) {
 			return err
 		}
 		r := rand.Float32()
@@ -73,7 +74,7 @@ func (r *RedisRateLimiter) Take(ctx context.Context, unit int) error {
 }
 
 func (r *RedisRateLimiter) take(ctx context.Context, unit int) error {
-	if unit <= 0 || unit > int(r.rqs) {
+	if unit <= 0 || unit > r.rqs {
 		return &InvalidUnitError{}
 	}
 
@@ -85,14 +86,14 @@ func (r *RedisRateLimiter) take(ctx context.Context, unit int) error {
 	err := r.client.Watch(ctx, func(tx *redis.Tx) error {
 		allowance, err := tx.Get(ctx, bucketKey).Float64()
 		if err != nil {
-			if err != redis.Nil {
+			if errors.Is(err, redis.Nil) {
 				return err
 			}
 			allowance = float64(r.rqs)
 		}
 		refillTs, err := tx.Get(ctx, tsKey).Int64()
 		if err != nil {
-			if err != redis.Nil {
+			if errors.Is(err, redis.Nil) {
 				return err
 			}
 			refillTs = time.Now().UnixNano()
