@@ -426,11 +426,6 @@ func (interpreter *Interpreter) Exec(evt event.Event, code string) ([]event.Even
 	}()
 	wg.Wait()
 	if nil != err {
-		switch err.(type) {
-		case *goja.InterruptedError:
-			err = Interrupted
-		case *goja.Exception:
-		}
 		return nil, err
 	}
 	x := v.Export()
