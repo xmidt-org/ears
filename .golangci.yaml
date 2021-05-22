@@ -87,4 +87,19 @@ issues:
       text: "weak cryptographic primitive"
       linters:
         - gosec
-
+    - path: pkg/ratelimit/redis_limiter\.go
+      text": "G404: Use of weak random number generator"
+      linters:
+        - gosec
+    - path: internal/pkg/aws/s3/client\.go
+      text": "type assertion on error"
+      linters:
+        - errorlint
+    - path: internal/pkg/aws/s3/client_test\.go
+      text": "type assertion on error"
+      linters:
+        - errorlint
+    - path: internal/pkg/aws/s3/error\.go
+      text": "type assertion on error"
+      linters:
+        - errorlint
