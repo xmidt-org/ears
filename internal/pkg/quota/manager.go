@@ -88,7 +88,7 @@ func (m *QuotaManager) Start() {
 			case <-m.ctx.Done():
 				return
 			case <-m.ticker.C:
-				m.syncAllItems()
+				//m.syncAllItems()
 			}
 		}
 	}()
