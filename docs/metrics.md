@@ -107,7 +107,7 @@ func ProvideMetrics() fx.Option {
 type Example struct {
   count int
   max int
-  M Measures
+  m Measures
 }
 
 // Inc adds to the internal counter in Example. If the count hits the maximum,
@@ -115,13 +115,13 @@ type Example struct {
 func (e *Example) Inc() error {
   if e.count >= e.max {
     e.count = 0
-    e.M.ExampleCount.With(prometheus.Labels{ // Labels is just a map.
+    e.m.ExampleCount.With(prometheus.Labels{ // Labels is just a map.
       ResultLabel: FailureResult,
     }).Add(1.0)
     return errors.New("overflow")
   }
   e.count++
-  e.M.ExampleCount.With(prometheus.Labels{ // Labels is just a map.
+  e.m.ExampleCount.With(prometheus.Labels{ // Labels is just a map.
     ResultLabel: SuccessResult,
   }).Add(1.0)
   return nil
@@ -134,7 +134,7 @@ func NewExample(m Measures, max int) (*Example, error) {
   }
   return &Example{
     max: max,
-    M: m,
+    m: m,
   }, nil
 }
 ```
