@@ -40,15 +40,18 @@ type QuotaManager struct {
 	ctx    context.Context
 }
 
+const LimiterTypeRedis = "redis"
+const LimiterTypeInMemory = "inmemory"
+
 func NewQuotaManager(logger *zerolog.Logger, tenantStorer tenant.TenantStorer, syncer syncer.DeltaSyncer, config config.Config) (*QuotaManager, error) {
 	backendLimiterType := config.GetString("ears.ratelimiter.type")
 
-	if backendLimiterType != "redis" && backendLimiterType != "inmemory" {
+	if backendLimiterType != LimiterTypeRedis && backendLimiterType != LimiterTypeInMemory {
 		return nil, &BadConfigError{"ears.ratelimiter.type", backendLimiterType}
 	}
 
 	redisAddr := ""
-	if backendLimiterType == "redis" {
+	if backendLimiterType == LimiterTypeRedis {
 		redisAddr = config.GetString("ears.ratelimiter.endpoint")
 		if redisAddr == "" {
 			return nil, &ConfigNotFoundError{"ears.ratelimiter.endpoint"}

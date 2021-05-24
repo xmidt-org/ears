@@ -83,8 +83,8 @@ func NewRoutingTableManager(pluginMgr plugin.Manager, storageMgr route.RouteStor
 		config:     config}
 	rtm.Lock()
 	defer rtm.Unlock()
-	rtm.liveRouteMap = make(map[string]*LiveRouteWrapper, 0)
-	rtm.routeHashMap = make(map[string]*LiveRouteWrapper, 0)
+	rtm.liveRouteMap = make(map[string]*LiveRouteWrapper)
+	rtm.routeHashMap = make(map[string]*LiveRouteWrapper)
 	tableSyncer.RegisterLocalSyncer(syncer.ITEM_TYPE_ROUTE, rtm) // register self as observer
 	return rtm
 }
@@ -192,26 +192,26 @@ func (r *DefaultRoutingTableManager) RemoveRoute(ctx context.Context, tid tenant
 }
 
 func (r *DefaultRoutingTableManager) AddRoute(ctx context.Context, routeConfig *route.Config) error {
-	ctx = context.Background()
+	sctx := context.Background()
 	if routeConfig == nil {
 		return errors.New("missing route config")
 	}
 	// use hashed ID if none is provided - this ID will be returned by the AddRoute REST API
-	routeHash := routeConfig.Hash(ctx)
+	routeHash := routeConfig.Hash(sctx)
 	if routeConfig.Id == "" {
 		routeConfig.Id = routeHash
 	}
-	err := routeConfig.Validate(ctx)
+	err := routeConfig.Validate(sctx)
 	if err != nil {
 		return err
 	}
 	// currently storage layer handles created and updated timestamps
-	err = r.storageMgr.SetRoute(ctx, *routeConfig)
+	err = r.storageMgr.SetRoute(sctx, *routeConfig)
 	if err != nil {
 		return err
 	}
-	r.rtSyncer.PublishSyncRequest(ctx, routeConfig.TenantId, syncer.ITEM_TYPE_ROUTE, routeConfig.Id, true)
-	return r.registerAndRunRoute(ctx, routeConfig)
+	r.rtSyncer.PublishSyncRequest(sctx, routeConfig.TenantId, syncer.ITEM_TYPE_ROUTE, routeConfig.Id, true)
+	return r.registerAndRunRoute(sctx, routeConfig)
 }
 
 func (r *DefaultRoutingTableManager) GetRoute(ctx context.Context, tid tenant.Id, routeId string) (*route.Config, error) {
@@ -327,13 +327,13 @@ func (r *DefaultRoutingTableManager) SynchronizeAllRoutes() (int, error) {
 	if err != nil {
 		return 0, err
 	}
-	storedRouteMap := make(map[string]route.Config, 0)
+	storedRouteMap := make(map[string]route.Config)
 	for _, storedRoute := range storedRoutes {
 		storedRouteMap[storedRoute.TenantId.KeyWithRoute(storedRoute.Id)] = storedRoute
 	}
 	mutated := 0
 	r.Lock()
-	lrm := make(map[string]*LiveRouteWrapper, 0)
+	lrm := make(map[string]*LiveRouteWrapper)
 	for k, v := range r.liveRouteMap {
 		lrm[k] = v
 	}
@@ -356,8 +356,7 @@ func (r *DefaultRoutingTableManager) SynchronizeAllRoutes() (int, error) {
 		_, ok := lrm[storedRoute.TenantId.KeyWithRoute(storedRoute.Id)]
 		if !ok {
 			r.logger.Info().Str("op", "Synchronize").Str("routeId", storedRoute.Id).Msg("route started")
-			var rc route.Config
-			rc = storedRoute
+			rc := storedRoute
 			r.registerAndRunRoute(ctx, &rc)
 			mutated++
 		}
@@ -390,8 +389,7 @@ func (r *DefaultRoutingTableManager) RegisterAllRoutes() error {
 		return err
 	}
 	for _, routeConfig := range routeConfigs {
-		var rc route.Config
-		rc = routeConfig
+		rc := routeConfig
 		r.logger.Info().Str("op", "RegisterAllRoutes").Msg("registering route " + routeConfig.Id)
 		err = r.registerAndRunRoute(ctx, &rc)
 		if err != nil {

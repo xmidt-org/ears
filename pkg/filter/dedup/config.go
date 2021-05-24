@@ -45,9 +45,7 @@ func (c Config) WithDefaults() *Config {
 }
 
 func (c *Config) Validate() error {
-	if c.CacheSize == nil {
-	}
-	if *c.CacheSize < 0 || *c.CacheSize > 10000 {
+	if c.CacheSize == nil || *c.CacheSize < 0 || *c.CacheSize > 10000 {
 		return errors.New("cache size must be between 0 and 10000")
 	}
 	return nil

@@ -41,7 +41,8 @@ func testWorker(ch chan *TestWork) {
 
 func TestSingleAck(t *testing.T) {
 	ctx := context.Background()
-	ctx, _ = context.WithTimeout(ctx, time.Second)
+	ctx, cancel := context.WithTimeout(ctx, time.Second)
+	defer cancel()
 
 	workChan := make(chan *TestWork, 10)
 	go testWorker(workChan)
@@ -65,7 +66,8 @@ func TestSingleAck(t *testing.T) {
 
 func TestAckTimeout(t *testing.T) {
 	ctx := context.Background()
-	ctx, _ = context.WithTimeout(ctx, 100*time.Millisecond)
+	ctx, cancel := context.WithTimeout(ctx, 100*time.Millisecond)
+	defer cancel()
 
 	workChan := make(chan *TestWork, 10)
 	go testWorker(workChan)
@@ -125,7 +127,8 @@ func TestNack(t *testing.T) {
 
 func TestSubTree(t *testing.T) {
 	ctx := context.Background()
-	ctx, _ = context.WithTimeout(ctx, time.Second)
+	ctx, cancel := context.WithTimeout(ctx, time.Second)
+	defer cancel()
 
 	workChan := make(chan *TestWork, 10)
 	for i := 0; i < 5; i++ {
@@ -167,7 +170,7 @@ func level1Worker(t *testing.T, ch chan *TestWork, ch2 chan *TestWork) {
 		for i := 0; i < 10; i++ {
 			subTree, err := work.ack.NewSubTree()
 			if err != nil {
-				t.Fatalf("Fail to create subtree %s\n", err.Error())
+				t.Errorf("Fail to create subtree %s\n", err.Error())
 			}
 			ch2 <- &TestWork{ack: subTree, workTime: 0 * time.Millisecond, doNack: work.doNack}
 		}
@@ -177,7 +180,8 @@ func level1Worker(t *testing.T, ch chan *TestWork, ch2 chan *TestWork) {
 
 func Test2LevelSubTree(t *testing.T) {
 	ctx := context.Background()
-	ctx, _ = context.WithTimeout(ctx, time.Second)
+	ctx, cancel := context.WithTimeout(ctx, time.Second)
+	defer cancel()
 
 	workChan := make(chan *TestWork, 100)
 	workChan2 := make(chan *TestWork, 1000)
@@ -200,7 +204,7 @@ func Test2LevelSubTree(t *testing.T) {
 	for i := 0; i < 100; i++ {
 		subTree, err := ack.NewSubTree()
 		if err != nil {
-			t.Fatalf("Fail to create subtree %s\n", err.Error())
+			t.Errorf("Fail to create subtree %s\n", err.Error())
 		}
 		workChan <- &TestWork{ack: subTree, workTime: 1 * time.Millisecond}
 	}
@@ -210,7 +214,8 @@ func Test2LevelSubTree(t *testing.T) {
 
 func Test2LevelSubTreeWithNack(t *testing.T) {
 	ctx := context.Background()
-	ctx, _ = context.WithTimeout(ctx, time.Second)
+	ctx, cancel := context.WithTimeout(ctx, time.Second)
+	defer cancel()
 
 	workChan := make(chan *TestWork, 100)
 	workChan2 := make(chan *TestWork, 1000)
@@ -236,7 +241,7 @@ func Test2LevelSubTreeWithNack(t *testing.T) {
 	for i := 0; i < 100; i++ {
 		subTree, err := ack.NewSubTree()
 		if err != nil {
-			t.Fatalf("Fail to create subtree %s\n", err.Error())
+			t.Errorf("Fail to create subtree %s\n", err.Error())
 		}
 		doNack := false
 		if i == 55 {

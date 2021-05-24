@@ -56,12 +56,12 @@ func (s *InMemoryRouteStorer) GetRoute(ctx context.Context, tid tenant.Id, id st
 
 	t, ok := s.tenants[tid.Key()]
 	if !ok {
-		return empty, &route.RouteNotFoundError{tid, id}
+		return empty, &route.RouteNotFoundError{TenantId: tid, RouteId: id}
 	}
 
 	r, ok := t[id]
 	if !ok {
-		return empty, &route.RouteNotFoundError{tid, id}
+		return empty, &route.RouteNotFoundError{TenantId: tid, RouteId: id}
 	}
 
 	newCopy := *r

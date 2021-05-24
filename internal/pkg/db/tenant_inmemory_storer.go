@@ -33,11 +33,11 @@ func NewTenantInmemoryStorer() *InMemoryStorer {
 func (s *InMemoryStorer) GetConfig(ctx context.Context, id tenant.Id) (*tenant.Config, error) {
 	appsInOrg, ok := s.orgs[id.OrgId]
 	if !ok {
-		return nil, &tenant.TenantNotFoundError{id}
+		return nil, &tenant.TenantNotFoundError{Tenant: id}
 	}
 	config, ok := appsInOrg[id.AppId]
 	if !ok {
-		return nil, &tenant.TenantNotFoundError{id}
+		return nil, &tenant.TenantNotFoundError{Tenant: id}
 	}
 	return &config, nil
 }
@@ -56,11 +56,11 @@ func (s *InMemoryStorer) SetConfig(ctx context.Context, config tenant.Config) er
 func (s *InMemoryStorer) DeleteConfig(ctx context.Context, id tenant.Id) error {
 	appsInOrg, ok := s.orgs[id.OrgId]
 	if !ok {
-		return &tenant.TenantNotFoundError{id}
+		return &tenant.TenantNotFoundError{Tenant: id}
 	}
 	_, ok = appsInOrg[id.AppId]
 	if !ok {
-		return &tenant.TenantNotFoundError{id}
+		return &tenant.TenantNotFoundError{Tenant: id}
 	}
 	delete(appsInOrg, id.AppId)
 	return nil

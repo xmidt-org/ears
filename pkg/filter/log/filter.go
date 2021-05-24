@@ -31,7 +31,7 @@ type Filter struct{}
 
 // Filter log event and pass it on
 func (f *Filter) Filter(evt event.Event) []event.Event {
-	m := make(map[string]interface{}, 0)
+	m := make(map[string]interface{})
 	m["payload"] = evt.Payload()
 	m["metadata"] = evt.Metadata()
 	buf, err := json.Marshal(m)

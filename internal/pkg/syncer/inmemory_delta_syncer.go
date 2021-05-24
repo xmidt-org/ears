@@ -51,7 +51,7 @@ func NewInMemoryDeltaSyncer(logger *zerolog.Logger, config config.Config) DeltaS
 
 	s := new(InmemoryDeltaSyncer)
 	s.logger = logger
-	s.localSyncers = make(map[string][]LocalSyncer, 0)
+	s.localSyncers = make(map[string][]LocalSyncer)
 	hostname, _ := os.Hostname()
 	s.instanceId = hostname + "_" + uuid.New().String()
 	s.active = config.GetBool("ears.synchronization.active")
@@ -76,13 +76,14 @@ func (s *InmemoryDeltaSyncer) UnregisterLocalSyncer(itemType string, localSyncer
 		return
 	}
 
-	for i, s := range syncers {
-		if s == localSyncer {
+	for i, syncer := range syncers {
+		if syncer == localSyncer {
 			//delete by copy the last element to the current pos and then
 			//shorten the array by one
 			syncers[i] = syncers[len(syncers)-1]
 			syncers[len(syncers)-1] = nil
 			syncers = syncers[:len(syncers)-1]
+			s.localSyncers[itemType] = syncers
 			return
 		}
 	}
