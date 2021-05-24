@@ -182,10 +182,17 @@ func (m *QuotaManager) getLimiter(ctx context.Context, tid tenant.Id) (*QuotaLim
 }
 
 func (m *QuotaManager) syncAllItems() {
+	//make a copy of quota limiters
 	m.lock.Lock()
-	defer m.lock.Unlock()
-
+	limiters := make([]*QuotaLimiter, len(m.limiters))
+	i := 0
 	for _, limiter := range m.limiters {
+		limiters[i] = limiter
+		i++
+	}
+	m.lock.Unlock()
+
+	for _, limiter := range limiters {
 		m.SyncItem(m.ctx, limiter.tid, "ignored", true)
 	}
 }
