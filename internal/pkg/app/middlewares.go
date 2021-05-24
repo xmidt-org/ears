@@ -42,7 +42,7 @@ func initRequestMiddleware(next http.Handler) http.Handler {
 			p := recover()
 			if p != nil {
 				panicErr := panics.ToError(p)
-				resp := ErrorResponse(panicErr)
+				resp := ErrorResponse(&InternalServerError{panicErr})
 				resp.Respond(subCtx, w)
 				log.Ctx(subCtx).Error().Str("op", "initRequestMiddleware").Str("error", panicErr.Error()).
 					Str("stackTrace", panicErr.StackTrace()).Msg("A panic has occurred")

@@ -62,12 +62,12 @@ func (d *RedisDbStorer) GetRoute(ctx context.Context, tid tenant.Id, id string) 
 	result, err := d.client.HGet(d.tableName, tid.KeyWithRoute(id)).Result()
 	if err != nil {
 		if err.Error() == "redis: nil" {
-			return r, &route.RouteNotFoundError{tid, id}
+			return r, &route.RouteNotFoundError{TenantId: tid, RouteId: id}
 		}
 		return r, fmt.Errorf("could not get route from redis: %v", err)
 	}
 	if result == "" {
-		return r, &route.RouteNotFoundError{tid, id}
+		return r, &route.RouteNotFoundError{TenantId: tid, RouteId: id}
 	}
 	err = json.Unmarshal([]byte(result), &r)
 	return r, err
@@ -123,12 +123,9 @@ func (d *RedisDbStorer) SetRoute(ctx context.Context, r route.Config) error {
 	if err != nil {
 		return err
 	}
-	isNew, err := d.client.HSet(d.tableName, r.TenantId.KeyWithRoute(r.Id), val).Result()
+	_, err = d.client.HSet(d.tableName, r.TenantId.KeyWithRoute(r.Id), val).Result()
 	if err != nil {
 		return fmt.Errorf("could not insert route into redis: %v", err)
-	}
-	if !isNew {
-		//return fmt.Errorf("could not insert route into redis")
 	}
 	return nil
 }
@@ -151,13 +148,13 @@ func (d *RedisDbStorer) DeleteRoute(ctx context.Context, tid tenant.Id, id strin
 		return fmt.Errorf("no route to delete in bolt")
 	}
 
-	num, err := d.client.HDel(d.tableName, tid.KeyWithRoute(id)).Result()
+	_, err := d.client.HDel(d.tableName, tid.KeyWithRoute(id)).Result()
 	if err != nil {
 		return fmt.Errorf("could not delete route from redis: %v", err)
 	}
-	if num != 1 {
-		//return fmt.Errorf("could not delete route from redis")
-	}
+	//if num != 1 {
+	//return fmt.Errorf("could not delete route from redis")
+	//}
 	return nil
 }
 

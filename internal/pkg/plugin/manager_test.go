@@ -55,7 +55,7 @@ func TestFilterRegisterErrors(t *testing.T) {
 			err: &plugin.RegistrationError{
 				Message: "could not get plugin",
 			},
-			tid: tenant.Id{"myOrg", "myApp"},
+			tid: tenant.Id{OrgId: "myOrg", AppId: "myApp"},
 		},
 	}
 
@@ -86,7 +86,7 @@ func TestFilterRegister(t *testing.T) {
 
 	m := newManager(t)
 
-	tid := tenant.Id{"myOrg", "myApp"}
+	tid := tenant.Id{OrgId: "myOrg", AppId: "myApp"}
 
 	fMap := m.Filters()
 	a.Expect(len(fMap)).To(Equal(0))
@@ -110,7 +110,7 @@ func TestFilterUnregister(t *testing.T) {
 
 	m := newManager(t)
 
-	tid := tenant.Id{"myOrg", "myApp"}
+	tid := tenant.Id{OrgId: "myOrg", AppId: "myApp"}
 
 	fMap := m.Filters()
 	a.Expect(len(fMap)).To(Equal(0))
@@ -135,7 +135,7 @@ func TestFilterLifecycle(t *testing.T) {
 
 	m := newManager(t)
 
-	tid := tenant.Id{"myOrg", "myApp"}
+	tid := tenant.Id{OrgId: "myOrg", AppId: "myApp"}
 
 	fMap := m.Filters()
 	a.Expect(len(fMap)).To(Equal(0))
@@ -187,7 +187,7 @@ func TestSenderRegisterErrors(t *testing.T) {
 			err: &plugin.RegistrationError{
 				Message: "could not get plugin",
 			},
-			tid: tenant.Id{"myOrg", "myApp"},
+			tid: tenant.Id{OrgId: "myOrg", AppId: "myApp"},
 		},
 	}
 
@@ -218,7 +218,7 @@ func TestSenderRegister(t *testing.T) {
 
 	m := newManager(t)
 
-	tid := tenant.Id{"myOrg", "myApp"}
+	tid := tenant.Id{OrgId: "myOrg", AppId: "myApp"}
 
 	sMap := m.Senders()
 	a.Expect(len(sMap)).To(Equal(0))
@@ -243,7 +243,7 @@ func TestSenderUnregister(t *testing.T) {
 
 	m := newManager(t)
 
-	tid := tenant.Id{"myOrg", "myApp"}
+	tid := tenant.Id{OrgId: "myOrg", AppId: "myApp"}
 
 	sMap := m.Senders()
 	a.Expect(len(sMap)).To(Equal(0))
@@ -269,7 +269,7 @@ func TestSenderLifecycle(t *testing.T) {
 
 	m := newManager(t)
 
-	tid := tenant.Id{"myOrg", "myApp"}
+	tid := tenant.Id{OrgId: "myOrg", AppId: "myApp"}
 
 	sMap := m.Senders()
 	a.Expect(len(sMap)).To(Equal(0))
@@ -321,7 +321,7 @@ func TestReceiverRegisterErrors(t *testing.T) {
 			err: &plugin.RegistrationError{
 				Message: "could not get plugin",
 			},
-			tid: tenant.Id{"myOrg", "myApp"},
+			tid: tenant.Id{OrgId: "myOrg", AppId: "myApp"},
 		},
 	}
 
@@ -352,7 +352,7 @@ func TestReceiverRegister(t *testing.T) {
 
 	m := newManager(t)
 
-	tid := tenant.Id{"myOrg", "myApp"}
+	tid := tenant.Id{OrgId: "myOrg", AppId: "myApp"}
 
 	rMap := m.Receivers()
 	a.Expect(len(rMap)).To(Equal(0))
@@ -378,7 +378,7 @@ func TestReceiverUnregister(t *testing.T) {
 
 	m := newManager(t)
 
-	tid := tenant.Id{"myOrg", "myApp"}
+	tid := tenant.Id{OrgId: "myOrg", AppId: "myApp"}
 
 	rMap := m.Receivers()
 	a.Expect(len(rMap)).To(Equal(0))

@@ -67,7 +67,6 @@ func (r *QuotaLimiter) Wait(ctx context.Context) error {
 			//keep looping
 		}
 	}
-	return nil
 }
 
 func (r *QuotaLimiter) Take(ctx context.Context, unit int) error {

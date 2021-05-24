@@ -26,7 +26,6 @@ import (
 	"github.com/spf13/viper"
 	"github.com/xmidt-org/ears/internal/pkg/config"
 	"github.com/xmidt-org/ears/internal/pkg/db"
-	"github.com/xmidt-org/ears/internal/pkg/db/bolt"
 	"github.com/xmidt-org/ears/internal/pkg/db/dynamo"
 	"github.com/xmidt-org/ears/internal/pkg/db/redis"
 	"github.com/xmidt-org/ears/internal/pkg/plugin"
@@ -62,6 +61,8 @@ import (
 	"testing"
 	"time"
 )
+
+//const Version = "v1.0.2"
 
 type (
 	RouteTestTable struct {
@@ -129,7 +130,6 @@ func prefixRouteConfig(routeConfig *route.Config, prefix string) {
 
 func TestRouteTable(t *testing.T) {
 	// global test settings
-	Version = "v1.0.2"
 	testTableName := "table"
 	// load test table
 	testTableFileName := "testdata/" + testTableName + ".json"
@@ -216,7 +216,7 @@ func TestRouteTable(t *testing.T) {
 				var data Response
 				err = json.Unmarshal(w.Body.Bytes(), &data)
 				if err != nil {
-					t.Fatalf("%s test: cannot unmarshal response: %s %s", currentTestName, err.Error(), string(w.Body.Bytes()))
+					t.Fatalf("%s test: cannot unmarshal response: %s %s", currentTestName, err.Error(), w.Body.String())
 				}
 				g.AssertJson(t, "tbl_"+currentTestName+"_"+routeConfig.Name, data)
 				// collect route ID
@@ -329,17 +329,17 @@ func checkNumRoutes(api *APIManager, currentTestName string, numExpected int) er
 	var data Response
 	var err = json.Unmarshal(w.Body.Bytes(), &data)
 	if err != nil {
-		return errors.New(fmt.Sprintf("%s test: cannot unmarshal response: %s %s", currentTestName, err.Error(), string(w.Body.Bytes())))
+		return fmt.Errorf("%s test: cannot unmarshal response: %s %s", currentTestName, err.Error(), w.Body.String())
 	}
 	if data.Items == nil {
-		return errors.New(fmt.Sprintf("%s test: no items found", currentTestName))
+		return fmt.Errorf("%s test: no items found", currentTestName)
 	}
 	itemsArray, ok := data.Items.([]interface{})
 	if !ok {
-		return errors.New(fmt.Sprintf("%s test: items not an array", currentTestName))
+		return fmt.Errorf("%s test: items not an array", currentTestName)
 	}
 	if len(itemsArray) != numExpected {
-		return errors.New(fmt.Sprintf("%s test: unexpected number of items %d (%d)", currentTestName, len(itemsArray), numExpected))
+		return fmt.Errorf("%s test: unexpected number of items %d (%d)", currentTestName, len(itemsArray), numExpected)
 	}
 	return nil
 }
@@ -393,11 +393,6 @@ func getStorageLayer(config config.Config, storageType string) (route.RouteStore
 		if err != nil {
 			return nil, err
 		}
-	case "boltdb":
-		storageMgr, err = bolt.NewBoltDbStorer(config)
-		if err != nil {
-			return nil, err
-		}
 	case "redis":
 		storageMgr, err = redis.NewRedisDbStorer(config, &log.Logger)
 		if err != nil {
@@ -426,12 +421,12 @@ func getTableSyncer(config config.Config, syncType string) (syncer.DeltaSyncer, 
 	return s, nil
 }
 
-func getTableSyncerType(config config.Config, syncType string) string {
+/*func getTableSyncerType(config config.Config, syncType string) string {
 	if syncType == "" {
 		syncType = config.GetString("ears.synchronization.type")
 	}
 	return syncType
-}
+}*/
 
 func setupRestApi(config config.Config, storageMgr route.RouteStorer) (*EarsRuntime, error) {
 	mgr, err := manager.New()
@@ -552,7 +547,7 @@ func setupRestApi(config config.Config, storageMgr route.RouteStorer) (*EarsRunt
 	}, nil
 }
 
-func resetDebugSender(routeFileName string, pluginMgr plugin.Manager) error {
+/*func resetDebugSender(routeFileName string, pluginMgr plugin.Manager) error {
 	//zerolog.SetGlobalLevel(zerolog.ErrorLevel)
 	ctx := context.Background()
 	ctx = log.Logger.WithContext(ctx)
@@ -582,7 +577,7 @@ func resetDebugSender(routeFileName string, pluginMgr plugin.Manager) error {
 		return err
 	}
 	return nil
-}
+}*/
 
 func checkEventsSent(routeFileName string, testPrefix string, pluginMgr plugin.Manager, expectedNumberOfEvents int, eventFileName string, eventIndex int) error {
 	//zerolog.SetGlobalLevel(zerolog.ErrorLevel)
@@ -611,16 +606,16 @@ func checkEventsSent(routeFileName string, testPrefix string, pluginMgr plugin.M
 		return errors.New("bad type assertion debug sender")
 	}
 	if debugSender.Count() != expectedNumberOfEvents {
-		return errors.New(fmt.Sprintf("unexpected number of events in sender %d (%d)", debugSender.Count(), expectedNumberOfEvents))
+		return fmt.Errorf("unexpected number of events in sender %d (%d)", debugSender.Count(), expectedNumberOfEvents)
 	}
 	// spot check event payload if desired
 	if eventFileName != "" && eventIndex >= 0 {
 		events := debugSender.History()
-		if events == nil || len(events) == 0 {
+		if len(events) == 0 {
 			return errors.New("no debug events collected")
 		}
 		if eventIndex >= len(events) {
-			return errors.New(fmt.Sprintf("event index %d out of range (%d)", eventIndex, len(events)))
+			return fmt.Errorf("event index %d out of range (%d)", eventIndex, len(events))
 		}
 		buf1, err := json.Marshal(events[eventIndex].Payload())
 		if err != nil {
@@ -640,7 +635,7 @@ func checkEventsSent(routeFileName string, testPrefix string, pluginMgr plugin.M
 			return err
 		}
 		if string(buf1) != string(buf2) {
-			return errors.New(fmt.Sprintf("event payload mismatch:\n%s\n%s\n", string(buf1), string(buf2)))
+			return fmt.Errorf("event payload mismatch:\n%s\n%s\n", string(buf1), string(buf2))
 		}
 	}
 	err = pluginMgr.UnregisterSender(ctx, sdr)
@@ -651,7 +646,6 @@ func checkEventsSent(routeFileName string, testPrefix string, pluginMgr plugin.M
 }
 
 func TestRestVersionHandler(t *testing.T) {
-	Version = "v1.0.2"
 	w := httptest.NewRecorder()
 	r := httptest.NewRequest(http.MethodGet, "/version", nil)
 	api, err := NewAPIManager(&tablemgr.DefaultRoutingTableManager{}, nil, nil)
@@ -663,7 +657,7 @@ func TestRestVersionHandler(t *testing.T) {
 	var data interface{}
 	err = json.Unmarshal(w.Body.Bytes(), &data)
 	if err != nil {
-		t.Fatalf("cannot unmarshal response %s into json %s", string(w.Body.Bytes()), err.Error())
+		t.Fatalf("cannot unmarshal response %s into json %s", w.Body.String(), err.Error())
 	}
 	g.AssertJson(t, "version", data)
 }
@@ -671,9 +665,9 @@ func TestRestVersionHandler(t *testing.T) {
 // update route test
 
 func TestRestUpdateRoutesHandler(t *testing.T) {
-	Version = "v1.0.2"
 	runtime := setupSimpleApi(t, "inmemory")
-	files := []string{"update1", "update2", "update3", "update4"}
+	//files := []string{"update1", "update2", "update3", "update4"}
+	files := []string{"update4"}
 	for _, fn := range files {
 		w := httptest.NewRecorder()
 		routeFileName := "testdata/" + fn + ".json"
@@ -686,7 +680,7 @@ func TestRestUpdateRoutesHandler(t *testing.T) {
 		var data Response
 		err = json.Unmarshal(w.Body.Bytes(), &data)
 		if err != nil {
-			t.Fatalf("cannot unmarshal response %s into json %s", string(w.Body.Bytes()), err.Error())
+			t.Fatalf("cannot unmarshal response %s into json %s", w.Body.String(), err.Error())
 		}
 	}
 	err := checkNumRoutes(runtime.apiManager, t.Name(), 1)
@@ -714,7 +708,6 @@ func TestRestUpdateRoutesHandler(t *testing.T) {
 // single route tests
 
 func TestRestPostSimpleRouteHandler(t *testing.T) {
-	Version = "v1.0.2"
 	w := httptest.NewRecorder()
 	routeFileName := "testdata/simpleRoute.json"
 	simpleRouteReader, err := os.Open(routeFileName)
@@ -728,7 +721,7 @@ func TestRestPostSimpleRouteHandler(t *testing.T) {
 	var data Response
 	err = json.Unmarshal(w.Body.Bytes(), &data)
 	if err != nil {
-		t.Fatalf("cannot unmarshal response %s into json %s", string(w.Body.Bytes()), err.Error())
+		t.Fatalf("cannot unmarshal response %s into json %s", w.Body.String(), err.Error())
 	}
 	g.AssertJson(t, "addpostroute", data)
 	// check number of events received by output plugin
@@ -762,7 +755,6 @@ func TestRestPostSimpleRouteHandler(t *testing.T) {
 }
 
 func TestRestPutSimpleRouteHandler(t *testing.T) {
-	Version = "v1.0.2"
 	w := httptest.NewRecorder()
 	name := "testdata/simpleRoute.json"
 	simpleRouteReader, err := os.Open(name)
@@ -776,7 +768,7 @@ func TestRestPutSimpleRouteHandler(t *testing.T) {
 	var data Response
 	err = json.Unmarshal(w.Body.Bytes(), &data)
 	if err != nil {
-		t.Fatalf("cannot unmarshal response %s into json %s", string(w.Body.Bytes()), err.Error())
+		t.Fatalf("cannot unmarshal response %s into json %s", w.Body.String(), err.Error())
 	}
 	g.AssertJson(t, "addputroute", data)
 	// collect route ID
@@ -804,7 +796,6 @@ func TestRestPutSimpleRouteHandler(t *testing.T) {
 }
 
 func TestRestPostFilterMatchAllowRouteHandler(t *testing.T) {
-	Version = "v1.0.2"
 	w := httptest.NewRecorder()
 	routeFileName := "testdata/simpleFilterMatchAllowRoute.json"
 	simpleRouteReader, err := os.Open(routeFileName)
@@ -818,7 +809,7 @@ func TestRestPostFilterMatchAllowRouteHandler(t *testing.T) {
 	var data Response
 	err = json.Unmarshal(w.Body.Bytes(), &data)
 	if err != nil {
-		t.Fatalf("cannot unmarshal response %s into json %s", string(w.Body.Bytes()), err.Error())
+		t.Fatalf("cannot unmarshal response %s into json %s", w.Body.String(), err.Error())
 	}
 	g.AssertJson(t, "addfiltermatchallowroute", data)
 	// check number of events received by output plugin
@@ -852,7 +843,6 @@ func TestRestPostFilterMatchAllowRouteHandler(t *testing.T) {
 }
 
 func TestRestPostFilterMatchDenyRouteHandler(t *testing.T) {
-	Version = "v1.0.2"
 	w := httptest.NewRecorder()
 	routeFileName := "testdata/simpleFilterMatchDenyRoute.json"
 	simpleRouteReader, err := os.Open(routeFileName)
@@ -866,7 +856,7 @@ func TestRestPostFilterMatchDenyRouteHandler(t *testing.T) {
 	var data Response
 	err = json.Unmarshal(w.Body.Bytes(), &data)
 	if err != nil {
-		t.Fatalf("cannot unmarshal response %s into json %s", string(w.Body.Bytes()), err.Error())
+		t.Fatalf("cannot unmarshal response %s into json %s", w.Body.String(), err.Error())
 	}
 	g.AssertJson(t, "addfiltermatchdenyroute", data)
 	// check number of events received by output plugin
@@ -900,7 +890,6 @@ func TestRestPostFilterMatchDenyRouteHandler(t *testing.T) {
 }
 
 func TestRestPostFilterChainMatchRouteHandler(t *testing.T) {
-	Version = "v1.0.2"
 	w := httptest.NewRecorder()
 	routeFileName := "testdata/simpleFilterChainMatchRoute.json"
 	simpleRouteReader, err := os.Open(routeFileName)
@@ -914,7 +903,7 @@ func TestRestPostFilterChainMatchRouteHandler(t *testing.T) {
 	var data Response
 	err = json.Unmarshal(w.Body.Bytes(), &data)
 	if err != nil {
-		t.Fatalf("cannot unmarshal response %s into json %s", string(w.Body.Bytes()), err.Error())
+		t.Fatalf("cannot unmarshal response %s into json %s", w.Body.String(), err.Error())
 	}
 	g.AssertJson(t, "addfilterchainmatchroute", data)
 	// check number of events received by output plugin
@@ -948,7 +937,6 @@ func TestRestPostFilterChainMatchRouteHandler(t *testing.T) {
 }
 
 func TestRestPostFilterSplitRouteHandler(t *testing.T) {
-	Version = "v1.0.2"
 	w := httptest.NewRecorder()
 	routeFileName := "testdata/simpleFilterSplitRoute.json"
 	simpleRouteReader, err := os.Open(routeFileName)
@@ -962,7 +950,7 @@ func TestRestPostFilterSplitRouteHandler(t *testing.T) {
 	var data Response
 	err = json.Unmarshal(w.Body.Bytes(), &data)
 	if err != nil {
-		t.Fatalf("cannot unmarshal response %s into json %s", string(w.Body.Bytes()), err.Error())
+		t.Fatalf("cannot unmarshal response %s into json %s", w.Body.String(), err.Error())
 	}
 	g.AssertJson(t, "addsimplefiltersplitroute", data)
 	// check number of events received by output plugin
@@ -996,7 +984,6 @@ func TestRestPostFilterSplitRouteHandler(t *testing.T) {
 }
 
 func TestRestPostFilterDeepSplitRouteHandler(t *testing.T) {
-	Version = "v1.0.2"
 	w := httptest.NewRecorder()
 	routeFileName := "testdata/simpleFilterDeepSplitRoute.json"
 	simpleRouteReader, err := os.Open(routeFileName)
@@ -1010,7 +997,7 @@ func TestRestPostFilterDeepSplitRouteHandler(t *testing.T) {
 	var data Response
 	err = json.Unmarshal(w.Body.Bytes(), &data)
 	if err != nil {
-		t.Fatalf("cannot unmarshal response %s into json %s", string(w.Body.Bytes()), err.Error())
+		t.Fatalf("cannot unmarshal response %s into json %s", w.Body.String(), err.Error())
 	}
 	g.AssertJson(t, "addsimplefilterdeepsplitroute", data)
 	// check number of events received by output plugin
@@ -1046,7 +1033,6 @@ func TestRestPostFilterDeepSplitRouteHandler(t *testing.T) {
 // various api tests
 
 func TestRestGetRouteHandler(t *testing.T) {
-	Version = "v1.0.2"
 	routeFileName := "testdata/simpleRoute.json"
 	simpleRouteReader, err := os.Open(routeFileName)
 	if err != nil {
@@ -1063,7 +1049,7 @@ func TestRestGetRouteHandler(t *testing.T) {
 	var data map[string]interface{}
 	err = json.Unmarshal(w.Body.Bytes(), &data)
 	if err != nil {
-		t.Fatalf("cannot unmarshal response %s into json %s", string(w.Body.Bytes()), err.Error())
+		t.Fatalf("cannot unmarshal response %s into json %s", w.Body.String(), err.Error())
 	}
 	item := data["item"].(map[string]interface{})
 	delete(item, "created")
@@ -1078,7 +1064,6 @@ func TestRestGetRouteHandler(t *testing.T) {
 }
 
 func TestRestGetMultipleRoutesHandler(t *testing.T) {
-	Version = "v1.0.2"
 	routeFileName := "testdata/simpleRoute.json"
 	simpleRouteReader, err := os.Open(routeFileName)
 	if err != nil {
@@ -1095,7 +1080,7 @@ func TestRestGetMultipleRoutesHandler(t *testing.T) {
 	var data map[string]interface{}
 	err = json.Unmarshal(w.Body.Bytes(), &data)
 	if err != nil {
-		t.Fatalf("cannot unmarshal response %s into json %s", string(w.Body.Bytes()), err.Error())
+		t.Fatalf("cannot unmarshal response %s into json %s", w.Body.String(), err.Error())
 	}
 	items := data["items"].([]interface{})
 	for _, item := range items {
@@ -1112,7 +1097,6 @@ func TestRestGetMultipleRoutesHandler(t *testing.T) {
 }
 
 func TestRestDeleteRouteHandler(t *testing.T) {
-	Version = "v1.0.2"
 	routeFileName := "testdata/simpleRoute.json"
 	simpleRouteReader, err := os.Open(routeFileName)
 	if err != nil {
@@ -1140,7 +1124,7 @@ func TestRestDeleteRouteHandler(t *testing.T) {
 	var data map[string]interface{}
 	err = json.Unmarshal(w.Body.Bytes(), &data)
 	if err != nil {
-		t.Fatalf("cannot unmarshal response %s into json %s", string(w.Body.Bytes()), err.Error())
+		t.Fatalf("cannot unmarshal response %s into json %s", w.Body.String(), err.Error())
 	}
 	items := data["items"].([]interface{})
 	for _, item := range items {
@@ -1159,7 +1143,6 @@ func TestRestDeleteRouteHandler(t *testing.T) {
 // tests for various error conditions
 
 func TestRestRouteHandlerIdMismatch(t *testing.T) {
-	Version = "v1.0.2"
 	w := httptest.NewRecorder()
 	routeFileName := "testdata/simpleRoute.json"
 	simpleRouteReader, err := os.Open(routeFileName)
@@ -1173,13 +1156,12 @@ func TestRestRouteHandlerIdMismatch(t *testing.T) {
 	var data interface{}
 	err = json.Unmarshal(w.Body.Bytes(), &data)
 	if err != nil {
-		t.Fatalf("cannot unmarshal response %s into json %s", string(w.Body.Bytes()), err.Error())
+		t.Fatalf("cannot unmarshal response %s into json %s", w.Body.String(), err.Error())
 	}
 	g.AssertJson(t, "addrouteidmismatch", data)
 }
 
 func TestRestMissingRouteHandler(t *testing.T) {
-	Version = "v1.0.2"
 	runtime := setupSimpleApi(t, "inmemory")
 	w := httptest.NewRecorder()
 	r := httptest.NewRequest(http.MethodGet, "/ears/v1"+tenantPath+"/routes/fakeid", nil)
@@ -1188,13 +1170,12 @@ func TestRestMissingRouteHandler(t *testing.T) {
 	var data interface{}
 	err := json.Unmarshal(w.Body.Bytes(), &data)
 	if err != nil {
-		t.Fatalf("cannot unmarshal response %s into json %s", string(w.Body.Bytes()), err.Error())
+		t.Fatalf("cannot unmarshal response %s into json %s", w.Body.String(), err.Error())
 	}
 	g.AssertJson(t, "missingroute", data)
 }
 
 func TestRestPostRouteHandlerBadName(t *testing.T) {
-	Version = "v1.0.2"
 	w := httptest.NewRecorder()
 	routeFileName := "testdata/simpleRouteBadName.json"
 	simpleRouteReader, err := os.Open(routeFileName)
@@ -1208,13 +1189,12 @@ func TestRestPostRouteHandlerBadName(t *testing.T) {
 	var data interface{}
 	err = json.Unmarshal(w.Body.Bytes(), &data)
 	if err != nil {
-		t.Fatalf("cannot unmarshal response %s into json %s", string(w.Body.Bytes()), err.Error())
+		t.Fatalf("cannot unmarshal response %s into json %s", w.Body.String(), err.Error())
 	}
 	g.AssertJson(t, "addroutebadname", data)
 }
 
 func TestRestPostRouteHandlerBadPluginName(t *testing.T) {
-	Version = "v1.0.2"
 	w := httptest.NewRecorder()
 	routeFileName := "testdata/simpleRouteBadPluginName.json"
 	simpleRouteReader, err := os.Open(routeFileName)
@@ -1228,13 +1208,12 @@ func TestRestPostRouteHandlerBadPluginName(t *testing.T) {
 	var data interface{}
 	err = json.Unmarshal(w.Body.Bytes(), &data)
 	if err != nil {
-		t.Fatalf("cannot unmarshal response %s into json %s", string(w.Body.Bytes()), err.Error())
+		t.Fatalf("cannot unmarshal response %s into json %s", w.Body.String(), err.Error())
 	}
 	g.AssertJson(t, "addroutebadpluginname", data)
 }
 
 func TestRestPostRouteHandlerNoSender(t *testing.T) {
-	Version = "v1.0.2"
 	w := httptest.NewRecorder()
 	routeFileName := "testdata/simpleRouteNoSender.json"
 	simpleRouteReader, err := os.Open(routeFileName)
@@ -1248,13 +1227,12 @@ func TestRestPostRouteHandlerNoSender(t *testing.T) {
 	var data interface{}
 	err = json.Unmarshal(w.Body.Bytes(), &data)
 	if err != nil {
-		t.Fatalf("cannot unmarshal response %s into json %s", string(w.Body.Bytes()), err.Error())
+		t.Fatalf("cannot unmarshal response %s into json %s", w.Body.String(), err.Error())
 	}
 	g.AssertJson(t, "addroutenosender", data)
 }
 
 func TestRestPostRouteHandlerNoReceiver(t *testing.T) {
-	Version = "v1.0.2"
 	w := httptest.NewRecorder()
 	routeFileName := "testdata/simpleRouteNoReceiver.json"
 	simpleRouteReader, err := os.Open(routeFileName)
@@ -1268,13 +1246,12 @@ func TestRestPostRouteHandlerNoReceiver(t *testing.T) {
 	var data interface{}
 	err = json.Unmarshal(w.Body.Bytes(), &data)
 	if err != nil {
-		t.Fatalf("cannot unmarshal response %s into json %s", string(w.Body.Bytes()), err.Error())
+		t.Fatalf("cannot unmarshal response %s into json %s", w.Body.String(), err.Error())
 	}
 	g.AssertJson(t, "addroutenoreceiver", data)
 }
 
 func TestRestPostRouteHandlerNoUser(t *testing.T) {
-	Version = "v1.0.2"
 	w := httptest.NewRecorder()
 	routeFileName := "testdata/simpleRouteNoUser.json"
 	simpleRouteReader, err := os.Open(routeFileName)
@@ -1288,13 +1265,12 @@ func TestRestPostRouteHandlerNoUser(t *testing.T) {
 	var data interface{}
 	err = json.Unmarshal(w.Body.Bytes(), &data)
 	if err != nil {
-		t.Fatalf("cannot unmarshal response %s into json %s", string(w.Body.Bytes()), err.Error())
+		t.Fatalf("cannot unmarshal response %s into json %s", w.Body.String(), err.Error())
 	}
 	g.AssertJson(t, "addroutenouser", data)
 }
 
 func TestRestMultipleTenants(t *testing.T) {
-	Version = "v1.0.2"
 	routeFileName := "testdata/simpleRoute.json"
 
 	tenantPaths := []string{
@@ -1331,7 +1307,7 @@ func TestRestMultipleTenants(t *testing.T) {
 		var data map[string]interface{}
 		err := json.Unmarshal(w.Body.Bytes(), &data)
 		if err != nil {
-			t.Fatalf("cannot unmarshal response %s into json %s", string(w.Body.Bytes()), err.Error())
+			t.Fatalf("cannot unmarshal response %s into json %s", w.Body.String(), err.Error())
 		}
 		item := data["item"].(map[string]interface{})
 		delete(item, "created")

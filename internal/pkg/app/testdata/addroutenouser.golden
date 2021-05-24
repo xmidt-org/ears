@@ -1,5 +1,5 @@
 {
-  "item": "missing user ID for plugin configuration",
+  "item": "InternalServerError: missing user ID for plugin configuration",
   "status": {
     "code": 500,
     "message": "Internal Server Error"

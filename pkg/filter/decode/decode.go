@@ -54,11 +54,11 @@ func (f *Filter) Filter(evt event.Event) []event.Event {
 		return []event.Event{}
 	}
 	var input string
-	switch obj.(type) {
+	switch obj := obj.(type) {
 	case string:
-		input = obj.(string)
+		input = obj
 	case []byte:
-		input = string(obj.([]byte))
+		input = string(obj)
 	default:
 		evt.Nack(errors.New("unsupported field type at path " + f.config.FromPath))
 		return []event.Event{}

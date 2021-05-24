@@ -97,21 +97,23 @@ func (r *Receiver) Receive(next receiver.NextFn) error {
 				r.count++
 				r.Unlock()
 			}
-			ctx, _ := context.WithTimeout(context.Background(), time.Duration(5)*time.Second)
 			var pl interface{}
 			err = json.Unmarshal([]byte(msg.Payload), &pl)
 			if err != nil {
 				r.logger.Error().Str("op", "redis.Receive").Msg("cannot parse payload: " + err.Error())
 				return
 			}
+			ctx, cancel := context.WithTimeout(context.Background(), time.Duration(5)*time.Second)
 			// note: if we just pass msg.Payload into event, redis will blow up with an out of memory error within a
 			// few seconds - possibly a bug in the client library
 			e, err := event.New(ctx, pl, event.WithAck(
 				func(e event.Event) {
 					r.logger.Info().Str("op", "redis.Receive").Msg("processed message from redis channel")
+					cancel()
 				},
 				func(e event.Event, err error) {
 					r.logger.Error().Str("op", "redis.Receive").Msg("failed to process message: " + err.Error())
+					cancel()
 				}))
 			if err != nil {
 				r.logger.Error().Str("op", "redis.Receive").Msg("cannot create event: " + err.Error())
@@ -123,7 +125,7 @@ func (r *Receiver) Receive(next receiver.NextFn) error {
 	r.logger.Info().Str("op", "redis.Receive").Msg("waiting for receive done")
 	<-r.done
 	r.Lock()
-	elapsedMs := time.Now().Sub(r.startTime).Milliseconds()
+	elapsedMs := time.Since(r.startTime).Milliseconds()
 	throughput := 1000 * r.count / (int(elapsedMs) + 1)
 	cnt := r.count
 	r.Unlock()

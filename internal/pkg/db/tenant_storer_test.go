@@ -30,7 +30,7 @@ type TestCase struct {
 var tenantTestCases = []TestCase{
 	{
 		config: tenant.Config{
-			Tenant: tenant.Id{"myOrg", "myApp"},
+			Tenant: tenant.Id{OrgId: "myOrg", AppId: "myApp"},
 			Quota: tenant.Quota{
 				EventsPerSec: 10,
 			},
@@ -38,7 +38,7 @@ var tenantTestCases = []TestCase{
 	},
 	{
 		config: tenant.Config{
-			Tenant: tenant.Id{"myOrg", "myApp2"},
+			Tenant: tenant.Id{OrgId: "myOrg", AppId: "myApp2"},
 			Quota: tenant.Quota{
 				EventsPerSec: 15,
 			},
@@ -46,7 +46,7 @@ var tenantTestCases = []TestCase{
 	},
 	{
 		config: tenant.Config{
-			Tenant: tenant.Id{"myOrg2", "myApp"},
+			Tenant: tenant.Id{OrgId: "myOrg2", AppId: "myApp"},
 			Quota: tenant.Quota{
 				EventsPerSec: 30,
 			},

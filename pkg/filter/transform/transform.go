@@ -72,19 +72,18 @@ func transform(evt event.Event, t interface{}, parent interface{}, key string, i
 	if evt == nil || t == nil {
 		return
 	}
-	switch t.(type) {
+	switch t := t.(type) {
 	case map[string]interface{}:
-		for key, st := range t.(map[string]interface{}) {
+		for key, st := range t {
 			transform(evt, st, t, key, -1)
 		}
 	case []interface{}:
-		for idx, st := range t.([]interface{}) {
+		for idx, st := range t {
 			transform(evt, st, t, "", idx)
 		}
 	case string:
-		expr := t.(string)
-		if strings.HasPrefix(expr, "{") && strings.HasSuffix(expr, "}") {
-			repl, _, _ := evt.GetPathValue(expr[1:len(expr)-1])
+		if strings.HasPrefix(t, "{") && strings.HasSuffix(t, "}") {
+			repl, _, _ := evt.GetPathValue(t[1:len(t)-1])
 			if parent != nil {
 				if key != "" {
 					parent.(map[string]interface{})[key] = repl

@@ -32,6 +32,7 @@ import (
 )
 
 //TODO: support headers
+//
 
 func NewSender(config interface{}) (sender.Sender, error) {
 	var cfg SenderConfig
@@ -146,6 +147,7 @@ func (s *Sender) setConfig(config *sarama.Config) error {
 		tlsConfig := &tls.Config{
 			Certificates: []tls.Certificate{keypair},
 			RootCAs:      caAuthorityPool,
+			MinVersion:   tls.VersionTLS12,
 		}
 		config.Net.TLS.Enable = true
 		config.Net.TLS.Config = tlsConfig
@@ -198,12 +200,14 @@ func (p *Producer) Close(ctx context.Context) {
 }
 
 func (p *Producer) SendMessage(topic string, partition int, headers map[string]string, bs []byte) error {
-	var hs []sarama.RecordHeader
+	hs := make([]sarama.RecordHeader, len(headers))
+	idx := 0
 	for k, v := range headers {
-		hs = append(hs, sarama.RecordHeader{
+		hs[idx] = sarama.RecordHeader{
 			Key:   []byte(k),
 			Value: []byte(v),
-		})
+		}
+		idx++
 	}
 	var producer sarama.SyncProducer
 	select {

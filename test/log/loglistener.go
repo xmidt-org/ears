@@ -69,7 +69,7 @@ func (l *LogListener) Listen(key string, value interface{}, timeout time.Duratio
 		select {
 		case jsonStr, ok := <-l.listener:
 			if !ok {
-				break
+				return fmt.Errorf("%s:%s not found", key, value)
 			}
 			var log map[string]interface{}
 			err := json.Unmarshal([]byte(jsonStr), &log)
@@ -82,7 +82,5 @@ func (l *LogListener) Listen(key string, value interface{}, timeout time.Duratio
 		case <-time.After(timeout):
 			return fmt.Errorf("listen timed out")
 		}
-
 	}
-	return fmt.Errorf("%s:%s not found", key, value)
 }

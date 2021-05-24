@@ -68,7 +68,7 @@ func testSyncers(newSyncer func() syncer.DeltaSyncer, t *testing.T) {
 
 	collector := LocalSyncCollector{}
 	ctx := context.Background()
-	tid := tenant.Id{"myOrg", "myApp"}
+	tid := tenant.Id{OrgId: "myOrg", AppId: "myApp"}
 
 	//Setup 5 syncer
 	syncers := make([]syncer.DeltaSyncer, 5)
