@@ -518,6 +518,10 @@ func setupRestApi(config config.Config, storageMgr route.RouteStorer) (*EarsRunt
 			name:   "transform",
 			plugin: toArr(transform.NewPluginVersion("transform", "", ""))[0].(pkgplugin.Pluginer),
 		},
+		{
+			name:   "http",
+			plugin: toArr(transform.NewPluginVersion("http", "", ""))[0].(pkgplugin.Pluginer),
+		},
 	}
 	for _, plug := range defaultPlugins {
 		err = mgr.RegisterPlugin(plug.name, plug.plugin)

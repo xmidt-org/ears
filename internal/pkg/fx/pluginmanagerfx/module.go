@@ -154,6 +154,10 @@ func ProvidePluginManager(in PluginIn) (PluginOut, error) {
 			name:   "transform",
 			plugin: toArr(transform.NewPluginVersion("transform", "", ""))[0].(pkgplugin.Pluginer),
 		},
+		{
+			name:   "http",
+			plugin: toArr(transform.NewPluginVersion("http", "", ""))[0].(pkgplugin.Pluginer),
+		},
 	}
 
 	for _, plug := range defaultPlugins {
