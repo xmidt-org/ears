@@ -61,12 +61,15 @@ type ReceiverConfig struct {
 
 type Receiver struct {
 	sync.Mutex
-	done      chan struct{}
-	config    ReceiverConfig
-	next      receiver.NextFn
-	logger    zerolog.Logger
-	count     int
-	startTime time.Time
+	stopped     bool
+	redisClient *redis.Client
+	pubsub      *redis.PubSub
+	done        chan struct{}
+	config      ReceiverConfig
+	next        receiver.NextFn
+	logger      zerolog.Logger
+	count       int
+	startTime   time.Time
 }
 
 var DefaultSenderConfig = SenderConfig{
