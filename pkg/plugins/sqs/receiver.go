@@ -103,7 +103,7 @@ func (r *Receiver) startReceiveWorker(svc *sqs.SQS, n int) {
 					deleteBatch = make([]*sqs.DeleteMessageBatchRequestEntry, 0)
 				}
 				r.Lock()
-				stopNow := r.stop
+				stopNow := r.stopped
 				r.Unlock()
 				if stopNow {
 					r.logger.Info().Str("op", "SQS.receiveWorker").Int("workerNum", n).Msg("delete loop stopped")
@@ -123,7 +123,7 @@ func (r *Receiver) startReceiveWorker(svc *sqs.SQS, n int) {
 			}
 			sqsResp, err := svc.ReceiveMessage(sqsParams)
 			r.Lock()
-			stopNow := r.stop
+			stopNow := r.stopped
 			r.Unlock()
 			if stopNow {
 				r.logger.Info().Str("op", "SQS.receiveWorker").Int("workerNum", n).Msg("receive loop stopped")
@@ -202,7 +202,7 @@ func (r *Receiver) Receive(next receiver.NextFn) error {
 	}
 	r.Lock()
 	r.startTime = time.Now()
-	r.stop = false
+	r.stopped = false
 	r.done = make(chan struct{})
 	r.next = next
 	r.Unlock()
@@ -242,9 +242,9 @@ func (r *Receiver) Count() int {
 
 func (r *Receiver) StopReceiving(ctx context.Context) error {
 	r.Lock()
-	r.stop = true
-	if r.done != nil {
-		r.done <- struct{}{}
+	if !r.stopped {
+		r.stopped = true
+		close(r.done)
 	}
 	r.Unlock()
 	return nil

@@ -113,7 +113,6 @@ func (s *Sender) startTimedSender() {
 			evtBatch := s.eventBatch
 			s.eventBatch = make([]event.Event, 0)
 			s.Unlock()
-
 			if len(evtBatch) > 0 {
 				s.work <- evtBatch
 			}
