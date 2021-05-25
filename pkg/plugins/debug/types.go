@@ -75,6 +75,7 @@ type ReceiverConfig struct {
 type Receiver struct {
 	sync.Mutex
 	done    chan struct{}
+	stopped bool
 	config  ReceiverConfig
 	history *history
 	next    receiver.NextFn
