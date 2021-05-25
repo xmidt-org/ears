@@ -209,6 +209,7 @@ func (r *Receiver) Receive(next receiver.NextFn) error {
 	r.startTime = time.Now()
 	r.next = next
 	r.done = make(chan struct{})
+	r.stopped = false
 	r.Unlock()
 	go func() {
 		r.Start(func(msg *sarama.ConsumerMessage) bool {
@@ -265,8 +266,9 @@ func (r *Receiver) Count() int {
 func (r *Receiver) StopReceiving(ctx context.Context) error {
 	r.logger.Info().Str("op", "kafka.StopReceiving").Msg("stop receiving")
 	r.Lock()
-	if r.done != nil {
-		r.done <- struct{}{}
+	if !r.stopped {
+		r.stopped = true
+		close(r.done)
 	}
 	r.Unlock()
 	r.logger.Info().Str("op", "kafka.StopReceiving").Msg("done sent to receiver func")

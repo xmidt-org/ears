@@ -90,8 +90,10 @@ func (s *Sender) Count() int {
 func (s *Sender) StopSending(ctx context.Context) {
 	s.Lock()
 	defer s.Unlock()
-	s.stopped = true
-	s.producer.Close(ctx)
+	if !s.stopped {
+		s.stopped = true
+		s.producer.Close(ctx)
+	}
 }
 
 func (s *Sender) NewProducer(count int) (*Producer, error) {
