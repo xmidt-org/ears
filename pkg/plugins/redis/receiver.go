@@ -79,6 +79,13 @@ func (r *Receiver) Receive(next receiver.NextFn) error {
 	r.stopped = false
 	r.Unlock()
 	go func() {
+		defer func() {
+			r.Lock()
+			if !r.stopped {
+				r.done <- struct{}{}
+			}
+			r.Unlock()
+		}()
 		r.redisClient = redis.NewClient(&redis.Options{
 			Addr:     r.config.Endpoint,
 			Password: "",
@@ -146,7 +153,7 @@ func (r *Receiver) StopReceiving(ctx context.Context) error {
 		r.stopped = true
 		r.pubsub.Unsubscribe(r.config.Channel)
 		r.pubsub.Close()
-		r.done <- struct{}{}
+		close(r.done)
 	}
 	r.Unlock()
 	return nil
