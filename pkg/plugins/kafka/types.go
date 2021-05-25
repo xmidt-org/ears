@@ -84,6 +84,7 @@ type ReceiverConfig struct {
 type Receiver struct {
 	sync.Mutex
 	done      chan struct{}
+	stopped   bool
 	config    ReceiverConfig
 	next      receiver.NextFn
 	logger    zerolog.Logger

@@ -57,7 +57,7 @@ func TestRedisSenderReceiver(t *testing.T) {
 			// set tc.senderConfig props
 			tc.senderConfig = tc.senderConfig.WithDefaults()
 			// set tc.receiverConfig props
-			tc.receiverConfig.GroupId = "mygroup"
+			tc.receiverConfig.GroupId = "myGroup"
 			tc.receiverConfig = tc.receiverConfig.WithDefaults()
 			kafkaReceiver, err := kafkaPlugin.NewReceiver(tc.receiverConfig)
 			a.Expect(err).To(BeNil())
