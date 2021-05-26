@@ -104,11 +104,11 @@ func (r *DefaultRoutingTableManager) unregisterAndStopRoute(ctx context.Context,
 		r.logger.Info().Str("op", "unregisterAndStopRoute").Str("routeId", routeId).Int("numRefs", numRefs).Str("routeHash", liveRoute.Config.Hash(ctx)).Msg("number references")
 		if numRefs == 0 {
 			delete(r.routeHashMap, liveRoute.Config.Hash(ctx))
-			err = liveRoute.Route.Stop(ctx)
-			if err != nil {
-				r.logger.Error().Str("op", "unregisterAndStopRoute").Msg("could not stop route: " + err.Error())
-				//return err
-			}
+			//err = liveRoute.Route.Stop(ctx)
+			//if err != nil {
+			//	r.logger.Error().Str("op", "unregisterAndStopRoute").Msg("could not stop route: " + err.Error())
+			//return err
+			//}
 			err = liveRoute.Unregister(ctx, r)
 			if err != nil {
 				return err
@@ -129,7 +129,7 @@ func (r *DefaultRoutingTableManager) registerAndRunRoute(ctx context.Context, ro
 		r.logger.Info().Str("op", "registerAndRunRoute").Str("routeId", routeConfig.Id).Msg("identical route exists with same hash and same ID")
 		return nil
 	}
-	// it's an update, so we first need to decrement thhe reference counter on the existing route and possibly stop it
+	// it's an update, so we first need to decrement the reference counter on the existing route and possibly stop it
 	if ok && existingLiveRoute.Config.Hash(ctx) != routeConfig.Hash(ctx) {
 		r.logger.Info().Str("op", "registerAndRunRoute").Str("routeId", routeConfig.Id).Msg("existing route needs to be updated")
 		err = r.unregisterAndStopRoute(ctx, routeConfig.TenantId, routeConfig.Id) // unregister will only truly decommission the route if this was th elast referecne
