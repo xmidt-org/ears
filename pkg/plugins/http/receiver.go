@@ -86,7 +86,12 @@ func (h *Receiver) Receive(next receiver.NextFn) error {
 			return
 		}
 		ctx := context.Background()
-		event, err := event.New(ctx, body)
+		event, err := event.New(ctx, body, event.WithAck(func(e event.Event) {
+			//do nothing
+		}, func(e event.Event, err error) {
+			h.logger.Error().Str("error", err.Error()).Msg("Nack handling events")
+		},
+		))
 		if err != nil {
 			h.logger.Error().Str("error", err.Error()).Msg("error creating event")
 		}

@@ -52,6 +52,11 @@ func NewSender(config interface{}) (sender.Sender, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	//TODO Does this live here?
+	//TODO Make this a configuration?
+	http.DefaultTransport.(*http.Transport).MaxIdleConnsPerHost = 100
+
 	return &Sender{
 		client: &http.Client{
 			Timeout: DEFAULT_TIMEOUT * time.Second,
