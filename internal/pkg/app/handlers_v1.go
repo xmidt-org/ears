@@ -218,13 +218,17 @@ func (a *APIManager) getAllTenantRoutesHandler(w http.ResponseWriter, r *http.Re
 func (a *APIManager) getAllSendersHandler(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	allSenders, err := a.routingTableMgr.GetAllSenders(ctx)
+	unwrappedSenderConfigs := make(map[string]interface{})
+	for k, v := range allSenders {
+		unwrappedSenderConfigs[k] = route.PluginConfig{Name: v.Name(), Plugin: v.Plugin(), Config: v.Config()}
+	}
 	if err != nil {
 		log.Ctx(ctx).Error().Str("op", "getAllSendersHandler").Msg(err.Error())
 		resp := ErrorResponse(&InternalServerError{err})
 		resp.Respond(ctx, w)
 		return
 	}
-	resp := ItemsResponse(allSenders)
+	resp := ItemsResponse(unwrappedSenderConfigs)
 	resp.Respond(ctx, w)
 }
 

@@ -113,7 +113,3 @@ type Sender struct {
 	done       chan struct{}
 	work       chan []event.Event
 }
-
-func (s *Sender) Unwrap() sender.Sender {
-	return s
-}

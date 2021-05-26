@@ -516,6 +516,7 @@ func (m *manager) RegisterSender(
 	w := &sender{
 		id:      u.String(),
 		name:    name,
+		plugin:  plugin,
 		hash:    hash,
 		manager: m,
 		sender:  s,

@@ -192,6 +192,15 @@ var _ Sender = &SenderMock{}
 //
 // 		// make and configure a mocked Sender
 // 		mockedSender := &SenderMock{
+// 			ConfigFunc: func() interface{} {
+// 				panic("mock out the Config method")
+// 			},
+// 			NameFunc: func() string {
+// 				panic("mock out the Name method")
+// 			},
+// 			PluginFunc: func() string {
+// 				panic("mock out the Plugin method")
+// 			},
 // 			SendFunc: func(e event.Event)  {
 // 				panic("mock out the Send method")
 // 			},
@@ -208,6 +217,15 @@ var _ Sender = &SenderMock{}
 //
 // 	}
 type SenderMock struct {
+	// ConfigFunc mocks the Config method.
+	ConfigFunc func() interface{}
+
+	// NameFunc mocks the Name method.
+	NameFunc func() string
+
+	// PluginFunc mocks the Plugin method.
+	PluginFunc func() string
+
 	// SendFunc mocks the Send method.
 	SendFunc func(e event.Event)
 
@@ -219,6 +237,15 @@ type SenderMock struct {
 
 	// calls tracks calls to the methods.
 	calls struct {
+		// Config holds details about calls to the Config method.
+		Config []struct {
+		}
+		// Name holds details about calls to the Name method.
+		Name []struct {
+		}
+		// Plugin holds details about calls to the Plugin method.
+		Plugin []struct {
+		}
 		// Send holds details about calls to the Send method.
 		Send []struct {
 			// E is the e argument value.
@@ -233,9 +260,90 @@ type SenderMock struct {
 		Unwrap []struct {
 		}
 	}
+	lockConfig      sync.RWMutex
+	lockName        sync.RWMutex
+	lockPlugin      sync.RWMutex
 	lockSend        sync.RWMutex
 	lockStopSending sync.RWMutex
 	lockUnwrap      sync.RWMutex
+}
+
+// Config calls ConfigFunc.
+func (mock *SenderMock) Config() interface{} {
+	if mock.ConfigFunc == nil {
+		panic("SenderMock.ConfigFunc: method is nil but Sender.Config was just called")
+	}
+	callInfo := struct {
+	}{}
+	mock.lockConfig.Lock()
+	mock.calls.Config = append(mock.calls.Config, callInfo)
+	mock.lockConfig.Unlock()
+	return mock.ConfigFunc()
+}
+
+// ConfigCalls gets all the calls that were made to Config.
+// Check the length with:
+//     len(mockedSender.ConfigCalls())
+func (mock *SenderMock) ConfigCalls() []struct {
+} {
+	var calls []struct {
+	}
+	mock.lockConfig.RLock()
+	calls = mock.calls.Config
+	mock.lockConfig.RUnlock()
+	return calls
+}
+
+// Name calls NameFunc.
+func (mock *SenderMock) Name() string {
+	if mock.NameFunc == nil {
+		panic("SenderMock.NameFunc: method is nil but Sender.Name was just called")
+	}
+	callInfo := struct {
+	}{}
+	mock.lockName.Lock()
+	mock.calls.Name = append(mock.calls.Name, callInfo)
+	mock.lockName.Unlock()
+	return mock.NameFunc()
+}
+
+// NameCalls gets all the calls that were made to Name.
+// Check the length with:
+//     len(mockedSender.NameCalls())
+func (mock *SenderMock) NameCalls() []struct {
+} {
+	var calls []struct {
+	}
+	mock.lockName.RLock()
+	calls = mock.calls.Name
+	mock.lockName.RUnlock()
+	return calls
+}
+
+// Plugin calls PluginFunc.
+func (mock *SenderMock) Plugin() string {
+	if mock.PluginFunc == nil {
+		panic("SenderMock.PluginFunc: method is nil but Sender.Plugin was just called")
+	}
+	callInfo := struct {
+	}{}
+	mock.lockPlugin.Lock()
+	mock.calls.Plugin = append(mock.calls.Plugin, callInfo)
+	mock.lockPlugin.Unlock()
+	return mock.PluginFunc()
+}
+
+// PluginCalls gets all the calls that were made to Plugin.
+// Check the length with:
+//     len(mockedSender.PluginCalls())
+func (mock *SenderMock) PluginCalls() []struct {
+} {
+	var calls []struct {
+	}
+	mock.lockPlugin.RLock()
+	calls = mock.calls.Plugin
+	mock.lockPlugin.RUnlock()
+	return calls
 }
 
 // Send calls SendFunc.

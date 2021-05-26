@@ -106,3 +106,15 @@ func (s *Sender) History() []event.Event {
 
 func (s *Sender) StopSending(ctx context.Context) {
 }
+
+func (s *Sender) Config() interface{} {
+	return s.config
+}
+
+func (s *Sender) Name() string {
+	return ""
+}
+
+func (s *Sender) Plugin() string {
+	return "debug"
+}

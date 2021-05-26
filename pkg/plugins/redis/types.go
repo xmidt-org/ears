@@ -91,7 +91,3 @@ type Sender struct {
 	logger zerolog.Logger
 	client *redis.Client
 }
-
-func (s *Sender) Unwrap() sender.Sender {
-	return s
-}

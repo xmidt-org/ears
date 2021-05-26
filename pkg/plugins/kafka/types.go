@@ -152,7 +152,3 @@ type Producer struct {
 	client sarama.Client
 	logger zerolog.Logger
 }
-
-func (s *Sender) Unwrap() sender.Sender {
-	return s
-}
