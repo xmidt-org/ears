@@ -101,3 +101,19 @@ func (s *Sender) Send(e event.Event) {
 	s.Unlock()
 	e.Ack()
 }
+
+func (s *Sender) Unwrap() sender.Sender {
+	return s
+}
+
+func (s *Sender) Config() interface{} {
+	return s.config
+}
+
+func (s *Sender) Name() string {
+	return ""
+}
+
+func (s *Sender) Plugin() string {
+	return "debug"
+}
