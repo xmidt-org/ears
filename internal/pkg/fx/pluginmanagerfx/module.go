@@ -27,6 +27,7 @@ import (
 	"github.com/xmidt-org/ears/pkg/plugins/dedup"
 	"github.com/xmidt-org/ears/pkg/plugins/encode"
 	"github.com/xmidt-org/ears/pkg/plugins/hash"
+	"github.com/xmidt-org/ears/pkg/plugins/http"
 	"github.com/xmidt-org/ears/pkg/plugins/js"
 	"github.com/xmidt-org/ears/pkg/plugins/kafka"
 	"github.com/xmidt-org/ears/pkg/plugins/log"
@@ -156,7 +157,7 @@ func ProvidePluginManager(in PluginIn) (PluginOut, error) {
 		},
 		{
 			name:   "http",
-			plugin: toArr(transform.NewPluginVersion("http", "", ""))[0].(pkgplugin.Pluginer),
+			plugin: toArr(http.NewPluginVersion("http", "", ""))[0].(pkgplugin.Pluginer),
 		},
 	}
 
