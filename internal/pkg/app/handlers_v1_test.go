@@ -40,6 +40,7 @@ import (
 	"github.com/xmidt-org/ears/pkg/plugins/dedup"
 	"github.com/xmidt-org/ears/pkg/plugins/encode"
 	"github.com/xmidt-org/ears/pkg/plugins/hash"
+	http_plugin "github.com/xmidt-org/ears/pkg/plugins/http"
 	"github.com/xmidt-org/ears/pkg/plugins/js"
 	"github.com/xmidt-org/ears/pkg/plugins/kafka"
 	plog "github.com/xmidt-org/ears/pkg/plugins/log"
@@ -520,7 +521,7 @@ func setupRestApi(config config.Config, storageMgr route.RouteStorer) (*EarsRunt
 		},
 		{
 			name:   "http",
-			plugin: toArr(transform.NewPluginVersion("http", "", ""))[0].(pkgplugin.Pluginer),
+			plugin: toArr(http_plugin.NewPluginVersion("http", "", ""))[0].(pkgplugin.Pluginer),
 		},
 	}
 	for _, plug := range defaultPlugins {
