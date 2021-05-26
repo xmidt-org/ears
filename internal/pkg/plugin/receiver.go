@@ -28,9 +28,10 @@ var _ pkgreceiver.Receiver = (*receiver)(nil)
 type receiver struct {
 	sync.Mutex
 
-	id   string
-	name string
-	hash string
+	id     string
+	name   string
+	plugin string
+	hash   string
 
 	manager *manager
 	active  bool
@@ -38,6 +39,18 @@ type receiver struct {
 	receiver pkgreceiver.Receiver
 
 	done chan struct{}
+}
+
+func (r *receiver) Config() interface{} {
+	return r.receiver.Config()
+}
+
+func (r *receiver) Name() string {
+	return r.name
+}
+
+func (r *receiver) Plugin() string {
+	return r.plugin
 }
 
 func (r *receiver) Receive(next pkgreceiver.NextFn) error {
