@@ -76,6 +76,7 @@ func (s *Sender) Send(event event.Event) {
 	req, err := http.NewRequest(s.method, s.url, bytes.NewReader(body))
 	if err != nil {
 		event.Nack(err)
+		return
 	}
 
 	ctx := event.Context()
@@ -87,13 +88,17 @@ func (s *Sender) Send(event event.Event) {
 	resp, err := s.client.Do(req)
 	if err != nil {
 		event.Nack(err)
+		return
 	}
 
 	io.Copy(ioutil.Discard, resp.Body)
 	defer resp.Body.Close()
 	if resp.StatusCode < http.StatusOK || resp.StatusCode >= http.StatusBadRequest {
 		event.Nack(&BadHttpStatusError{resp.StatusCode})
+		return
 	}
+
+	event.Ack()
 }
 
 func (s *Sender) Unwrap() sender.Sender {
