@@ -256,3 +256,15 @@ func (r *Receiver) Trigger(e event.Event) {
 	r.Unlock()
 	next(e)
 }
+
+func (r *Receiver) Config() interface{} {
+	return r.config
+}
+
+func (r *Receiver) Name() string {
+	return ""
+}
+
+func (r *Receiver) Plugin() string {
+	return "sqs"
+}

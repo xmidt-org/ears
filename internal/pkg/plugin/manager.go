@@ -178,6 +178,7 @@ func (m *manager) RegisterReceiver(
 	w := &receiver{
 		id:       u.String(),
 		name:     name,
+		plugin:   plugin,
 		hash:     hash,
 		manager:  m,
 		receiver: r,

@@ -191,6 +191,15 @@ var _ Receiver = &ReceiverMock{}
 //
 // 		// make and configure a mocked Receiver
 // 		mockedReceiver := &ReceiverMock{
+// 			ConfigFunc: func() interface{} {
+// 				panic("mock out the Config method")
+// 			},
+// 			NameFunc: func() string {
+// 				panic("mock out the Name method")
+// 			},
+// 			PluginFunc: func() string {
+// 				panic("mock out the Plugin method")
+// 			},
 // 			ReceiveFunc: func(next NextFn) error {
 // 				panic("mock out the Receive method")
 // 			},
@@ -204,6 +213,15 @@ var _ Receiver = &ReceiverMock{}
 //
 // 	}
 type ReceiverMock struct {
+	// ConfigFunc mocks the Config method.
+	ConfigFunc func() interface{}
+
+	// NameFunc mocks the Name method.
+	NameFunc func() string
+
+	// PluginFunc mocks the Plugin method.
+	PluginFunc func() string
+
 	// ReceiveFunc mocks the Receive method.
 	ReceiveFunc func(next NextFn) error
 
@@ -212,6 +230,15 @@ type ReceiverMock struct {
 
 	// calls tracks calls to the methods.
 	calls struct {
+		// Config holds details about calls to the Config method.
+		Config []struct {
+		}
+		// Name holds details about calls to the Name method.
+		Name []struct {
+		}
+		// Plugin holds details about calls to the Plugin method.
+		Plugin []struct {
+		}
 		// Receive holds details about calls to the Receive method.
 		Receive []struct {
 			// Next is the next argument value.
@@ -223,8 +250,89 @@ type ReceiverMock struct {
 			Ctx context.Context
 		}
 	}
+	lockConfig        sync.RWMutex
+	lockName          sync.RWMutex
+	lockPlugin        sync.RWMutex
 	lockReceive       sync.RWMutex
 	lockStopReceiving sync.RWMutex
+}
+
+// Config calls ConfigFunc.
+func (mock *ReceiverMock) Config() interface{} {
+	if mock.ConfigFunc == nil {
+		panic("ReceiverMock.ConfigFunc: method is nil but Receiver.Config was just called")
+	}
+	callInfo := struct {
+	}{}
+	mock.lockConfig.Lock()
+	mock.calls.Config = append(mock.calls.Config, callInfo)
+	mock.lockConfig.Unlock()
+	return mock.ConfigFunc()
+}
+
+// ConfigCalls gets all the calls that were made to Config.
+// Check the length with:
+//     len(mockedReceiver.ConfigCalls())
+func (mock *ReceiverMock) ConfigCalls() []struct {
+} {
+	var calls []struct {
+	}
+	mock.lockConfig.RLock()
+	calls = mock.calls.Config
+	mock.lockConfig.RUnlock()
+	return calls
+}
+
+// Name calls NameFunc.
+func (mock *ReceiverMock) Name() string {
+	if mock.NameFunc == nil {
+		panic("ReceiverMock.NameFunc: method is nil but Receiver.Name was just called")
+	}
+	callInfo := struct {
+	}{}
+	mock.lockName.Lock()
+	mock.calls.Name = append(mock.calls.Name, callInfo)
+	mock.lockName.Unlock()
+	return mock.NameFunc()
+}
+
+// NameCalls gets all the calls that were made to Name.
+// Check the length with:
+//     len(mockedReceiver.NameCalls())
+func (mock *ReceiverMock) NameCalls() []struct {
+} {
+	var calls []struct {
+	}
+	mock.lockName.RLock()
+	calls = mock.calls.Name
+	mock.lockName.RUnlock()
+	return calls
+}
+
+// Plugin calls PluginFunc.
+func (mock *ReceiverMock) Plugin() string {
+	if mock.PluginFunc == nil {
+		panic("ReceiverMock.PluginFunc: method is nil but Receiver.Plugin was just called")
+	}
+	callInfo := struct {
+	}{}
+	mock.lockPlugin.Lock()
+	mock.calls.Plugin = append(mock.calls.Plugin, callInfo)
+	mock.lockPlugin.Unlock()
+	return mock.PluginFunc()
+}
+
+// PluginCalls gets all the calls that were made to Plugin.
+// Check the length with:
+//     len(mockedReceiver.PluginCalls())
+func (mock *ReceiverMock) PluginCalls() []struct {
+} {
+	var calls []struct {
+	}
+	mock.lockPlugin.RLock()
+	calls = mock.calls.Plugin
+	mock.lockPlugin.RUnlock()
+	return calls
 }
 
 // Receive calls ReceiveFunc.

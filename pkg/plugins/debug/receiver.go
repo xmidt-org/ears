@@ -156,3 +156,15 @@ func (r *Receiver) History() []event.Event {
 	}
 	return events
 }
+
+func (r *Receiver) Config() interface{} {
+	return r.config
+}
+
+func (r *Receiver) Name() string {
+	return ""
+}
+
+func (r *Receiver) Plugin() string {
+	return "debug"
+}
