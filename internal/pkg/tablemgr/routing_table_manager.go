@@ -23,10 +23,7 @@ import (
 	"github.com/xmidt-org/ears/internal/pkg/config"
 	"github.com/xmidt-org/ears/internal/pkg/plugin"
 	"github.com/xmidt-org/ears/internal/pkg/syncer"
-	"github.com/xmidt-org/ears/pkg/filter"
-	"github.com/xmidt-org/ears/pkg/receiver"
 	"github.com/xmidt-org/ears/pkg/route"
-	"github.com/xmidt-org/ears/pkg/sender"
 	"github.com/xmidt-org/ears/pkg/tenant"
 	"go.uber.org/fx"
 	"sync"
@@ -104,11 +101,11 @@ func (r *DefaultRoutingTableManager) unregisterAndStopRoute(ctx context.Context,
 		r.logger.Info().Str("op", "unregisterAndStopRoute").Str("routeId", routeId).Int("numRefs", numRefs).Str("routeHash", liveRoute.Config.Hash(ctx)).Msg("number references")
 		if numRefs == 0 {
 			delete(r.routeHashMap, liveRoute.Config.Hash(ctx))
-			err = liveRoute.Route.Stop(ctx)
-			if err != nil {
-				r.logger.Error().Str("op", "unregisterAndStopRoute").Msg("could not stop route: " + err.Error())
-				//return err
-			}
+			//err = liveRoute.Route.Stop(ctx)
+			//if err != nil {
+			//	r.logger.Error().Str("op", "unregisterAndStopRoute").Msg("could not stop route: " + err.Error())
+			//return err
+			//}
 			err = liveRoute.Unregister(ctx, r)
 			if err != nil {
 				return err
@@ -129,7 +126,7 @@ func (r *DefaultRoutingTableManager) registerAndRunRoute(ctx context.Context, ro
 		r.logger.Info().Str("op", "registerAndRunRoute").Str("routeId", routeConfig.Id).Msg("identical route exists with same hash and same ID")
 		return nil
 	}
-	// it's an update, so we first need to decrement thhe reference counter on the existing route and possibly stop it
+	// it's an update, so we first need to decrement the reference counter on the existing route and possibly stop it
 	if ok && existingLiveRoute.Config.Hash(ctx) != routeConfig.Hash(ctx) {
 		r.logger.Info().Str("op", "registerAndRunRoute").Str("routeId", routeConfig.Id).Msg("existing route needs to be updated")
 		err = r.unregisterAndStopRoute(ctx, routeConfig.TenantId, routeConfig.Id) // unregister will only truly decommission the route if this was th elast referecne
@@ -239,18 +236,18 @@ func (r *DefaultRoutingTableManager) GetAllRoutes(ctx context.Context) ([]route.
 	return routes, nil
 }
 
-func (r *DefaultRoutingTableManager) GetAllSenders(ctx context.Context) (map[string]sender.Sender, error) {
-	senders := r.pluginMgr.Senders()
+func (r *DefaultRoutingTableManager) GetAllSendersStatus(ctx context.Context) (map[string]plugin.SenderStatus, error) {
+	senders := r.pluginMgr.SendersStatus()
 	return senders, nil
 }
 
-func (r *DefaultRoutingTableManager) GetAllReceivers(ctx context.Context) (map[string]receiver.Receiver, error) {
-	receivers := r.pluginMgr.Receivers()
+func (r *DefaultRoutingTableManager) GetAllReceiversStatus(ctx context.Context) (map[string]plugin.ReceiverStatus, error) {
+	receivers := r.pluginMgr.ReceiversStatus()
 	return receivers, nil
 }
 
-func (r *DefaultRoutingTableManager) GetAllFilters(ctx context.Context) (map[string]filter.Filterer, error) {
-	filterers := r.pluginMgr.Filters()
+func (r *DefaultRoutingTableManager) GetAllFiltersStatus(ctx context.Context) (map[string]plugin.FilterStatus, error) {
+	filterers := r.pluginMgr.FiltersStatus()
 	return filterers, nil
 }
 

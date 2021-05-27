@@ -90,8 +90,10 @@ func (s *Sender) Count() int {
 func (s *Sender) StopSending(ctx context.Context) {
 	s.Lock()
 	defer s.Unlock()
-	s.stopped = true
-	s.producer.Close(ctx)
+	if !s.stopped {
+		s.stopped = true
+		s.producer.Close(ctx)
+	}
 }
 
 func (s *Sender) NewProducer(count int) (*Producer, error) {
@@ -286,4 +288,20 @@ func (s *Sender) Send(e event.Event) {
 	s.count++
 	s.Unlock()
 	e.Ack()
+}
+
+func (s *Sender) Unwrap() sender.Sender {
+	return s
+}
+
+func (s *Sender) Config() interface{} {
+	return s.config
+}
+
+func (s *Sender) Name() string {
+	return ""
+}
+
+func (s *Sender) Plugin() string {
+	return "kafka"
 }

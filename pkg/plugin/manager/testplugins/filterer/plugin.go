@@ -65,3 +65,15 @@ func NewFilterer(config interface{}) (filter.Filterer, error) {
 func (p *plugin) Filter(e event.Event) []event.Event {
 	return nil
 }
+
+func (p *plugin) Config() interface{} {
+	return nil
+}
+
+func (p *plugin) Name() string {
+	return ""
+}
+
+func (p *plugin) Plugin() string {
+	return "filter"
+}

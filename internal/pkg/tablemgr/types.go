@@ -16,11 +16,9 @@ package tablemgr
 
 import (
 	"context"
+	"github.com/xmidt-org/ears/internal/pkg/plugin"
 	"github.com/xmidt-org/ears/internal/pkg/syncer"
-	"github.com/xmidt-org/ears/pkg/filter"
-	"github.com/xmidt-org/ears/pkg/receiver"
 	"github.com/xmidt-org/ears/pkg/route"
-	"github.com/xmidt-org/ears/pkg/sender"
 	"github.com/xmidt-org/ears/pkg/tenant"
 )
 
@@ -41,11 +39,11 @@ type (
 		// GetAllRoutes gets all routes from persistence layer
 		GetAllRoutes(ctx context.Context) ([]route.Config, error)
 		// GetAllSenders gets all senders currently present in the system
-		GetAllSenders(ctx context.Context) (map[string]sender.Sender, error)
+		GetAllSendersStatus(ctx context.Context) (map[string]plugin.SenderStatus, error)
 		// GetAllReceivers gets all receivers currently present in the system
-		GetAllReceivers(ctx context.Context) (map[string]receiver.Receiver, error)
+		GetAllReceiversStatus(ctx context.Context) (map[string]plugin.ReceiverStatus, error)
 		// GetAllFilters gets all filters currently present in the system
-		GetAllFilters(ctx context.Context) (map[string]filter.Filterer, error)
+		GetAllFiltersStatus(ctx context.Context) (map[string]plugin.FilterStatus, error)
 	}
 
 	RoutingTableGlobalSyncer interface {

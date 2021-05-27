@@ -76,7 +76,7 @@ type ReceiverConfig struct {
 type Receiver struct {
 	sync.Mutex
 	done         chan struct{}
-	stop         bool
+	stopped      bool
 	config       ReceiverConfig
 	next         receiver.NextFn
 	logger       zerolog.Logger
@@ -112,8 +112,4 @@ type Sender struct {
 	eventBatch []event.Event
 	done       chan struct{}
 	work       chan []event.Event
-}
-
-func (s *Sender) Unwrap() sender.Sender {
-	return s
 }

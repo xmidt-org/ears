@@ -46,12 +46,13 @@ func (r *Receiver) Receive(next receiver.NextFn) error {
 	}
 	r.Lock()
 	r.done = make(chan struct{})
+	r.stopped = false
 	r.next = next
 	r.Unlock()
 	go func() {
 		defer func() {
 			r.Lock()
-			if r.done != nil {
+			if !r.stopped {
 				r.done <- struct{}{}
 			}
 			r.Unlock()
@@ -91,10 +92,10 @@ func (r *Receiver) Receive(next receiver.NextFn) error {
 func (r *Receiver) StopReceiving(ctx context.Context) error {
 	r.Lock()
 	defer r.Unlock()
-	/*if r.done != nil {
+	if !r.stopped {
 		close(r.done)
-		r.done = nil
-	}*/
+		r.stopped = true
+	}
 	return nil
 }
 
@@ -154,4 +155,16 @@ func (r *Receiver) History() []event.Event {
 		}
 	}
 	return events
+}
+
+func (r *Receiver) Config() interface{} {
+	return r.config
+}
+
+func (r *Receiver) Name() string {
+	return ""
+}
+
+func (r *Receiver) Plugin() string {
+	return "debug"
 }

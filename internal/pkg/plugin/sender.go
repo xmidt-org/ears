@@ -29,6 +29,7 @@ type sender struct {
 	sync.Mutex
 	id      string
 	name    string
+	plugin  string
 	hash    string
 	manager *manager
 	active  bool
@@ -37,6 +38,18 @@ type sender struct {
 
 func (s *sender) Unwrap() pkgsender.Sender {
 	return s.sender
+}
+
+func (s *sender) Config() interface{} {
+	return s.sender.Config()
+}
+
+func (s *sender) Name() string {
+	return s.name
+}
+
+func (s *sender) Plugin() string {
+	return s.plugin
 }
 
 func (s *sender) Send(e event.Event) {

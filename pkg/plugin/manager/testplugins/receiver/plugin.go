@@ -70,3 +70,15 @@ func (p *plugin) Receive(next receiver.NextFn) error {
 func (p *plugin) StopReceiving(ctx context.Context) error {
 	return nil
 }
+
+func (p *plugin) Config() interface{} {
+	return nil
+}
+
+func (p *plugin) Name() string {
+	return ""
+}
+
+func (p *plugin) Plugin() string {
+	return "plugin"
+}

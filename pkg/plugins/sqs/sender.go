@@ -113,7 +113,6 @@ func (s *Sender) startTimedSender() {
 			evtBatch := s.eventBatch
 			s.eventBatch = make([]event.Event, 0)
 			s.Unlock()
-
 			if len(evtBatch) > 0 {
 				s.work <- evtBatch
 			}
@@ -193,4 +192,20 @@ func (s *Sender) Send(e event.Event) {
 	} else {
 		s.Unlock()
 	}
+}
+
+func (s *Sender) Unwrap() sender.Sender {
+	return s
+}
+
+func (s *Sender) Config() interface{} {
+	return s.config
+}
+
+func (s *Sender) Name() string {
+	return ""
+}
+
+func (s *Sender) Plugin() string {
+	return "sqs"
 }

@@ -72,3 +72,15 @@ func (p *plugin) Unwrap() sender.Sender {
 
 func (p *plugin) StopSending(ctx context.Context) {
 }
+
+func (p *plugin) Config() interface{} {
+	return nil
+}
+
+func (p *plugin) Name() string {
+	return ""
+}
+
+func (p *plugin) Plugin() string {
+	return "plugin"
+}

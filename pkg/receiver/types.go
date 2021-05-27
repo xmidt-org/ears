@@ -55,4 +55,9 @@ type Receiver interface {
 	// StopReceiving will stop the receiver from receiving events.
 	// This will cause Receive to return.
 	StopReceiving(ctx context.Context) error
+	//
+	//
+	Config() interface{}
+	Name() string
+	Plugin() string
 }
