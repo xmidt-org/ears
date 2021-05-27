@@ -24,9 +24,7 @@ import (
 	"github.com/xmidt-org/ears/internal/pkg/plugin"
 	"github.com/xmidt-org/ears/internal/pkg/syncer"
 	"github.com/xmidt-org/ears/pkg/filter"
-	"github.com/xmidt-org/ears/pkg/receiver"
 	"github.com/xmidt-org/ears/pkg/route"
-	"github.com/xmidt-org/ears/pkg/sender"
 	"github.com/xmidt-org/ears/pkg/tenant"
 	"go.uber.org/fx"
 	"sync"
@@ -239,17 +237,17 @@ func (r *DefaultRoutingTableManager) GetAllRoutes(ctx context.Context) ([]route.
 	return routes, nil
 }
 
-func (r *DefaultRoutingTableManager) GetAllSenders(ctx context.Context) (map[string]sender.Sender, error) {
-	senders := r.pluginMgr.UniqueSenders()
+func (r *DefaultRoutingTableManager) GetAllSendersStatus(ctx context.Context) (map[string]plugin.SenderStatus, error) {
+	senders := r.pluginMgr.SendersStatus()
 	return senders, nil
 }
 
-func (r *DefaultRoutingTableManager) GetAllReceivers(ctx context.Context) (map[string]receiver.Receiver, error) {
-	receivers := r.pluginMgr.UniqueReceivers()
+func (r *DefaultRoutingTableManager) GetAllReceiversStatus(ctx context.Context) (map[string]plugin.ReceiverStatus, error) {
+	receivers := r.pluginMgr.ReceiversStatus()
 	return receivers, nil
 }
 
-func (r *DefaultRoutingTableManager) GetAllFilters(ctx context.Context) (map[string]filter.Filterer, error) {
+func (r *DefaultRoutingTableManager) GetAllFiltersStatus(ctx context.Context) (map[string]filter.Filterer, error) {
 	filterers := r.pluginMgr.Filters()
 	return filterers, nil
 }
