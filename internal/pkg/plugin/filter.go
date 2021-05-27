@@ -30,6 +30,7 @@ type filter struct {
 
 	id   string
 	name string
+	//plugin string
 	hash string
 
 	manager *manager

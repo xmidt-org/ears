@@ -35,6 +35,7 @@ type Manager interface {
 		tid tenant.Id,
 	) (pkgreceiver.Receiver, error)
 	Receivers() map[string]pkgreceiver.Receiver
+	UniqueReceivers() map[string]pkgreceiver.Receiver
 	UnregisterReceiver(ctx context.Context, r pkgreceiver.Receiver) error
 
 	Filterers() map[string]pkgfilter.NewFilterer
@@ -53,6 +54,7 @@ type Manager interface {
 		tid tenant.Id,
 	) (pkgsender.Sender, error)
 	Senders() map[string]pkgsender.Sender
+	UniqueSenders() map[string]pkgsender.Sender
 	UnregisterSender(ctx context.Context, s pkgsender.Sender) error
 }
 
