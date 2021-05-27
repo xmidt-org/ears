@@ -283,6 +283,7 @@ func (m *manager) stopReceiving(ctx context.Context, r *receiver) error {
 		return &NotRegisteredError{}
 	}
 	if r.active {
+		r.active = false
 		close(r.done)
 	}
 	return nil
