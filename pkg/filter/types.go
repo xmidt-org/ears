@@ -57,6 +57,10 @@ type NewFilterer interface {
 // TODO: https://github.com/xmidt-org/ears/issues/74
 type Filterer interface {
 	Filter(e event.Event) []event.Event
+	//
+	Config() interface{}
+	Name() string
+	Plugin() string
 }
 
 // Chainer

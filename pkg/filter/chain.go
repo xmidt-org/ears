@@ -83,3 +83,15 @@ func (c *Chain) Filter(e event.Event) []event.Event {
 	}
 	return events
 }
+
+func (c *Chain) Config() interface{} {
+	return nil
+}
+
+func (c *Chain) Name() string {
+	return "filter_chain"
+}
+
+func (c *Chain) Plugin() string {
+	return "filter_chain"
+}

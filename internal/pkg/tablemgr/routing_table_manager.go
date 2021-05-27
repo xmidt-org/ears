@@ -23,7 +23,6 @@ import (
 	"github.com/xmidt-org/ears/internal/pkg/config"
 	"github.com/xmidt-org/ears/internal/pkg/plugin"
 	"github.com/xmidt-org/ears/internal/pkg/syncer"
-	"github.com/xmidt-org/ears/pkg/filter"
 	"github.com/xmidt-org/ears/pkg/route"
 	"github.com/xmidt-org/ears/pkg/tenant"
 	"go.uber.org/fx"
@@ -247,8 +246,8 @@ func (r *DefaultRoutingTableManager) GetAllReceiversStatus(ctx context.Context) 
 	return receivers, nil
 }
 
-func (r *DefaultRoutingTableManager) GetAllFiltersStatus(ctx context.Context) (map[string]filter.Filterer, error) {
-	filterers := r.pluginMgr.Filters()
+func (r *DefaultRoutingTableManager) GetAllFiltersStatus(ctx context.Context) (map[string]plugin.FilterStatus, error) {
+	filterers := r.pluginMgr.FiltersStatus()
 	return filterers, nil
 }
 

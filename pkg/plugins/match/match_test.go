@@ -247,13 +247,15 @@ func TestNewFilterConfig(t *testing.T) {
 					a.Expect(err).To(BeNil())
 					a.Expect(f).ToNot(BeNil())
 
-					fcfg, ok := f.(interface {
+					/*fcfg, ok := f.(interface {
 						Config() match.Config
 					})
 					a.Expect(ok).To(BeTrue(), "filter supports Config interface")
 					a.Expect(fcfg).ToNot(BeNil())
 
-					cfg := fcfg.Config()
+					cfg := fcfg.Config()*/
+
+					cfg := f.Config().(match.Config)
 
 					a.Expect(cfg.String()).To(Equal(expectedStr))
 
