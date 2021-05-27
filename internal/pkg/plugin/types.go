@@ -35,7 +35,7 @@ type Manager interface {
 		tid tenant.Id,
 	) (pkgreceiver.Receiver, error)
 	Receivers() map[string]pkgreceiver.Receiver
-	UniqueReceivers() map[string]pkgreceiver.Receiver
+	ReceiversStatus() map[string]ReceiverStatus
 	UnregisterReceiver(ctx context.Context, r pkgreceiver.Receiver) error
 
 	Filterers() map[string]pkgfilter.NewFilterer
@@ -54,7 +54,7 @@ type Manager interface {
 		tid tenant.Id,
 	) (pkgsender.Sender, error)
 	Senders() map[string]pkgsender.Sender
-	UniqueSenders() map[string]pkgsender.Sender
+	SendersStatus() map[string]SenderStatus
 	UnregisterSender(ctx context.Context, s pkgsender.Sender) error
 }
 
@@ -91,6 +91,27 @@ func WithNextFnDeadline(d time.Duration) ManagerOption {
 		m.nextFnDeadline = d
 		return nil
 	}
+}
+
+type ReceiverStatus struct {
+	Name           string
+	Plugin         string
+	Config         interface{}
+	ReferenceCount int
+}
+
+type SenderStatus struct {
+	Name           string
+	Plugin         string
+	Config         interface{}
+	ReferenceCount int
+}
+
+type FilterStatus struct {
+	Name           string
+	Plugin         string
+	Config         interface{}
+	ReferenceCount int
 }
 
 type OptionError struct {

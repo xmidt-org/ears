@@ -202,12 +202,18 @@ func (m *manager) Receivers() map[string]pkgreceiver.Receiver {
 	return receivers
 }
 
-func (m *manager) UniqueReceivers() map[string]pkgreceiver.Receiver {
+func (m *manager) ReceiversStatus() map[string]ReceiverStatus {
 	m.Lock()
 	defer m.Unlock()
-	receivers := map[string]pkgreceiver.Receiver{}
-	for _, v := range m.receiversWrapped {
-		receivers[v.hash] = v
+	receivers := map[string]ReceiverStatus{}
+	for _, v := range m.sendersWrapped {
+		status, ok := receivers[v.hash]
+		if ok {
+			status.ReferenceCount++
+			receivers[v.hash] = status
+		} else {
+			receivers[v.hash] = ReceiverStatus{Name: v.Name(), Plugin: v.Plugin(), Config: v.Config(), ReferenceCount: 1}
+		}
 	}
 	return receivers
 }
@@ -535,12 +541,18 @@ func (m *manager) Senders() map[string]pkgsender.Sender {
 	return senders
 }
 
-func (m *manager) UniqueSenders() map[string]pkgsender.Sender {
+func (m *manager) SendersStatus() map[string]SenderStatus {
 	m.Lock()
 	defer m.Unlock()
-	senders := map[string]pkgsender.Sender{}
+	senders := map[string]SenderStatus{}
 	for _, v := range m.sendersWrapped {
-		senders[v.hash] = v
+		status, ok := senders[v.hash]
+		if ok {
+			status.ReferenceCount++
+			senders[v.hash] = status
+		} else {
+			senders[v.hash] = SenderStatus{Name: v.Name(), Plugin: v.Plugin(), Config: v.Config(), ReferenceCount: 1}
+		}
 	}
 	return senders
 }
