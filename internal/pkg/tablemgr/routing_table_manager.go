@@ -240,12 +240,12 @@ func (r *DefaultRoutingTableManager) GetAllRoutes(ctx context.Context) ([]route.
 }
 
 func (r *DefaultRoutingTableManager) GetAllSenders(ctx context.Context) (map[string]sender.Sender, error) {
-	senders := r.pluginMgr.Senders()
+	senders := r.pluginMgr.UniqueSenders()
 	return senders, nil
 }
 
 func (r *DefaultRoutingTableManager) GetAllReceivers(ctx context.Context) (map[string]receiver.Receiver, error) {
-	receivers := r.pluginMgr.Receivers()
+	receivers := r.pluginMgr.UniqueReceivers()
 	return receivers, nil
 }
 

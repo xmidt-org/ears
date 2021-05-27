@@ -195,10 +195,19 @@ func (m *manager) RegisterReceiver(
 func (m *manager) Receivers() map[string]pkgreceiver.Receiver {
 	m.Lock()
 	defer m.Unlock()
-
 	receivers := map[string]pkgreceiver.Receiver{}
 	for k, v := range m.receiversWrapped {
 		receivers[k] = v
+	}
+	return receivers
+}
+
+func (m *manager) UniqueReceivers() map[string]pkgreceiver.Receiver {
+	m.Lock()
+	defer m.Unlock()
+	receivers := map[string]pkgreceiver.Receiver{}
+	for _, v := range m.receiversWrapped {
+		receivers[v.hash] = v
 	}
 	return receivers
 }
@@ -383,8 +392,9 @@ func (m *manager) RegisterFilter(
 	}
 
 	w := &filter{
-		id:      u.String(),
-		name:    name,
+		id:   u.String(),
+		name: name,
+		//plugin:  plugin,
 		hash:    hash,
 		manager: m,
 
@@ -533,10 +543,19 @@ func (m *manager) RegisterSender(
 func (m *manager) Senders() map[string]pkgsender.Sender {
 	m.Lock()
 	defer m.Unlock()
-
 	senders := map[string]pkgsender.Sender{}
 	for k, v := range m.sendersWrapped {
 		senders[k] = v
+	}
+	return senders
+}
+
+func (m *manager) UniqueSenders() map[string]pkgsender.Sender {
+	m.Lock()
+	defer m.Unlock()
+	senders := map[string]pkgsender.Sender{}
+	for _, v := range m.sendersWrapped {
+		senders[v.hash] = v
 	}
 	return senders
 }
