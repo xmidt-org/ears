@@ -178,6 +178,7 @@ func (m *manager) RegisterReceiver(
 	w := &receiver{
 		id:       u.String(),
 		name:     name,
+		plugin:   plugin,
 		hash:     hash,
 		manager:  m,
 		receiver: r,
@@ -194,10 +195,25 @@ func (m *manager) RegisterReceiver(
 func (m *manager) Receivers() map[string]pkgreceiver.Receiver {
 	m.Lock()
 	defer m.Unlock()
-
 	receivers := map[string]pkgreceiver.Receiver{}
 	for k, v := range m.receiversWrapped {
 		receivers[k] = v
+	}
+	return receivers
+}
+
+func (m *manager) ReceiversStatus() map[string]ReceiverStatus {
+	m.Lock()
+	defer m.Unlock()
+	receivers := map[string]ReceiverStatus{}
+	for _, v := range m.sendersWrapped {
+		status, ok := receivers[v.hash]
+		if ok {
+			status.ReferenceCount++
+			receivers[v.hash] = status
+		} else {
+			receivers[v.hash] = ReceiverStatus{Name: v.Name(), Plugin: v.Plugin(), Config: v.Config(), ReferenceCount: 1}
+		}
 	}
 	return receivers
 }
@@ -261,55 +277,41 @@ func (m *manager) stopReceiving(ctx context.Context, r *receiver) error {
 	m.Lock()
 	delete(m.receiversFn[m.mapkey(r.name, r.hash)], r.id)
 	m.Unlock()
-
 	r.Lock()
 	defer r.Unlock()
-	//BW
-	//r.active = false
-
 	if r.done == nil {
 		return &NotRegisteredError{}
 	}
-	//BW
-	//close(r.done)
-
+	if r.active {
+		r.active = false
+		close(r.done)
+	}
 	return nil
 }
 
 func (m *manager) UnregisterReceiver(ctx context.Context, pr pkgreceiver.Receiver) error {
 	r, ok := pr.(*receiver)
-
 	// NOTE: No locking on simple reads
 	if !ok || !r.active {
 		return &RegistrationError{
 			Message: fmt.Sprintf("receiver not registered %v", ok),
 		}
 	}
-
 	r.StopReceiving(ctx) // This in turn calls manager.stopreceiving()
-
 	key := m.mapkey(r.name, r.hash)
-
 	m.Lock()
 	defer m.Unlock()
-
 	m.receiversCount[key]--
-
 	if m.receiversCount[key] <= 0 {
 		r.receiver.StopReceiving(ctx)
 		delete(m.receiversCount, key)
 		delete(m.receivers, key)
 	}
-
 	delete(m.receiversWrapped, r.id)
-
-	//BW
 	r.Lock()
 	r.active = false
 	r.Unlock()
-
 	return nil
-
 }
 
 // === Filters =======================================================
@@ -384,6 +386,7 @@ func (m *manager) RegisterFilter(
 	w := &filter{
 		id:      u.String(),
 		name:    name,
+		plugin:  plugin,
 		hash:    hash,
 		manager: m,
 
@@ -401,10 +404,25 @@ func (m *manager) RegisterFilter(
 func (m *manager) Filters() map[string]pkgfilter.Filterer {
 	m.Lock()
 	defer m.Unlock()
-
 	filters := map[string]pkgfilter.Filterer{}
 	for k, v := range m.filtersWrapped {
 		filters[k] = v
+	}
+	return filters
+}
+
+func (m *manager) FiltersStatus() map[string]FilterStatus {
+	m.Lock()
+	defer m.Unlock()
+	filters := map[string]FilterStatus{}
+	for _, v := range m.filtersWrapped {
+		status, ok := filters[v.hash]
+		if ok {
+			status.ReferenceCount++
+			filters[v.hash] = status
+		} else {
+			filters[v.hash] = FilterStatus{Name: v.Name(), Plugin: v.Plugin(), Config: v.Config(), ReferenceCount: 1}
+		}
 	}
 	return filters
 }
@@ -516,6 +534,7 @@ func (m *manager) RegisterSender(
 	w := &sender{
 		id:      u.String(),
 		name:    name,
+		plugin:  plugin,
 		hash:    hash,
 		manager: m,
 		sender:  s,
@@ -531,10 +550,25 @@ func (m *manager) RegisterSender(
 func (m *manager) Senders() map[string]pkgsender.Sender {
 	m.Lock()
 	defer m.Unlock()
-
 	senders := map[string]pkgsender.Sender{}
 	for k, v := range m.sendersWrapped {
 		senders[k] = v
+	}
+	return senders
+}
+
+func (m *manager) SendersStatus() map[string]SenderStatus {
+	m.Lock()
+	defer m.Unlock()
+	senders := map[string]SenderStatus{}
+	for _, v := range m.sendersWrapped {
+		status, ok := senders[v.hash]
+		if ok {
+			status.ReferenceCount++
+			senders[v.hash] = status
+		} else {
+			senders[v.hash] = SenderStatus{Name: v.Name(), Plugin: v.Plugin(), Config: v.Config(), ReferenceCount: 1}
+		}
 	}
 	return senders
 }

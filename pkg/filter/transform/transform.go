@@ -60,13 +60,6 @@ func (f *Filter) Filter(evt event.Event) []event.Event {
 	return events
 }
 
-func (f *Filter) Config() Config {
-	if f == nil {
-		return Config{}
-	}
-	return f.config
-}
-
 // transform is a helper function to perform a simple transformation
 func transform(evt event.Event, t interface{}, parent interface{}, key string, idx int) {
 	if evt == nil || t == nil {
@@ -83,7 +76,7 @@ func transform(evt event.Event, t interface{}, parent interface{}, key string, i
 		}
 	case string:
 		if strings.HasPrefix(t, "{") && strings.HasSuffix(t, "}") {
-			repl, _, _ := evt.GetPathValue(t[1:len(t)-1])
+			repl, _, _ := evt.GetPathValue(t[1 : len(t)-1])
 			if parent != nil {
 				if key != "" {
 					parent.(map[string]interface{})[key] = repl
@@ -93,4 +86,19 @@ func transform(evt event.Event, t interface{}, parent interface{}, key string, i
 			}
 		}
 	}
+}
+
+func (f *Filter) Config() interface{} {
+	if f == nil {
+		return Config{}
+	}
+	return f.Config()
+}
+
+func (f *Filter) Name() string {
+	return ""
+}
+
+func (f *Filter) Plugin() string {
+	return "transform"
 }

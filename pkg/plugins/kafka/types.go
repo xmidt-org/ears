@@ -84,6 +84,7 @@ type ReceiverConfig struct {
 type Receiver struct {
 	sync.Mutex
 	done      chan struct{}
+	stopped   bool
 	config    ReceiverConfig
 	next      receiver.NextFn
 	logger    zerolog.Logger
@@ -150,8 +151,4 @@ type Producer struct {
 	done   chan bool
 	client sarama.Client
 	logger zerolog.Logger
-}
-
-func (s *Sender) Unwrap() sender.Sender {
-	return s
 }

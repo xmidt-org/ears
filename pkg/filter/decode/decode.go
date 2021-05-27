@@ -81,9 +81,17 @@ func (f *Filter) Filter(evt event.Event) []event.Event {
 	evt.SetPathValue(path, output, true)
 	return []event.Event{evt}
 }
-func (f *Filter) Config() Config {
+func (f *Filter) Config() interface{} {
 	if f == nil {
 		return Config{}
 	}
 	return f.config
+}
+
+func (f *Filter) Name() string {
+	return ""
+}
+
+func (f *Filter) Plugin() string {
+	return "decode"
 }

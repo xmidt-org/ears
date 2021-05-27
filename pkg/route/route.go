@@ -65,6 +65,7 @@ func (rte *Route) Stop(ctx context.Context) error {
 	if rte.r == nil {
 		return nil
 	}
+	//TODO: should this only be done if plugin reference count is zero
 	//log.Ctx(ctx).Info().Str("op", "StopRoute").Msg("stop receiving")
 	err := rte.r.StopReceiving(ctx)
 	//log.Ctx(ctx).Info().Str("op", "StopRoute").Msg("stop sending")

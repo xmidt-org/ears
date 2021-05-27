@@ -217,7 +217,7 @@ func (a *APIManager) getAllTenantRoutesHandler(w http.ResponseWriter, r *http.Re
 
 func (a *APIManager) getAllSendersHandler(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
-	allSenders, err := a.routingTableMgr.GetAllSenders(ctx)
+	allSenders, err := a.routingTableMgr.GetAllSendersStatus(ctx)
 	if err != nil {
 		log.Ctx(ctx).Error().Str("op", "getAllSendersHandler").Msg(err.Error())
 		resp := ErrorResponse(&InternalServerError{err})
@@ -230,7 +230,7 @@ func (a *APIManager) getAllSendersHandler(w http.ResponseWriter, r *http.Request
 
 func (a *APIManager) getAllReceiversHandler(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
-	allReceivers, err := a.routingTableMgr.GetAllReceivers(ctx)
+	allReceivers, err := a.routingTableMgr.GetAllReceiversStatus(ctx)
 	if err != nil {
 		log.Ctx(ctx).Error().Str("op", "getAllReceiversHandler").Msg(err.Error())
 		resp := ErrorResponse(&InternalServerError{err})
@@ -243,7 +243,7 @@ func (a *APIManager) getAllReceiversHandler(w http.ResponseWriter, r *http.Reque
 
 func (a *APIManager) getAllFiltersHandler(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
-	allFilters, err := a.routingTableMgr.GetAllFilters(ctx)
+	allFilters, err := a.routingTableMgr.GetAllFiltersStatus(ctx)
 	if err != nil {
 		log.Ctx(ctx).Error().Str("op", "getAllFiltersHandler").Msg(err.Error())
 		resp := ErrorResponse(&InternalServerError{err})

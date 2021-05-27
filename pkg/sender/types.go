@@ -46,4 +46,8 @@ type Sender interface {
 	// StopSending will stop any long running maintenance threads in the sender plugin.
 	// Often this function does nothing.
 	StopSending(ctx context.Context)
+	//
+	Config() interface{}
+	Name() string
+	Plugin() string
 }

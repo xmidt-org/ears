@@ -41,3 +41,18 @@ func (f *Filter) Filter(evt event.Event) []event.Event {
 	log.Ctx(evt.Context()).Info().Str("op", "log.Filter").RawJSON("event", buf).Msg("ears log")
 	return []event.Event{evt}
 }
+
+func (f *Filter) Config() interface{} {
+	if f == nil {
+		return Config{}
+	}
+	return f.Config()
+}
+
+func (f *Filter) Name() string {
+	return ""
+}
+
+func (f *Filter) Plugin() string {
+	return "log"
+}

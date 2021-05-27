@@ -11,7 +11,7 @@
       "payload": {
         "foo": "bar"
       },
-      "rounds": 5
+      "rounds": 10
     }
   },
   "sender": {
