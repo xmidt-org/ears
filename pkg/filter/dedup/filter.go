@@ -74,9 +74,17 @@ func (f *Filter) Filter(evt event.Event) []event.Event {
 	}
 }
 
-func (f *Filter) Config() Config {
+func (f *Filter) Config() interface{} {
 	if f == nil {
 		return Config{}
 	}
 	return f.config
+}
+
+func (f *Filter) Name() string {
+	return ""
+}
+
+func (f *Filter) Plugin() string {
+	return "dedup"
 }

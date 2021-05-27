@@ -52,3 +52,18 @@ func (f *Filter) Filter(evt event.Event) []event.Event {
 	}
 	return transformedEvts
 }
+
+func (f *Filter) Config() interface{} {
+	if f == nil {
+		return Config{}
+	}
+	return f.Config()
+}
+
+func (f *Filter) Name() string {
+	return ""
+}
+
+func (f *Filter) Plugin() string {
+	return "js"
+}

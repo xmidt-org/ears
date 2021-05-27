@@ -18,7 +18,6 @@ import (
 	"context"
 	"github.com/xmidt-org/ears/internal/pkg/plugin"
 	"github.com/xmidt-org/ears/internal/pkg/syncer"
-	"github.com/xmidt-org/ears/pkg/filter"
 	"github.com/xmidt-org/ears/pkg/route"
 	"github.com/xmidt-org/ears/pkg/tenant"
 )
@@ -44,7 +43,7 @@ type (
 		// GetAllReceivers gets all receivers currently present in the system
 		GetAllReceiversStatus(ctx context.Context) (map[string]plugin.ReceiverStatus, error)
 		// GetAllFilters gets all filters currently present in the system
-		GetAllFiltersStatus(ctx context.Context) (map[string]filter.Filterer, error)
+		GetAllFiltersStatus(ctx context.Context) (map[string]plugin.FilterStatus, error)
 	}
 
 	RoutingTableGlobalSyncer interface {

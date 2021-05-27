@@ -384,9 +384,9 @@ func (m *manager) RegisterFilter(
 	}
 
 	w := &filter{
-		id:   u.String(),
-		name: name,
-		//plugin:  plugin,
+		id:      u.String(),
+		name:    name,
+		plugin:  plugin,
 		hash:    hash,
 		manager: m,
 
@@ -404,10 +404,25 @@ func (m *manager) RegisterFilter(
 func (m *manager) Filters() map[string]pkgfilter.Filterer {
 	m.Lock()
 	defer m.Unlock()
-
 	filters := map[string]pkgfilter.Filterer{}
 	for k, v := range m.filtersWrapped {
 		filters[k] = v
+	}
+	return filters
+}
+
+func (m *manager) FiltersStatus() map[string]FilterStatus {
+	m.Lock()
+	defer m.Unlock()
+	filters := map[string]FilterStatus{}
+	for _, v := range m.filtersWrapped {
+		status, ok := filters[v.hash]
+		if ok {
+			status.ReferenceCount++
+			filters[v.hash] = status
+		} else {
+			filters[v.hash] = FilterStatus{Name: v.Name(), Plugin: v.Plugin(), Config: v.Config(), ReferenceCount: 1}
+		}
 	}
 	return filters
 }

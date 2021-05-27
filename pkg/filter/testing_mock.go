@@ -191,8 +191,17 @@ var _ Filterer = &FiltererMock{}
 //
 // 		// make and configure a mocked Filterer
 // 		mockedFilterer := &FiltererMock{
+// 			ConfigFunc: func() interface{} {
+// 				panic("mock out the Config method")
+// 			},
 // 			FilterFunc: func(e event.Event) []event.Event {
 // 				panic("mock out the Filter method")
+// 			},
+// 			NameFunc: func() string {
+// 				panic("mock out the Name method")
+// 			},
+// 			PluginFunc: func() string {
+// 				panic("mock out the Plugin method")
 // 			},
 // 		}
 //
@@ -201,18 +210,65 @@ var _ Filterer = &FiltererMock{}
 //
 // 	}
 type FiltererMock struct {
+	// ConfigFunc mocks the Config method.
+	ConfigFunc func() interface{}
+
 	// FilterFunc mocks the Filter method.
 	FilterFunc func(e event.Event) []event.Event
 
+	// NameFunc mocks the Name method.
+	NameFunc func() string
+
+	// PluginFunc mocks the Plugin method.
+	PluginFunc func() string
+
 	// calls tracks calls to the methods.
 	calls struct {
+		// Config holds details about calls to the Config method.
+		Config []struct {
+		}
 		// Filter holds details about calls to the Filter method.
 		Filter []struct {
 			// E is the e argument value.
 			E event.Event
 		}
+		// Name holds details about calls to the Name method.
+		Name []struct {
+		}
+		// Plugin holds details about calls to the Plugin method.
+		Plugin []struct {
+		}
 	}
+	lockConfig sync.RWMutex
 	lockFilter sync.RWMutex
+	lockName   sync.RWMutex
+	lockPlugin sync.RWMutex
+}
+
+// Config calls ConfigFunc.
+func (mock *FiltererMock) Config() interface{} {
+	if mock.ConfigFunc == nil {
+		panic("FiltererMock.ConfigFunc: method is nil but Filterer.Config was just called")
+	}
+	callInfo := struct {
+	}{}
+	mock.lockConfig.Lock()
+	mock.calls.Config = append(mock.calls.Config, callInfo)
+	mock.lockConfig.Unlock()
+	return mock.ConfigFunc()
+}
+
+// ConfigCalls gets all the calls that were made to Config.
+// Check the length with:
+//     len(mockedFilterer.ConfigCalls())
+func (mock *FiltererMock) ConfigCalls() []struct {
+} {
+	var calls []struct {
+	}
+	mock.lockConfig.RLock()
+	calls = mock.calls.Config
+	mock.lockConfig.RUnlock()
+	return calls
 }
 
 // Filter calls FilterFunc.
@@ -246,6 +302,58 @@ func (mock *FiltererMock) FilterCalls() []struct {
 	return calls
 }
 
+// Name calls NameFunc.
+func (mock *FiltererMock) Name() string {
+	if mock.NameFunc == nil {
+		panic("FiltererMock.NameFunc: method is nil but Filterer.Name was just called")
+	}
+	callInfo := struct {
+	}{}
+	mock.lockName.Lock()
+	mock.calls.Name = append(mock.calls.Name, callInfo)
+	mock.lockName.Unlock()
+	return mock.NameFunc()
+}
+
+// NameCalls gets all the calls that were made to Name.
+// Check the length with:
+//     len(mockedFilterer.NameCalls())
+func (mock *FiltererMock) NameCalls() []struct {
+} {
+	var calls []struct {
+	}
+	mock.lockName.RLock()
+	calls = mock.calls.Name
+	mock.lockName.RUnlock()
+	return calls
+}
+
+// Plugin calls PluginFunc.
+func (mock *FiltererMock) Plugin() string {
+	if mock.PluginFunc == nil {
+		panic("FiltererMock.PluginFunc: method is nil but Filterer.Plugin was just called")
+	}
+	callInfo := struct {
+	}{}
+	mock.lockPlugin.Lock()
+	mock.calls.Plugin = append(mock.calls.Plugin, callInfo)
+	mock.lockPlugin.Unlock()
+	return mock.PluginFunc()
+}
+
+// PluginCalls gets all the calls that were made to Plugin.
+// Check the length with:
+//     len(mockedFilterer.PluginCalls())
+func (mock *FiltererMock) PluginCalls() []struct {
+} {
+	var calls []struct {
+	}
+	mock.lockPlugin.RLock()
+	calls = mock.calls.Plugin
+	mock.lockPlugin.RUnlock()
+	return calls
+}
+
 // Ensure, that ChainerMock does implement Chainer.
 // If this is not the case, regenerate this file with moq.
 var _ Chainer = &ChainerMock{}
@@ -259,11 +367,20 @@ var _ Chainer = &ChainerMock{}
 // 			AddFunc: func(f Filterer) error {
 // 				panic("mock out the Add method")
 // 			},
+// 			ConfigFunc: func() interface{} {
+// 				panic("mock out the Config method")
+// 			},
 // 			FilterFunc: func(e event.Event) []event.Event {
 // 				panic("mock out the Filter method")
 // 			},
 // 			FilterersFunc: func() []Filterer {
 // 				panic("mock out the Filterers method")
+// 			},
+// 			NameFunc: func() string {
+// 				panic("mock out the Name method")
+// 			},
+// 			PluginFunc: func() string {
+// 				panic("mock out the Plugin method")
 // 			},
 // 		}
 //
@@ -275,11 +392,20 @@ type ChainerMock struct {
 	// AddFunc mocks the Add method.
 	AddFunc func(f Filterer) error
 
+	// ConfigFunc mocks the Config method.
+	ConfigFunc func() interface{}
+
 	// FilterFunc mocks the Filter method.
 	FilterFunc func(e event.Event) []event.Event
 
 	// FilterersFunc mocks the Filterers method.
 	FilterersFunc func() []Filterer
+
+	// NameFunc mocks the Name method.
+	NameFunc func() string
+
+	// PluginFunc mocks the Plugin method.
+	PluginFunc func() string
 
 	// calls tracks calls to the methods.
 	calls struct {
@@ -287,6 +413,9 @@ type ChainerMock struct {
 		Add []struct {
 			// F is the f argument value.
 			F Filterer
+		}
+		// Config holds details about calls to the Config method.
+		Config []struct {
 		}
 		// Filter holds details about calls to the Filter method.
 		Filter []struct {
@@ -296,10 +425,19 @@ type ChainerMock struct {
 		// Filterers holds details about calls to the Filterers method.
 		Filterers []struct {
 		}
+		// Name holds details about calls to the Name method.
+		Name []struct {
+		}
+		// Plugin holds details about calls to the Plugin method.
+		Plugin []struct {
+		}
 	}
 	lockAdd       sync.RWMutex
+	lockConfig    sync.RWMutex
 	lockFilter    sync.RWMutex
 	lockFilterers sync.RWMutex
+	lockName      sync.RWMutex
+	lockPlugin    sync.RWMutex
 }
 
 // Add calls AddFunc.
@@ -330,6 +468,32 @@ func (mock *ChainerMock) AddCalls() []struct {
 	mock.lockAdd.RLock()
 	calls = mock.calls.Add
 	mock.lockAdd.RUnlock()
+	return calls
+}
+
+// Config calls ConfigFunc.
+func (mock *ChainerMock) Config() interface{} {
+	if mock.ConfigFunc == nil {
+		panic("ChainerMock.ConfigFunc: method is nil but Chainer.Config was just called")
+	}
+	callInfo := struct {
+	}{}
+	mock.lockConfig.Lock()
+	mock.calls.Config = append(mock.calls.Config, callInfo)
+	mock.lockConfig.Unlock()
+	return mock.ConfigFunc()
+}
+
+// ConfigCalls gets all the calls that were made to Config.
+// Check the length with:
+//     len(mockedChainer.ConfigCalls())
+func (mock *ChainerMock) ConfigCalls() []struct {
+} {
+	var calls []struct {
+	}
+	mock.lockConfig.RLock()
+	calls = mock.calls.Config
+	mock.lockConfig.RUnlock()
 	return calls
 }
 
@@ -387,5 +551,57 @@ func (mock *ChainerMock) FilterersCalls() []struct {
 	mock.lockFilterers.RLock()
 	calls = mock.calls.Filterers
 	mock.lockFilterers.RUnlock()
+	return calls
+}
+
+// Name calls NameFunc.
+func (mock *ChainerMock) Name() string {
+	if mock.NameFunc == nil {
+		panic("ChainerMock.NameFunc: method is nil but Chainer.Name was just called")
+	}
+	callInfo := struct {
+	}{}
+	mock.lockName.Lock()
+	mock.calls.Name = append(mock.calls.Name, callInfo)
+	mock.lockName.Unlock()
+	return mock.NameFunc()
+}
+
+// NameCalls gets all the calls that were made to Name.
+// Check the length with:
+//     len(mockedChainer.NameCalls())
+func (mock *ChainerMock) NameCalls() []struct {
+} {
+	var calls []struct {
+	}
+	mock.lockName.RLock()
+	calls = mock.calls.Name
+	mock.lockName.RUnlock()
+	return calls
+}
+
+// Plugin calls PluginFunc.
+func (mock *ChainerMock) Plugin() string {
+	if mock.PluginFunc == nil {
+		panic("ChainerMock.PluginFunc: method is nil but Chainer.Plugin was just called")
+	}
+	callInfo := struct {
+	}{}
+	mock.lockPlugin.Lock()
+	mock.calls.Plugin = append(mock.calls.Plugin, callInfo)
+	mock.lockPlugin.Unlock()
+	return mock.PluginFunc()
+}
+
+// PluginCalls gets all the calls that were made to Plugin.
+// Check the length with:
+//     len(mockedChainer.PluginCalls())
+func (mock *ChainerMock) PluginCalls() []struct {
+} {
+	var calls []struct {
+	}
+	mock.lockPlugin.RLock()
+	calls = mock.calls.Plugin
+	mock.lockPlugin.RUnlock()
 	return calls
 }

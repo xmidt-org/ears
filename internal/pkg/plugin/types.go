@@ -45,6 +45,7 @@ type Manager interface {
 		tid tenant.Id,
 	) (pkgfilter.Filterer, error)
 	Filters() map[string]pkgfilter.Filterer
+	FiltersStatus() map[string]FilterStatus
 	UnregisterFilter(ctx context.Context, f pkgfilter.Filterer) error
 
 	Senderers() map[string]pkgsender.NewSenderer

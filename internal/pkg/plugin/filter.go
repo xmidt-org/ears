@@ -28,10 +28,10 @@ var _ pkgfilter.Filterer = (*filter)(nil)
 type filter struct {
 	sync.Mutex
 
-	id   string
-	name string
-	//plugin string
-	hash string
+	id     string
+	name   string
+	plugin string
+	hash   string
 
 	manager *manager
 
@@ -44,7 +44,6 @@ func (f *filter) Filter(e event.Event) []event.Event {
 		e.Nack(&pkgmanager.NilPluginError{})
 		return nil
 	}
-
 	{
 		f.Lock()
 		if !f.active {
@@ -54,7 +53,6 @@ func (f *filter) Filter(e event.Event) []event.Event {
 		}
 		f.Unlock()
 	}
-
 	return f.filterer.Filter(e)
 }
 
@@ -62,7 +60,6 @@ func (f *filter) Unregister(ctx context.Context) error {
 	if f == nil {
 		return &pkgmanager.NilPluginError{}
 	}
-
 	{
 		f.Lock()
 		if f.manager == nil || !f.active {
@@ -71,6 +68,17 @@ func (f *filter) Unregister(ctx context.Context) error {
 		}
 		f.Unlock()
 	}
-
 	return f.manager.UnregisterFilter(ctx, f)
+}
+
+func (f *filter) Config() interface{} {
+	return f.filterer.Config()
+}
+
+func (f *filter) Name() string {
+	return f.name
+}
+
+func (f *filter) Plugin() string {
+	return f.plugin
 }
