@@ -18,4 +18,4 @@
 
 package manager_test
 
-var raceFlagEnabled = false
+//var raceFlagEnabled = false

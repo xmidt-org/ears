@@ -15,20 +15,7 @@
 package manager_test
 
 import (
-	"context"
-	"flag"
 	"fmt"
-	"io/ioutil"
-	"log"
-	"os"
-	"os/exec"
-	"path/filepath"
-	"reflect"
-	"strconv"
-	"strings"
-	"testing"
-	"time"
-
 	"github.com/sebdah/goldie/v2"
 	"github.com/xmidt-org/ears/pkg/bit"
 	"github.com/xmidt-org/ears/pkg/filter"
@@ -36,45 +23,50 @@ import (
 	"github.com/xmidt-org/ears/pkg/plugin/manager"
 	"github.com/xmidt-org/ears/pkg/receiver"
 	"github.com/xmidt-org/ears/pkg/sender"
+	"path/filepath"
+	"reflect"
+	"strconv"
+	"strings"
+	"testing"
 
 	. "github.com/onsi/gomega"
 )
 
 const (
-	buildPluginTimeout = 1 * time.Minute
+	//buildPluginTimeout = 1 * time.Minute
 
 	testPluginDir = "testplugins"
 )
 
-var logger *log.Logger
+//var logger *log.Logger
 
-func TestMain(m *testing.M) {
-
-	flag.Parse()
-
-	if verboseEnabled() {
-		logger = log.New(os.Stderr, "", log.LstdFlags)
-	} else {
-		logger = log.New(ioutil.Discard, "", log.LstdFlags)
-	}
-
-	shutdown := func(code int) {
-		err := testShutdown()
-		if err != nil {
-			logger.Println(err)
-			os.Exit(1 | code)
-		}
-		os.Exit(code)
-	}
-
-	err := testSetup()
-	if err != nil {
-		logger.Println(err)
-		shutdown(1)
-	}
-
-	shutdown(m.Run())
-}
+//func TestMain(m *testing.M) {
+//
+//	flag.Parse()
+//
+//	if verboseEnabled() {
+//		logger = log.New(os.Stderr, "", log.LstdFlags)
+//	} else {
+//		logger = log.New(ioutil.Discard, "", log.LstdFlags)
+//	}
+//
+//	shutdown := func(code int) {
+//		err := testShutdown()
+//		if err != nil {
+//			logger.Println(err)
+//			os.Exit(1 | code)
+//		}
+//		os.Exit(code)
+//	}
+//
+//	err := testSetup()
+//	if err != nil {
+//		logger.Println(err)
+//		shutdown(1)
+//	}
+//
+//	shutdown(m.Run())
+//}
 
 func TestNilPluginError(t *testing.T) {
 	testCases := []struct {
@@ -486,24 +478,24 @@ func TestNewSenderer(t *testing.T) {
 
 // === Test Lifecycle ===========================
 
-func testSetup() error {
-	return buildTestPlugins()
-}
-
-func testShutdown() error {
-	files, err := getTestPluginSOPaths()
-
-	if err != nil {
-		logger.Printf("error cleaning up *.so: %s", err.Error())
-	}
-
-	for _, f := range files {
-		logger.Printf("removing plugin: %s\n", f)
-		_ = os.Remove(f)
-	}
-
-	return nil
-}
+//func testSetup() error {
+//	return buildTestPlugins()
+//}
+//
+//func testShutdown() error {
+//	files, err := getTestPluginSOPaths()
+//
+//	if err != nil {
+//		logger.Printf("error cleaning up *.so: %s", err.Error())
+//	}
+//
+//	for _, f := range files {
+//		logger.Printf("removing plugin: %s\n", f)
+//		_ = os.Remove(f)
+//	}
+//
+//	return nil
+//}
 
 // == Helper Functions ===============================================
 
@@ -517,72 +509,77 @@ func errTypeToString(err error) string {
 
 // verboseEnabled allows us to see if the flag is set.  Unfortunately
 // this is only available on *testing.T.Verbose() and not on *testing.M
-func verboseEnabled() bool {
-	for _, v := range os.Args {
-		if v == "-test.v=true" {
-			return true
-		}
-	}
-
-	return false
-}
+//func verboseEnabled() bool {
+//	for _, v := range os.Args {
+//		if v == "-test.v=true" {
+//			return true
+//		}
+//	}
+//
+//	return false
+//}
 
 // buildTestPlugin will build the plugin
-func buildTestPlugins() error {
+//func buildTestPlugins() error {
+//
+//	paths, err := getTestPluginPaths()
+//
+//	if err != nil {
+//		return fmt.Errorf("could not find matching plugins: %w", err)
+//	}
+//
+//	for _, p := range paths {
+//		ctx, cancel := context.WithTimeout(context.Background(), buildPluginTimeout)
+//		defer cancel()
+//
+//		baseName := strings.TrimSuffix(filepath.Base(p), ".go")
+//		dir := filepath.Dir(p)
+//
+//		args := []string{
+//			"build",
+//			"-buildmode=plugin",
+//		}
+//
+//		if raceFlagEnabled {
+//			args = append(args, "-race")
+//		}
+//
+//		args = append(
+//			args,
+//			"-o", filepath.Join(dir, baseName+".so"),
+//			"./"+dir+"/plugin.go", // Must have the preceding "./" which a filepath.Join ends up removing
+//		)
+//
+//		fmt.Printf("args=%v\n", args)
+//		path, _ := os.Getwd()
+//		fmt.Printf("dir=%s\n", path)
+//		path, _ = os.Executable()
+//		fmt.Printf("exec=%s\n", path)
+//
+//		cmd := exec.CommandContext(ctx, "go", args...)
+//
+//		cmd.Env = os.Environ()
+//		cmd.Stdin = os.Stdin
+//		cmd.Stdout = os.Stdout
+//		cmd.Stderr = os.Stderr
+//
+//		logger.Printf("compiling plugin: %s", p)
+//
+//		err := cmd.Run()
+//
+//		if err != nil {
+//			return fmt.Errorf("error compiling plugin %s: %w", p, err)
+//		}
+//	}
+//
+//	return nil
+//
+//}
 
-	paths, err := getTestPluginPaths()
-
-	if err != nil {
-		return fmt.Errorf("could not find matching plugins: %w", err)
-	}
-
-	for _, p := range paths {
-		ctx, cancel := context.WithTimeout(context.Background(), buildPluginTimeout)
-		defer cancel()
-
-		baseName := strings.TrimSuffix(filepath.Base(p), ".go")
-		dir := filepath.Dir(p)
-
-		args := []string{
-			"build",
-			"-buildmode=plugin",
-		}
-
-		if raceFlagEnabled {
-			args = append(args, "-race")
-		}
-
-		args = append(
-			args,
-			"-o", filepath.Join(dir, baseName+".so"),
-			"./"+dir, // Must have the preceding "./" which a filepath.Join ends up removing
-		)
-
-		cmd := exec.CommandContext(ctx, "go", args...)
-
-		cmd.Env = os.Environ()
-		cmd.Stdin = os.Stdin
-		cmd.Stdout = os.Stdout
-		cmd.Stderr = os.Stderr
-
-		logger.Printf("compiling plugin: %s", p)
-
-		err := cmd.Run()
-
-		if err != nil {
-			return fmt.Errorf("error compiling plugin %s: %w", p, err)
-		}
-
-	}
-
-	return nil
-
-}
-
-func getTestPluginPaths() ([]string, error) {
-	pluginRegex := filepath.Join(testPluginDir, "*", "*plugin.go")
-	return filepath.Glob(pluginRegex)
-}
+//func getTestPluginPaths() ([]string, error) {
+//	pluginRegex := filepath.Join(testPluginDir, "*", "*plugin.go")
+//	return filepath.Glob(pluginRegex)
+//}
 
 func getTestPluginSOPaths() ([]string, error) {
 	pluginRegex := filepath.Join(testPluginDir, "*", "*.so")
