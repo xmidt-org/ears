@@ -239,13 +239,20 @@ func TestRouteTable(t *testing.T) {
 				routeIds = append(routeIds, rt.Id)
 				t.Logf("added route with tid: %v, id: %s", rt.TenantId, rt.Id)
 			}
-			// sleep
-			time.Sleep(time.Duration(currentTest.WaitMs) * time.Millisecond)
-			// check number of routes in persistence layer
-			err = checkNumRoutes(runtime.apiManager, currentTestName, len(routeIds))
+			// sleep and wakeup every 100ms to check
+			loopCount := currentTest.WaitMs / 100
+			for i := 0; i < loopCount; i++ {
+				time.Sleep(100 * time.Millisecond)
+				// check number of routes in persistence layer
+				err = checkNumRoutes(runtime.apiManager, currentTestName, len(routeIds))
+				if err == nil {
+					break
+				}
+			}
 			if err != nil {
 				t.Fatalf("%s test: route count issue: %s", currentTestName, err.Error())
 			}
+
 			for _, rt := range passiveRuntimes {
 				err = checkNumRoutes(rt.apiManager, currentTestName, len(routeIds))
 				if err != nil {
@@ -263,8 +270,7 @@ func TestRouteTable(t *testing.T) {
 					t.Fatalf("%s test: synchronized registered route count mismatch: %d (%d)", currentTestName, len(registeredRoutes), len(routeIds))
 				}
 			}
-			// sleep
-			time.Sleep(time.Duration(currentTest.WaitMs) * time.Millisecond)
+
 			// check number of events and payloads if desired
 			for _, eventData := range currentTest.Events {
 				if eventData.SenderRouteFile == "" {
@@ -275,7 +281,15 @@ func TestRouteTable(t *testing.T) {
 				if eventData.ExpectedEventPayloadFile != "" {
 					eventFileName = "testdata/" + eventData.ExpectedEventPayloadFile + ".json"
 				}
-				err = checkEventsSent(routeFileName, testPrefix, runtime.pluginManger, eventData.ExpectedEventCount, eventFileName, eventData.ExpectedEventIndex)
+				loopCount = currentTest.WaitMs / 100
+				for i := 0; i < loopCount; i++ {
+					// sleep
+					time.Sleep(100 * time.Millisecond)
+					err = checkEventsSent(routeFileName, testPrefix, runtime.pluginManger, eventData.ExpectedEventCount, eventFileName, eventData.ExpectedEventIndex)
+					if err == nil {
+						break
+					}
+				}
 				if err != nil {
 					t.Fatalf("%s test: check events sent error: %s", currentTestName, err.Error())
 				}
@@ -288,7 +302,15 @@ func TestRouteTable(t *testing.T) {
 				t.Logf("deleted route with id: %s", rtId)
 			}
 			// sleep
-			time.Sleep(time.Duration(currentTest.WaitMs) * time.Millisecond)
+			loopCount = currentTest.WaitMs / 100
+			for i := 0; i < loopCount; i++ {
+				time.Sleep(100 * time.Millisecond)
+				// check number of routes in persistence layer
+				err = checkNumRoutes(runtime.apiManager, currentTestName, len(routeIds))
+				if err == nil {
+					break
+				}
+			}
 			// check number of routes in persistence layer
 			err = checkNumRoutes(runtime.apiManager, currentTestName, 0)
 			if err != nil {
@@ -312,7 +334,7 @@ func TestRouteTable(t *testing.T) {
 				}
 			}
 			// sleep
-			time.Sleep(time.Duration(currentTest.WaitMs) * time.Millisecond)
+			time.Sleep(100 * time.Millisecond)
 		})
 	}
 	// tear down ears runtime
