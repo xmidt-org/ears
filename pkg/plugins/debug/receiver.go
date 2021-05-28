@@ -92,7 +92,7 @@ func (r *Receiver) Receive(next receiver.NextFn) error {
 func (r *Receiver) StopReceiving(ctx context.Context) error {
 	r.Lock()
 	defer r.Unlock()
-	if !r.stopped {
+	if !r.stopped && r.done != nil {
 		close(r.done)
 		r.stopped = true
 	}
@@ -125,8 +125,9 @@ func NewReceiver(config interface{}) (receiver.Receiver, error) {
 	logger := zerolog.New(os.Stdout).Level(zerolog.DebugLevel)
 	//zerolog.LevelFieldName = "log.level"
 	r := &Receiver{
-		config: cfg,
-		logger: logger,
+		config:  cfg,
+		logger:  logger,
+		stopped: true,
 	}
 	r.history = newHistory(*r.config.MaxHistory)
 	return r, nil

@@ -18,6 +18,7 @@ import (
 	"context"
 	"errors"
 	"github.com/xmidt-org/ears/pkg/ratelimit"
+	"github.com/xmidt-org/ears/pkg/ratelimit/redis"
 	"github.com/xmidt-org/ears/pkg/tenant"
 	"time"
 )
@@ -33,7 +34,7 @@ func NewQuotaLimiter(tid tenant.Id, backendLimiterType string, redisAddr string,
 
 	var backendLimiter ratelimit.RateLimiter
 	if backendLimiterType == "redis" {
-		backendLimiter = ratelimit.NewRedisRateLimiter(tid, redisAddr, tenantRqs)
+		backendLimiter = redis.NewRedisRateLimiter(tid, redisAddr, tenantRqs)
 	} else {
 		backendLimiter = ratelimit.NewInMemoryBackendLimiter(tid, tenantRqs)
 	}
