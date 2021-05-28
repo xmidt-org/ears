@@ -63,7 +63,7 @@ issues:
     - path: pkg/ratelimit/adaptive_limiter\.go
       linters:
         - funlen
-    - path: internal/pkg/syncer/redis_delta_syncer\.go
+    - path: internal/pkg/syncer/redis/redis_delta_syncer\.go
       linters:
         - funlen
     - path: pkg/cli/viper\.go
@@ -88,7 +88,7 @@ issues:
       text: "weak cryptographic primitive"
       linters:
         - gosec
-    - path: pkg/ratelimit/redis_limiter\.go
+    - path: pkg/ratelimit/redis/redis_limiter\.go
       text": "G404: Use of weak random number generator"
       linters:
         - gosec

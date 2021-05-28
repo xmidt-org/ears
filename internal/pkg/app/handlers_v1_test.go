@@ -29,7 +29,9 @@ import (
 	"github.com/xmidt-org/ears/internal/pkg/db/dynamo"
 	"github.com/xmidt-org/ears/internal/pkg/db/redis"
 	"github.com/xmidt-org/ears/internal/pkg/plugin"
+	"github.com/xmidt-org/ears/internal/pkg/quota"
 	"github.com/xmidt-org/ears/internal/pkg/syncer"
+	redissyncer "github.com/xmidt-org/ears/internal/pkg/syncer/redis"
 	"github.com/xmidt-org/ears/internal/pkg/tablemgr"
 	pkgplugin "github.com/xmidt-org/ears/pkg/plugin"
 	"github.com/xmidt-org/ears/pkg/plugin/manager"
@@ -154,7 +156,7 @@ func TestRouteTable(t *testing.T) {
 	if err != nil {
 		t.Fatalf("cannot get stroage manager: %s", err.Error())
 	}
-	runtime, err := setupRestApi(config, storageMgr)
+	runtime, err := setupRestApi(config, storageMgr, false)
 	if err != nil {
 		t.Fatalf("cannot create ears runtime: %s\n", err.Error())
 	}
@@ -165,7 +167,7 @@ func TestRouteTable(t *testing.T) {
 		t.Logf("no passive ears runtime configured")
 	}
 	for i := 1; i < table.NumInstances; i++ {
-		rt, err := setupRestApi(config, storageMgr)
+		rt, err := setupRestApi(config, storageMgr, false)
 		if err != nil {
 			t.Fatalf("cannot create passive ears runtime: %s\n", err.Error())
 		}
@@ -375,7 +377,7 @@ func setupSimpleApi(t *testing.T, storageType string) *EarsRuntime {
 	if err != nil {
 		t.Fatalf("cannot get stroage manager: %s", err.Error())
 	}
-	runtime, err := setupRestApi(config, storageMgr)
+	runtime, err := setupRestApi(config, storageMgr, false)
 	if err != nil {
 		t.Fatalf("cannot create api manager: %s\n", err.Error())
 	}
@@ -436,7 +438,7 @@ func getTableSyncer(config config.Config, syncType string) (syncer.DeltaSyncer, 
 	case "inmemory":
 		s = syncer.NewInMemoryDeltaSyncer(&log.Logger, config)
 	case "redis":
-		s = syncer.NewRedisDeltaSyncer(&log.Logger, config)
+		s = redissyncer.NewRedisDeltaSyncer(&log.Logger, config)
 	default:
 		return nil, errors.New("unsupported syncer type '" + syncType + "'")
 	}
@@ -450,7 +452,7 @@ func getTableSyncer(config config.Config, syncType string) (syncer.DeltaSyncer, 
 	return syncType
 }*/
 
-func setupRestApi(config config.Config, storageMgr route.RouteStorer) (*EarsRuntime, error) {
+func setupRestApi(config config.Config, storageMgr route.RouteStorer, setupQuotaMgr bool) (*EarsRuntime, error) {
 	mgr, err := manager.New()
 	if err != nil {
 		return &EarsRuntime{config, nil, nil, storageMgr, nil, nil}, err
@@ -555,7 +557,15 @@ func setupRestApi(config config.Config, storageMgr route.RouteStorer) (*EarsRunt
 
 	tenantStorer := db.NewTenantInmemoryStorer()
 
-	apiMgr, err := NewAPIManager(routingMgr, tenantStorer, nil)
+	var quotaMgr *quota.QuotaManager = nil
+	if setupQuotaMgr {
+		quotaMgr, err = quota.NewQuotaManager(&log.Logger, tenantStorer, tableSyncer, config)
+		if err != nil {
+			return &EarsRuntime{config, nil, nil, storageMgr, nil, nil}, err
+		}
+	}
+
+	apiMgr, err := NewAPIManager(routingMgr, tenantStorer, quotaMgr)
 	if err != nil {
 		return &EarsRuntime{config, nil, nil, storageMgr, nil, nil}, err
 	}
@@ -1344,5 +1354,124 @@ func TestRestMultipleTenants(t *testing.T) {
 		w := httptest.NewRecorder()
 		runtime.apiManager.muxRouter.ServeHTTP(w, r)
 		t.Logf("deleted route with tenant: %s, id: %s", path, rtId)
+	}
+}
+
+type TenantConfigTestCase struct {
+	Path   string
+	Config string
+}
+
+func TestTenantConfig(t *testing.T) {
+	testCases := []TenantConfigTestCase{
+		{
+			Path: "/orgs/myorg/applications/myapp",
+			Config: `
+				{
+					"quota": {
+						"eventsPerSec": 10
+					}
+				}
+				`,
+		},
+		{
+			Path: "/orgs/myorg/applications/myapp2",
+			Config: `
+				{
+					"quota": {
+						"eventsPerSec": 20
+					}
+				}
+				`,
+		},
+		{
+			Path: "/orgs/myorg2/applications/myapp",
+			Config: `
+				{
+					"quota": {
+						"eventsPerSec": 40
+					}
+				}
+				`,
+		},
+		{
+			Path: "/orgs/myorg2/applications/myapp2",
+			Config: `
+				{
+					"quota": {
+						"eventsPerSec": 80
+					}
+				}
+				`,
+		},
+	}
+
+	config, err := getConfig()
+	if err != nil {
+		t.Fatalf("cannot get config: %s", err.Error())
+	}
+	storageMgr, err := getStorageLayer(config, "inmemory")
+	if err != nil {
+		t.Fatalf("cannot get stroage manager: %s", err.Error())
+	}
+	runtime, err := setupRestApi(config, storageMgr, true)
+	if err != nil {
+		t.Fatalf("cannot create api manager: %s\n", err.Error())
+	}
+
+	//set configs
+	for _, tc := range testCases {
+		configReader := strings.NewReader(tc.Config)
+
+		w := httptest.NewRecorder()
+		r := httptest.NewRequest(http.MethodPut, "/ears/v1"+tc.Path+"/config", configReader)
+		runtime.apiManager.muxRouter.ServeHTTP(w, r)
+		if w.Code != http.StatusOK {
+			t.Fatalf("Setting route does not return 200. Instead, returns %d\n", w.Code)
+			return
+		}
+	}
+
+	//get configs
+	for _, tc := range testCases {
+		w := httptest.NewRecorder()
+		r := httptest.NewRequest(http.MethodGet, "/ears/v1"+tc.Path+"/config", nil)
+		runtime.apiManager.muxRouter.ServeHTTP(w, r)
+		if w.Code != http.StatusOK {
+			t.Fatalf("Getting route does not return 200. Instead, returns %d\n", w.Code)
+			return
+		}
+
+		g := goldie.New(t)
+		var data map[string]interface{}
+		err := json.Unmarshal(w.Body.Bytes(), &data)
+		if err != nil {
+			t.Fatalf("cannot unmarshal response %s into json %s", w.Body.String(), err.Error())
+		}
+		item := data["item"].(map[string]interface{})
+		delete(item, "modified")
+		g.AssertJson(t, "getTenantConfig"+strings.Replace(tc.Path, "/", "_", -1), data)
+	}
+
+	//delete configs
+	for _, tc := range testCases {
+		w := httptest.NewRecorder()
+		r := httptest.NewRequest(http.MethodDelete, "/ears/v1"+tc.Path+"/config", nil)
+		runtime.apiManager.muxRouter.ServeHTTP(w, r)
+		if w.Code != http.StatusOK {
+			t.Fatalf("Deleting route does not return 200. Instead, returns %d\n", w.Code)
+			return
+		}
+	}
+
+	//get configs again
+	for _, tc := range testCases {
+		w := httptest.NewRecorder()
+		r := httptest.NewRequest(http.MethodGet, "/ears/v1"+tc.Path+"/config", nil)
+		runtime.apiManager.muxRouter.ServeHTTP(w, r)
+		if w.Code != http.StatusNotFound {
+			t.Fatalf("Getting route does not return 404. Instead, returns %d\n", w.Code)
+			return
+		}
 	}
 }

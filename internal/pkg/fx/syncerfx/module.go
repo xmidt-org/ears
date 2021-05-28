@@ -20,6 +20,7 @@ import (
 	"github.com/rs/zerolog"
 	"github.com/xmidt-org/ears/internal/pkg/config"
 	"github.com/xmidt-org/ears/internal/pkg/syncer"
+	"github.com/xmidt-org/ears/internal/pkg/syncer/redis"
 	"go.uber.org/fx"
 )
 
@@ -47,7 +48,7 @@ func ProvideRouteTableSyncer(in TableSyncerIn) (TableSyncerOut, error) {
 	case "inmemory":
 		out.RoutingTableDeltaSyncer = syncer.NewInMemoryDeltaSyncer(in.Logger, in.Config)
 	case "redis":
-		out.RoutingTableDeltaSyncer = syncer.NewRedisDeltaSyncer(in.Logger, in.Config)
+		out.RoutingTableDeltaSyncer = redis.NewRedisDeltaSyncer(in.Logger, in.Config)
 	default:
 		return out, errors.New("unsupported table syncer type " + tableSyncerType)
 	}

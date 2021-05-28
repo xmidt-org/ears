@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package syncer
+package redis
 
 import (
 	"context"
@@ -23,6 +23,7 @@ import (
 	"github.com/rs/zerolog"
 	"github.com/xmidt-org/ears/internal/pkg/config"
 	"github.com/xmidt-org/ears/internal/pkg/logs"
+	"github.com/xmidt-org/ears/internal/pkg/syncer"
 	"github.com/xmidt-org/ears/pkg/tenant"
 	"os"
 	"sync"
@@ -46,19 +47,19 @@ type (
 		redisEndpoint string
 		active        bool
 		client        *redis.Client
-		localSyncers  map[string][]LocalSyncer
+		localSyncers  map[string][]syncer.LocalSyncer
 		logger        *zerolog.Logger
 		config        config.Config
 		instanceId    string
 	}
 )
 
-func NewRedisDeltaSyncer(logger *zerolog.Logger, config config.Config) DeltaSyncer {
+func NewRedisDeltaSyncer(logger *zerolog.Logger, config config.Config) syncer.DeltaSyncer {
 	s := new(RedisDeltaSyncer)
 	s.logger = logger
 	s.config = config
 	s.redisEndpoint = config.GetString("ears.synchronization.endpoint")
-	s.localSyncers = make(map[string][]LocalSyncer)
+	s.localSyncers = make(map[string][]syncer.LocalSyncer)
 	hostname, _ := os.Hostname()
 	s.instanceId = hostname + "_" + uuid.New().String()
 	s.active = config.GetBool("ears.synchronization.active")
@@ -75,14 +76,14 @@ func NewRedisDeltaSyncer(logger *zerolog.Logger, config config.Config) DeltaSync
 	return s
 }
 
-func (s *RedisDeltaSyncer) RegisterLocalSyncer(itemType string, localSyncer LocalSyncer) {
+func (s *RedisDeltaSyncer) RegisterLocalSyncer(itemType string, localSyncer syncer.LocalSyncer) {
 	// the redis implementation should only ever register itself
 	s.Lock()
 	defer s.Unlock()
 	s.localSyncers[itemType] = append(s.localSyncers[itemType], localSyncer)
 }
 
-func (s *RedisDeltaSyncer) UnregisterLocalSyncer(itemType string, localSyncer LocalSyncer) {
+func (s *RedisDeltaSyncer) UnregisterLocalSyncer(itemType string, localSyncer syncer.LocalSyncer) {
 	s.Lock()
 	defer s.Unlock()
 
@@ -111,9 +112,9 @@ func (s *RedisDeltaSyncer) PublishSyncRequest(ctx context.Context, tid tenant.Id
 	}
 	cmd := ""
 	if add {
-		cmd = EARS_ADD_ITEM_CMD
+		cmd = syncer.EARS_ADD_ITEM_CMD
 	} else {
-		cmd = EARS_REMOVE_ITEM_CMD
+		cmd = syncer.EARS_REMOVE_ITEM_CMD
 	}
 	sid := uuid.New().String() // session id
 	numSubscribers := s.GetInstanceCount(ctx)
@@ -149,7 +150,7 @@ func (s *RedisDeltaSyncer) PublishSyncRequest(ctx context.Context, tid tenant.Id
 						break
 					}
 
-					var syncCmd SyncCommand
+					var syncCmd syncer.SyncCommand
 					err = json.Unmarshal([]byte(msg.Payload), &syncCmd)
 					if err != nil {
 						s.logger.Error().Str("op", "PublishSyncRequest").Str("error", err.Error()).Msg("bad ack message structure: " + msg.Payload)
@@ -181,13 +182,13 @@ func (s *RedisDeltaSyncer) PublishSyncRequest(ctx context.Context, tid tenant.Id
 			// wait for listener to be ready
 			wg.Wait()
 			// ... then request all flow apis to sync
-			syncCmd := &SyncCommand{
-				cmd,
-				itemType,
-				itemId,
-				s.instanceId,
-				sid,
-				tid,
+			syncCmd := &syncer.SyncCommand{
+				Cmd:        cmd,
+				ItemType:   itemType,
+				ItemId:     itemId,
+				InstanceId: s.instanceId,
+				Sid:        sid,
+				Tenant:     tid,
 			}
 
 			msg, _ := json.Marshal(syncCmd)
@@ -204,8 +205,8 @@ func (s *RedisDeltaSyncer) StopListeningForSyncRequests() {
 	if !s.active {
 		return
 	}
-	syncCmd := &SyncCommand{
-		Cmd:        EARS_STOP_LISTENING_CMD,
+	syncCmd := &syncer.SyncCommand{
+		Cmd:        syncer.EARS_STOP_LISTENING_CMD,
 		InstanceId: s.instanceId,
 	}
 	msg, _ := json.Marshal(syncCmd)
@@ -244,14 +245,14 @@ func (s *RedisDeltaSyncer) StartListeningForSyncRequests() {
 			} else {
 				s.logger.Info().Str("op", "ListenForSyncRequests").Msg("received message on channel " + EARS_REDIS_SYNC_CHANNEL)
 				// parse message
-				var syncCmd SyncCommand
+				var syncCmd syncer.SyncCommand
 				err := json.Unmarshal([]byte(msg.Payload), &syncCmd)
 				if err != nil {
 					s.logger.Error().Str("op", "ListenForSyncRequests").Str("error", err.Error()).Msg("bad message structure: " + msg.Payload)
 					continue
 				}
 				// leave sync loop if asked
-				if syncCmd.Cmd == EARS_STOP_LISTENING_CMD {
+				if syncCmd.Cmd == syncer.EARS_STOP_LISTENING_CMD {
 					if syncCmd.InstanceId == s.instanceId || syncCmd.InstanceId == "" {
 						s.logger.Info().Str("op", "ListenForSyncRequests").Str("instanceId", s.instanceId).Msg("received stop listening message")
 						return
@@ -260,7 +261,7 @@ func (s *RedisDeltaSyncer) StartListeningForSyncRequests() {
 				// sync only whats needed
 				if syncCmd.InstanceId != s.instanceId {
 					s.GetInstanceCount(ctx) // just for logging
-					if syncCmd.Cmd == EARS_ADD_ITEM_CMD {
+					if syncCmd.Cmd == syncer.EARS_ADD_ITEM_CMD {
 						s.logger.Info().Str("op", "ListenForSyncRequests").Str("instanceId", s.instanceId).Str("routeId", syncCmd.ItemId).Str("sid", syncCmd.Sid).Msg("received message to add route")
 
 						s.Lock()
@@ -275,7 +276,7 @@ func (s *RedisDeltaSyncer) StartListeningForSyncRequests() {
 						}
 						s.Unlock()
 						s.publishAckMessage(ctx, syncCmd.Cmd, syncCmd.ItemType, syncCmd.ItemId, syncCmd.Sid, syncCmd.Tenant)
-					} else if syncCmd.Cmd == EARS_REMOVE_ITEM_CMD {
+					} else if syncCmd.Cmd == syncer.EARS_REMOVE_ITEM_CMD {
 						s.logger.Info().Str("op", "ListenForSyncRequests").Str("instanceId", s.instanceId).Str("routeId", syncCmd.ItemId).Str("sid", syncCmd.Sid).Msg("received message to remove route")
 
 						s.Lock()
@@ -290,7 +291,7 @@ func (s *RedisDeltaSyncer) StartListeningForSyncRequests() {
 						}
 						s.Unlock()
 						s.publishAckMessage(ctx, syncCmd.Cmd, syncCmd.ItemType, syncCmd.ItemId, syncCmd.Sid, syncCmd.Tenant)
-					} else if syncCmd.Cmd == EARS_STOP_LISTENING_CMD {
+					} else if syncCmd.Cmd == syncer.EARS_STOP_LISTENING_CMD {
 						s.logger.Info().Str("op", "ListenForSyncRequests").Str("instanceId", s.instanceId).Msg("stop message ignored")
 						// already handled above
 					} else {
@@ -313,13 +314,13 @@ func (s *RedisDeltaSyncer) publishAckMessage(ctx context.Context, cmd string, it
 		return nil
 	}
 
-	syncCmd := &SyncCommand{
-		cmd,
-		itemType,
-		itemId,
-		s.instanceId,
-		sid,
-		tid,
+	syncCmd := &syncer.SyncCommand{
+		Cmd:        cmd,
+		ItemType:   itemType,
+		ItemId:     itemId,
+		InstanceId: s.instanceId,
+		Sid:        sid,
+		Tenant:     tid,
 	}
 
 	msg, _ := json.Marshal(syncCmd)
