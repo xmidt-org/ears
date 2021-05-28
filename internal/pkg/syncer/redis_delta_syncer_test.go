@@ -21,6 +21,7 @@ import (
 	"github.com/spf13/viper"
 	"github.com/xmidt-org/ears/internal/pkg/config"
 	"github.com/xmidt-org/ears/internal/pkg/syncer"
+	"github.com/xmidt-org/ears/internal/pkg/syncer/redis"
 	"testing"
 )
 
@@ -32,7 +33,7 @@ func RedisConfig() config.Config {
 }
 
 func newRedisDeltaSyncer() syncer.DeltaSyncer {
-	return syncer.NewRedisDeltaSyncer(&log.Logger, RedisConfig())
+	return redis.NewRedisDeltaSyncer(&log.Logger, RedisConfig())
 }
 
 func TestRedisDeltaSyncer(t *testing.T) {
