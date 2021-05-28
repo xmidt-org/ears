@@ -15,6 +15,7 @@ ignore:
   - "kafka"
   - "s3"
   - "testing_mock.go"
+  - "*testing.go"
 
 fixes:
   - "github.com/xmidt-org/ears/::"
