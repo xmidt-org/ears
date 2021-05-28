@@ -207,12 +207,13 @@ func (m *manager) ReceiversStatus() map[string]ReceiverStatus {
 	defer m.Unlock()
 	receivers := map[string]ReceiverStatus{}
 	for _, v := range m.receiversWrapped {
-		status, ok := receivers[v.hash]
+		mapKey := m.mapkey(v.Name(), v.hash)
+		status, ok := receivers[mapKey]
 		if ok {
 			status.ReferenceCount++
-			receivers[v.hash] = status
+			receivers[mapKey] = status
 		} else {
-			receivers[v.hash] = ReceiverStatus{Name: v.Name(), Plugin: v.Plugin(), Config: v.Config(), ReferenceCount: 1}
+			receivers[mapKey] = ReceiverStatus{Name: v.Name(), Plugin: v.Plugin(), Config: v.Config(), ReferenceCount: 1}
 		}
 	}
 	return receivers
@@ -416,12 +417,13 @@ func (m *manager) FiltersStatus() map[string]FilterStatus {
 	defer m.Unlock()
 	filters := map[string]FilterStatus{}
 	for _, v := range m.filtersWrapped {
-		status, ok := filters[v.hash]
+		mapKey := m.mapkey(v.Name(), v.hash)
+		status, ok := filters[mapKey]
 		if ok {
 			status.ReferenceCount++
-			filters[v.hash] = status
+			filters[mapKey] = status
 		} else {
-			filters[v.hash] = FilterStatus{Name: v.Name(), Plugin: v.Plugin(), Config: v.Config(), ReferenceCount: 1}
+			filters[mapKey] = FilterStatus{Name: v.Name(), Plugin: v.Plugin(), Config: v.Config(), ReferenceCount: 1}
 		}
 	}
 	return filters
@@ -562,12 +564,13 @@ func (m *manager) SendersStatus() map[string]SenderStatus {
 	defer m.Unlock()
 	senders := map[string]SenderStatus{}
 	for _, v := range m.sendersWrapped {
-		status, ok := senders[v.hash]
+		mapKey := m.mapkey(v.Name(), v.hash)
+		status, ok := senders[mapKey]
 		if ok {
 			status.ReferenceCount++
-			senders[v.hash] = status
+			senders[mapKey] = status
 		} else {
-			senders[v.hash] = SenderStatus{Name: v.Name(), Plugin: v.Plugin(), Config: v.Config(), ReferenceCount: 1}
+			senders[mapKey] = SenderStatus{Name: v.Name(), Plugin: v.Plugin(), Config: v.Config(), ReferenceCount: 1}
 		}
 	}
 	return senders
