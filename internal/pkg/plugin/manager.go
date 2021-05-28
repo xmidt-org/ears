@@ -206,7 +206,7 @@ func (m *manager) ReceiversStatus() map[string]ReceiverStatus {
 	m.Lock()
 	defer m.Unlock()
 	receivers := map[string]ReceiverStatus{}
-	for _, v := range m.sendersWrapped {
+	for _, v := range m.receiversWrapped {
 		status, ok := receivers[v.hash]
 		if ok {
 			status.ReferenceCount++
