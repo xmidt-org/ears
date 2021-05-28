@@ -11,7 +11,7 @@
   },
   "sender": {
     "plugin": "debug",
-    "name": "myDebugReceiver",
+    "name": "myDebugSender",
     "config": {
       "destination": "stdout",
       "maxHistory": 100
