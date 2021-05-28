@@ -13,6 +13,7 @@ ignore:
   - "http"
   - "sqs"
   - "kafka"
+  - "s3"
 
 fixes:
   - "github.com/xmidt-org/ears/::"
