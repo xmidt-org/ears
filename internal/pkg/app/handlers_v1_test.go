@@ -31,6 +31,7 @@ import (
 	"github.com/xmidt-org/ears/internal/pkg/plugin"
 	"github.com/xmidt-org/ears/internal/pkg/quota"
 	"github.com/xmidt-org/ears/internal/pkg/syncer"
+	redissyncer "github.com/xmidt-org/ears/internal/pkg/syncer/redis"
 	"github.com/xmidt-org/ears/internal/pkg/tablemgr"
 	pkgplugin "github.com/xmidt-org/ears/pkg/plugin"
 	"github.com/xmidt-org/ears/pkg/plugin/manager"
@@ -437,7 +438,7 @@ func getTableSyncer(config config.Config, syncType string) (syncer.DeltaSyncer, 
 	case "inmemory":
 		s = syncer.NewInMemoryDeltaSyncer(&log.Logger, config)
 	case "redis":
-		s = syncer.NewRedisDeltaSyncer(&log.Logger, config)
+		s = redissyncer.NewRedisDeltaSyncer(&log.Logger, config)
 	default:
 		return nil, errors.New("unsupported syncer type '" + syncType + "'")
 	}

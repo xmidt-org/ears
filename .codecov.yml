@@ -7,6 +7,9 @@ ignore:
   - "*_test.go"
   - "vendor"
   - "cmd"
+  - "dynamo"
+  - "redis"
+  - "fx"
 
 fixes:
   - "github.com/xmidt-org/ears/::"
