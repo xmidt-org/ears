@@ -63,12 +63,13 @@ func NewReceiver(config interface{}) (receiver.Receiver, error) {
 	ctx := context.Background()
 	cctx, cancel := context.WithCancel(ctx)
 	r := &Receiver{
-		config: cfg,
-		logger: logger,
-		cancel: cancel,
-		ctx:    cctx,
-		ready:  make(chan bool),
-		topics: []string{cfg.Topic},
+		config:  cfg,
+		logger:  logger,
+		cancel:  cancel,
+		ctx:     cctx,
+		ready:   make(chan bool),
+		topics:  []string{cfg.Topic},
+		stopped: true,
 	}
 	saramaConfig, err := r.getSaramaConfig(*r.config.CommitInterval)
 	if err != nil {
