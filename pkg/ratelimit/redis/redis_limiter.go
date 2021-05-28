@@ -12,12 +12,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package ratelimit
+package redis
 
 import (
 	"context"
 	"github.com/go-redis/redis/v8"
 	"github.com/pkg/errors"
+	"github.com/xmidt-org/ears/pkg/ratelimit"
 	"github.com/xmidt-org/ears/pkg/tenant"
 	"math/rand"
 	"strconv"
@@ -48,7 +49,7 @@ func (r *RedisRateLimiter) Limit() int {
 
 func (r *RedisRateLimiter) SetLimit(newLimit int) error {
 	if newLimit < 0 {
-		return &InvalidUnitError{newLimit}
+		return &ratelimit.InvalidUnitError{BadUnit: newLimit}
 	}
 	r.rqs = newLimit
 	return nil
@@ -75,7 +76,7 @@ func (r *RedisRateLimiter) Take(ctx context.Context, unit int) error {
 
 func (r *RedisRateLimiter) take(ctx context.Context, unit int) error {
 	if unit <= 0 || unit > r.rqs {
-		return &InvalidUnitError{}
+		return &ratelimit.InvalidUnitError{}
 	}
 
 	bucketKey := r.tid.Key() + "_bucket"
@@ -131,7 +132,7 @@ func (r *RedisRateLimiter) take(ctx context.Context, unit int) error {
 		return err
 	}
 	if !allowed {
-		return &LimitReached{}
+		return &ratelimit.LimitReached{}
 	}
 	return nil
 }

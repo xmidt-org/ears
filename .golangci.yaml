@@ -88,7 +88,7 @@ issues:
       text: "weak cryptographic primitive"
       linters:
         - gosec
-    - path: pkg/ratelimit/redis_limiter\.go
+    - path: pkg/ratelimit/redis/redis_limiter\.go
       text": "G404: Use of weak random number generator"
       linters:
         - gosec
