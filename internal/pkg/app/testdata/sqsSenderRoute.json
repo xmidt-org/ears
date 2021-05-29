@@ -4,7 +4,7 @@
   "name": "sqsSenderRoute",
   "receiver": {
     "plugin": "debug",
-    "name": "myDebugSender",
+    "name": "myDebugReceiver",
     "config": {
       "intervalMs": 10,
       "maxHistory": 100,
