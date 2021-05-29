@@ -202,13 +202,17 @@ func (r *DefaultRoutingTableManager) AddRoute(ctx context.Context, routeConfig *
 	if err != nil {
 		return err
 	}
+	err = r.registerAndRunRoute(sctx, routeConfig)
+	if err != nil {
+		return err
+	}
 	// currently storage layer handles created and updated timestamps
 	err = r.storageMgr.SetRoute(sctx, *routeConfig)
 	if err != nil {
 		return err
 	}
 	r.rtSyncer.PublishSyncRequest(sctx, routeConfig.TenantId, syncer.ITEM_TYPE_ROUTE, routeConfig.Id, true)
-	return r.registerAndRunRoute(sctx, routeConfig)
+	return nil
 }
 
 func (r *DefaultRoutingTableManager) GetRoute(ctx context.Context, tid tenant.Id, routeId string) (*route.Config, error) {
