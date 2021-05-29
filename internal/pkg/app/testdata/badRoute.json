@@ -1,0 +1,21 @@
+{
+  "id": "bad101",
+  "userId": "boris",
+  "name": "sqsReceiverRoute",
+  "receiver": {
+    "plugin": "doesnotexist",
+    "name": "mySqsReceiver",
+    "config": {
+      "queueUrl": "https://sqs.us-west-2.amazonaws.com/447701116110/earsSender"
+    }
+  },
+  "sender": {
+    "plugin": "debug",
+    "name": "myDebugSender",
+    "config": {
+      "destination": "stdout",
+      "maxHistory": 100
+    }
+  },
+  "deliveryMode": "whoCares"
+}
