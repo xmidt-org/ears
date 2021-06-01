@@ -159,7 +159,6 @@ func (a *APIManager) removeRouteHandler(w http.ResponseWriter, r *http.Request) 
 func (a *APIManager) getRouteHandler(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	vars := mux.Vars(r)
-
 	tid, apiErr := getTenant(ctx, vars)
 	if apiErr != nil {
 		log.Ctx(ctx).Error().Str("op", "getRouteHandler").Str("error", apiErr.Error()).Msg("orgId or appId empty")
@@ -167,21 +166,13 @@ func (a *APIManager) getRouteHandler(w http.ResponseWriter, r *http.Request) {
 		resp.Respond(ctx, w)
 		return
 	}
-
 	routeId := vars["routeId"]
 	routeConfig, err := a.routingTableMgr.GetRoute(ctx, *tid, routeId)
 	if err != nil {
 		log.Ctx(ctx).Error().Str("op", "getRouteHandler").Msg(err.Error())
-		var routeNotFound *route.RouteNotFoundError
-		if errors.As(err, &routeNotFound) {
-			resp := ErrorResponse(&NotFoundError{})
-			resp.Respond(ctx, w)
-		} else {
-			resp := ErrorResponse(&InternalServerError{err})
-			resp.Respond(ctx, w)
-		}
+		resp := ErrorResponse(convertToApiError(err))
+		resp.Respond(ctx, w)
 		return
-
 	}
 	resp := ItemResponse(routeConfig)
 	resp.Respond(ctx, w)
@@ -190,7 +181,6 @@ func (a *APIManager) getRouteHandler(w http.ResponseWriter, r *http.Request) {
 func (a *APIManager) getAllTenantRoutesHandler(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	vars := mux.Vars(r)
-
 	tid, apiErr := getTenant(ctx, vars)
 	if apiErr != nil {
 		log.Ctx(ctx).Error().Str("op", "GetAllTenantRoutes").Str("error", apiErr.Error()).Msg("orgId or appId empty")
@@ -198,7 +188,6 @@ func (a *APIManager) getAllTenantRoutesHandler(w http.ResponseWriter, r *http.Re
 		resp.Respond(ctx, w)
 		return
 	}
-
 	allRouteConfigs, err := a.routingTableMgr.GetAllTenantRoutes(ctx, *tid)
 	if err != nil {
 		log.Ctx(ctx).Error().Str("op", "GetAllTenantRoutes").Msg(err.Error())
@@ -252,7 +241,6 @@ func (a *APIManager) getAllFiltersHandler(w http.ResponseWriter, r *http.Request
 func (a *APIManager) getTenantConfigHandler(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	vars := mux.Vars(r)
-
 	tid, apiErr := getTenant(ctx, vars)
 	if apiErr != nil {
 		log.Ctx(ctx).Error().Str("op", "getTenantConfigHandler").Str("error", apiErr.Error()).Msg("orgId or appId empty")
@@ -260,7 +248,6 @@ func (a *APIManager) getTenantConfigHandler(w http.ResponseWriter, r *http.Reque
 		resp.Respond(ctx, w)
 		return
 	}
-
 	config, err := a.tenantStorer.GetConfig(ctx, *tid)
 	if err != nil {
 		log.Ctx(ctx).Error().Str("op", "getTenantConfigHandler").Str("error", err.Error()).Msg("error getting tenant config")
@@ -275,7 +262,6 @@ func (a *APIManager) getTenantConfigHandler(w http.ResponseWriter, r *http.Reque
 func (a *APIManager) setTenantConfigHandler(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	vars := mux.Vars(r)
-
 	tid, apiErr := getTenant(ctx, vars)
 	if apiErr != nil {
 		log.Ctx(ctx).Error().Str("op", "setTenantConfigHandler").Str("error", apiErr.Error()).Msg("orgId or appId empty")
@@ -283,7 +269,6 @@ func (a *APIManager) setTenantConfigHandler(w http.ResponseWriter, r *http.Reque
 		resp.Respond(ctx, w)
 		return
 	}
-
 	body, err := ioutil.ReadAll(r.Body)
 	if err != nil {
 		log.Ctx(ctx).Error().Str("op", "setTenantConfigHandler").Str("error", err.Error()).Msg("error reading request body")
@@ -291,7 +276,6 @@ func (a *APIManager) setTenantConfigHandler(w http.ResponseWriter, r *http.Reque
 		resp.Respond(ctx, w)
 		return
 	}
-
 	var tenantConfig tenant.Config
 	err = yaml.Unmarshal(body, &tenantConfig)
 	if err != nil {
@@ -301,7 +285,6 @@ func (a *APIManager) setTenantConfigHandler(w http.ResponseWriter, r *http.Reque
 		resp.Respond(ctx, w)
 		return
 	}
-
 	tenantConfig.Tenant = *tid
 	err = a.tenantStorer.SetConfig(ctx, tenantConfig)
 	if err != nil {
@@ -310,9 +293,7 @@ func (a *APIManager) setTenantConfigHandler(w http.ResponseWriter, r *http.Reque
 		resp.Respond(ctx, w)
 		return
 	}
-
 	a.quotaManager.PublishQuota(ctx, *tid)
-
 	resp := ItemResponse(tenantConfig)
 	resp.Respond(ctx, w)
 }
@@ -320,7 +301,6 @@ func (a *APIManager) setTenantConfigHandler(w http.ResponseWriter, r *http.Reque
 func (a *APIManager) deleteTenantConfigHandler(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	vars := mux.Vars(r)
-
 	tid, apiErr := getTenant(ctx, vars)
 	if apiErr != nil {
 		log.Ctx(ctx).Error().Str("op", "deleteTenantConfigHandler").Str("error", apiErr.Error()).Msg("orgId or appId empty")
@@ -328,7 +308,6 @@ func (a *APIManager) deleteTenantConfigHandler(w http.ResponseWriter, r *http.Re
 		resp.Respond(ctx, w)
 		return
 	}
-
 	err := a.tenantStorer.DeleteConfig(ctx, *tid)
 	if err != nil {
 		log.Ctx(ctx).Error().Str("op", "deleteTenantConfigHandler").Str("error", err.Error()).Msg("error deleting tenant config")
@@ -336,7 +315,6 @@ func (a *APIManager) deleteTenantConfigHandler(w http.ResponseWriter, r *http.Re
 		resp.Respond(ctx, w)
 		return
 	}
-
 	resp := ItemResponse(tid)
 	resp.Respond(ctx, w)
 }
@@ -346,6 +324,7 @@ func convertToApiError(err error) ApiError {
 	var badTenantConfig *tenant.BadConfigError
 	var badRouteConfig *tablemgr.BadConfigError
 	var routeRegistrationError *tablemgr.RouteRegistrationError
+	var routeNotFound *route.RouteNotFoundError
 	if errors.As(err, &tenantNotFound) {
 		return &NotFoundError{"tenant " + tenantNotFound.Tenant.ToString() + " not found"}
 	} else if errors.As(err, &badTenantConfig) {
@@ -354,6 +333,8 @@ func convertToApiError(err error) ApiError {
 		return &BadRequestError{"bad route config", err}
 	} else if errors.As(err, &routeRegistrationError) {
 		return &BadRequestError{"bad route config", err}
+	} else if errors.As(err, &routeNotFound) {
+		return &NotFoundError{"route " + routeNotFound.RouteId + " not found"}
 	}
 	return &InternalServerError{err}
 }
