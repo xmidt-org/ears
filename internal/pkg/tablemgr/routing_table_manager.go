@@ -179,13 +179,18 @@ func (r *DefaultRoutingTableManager) RemoveRoute(ctx context.Context, tid tenant
 	if routeId == "" {
 		return errors.New("missing route ID")
 	}
-	err := r.storageMgr.DeleteRoute(ctx, tid, routeId)
-	if err != nil {
-		r.logger.Info().Str("op", "RemoveRoute").Str("routeId", routeId).Msg("could not delete route from storage layer")
+	storageErr := r.storageMgr.DeleteRoute(ctx, tid, routeId)
+	if storageErr != nil {
+		// even if the route cannot be deleted from storage we should still proceed to try to sync the delta
+		r.logger.Info().Str("op", "RemoveRoute").Str("routeId", routeId).Msg("could not delete route from storage layer: " + storageErr.Error())
 		//return err
 	}
 	r.rtSyncer.PublishSyncRequest(ctx, tid, syncer.ITEM_TYPE_ROUTE, routeId, false)
-	return r.unregisterAndStopRoute(ctx, tid, routeId)
+	registrationErr := r.unregisterAndStopRoute(ctx, tid, routeId)
+	if registrationErr != nil {
+		return &RouteRegistrationError{registrationErr}
+	}
+	return storageErr
 }
 
 func (r *DefaultRoutingTableManager) AddRoute(ctx context.Context, routeConfig *route.Config) error {

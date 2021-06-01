@@ -88,7 +88,6 @@ func getTenant(ctx context.Context, vars map[string]string) (*tenant.Id, ApiErro
 func (a *APIManager) addRouteHandler(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	vars := mux.Vars(r)
-
 	tid, apiErr := getTenant(ctx, vars)
 	if apiErr != nil {
 		log.Ctx(ctx).Error().Str("op", "AddRouteHandler").Str("error", apiErr.Error()).Msg("orgId or appId empty")
@@ -96,7 +95,6 @@ func (a *APIManager) addRouteHandler(w http.ResponseWriter, r *http.Request) {
 		resp.Respond(ctx, w)
 		return
 	}
-
 	routeId := vars["routeId"]
 	body, err := ioutil.ReadAll(r.Body)
 	if err != nil {
@@ -106,7 +104,6 @@ func (a *APIManager) addRouteHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var route route.Config
-	//err = json.Unmarshal(body, &route)
 	err = yaml.Unmarshal(body, &route)
 	if err != nil {
 		log.Ctx(ctx).Error().Str("op", "addRouteHandler").Msg(err.Error())
@@ -140,7 +137,6 @@ func (a *APIManager) addRouteHandler(w http.ResponseWriter, r *http.Request) {
 func (a *APIManager) removeRouteHandler(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	vars := mux.Vars(r)
-
 	tid, apiErr := getTenant(ctx, vars)
 	if apiErr != nil {
 		log.Ctx(ctx).Error().Str("op", "removeRouteHandler").Str("error", apiErr.Error()).Msg("orgId or appId empty")
@@ -148,12 +144,11 @@ func (a *APIManager) removeRouteHandler(w http.ResponseWriter, r *http.Request) 
 		resp.Respond(ctx, w)
 		return
 	}
-
 	routeId := vars["routeId"]
 	err := a.routingTableMgr.RemoveRoute(ctx, *tid, routeId)
 	if err != nil {
 		log.Ctx(ctx).Error().Str("op", "removeRouteHandler").Msg(err.Error())
-		resp := ErrorResponse(&InternalServerError{err})
+		resp := ErrorResponse(convertToApiError(err))
 		resp.Respond(ctx, w)
 		return
 	}
