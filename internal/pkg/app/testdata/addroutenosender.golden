@@ -1,5 +1,5 @@
 {
-  "item": "BadRequestError (message=bad route config): BadConfigError: missing plugin type configuration",
+  "item": "BadRequestError (message=bad route config): RouteRegistrationError: missing plugin type configuration",
   "status": {
     "code": 400,
     "message": "Bad Request"
