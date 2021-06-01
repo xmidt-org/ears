@@ -183,7 +183,6 @@ func (r *DefaultRoutingTableManager) RemoveRoute(ctx context.Context, tid tenant
 	if storageErr != nil {
 		// even if the route cannot be deleted from storage we should still proceed to try to sync the delta
 		r.logger.Info().Str("op", "RemoveRoute").Str("routeId", routeId).Msg("could not delete route from storage layer: " + storageErr.Error())
-		//return err
 	}
 	r.rtSyncer.PublishSyncRequest(ctx, tid, syncer.ITEM_TYPE_ROUTE, routeId, false)
 	registrationErr := r.unregisterAndStopRoute(ctx, tid, routeId)
