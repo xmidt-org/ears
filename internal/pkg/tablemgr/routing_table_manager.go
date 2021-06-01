@@ -205,7 +205,7 @@ func (r *DefaultRoutingTableManager) AddRoute(ctx context.Context, routeConfig *
 	}
 	err := routeConfig.Validate(sctx)
 	if err != nil {
-		return &BadConfigError{err}
+		return &RouteValidationError{err}
 	}
 	err = r.registerAndRunRoute(sctx, routeConfig)
 	if err != nil {

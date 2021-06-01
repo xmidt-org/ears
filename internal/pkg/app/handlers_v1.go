@@ -191,7 +191,7 @@ func (a *APIManager) getAllTenantRoutesHandler(w http.ResponseWriter, r *http.Re
 	allRouteConfigs, err := a.routingTableMgr.GetAllTenantRoutes(ctx, *tid)
 	if err != nil {
 		log.Ctx(ctx).Error().Str("op", "GetAllTenantRoutes").Msg(err.Error())
-		resp := ErrorResponse(&InternalServerError{err})
+		resp := ErrorResponse(convertToApiError(err))
 		resp.Respond(ctx, w)
 		return
 	}
@@ -204,7 +204,7 @@ func (a *APIManager) getAllSendersHandler(w http.ResponseWriter, r *http.Request
 	allSenders, err := a.routingTableMgr.GetAllSendersStatus(ctx)
 	if err != nil {
 		log.Ctx(ctx).Error().Str("op", "getAllSendersHandler").Msg(err.Error())
-		resp := ErrorResponse(&InternalServerError{err})
+		resp := ErrorResponse(convertToApiError(err))
 		resp.Respond(ctx, w)
 		return
 	}
@@ -217,7 +217,7 @@ func (a *APIManager) getAllReceiversHandler(w http.ResponseWriter, r *http.Reque
 	allReceivers, err := a.routingTableMgr.GetAllReceiversStatus(ctx)
 	if err != nil {
 		log.Ctx(ctx).Error().Str("op", "getAllReceiversHandler").Msg(err.Error())
-		resp := ErrorResponse(&InternalServerError{err})
+		resp := ErrorResponse(convertToApiError(err))
 		resp.Respond(ctx, w)
 		return
 	}
@@ -230,7 +230,7 @@ func (a *APIManager) getAllFiltersHandler(w http.ResponseWriter, r *http.Request
 	allFilters, err := a.routingTableMgr.GetAllFiltersStatus(ctx)
 	if err != nil {
 		log.Ctx(ctx).Error().Str("op", "getAllFiltersHandler").Msg(err.Error())
-		resp := ErrorResponse(&InternalServerError{err})
+		resp := ErrorResponse(convertToApiError(err))
 		resp.Respond(ctx, w)
 		return
 	}
@@ -323,6 +323,7 @@ func convertToApiError(err error) ApiError {
 	var tenantNotFound *tenant.TenantNotFoundError
 	var badTenantConfig *tenant.BadConfigError
 	var badRouteConfig *tablemgr.BadConfigError
+	var routeValidationError *tablemgr.RouteValidationError
 	var routeRegistrationError *tablemgr.RouteRegistrationError
 	var routeNotFound *route.RouteNotFoundError
 	if errors.As(err, &tenantNotFound) {
@@ -332,6 +333,8 @@ func convertToApiError(err error) ApiError {
 	} else if errors.As(err, &badRouteConfig) {
 		return &BadRequestError{"bad route config", err}
 	} else if errors.As(err, &routeRegistrationError) {
+		return &BadRequestError{"bad route config", err}
+	} else if errors.As(err, &routeValidationError) {
 		return &BadRequestError{"bad route config", err}
 	} else if errors.As(err, &routeNotFound) {
 		return &NotFoundError{"route " + routeNotFound.RouteId + " not found"}
