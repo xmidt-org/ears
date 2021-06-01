@@ -129,7 +129,7 @@ func (a *APIManager) addRouteHandler(w http.ResponseWriter, r *http.Request) {
 	err = a.routingTableMgr.AddRoute(ctx, &route)
 	if err != nil {
 		log.Ctx(ctx).Error().Str("op", "addRouteHandler").Msg(err.Error())
-		resp := ErrorResponse(&InternalServerError{err})
+		resp := ErrorResponse(convertToApiError(err))
 		resp.Respond(ctx, w)
 		return
 	}
@@ -348,13 +348,17 @@ func (a *APIManager) deleteTenantConfigHandler(w http.ResponseWriter, r *http.Re
 
 func convertToApiError(err error) ApiError {
 	var tenantNotFound *tenant.TenantNotFoundError
-	var badConfig *tenant.BadConfigError
+	var badTenantConfig *tenant.BadConfigError
+	var badRouteConfig *tablemgr.BadConfigError
+	var routeRegistrationError *tablemgr.RouteRegistrationError
 	if errors.As(err, &tenantNotFound) {
 		return &NotFoundError{"tenant " + tenantNotFound.Tenant.ToString() + " not found"}
-	} else if errors.As(err, &badConfig) {
+	} else if errors.As(err, &badTenantConfig) {
 		return &BadRequestError{"bad tenant config", err}
+	} else if errors.As(err, &badRouteConfig) {
+		return &BadRequestError{"bad route config", err}
+	} else if errors.As(err, &routeRegistrationError) {
+		return &BadRequestError{"bad route config", err}
 	}
-
-	//Something we don't recognize
 	return &InternalServerError{err}
 }

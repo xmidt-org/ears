@@ -200,11 +200,11 @@ func (r *DefaultRoutingTableManager) AddRoute(ctx context.Context, routeConfig *
 	}
 	err := routeConfig.Validate(sctx)
 	if err != nil {
-		return err
+		return &BadConfigError{err}
 	}
 	err = r.registerAndRunRoute(sctx, routeConfig)
 	if err != nil {
-		return err
+		return &RouteRegistrationError{err}
 	}
 	// currently storage layer handles created and updated timestamps
 	err = r.storageMgr.SetRoute(sctx, *routeConfig)
