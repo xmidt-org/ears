@@ -12,13 +12,13 @@ require (
 	github.com/go-redis/redis v6.15.9+incompatible
 	github.com/go-redis/redis/v8 v8.8.2
 	github.com/goccy/go-yaml v1.8.9
-	github.com/golang/protobuf v1.4.3 // indirect
 	github.com/google/addlicense v0.0.0-20210428195630-6d92264d7170 // indirect
 	github.com/google/go-cmp v0.5.5
 	github.com/google/uuid v1.2.0
 	github.com/gopherjs/gopherjs v0.0.0-20181103185306-d547d1d9531e // indirect
 	github.com/gorilla/mux v1.8.0
 	github.com/hashicorp/golang-lru v0.5.4
+	github.com/lightstep/otel-launcher-go v0.20.0 // indirect
 	github.com/magiconair/properties v1.8.5 // indirect
 	github.com/matryer/moq v0.2.1 // indirect
 	github.com/mitchellh/mapstructure v1.4.1 // indirect
@@ -51,7 +51,6 @@ require (
 	golang.org/x/sys v0.0.0-20210525143221-35b2ab0089ea // indirect
 	golang.org/x/time v0.0.0-20210220033141-f8bda1e9f3ba
 	golang.org/x/tools v0.1.2 // indirect
-	google.golang.org/protobuf v1.25.0 // indirect
 	gopkg.in/ini.v1 v1.62.0 // indirect
 	gopkg.in/yaml.v2 v2.4.0
 )
