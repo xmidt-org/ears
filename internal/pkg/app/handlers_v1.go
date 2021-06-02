@@ -22,6 +22,7 @@ import (
 	"github.com/xmidt-org/ears/internal/pkg/quota"
 	"github.com/xmidt-org/ears/internal/pkg/tablemgr"
 	"github.com/xmidt-org/ears/pkg/tenant"
+	"go.opentelemetry.io/otel"
 	"io/ioutil"
 	"net/http"
 
@@ -87,6 +88,9 @@ func getTenant(ctx context.Context, vars map[string]string) (*tenant.Id, ApiErro
 
 func (a *APIManager) addRouteHandler(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
+	tracer := otel.Tracer("ears")
+	ctx, span := tracer.Start(ctx, "addRoute")
+	defer span.End()
 	vars := mux.Vars(r)
 	tid, apiErr := getTenant(ctx, vars)
 	if apiErr != nil {
@@ -136,6 +140,9 @@ func (a *APIManager) addRouteHandler(w http.ResponseWriter, r *http.Request) {
 
 func (a *APIManager) removeRouteHandler(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
+	tracer := otel.Tracer("ears")
+	ctx, span := tracer.Start(ctx, "removeRoute")
+	defer span.End()
 	vars := mux.Vars(r)
 	tid, apiErr := getTenant(ctx, vars)
 	if apiErr != nil {
@@ -158,6 +165,9 @@ func (a *APIManager) removeRouteHandler(w http.ResponseWriter, r *http.Request) 
 
 func (a *APIManager) getRouteHandler(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
+	tracer := otel.Tracer("ears")
+	ctx, span := tracer.Start(ctx, "getRoute")
+	defer span.End()
 	vars := mux.Vars(r)
 	tid, apiErr := getTenant(ctx, vars)
 	if apiErr != nil {
@@ -180,6 +190,9 @@ func (a *APIManager) getRouteHandler(w http.ResponseWriter, r *http.Request) {
 
 func (a *APIManager) getAllTenantRoutesHandler(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
+	tracer := otel.Tracer("ears")
+	ctx, span := tracer.Start(ctx, "getAllTenantRoutes")
+	defer span.End()
 	vars := mux.Vars(r)
 	tid, apiErr := getTenant(ctx, vars)
 	if apiErr != nil {
@@ -201,6 +214,9 @@ func (a *APIManager) getAllTenantRoutesHandler(w http.ResponseWriter, r *http.Re
 
 func (a *APIManager) getAllSendersHandler(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
+	tracer := otel.Tracer("ears")
+	ctx, span := tracer.Start(ctx, "getAllSenders")
+	defer span.End()
 	allSenders, err := a.routingTableMgr.GetAllSendersStatus(ctx)
 	if err != nil {
 		log.Ctx(ctx).Error().Str("op", "getAllSendersHandler").Msg(err.Error())
@@ -214,6 +230,9 @@ func (a *APIManager) getAllSendersHandler(w http.ResponseWriter, r *http.Request
 
 func (a *APIManager) getAllReceiversHandler(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
+	tracer := otel.Tracer("ears")
+	ctx, span := tracer.Start(ctx, "getAllReceivers")
+	defer span.End()
 	allReceivers, err := a.routingTableMgr.GetAllReceiversStatus(ctx)
 	if err != nil {
 		log.Ctx(ctx).Error().Str("op", "getAllReceiversHandler").Msg(err.Error())
@@ -227,6 +246,9 @@ func (a *APIManager) getAllReceiversHandler(w http.ResponseWriter, r *http.Reque
 
 func (a *APIManager) getAllFiltersHandler(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
+	tracer := otel.Tracer("ears")
+	ctx, span := tracer.Start(ctx, "getAllFilters")
+	defer span.End()
 	allFilters, err := a.routingTableMgr.GetAllFiltersStatus(ctx)
 	if err != nil {
 		log.Ctx(ctx).Error().Str("op", "getAllFiltersHandler").Msg(err.Error())
@@ -240,6 +262,9 @@ func (a *APIManager) getAllFiltersHandler(w http.ResponseWriter, r *http.Request
 
 func (a *APIManager) getTenantConfigHandler(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
+	tracer := otel.Tracer("ears")
+	ctx, span := tracer.Start(ctx, "getTenant")
+	defer span.End()
 	vars := mux.Vars(r)
 	tid, apiErr := getTenant(ctx, vars)
 	if apiErr != nil {
@@ -261,6 +286,9 @@ func (a *APIManager) getTenantConfigHandler(w http.ResponseWriter, r *http.Reque
 
 func (a *APIManager) setTenantConfigHandler(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
+	tracer := otel.Tracer("ears")
+	ctx, span := tracer.Start(ctx, "addTenant")
+	defer span.End()
 	vars := mux.Vars(r)
 	tid, apiErr := getTenant(ctx, vars)
 	if apiErr != nil {
@@ -300,6 +328,9 @@ func (a *APIManager) setTenantConfigHandler(w http.ResponseWriter, r *http.Reque
 
 func (a *APIManager) deleteTenantConfigHandler(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
+	tracer := otel.Tracer("ears")
+	ctx, span := tracer.Start(ctx, "deleteTenant")
+	defer span.End()
 	vars := mux.Vars(r)
 	tid, apiErr := getTenant(ctx, vars)
 	if apiErr != nil {

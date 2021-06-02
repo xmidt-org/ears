@@ -20,6 +20,7 @@ package app
 import (
 	"context"
 	"fmt"
+	"github.com/lightstep/otel-launcher-go/launcher"
 	"github.com/rs/zerolog"
 	"github.com/xmidt-org/ears/internal/pkg/config"
 	"go.uber.org/fx"
@@ -48,6 +49,12 @@ func SetupAPIServer(lifecycle fx.Lifecycle, config config.Config, logger *zerolo
 		Handler: mux,
 	}
 
+	ls := launcher.ConfigureOpentelemetry(
+		launcher.WithServiceName("ears"),
+		launcher.WithAccessToken(config.GetString("ears.opentelemetry.lightstep.accessToken")),
+		launcher.WithServiceVersion(Version),
+	)
+
 	lifecycle.Append(
 		fx.Hook{
 			OnStart: func(context.Context) error {
@@ -62,6 +69,7 @@ func SetupAPIServer(lifecycle fx.Lifecycle, config config.Config, logger *zerolo
 				} else {
 					logger.Info().Msg("API Server Stopped")
 				}
+				ls.Shutdown()
 				return nil
 			},
 		},
