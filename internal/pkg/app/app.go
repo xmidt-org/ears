@@ -49,11 +49,14 @@ func SetupAPIServer(lifecycle fx.Lifecycle, config config.Config, logger *zerolo
 		Handler: mux,
 	}
 
-	ls := launcher.ConfigureOpentelemetry(
-		launcher.WithServiceName("ears"),
-		launcher.WithAccessToken(config.GetString("ears.opentelemetry.lightstep.accessToken")),
-		launcher.WithServiceVersion(Version),
-	)
+	var ls launcher.Launcher
+	if config.GetBool("ears.opentelemetry.lightstep.active") {
+		ls = launcher.ConfigureOpentelemetry(
+			launcher.WithServiceName("ears"),
+			launcher.WithAccessToken(config.GetString("ears.opentelemetry.lightstep.accessToken")),
+			launcher.WithServiceVersion(Version),
+		)
+	}
 
 	lifecycle.Append(
 		fx.Hook{
@@ -69,7 +72,9 @@ func SetupAPIServer(lifecycle fx.Lifecycle, config config.Config, logger *zerolo
 				} else {
 					logger.Info().Msg("API Server Stopped")
 				}
-				ls.Shutdown()
+				if config.GetBool("ears.opentelemetry.lightstep.active") {
+					ls.Shutdown()
+				}
 				return nil
 			},
 		},

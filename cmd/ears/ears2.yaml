@@ -23,4 +23,5 @@ ears:
 
   opentelemetry:
     lightstep:
+      active: no
       accessToken: ""
