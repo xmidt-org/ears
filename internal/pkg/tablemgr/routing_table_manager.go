@@ -25,6 +25,7 @@ import (
 	"github.com/xmidt-org/ears/internal/pkg/syncer"
 	"github.com/xmidt-org/ears/pkg/route"
 	"github.com/xmidt-org/ears/pkg/tenant"
+	"go.opentelemetry.io/otel"
 	"go.uber.org/fx"
 	"sync"
 	"time"
@@ -87,6 +88,9 @@ func NewRoutingTableManager(pluginMgr plugin.Manager, storageMgr route.RouteStor
 }
 
 func (r *DefaultRoutingTableManager) unregisterAndStopRoute(ctx context.Context, tid tenant.Id, routeId string) error {
+	tracer := otel.Tracer("ears")
+	ctx, span := tracer.Start(ctx, "unregisterAndStopRoute")
+	defer span.End()
 	var err error
 	r.Lock()
 	defer r.Unlock()
@@ -117,6 +121,9 @@ func (r *DefaultRoutingTableManager) unregisterAndStopRoute(ctx context.Context,
 }
 
 func (r *DefaultRoutingTableManager) registerAndRunRoute(ctx context.Context, routeConfig *route.Config) error {
+	tracer := otel.Tracer("ears")
+	ctx, span := tracer.Start(ctx, "registerAndRunRoute")
+	defer span.End()
 	var err error
 	// check if route already exists, check if this is an update etc.
 	r.Lock()
@@ -193,29 +200,28 @@ func (r *DefaultRoutingTableManager) RemoveRoute(ctx context.Context, tid tenant
 }
 
 func (r *DefaultRoutingTableManager) AddRoute(ctx context.Context, routeConfig *route.Config) error {
-	sctx := context.Background()
 	if routeConfig == nil {
 		return errors.New("missing route config")
 	}
 	// use hashed ID if none is provided - this ID will be returned by the AddRoute REST API
-	routeHash := routeConfig.Hash(sctx)
+	routeHash := routeConfig.Hash(ctx)
 	if routeConfig.Id == "" {
 		routeConfig.Id = routeHash
 	}
-	err := routeConfig.Validate(sctx)
+	err := routeConfig.Validate(ctx)
 	if err != nil {
 		return &RouteValidationError{err}
 	}
-	err = r.registerAndRunRoute(sctx, routeConfig)
+	err = r.registerAndRunRoute(ctx, routeConfig)
 	if err != nil {
 		return &RouteRegistrationError{err}
 	}
 	// currently storage layer handles created and updated timestamps
-	err = r.storageMgr.SetRoute(sctx, *routeConfig)
+	err = r.storageMgr.SetRoute(ctx, *routeConfig)
 	if err != nil {
 		return err
 	}
-	r.rtSyncer.PublishSyncRequest(sctx, routeConfig.TenantId, syncer.ITEM_TYPE_ROUTE, routeConfig.Id, true)
+	r.rtSyncer.PublishSyncRequest(ctx, routeConfig.TenantId, syncer.ITEM_TYPE_ROUTE, routeConfig.Id, true)
 	return nil
 }
 
