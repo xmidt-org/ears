@@ -36,6 +36,7 @@ issues:
     - path: internal/pkg/app/handlers_v1\.go
       linters:
         - funlen
+        - dupl
     - path: pkg/filter/match/patternregex/patternregex\.go
       linters:
         - funlen
