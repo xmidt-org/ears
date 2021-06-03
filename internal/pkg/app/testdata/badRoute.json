@@ -1,9 +1,9 @@
 {
-  "id": "sqs100",
+  "id": "bad101",
   "userId": "boris",
   "name": "sqsReceiverRoute",
   "receiver": {
-    "plugin": "sqs",
+    "plugin": "doesnotexist",
     "name": "mySqsReceiver",
     "config": {
       "queueUrl": "https://sqs.us-west-2.amazonaws.com/447701116110/earsSender"
