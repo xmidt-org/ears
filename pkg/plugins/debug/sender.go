@@ -22,6 +22,7 @@ import (
 	"github.com/xmidt-org/ears/pkg/event"
 	pkgplugin "github.com/xmidt-org/ears/pkg/plugin"
 	"github.com/xmidt-org/ears/pkg/sender"
+	"go.opentelemetry.io/otel"
 )
 
 func NewSender(config interface{}) (sender.Sender, error) {
@@ -69,6 +70,11 @@ func NewSender(config interface{}) (sender.Sender, error) {
 }
 
 func (s *Sender) Send(e event.Event) {
+	if e.Trace() {
+		tracer := otel.Tracer("ears")
+		_, span := tracer.Start(e.Context(), "debugSender")
+		defer span.End()
+	}
 	s.history.Add(e)
 	//fmt.Printf("SEND %p\n", e)
 	if s.destination != nil {

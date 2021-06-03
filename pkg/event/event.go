@@ -30,6 +30,7 @@ type event struct {
 	payload  interface{}
 	ctx      context.Context
 	ack      ack.SubTree
+	trace    bool
 }
 
 type EventOption func(*event) error
@@ -79,6 +80,25 @@ func WithMetadata(metadata interface{}) EventOption {
 		e.SetMetadata(metadata)
 		return nil
 	}
+}
+
+func WithTrace(trace bool) EventOption {
+	return func(e *event) error {
+		e.SetTrace(trace)
+		return nil
+	}
+}
+
+func (e *event) Trace() bool {
+	return e.trace
+}
+
+func (e *event) SetTrace(trace bool) error {
+	if e.ack != nil && e.ack.IsAcked() {
+		return &ack.AlreadyAckedError{}
+	}
+	e.trace = trace
+	return nil
 }
 
 func (e *event) Payload() interface{} {
@@ -241,5 +261,6 @@ func (e *event) Clone(ctx context.Context) (Event, error) {
 		metadata: newMetadtaCopy,
 		ctx:      ctx,
 		ack:      subTree,
+		trace:    e.trace,
 	}, nil
 }

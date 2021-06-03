@@ -28,12 +28,11 @@ import (
 // prefixes for json path expressions
 
 const (
-	PAYLOAD = "payload"
+	PAYLOAD  = "payload"
 	METADATA = "metadata"
-	TRACE = "trace"
-	TENANT = "tenant"
+	TRACE    = "trace"
+	TENANT   = "tenant"
 )
-
 
 type Event interface {
 	//Get the event payload
@@ -41,6 +40,9 @@ type Event interface {
 
 	//Get the event metadata
 	Metadata() interface{}
+
+	//Get the event trace flag
+	Trace() bool
 
 	//Get the event context
 	Context() context.Context
@@ -52,6 +54,10 @@ type Event interface {
 	//Set the event metadata
 	//Will return an error if the event is done
 	SetMetadata(metadata interface{}) error
+
+	//Set trace flag
+	//Will return an error if the event is done
+	SetTrace(trace bool) error
 
 	// SetPathValue sets object value at path in either payload or metadata and returns its parent
 	// object and parent key if those exist

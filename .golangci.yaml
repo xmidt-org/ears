@@ -55,6 +55,9 @@ issues:
     - path: internal/pkg/plugin/manager\.go
       linters:
         - dupl
+    - path: pkg/plugins/debug/receiver\.go
+      linters:
+        - funlen
     - path: pkg/plugins/sqs/receiver\.go
       linters:
         - funlen
