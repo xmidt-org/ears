@@ -20,6 +20,7 @@ import (
 	"github.com/goccy/go-yaml"
 	"github.com/xmidt-org/ears/internal/pkg/logs"
 	"github.com/xmidt-org/ears/internal/pkg/quota"
+	"github.com/xmidt-org/ears/internal/pkg/rtsemconv"
 	"github.com/xmidt-org/ears/internal/pkg/tablemgr"
 	"github.com/xmidt-org/ears/pkg/tenant"
 	"go.opentelemetry.io/otel"
@@ -105,8 +106,8 @@ func (a *APIManager) addRouteHandler(w http.ResponseWriter, r *http.Request) {
 		resp.Respond(ctx, w)
 		return
 	}
-	span.SetAttributes(attribute.String("orgId", tid.OrgId))
-	span.SetAttributes(attribute.String("appId", tid.AppId))
+	span.SetAttributes(rtsemconv.EARSOrgId.String(tid.OrgId))
+	span.SetAttributes(rtsemconv.EARSAppId.String(tid.AppId))
 	routeId := vars["routeId"]
 	body, err := ioutil.ReadAll(r.Body)
 	if err != nil {
@@ -133,7 +134,7 @@ func (a *APIManager) addRouteHandler(w http.ResponseWriter, r *http.Request) {
 	if routeId != "" && route.Id == "" {
 		route.Id = routeId
 	}
-	span.SetAttributes(attribute.String("routeId", route.Id))
+	span.SetAttributes(rtsemconv.EARSRouteId.String(routeId))
 	route.TenantId.AppId = tid.AppId
 	route.TenantId.OrgId = tid.OrgId
 	err = a.routingTableMgr.AddRoute(ctx, &route)
@@ -164,10 +165,10 @@ func (a *APIManager) removeRouteHandler(w http.ResponseWriter, r *http.Request) 
 		resp.Respond(ctx, w)
 		return
 	}
-	span.SetAttributes(attribute.String("orgId", tid.OrgId))
-	span.SetAttributes(attribute.String("appId", tid.AppId))
+	span.SetAttributes(rtsemconv.EARSOrgId.String(tid.OrgId))
+	span.SetAttributes(rtsemconv.EARSAppId.String(tid.AppId))
 	routeId := vars["routeId"]
-	span.SetAttributes(attribute.String("routeId", routeId))
+	span.SetAttributes(rtsemconv.EARSRouteId.String(routeId))
 	err := a.routingTableMgr.RemoveRoute(ctx, *tid, routeId)
 	if err != nil {
 		log.Ctx(ctx).Error().Str("op", "removeRouteHandler").Msg(err.Error())
@@ -196,10 +197,10 @@ func (a *APIManager) getRouteHandler(w http.ResponseWriter, r *http.Request) {
 		resp.Respond(ctx, w)
 		return
 	}
-	span.SetAttributes(attribute.String("orgId", tid.OrgId))
-	span.SetAttributes(attribute.String("appId", tid.AppId))
+	span.SetAttributes(rtsemconv.EARSOrgId.String(tid.OrgId))
+	span.SetAttributes(rtsemconv.EARSAppId.String(tid.AppId))
 	routeId := vars["routeId"]
-	span.SetAttributes(attribute.String("routeId", routeId))
+	span.SetAttributes(rtsemconv.EARSRouteId.String(routeId))
 	routeConfig, err := a.routingTableMgr.GetRoute(ctx, *tid, routeId)
 	if err != nil {
 		log.Ctx(ctx).Error().Str("op", "getRouteHandler").Msg(err.Error())
@@ -228,8 +229,8 @@ func (a *APIManager) getAllTenantRoutesHandler(w http.ResponseWriter, r *http.Re
 		resp.Respond(ctx, w)
 		return
 	}
-	span.SetAttributes(attribute.String("orgId", tid.OrgId))
-	span.SetAttributes(attribute.String("appId", tid.AppId))
+	span.SetAttributes(rtsemconv.EARSOrgId.String(tid.OrgId))
+	span.SetAttributes(rtsemconv.EARSAppId.String(tid.AppId))
 	allRouteConfigs, err := a.routingTableMgr.GetAllTenantRoutes(ctx, *tid)
 	if err != nil {
 		log.Ctx(ctx).Error().Str("op", "GetAllTenantRoutes").Msg(err.Error())
@@ -322,8 +323,8 @@ func (a *APIManager) getTenantConfigHandler(w http.ResponseWriter, r *http.Reque
 		resp.Respond(ctx, w)
 		return
 	}
-	span.SetAttributes(attribute.String("orgId", tid.OrgId))
-	span.SetAttributes(attribute.String("appId", tid.AppId))
+	span.SetAttributes(rtsemconv.EARSOrgId.String(tid.OrgId))
+	span.SetAttributes(rtsemconv.EARSAppId.String(tid.AppId))
 	config, err := a.tenantStorer.GetConfig(ctx, *tid)
 	if err != nil {
 		log.Ctx(ctx).Error().Str("op", "getTenantConfigHandler").Str("error", err.Error()).Msg("error getting tenant config")
@@ -352,8 +353,8 @@ func (a *APIManager) setTenantConfigHandler(w http.ResponseWriter, r *http.Reque
 		resp.Respond(ctx, w)
 		return
 	}
-	span.SetAttributes(attribute.String("orgId", tid.OrgId))
-	span.SetAttributes(attribute.String("appId", tid.AppId))
+	span.SetAttributes(rtsemconv.EARSOrgId.String(tid.OrgId))
+	span.SetAttributes(rtsemconv.EARSAppId.String(tid.AppId))
 	body, err := ioutil.ReadAll(r.Body)
 	if err != nil {
 		log.Ctx(ctx).Error().Str("op", "setTenantConfigHandler").Str("error", err.Error()).Msg("error reading request body")
@@ -400,8 +401,8 @@ func (a *APIManager) deleteTenantConfigHandler(w http.ResponseWriter, r *http.Re
 		resp.Respond(ctx, w)
 		return
 	}
-	span.SetAttributes(attribute.String("orgId", tid.OrgId))
-	span.SetAttributes(attribute.String("appId", tid.AppId))
+	span.SetAttributes(rtsemconv.EARSOrgId.String(tid.OrgId))
+	span.SetAttributes(rtsemconv.EARSAppId.String(tid.AppId))
 	err := a.tenantStorer.DeleteConfig(ctx, *tid)
 	if err != nil {
 		log.Ctx(ctx).Error().Str("op", "deleteTenantConfigHandler").Str("error", err.Error()).Msg("error deleting tenant config")

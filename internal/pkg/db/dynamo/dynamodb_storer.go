@@ -22,10 +22,10 @@ import (
 	"github.com/aws/aws-sdk-go/service/dynamodb"
 	"github.com/aws/aws-sdk-go/service/dynamodb/dynamodbattribute"
 	"github.com/xmidt-org/ears/internal/pkg/config"
+	"github.com/xmidt-org/ears/internal/pkg/rtsemconv"
 	"github.com/xmidt-org/ears/pkg/route"
 	"github.com/xmidt-org/ears/pkg/tenant"
 	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/semconv"
 	"time"
 )
@@ -85,7 +85,7 @@ func (d *DynamoDbStorer) GetRoute(ctx context.Context, tid tenant.Id, id string)
 	ctx, span := tracer.Start(ctx, "getRoute")
 	defer span.End()
 	span.SetAttributes(semconv.DBSystemDynamoDB)
-	span.SetAttributes(attribute.String("db.table", d.tableName))
+	span.SetAttributes(rtsemconv.DBTable.String(d.tableName))
 	sess, err := session.NewSession(&aws.Config{
 		Region: aws.String(d.region),
 	})
@@ -106,7 +106,7 @@ func (d *DynamoDbStorer) GetAllRoutes(ctx context.Context) ([]route.Config, erro
 	ctx, span := tracer.Start(ctx, "getRoutes")
 	defer span.End()
 	span.SetAttributes(semconv.DBSystemDynamoDB)
-	span.SetAttributes(attribute.String("db.table", d.tableName))
+	span.SetAttributes(rtsemconv.DBTable.String(d.tableName))
 	sess, err := session.NewSession(&aws.Config{
 		Region: aws.String(d.region),
 	})
@@ -192,7 +192,7 @@ func (d *DynamoDbStorer) SetRoute(ctx context.Context, r route.Config) error {
 	ctx, span := tracer.Start(ctx, "storeRoute")
 	defer span.End()
 	span.SetAttributes(semconv.DBSystemDynamoDB)
-	span.SetAttributes(attribute.String("db.table", d.tableName))
+	span.SetAttributes(rtsemconv.DBTable.String(d.tableName))
 	sess, err := session.NewSession(&aws.Config{
 		Region: aws.String(d.region),
 	})
@@ -209,7 +209,7 @@ func (d *DynamoDbStorer) SetRoutes(ctx context.Context, routes []route.Config) e
 	ctx, span := tracer.Start(ctx, "storeRoutes")
 	defer span.End()
 	span.SetAttributes(semconv.DBSystemDynamoDB)
-	span.SetAttributes(attribute.String("db.table", d.tableName))
+	span.SetAttributes(rtsemconv.DBTable.String(d.tableName))
 	sess, err := session.NewSession(&aws.Config{
 		Region: aws.String(d.region),
 	})
@@ -249,7 +249,7 @@ func (d *DynamoDbStorer) DeleteRoute(ctx context.Context, tid tenant.Id, id stri
 	ctx, span := tracer.Start(ctx, "deleteRoute")
 	defer span.End()
 	span.SetAttributes(semconv.DBSystemDynamoDB)
-	span.SetAttributes(attribute.String("db.table", d.tableName))
+	span.SetAttributes(rtsemconv.DBTable.String(d.tableName))
 	sess, err := session.NewSession(&aws.Config{
 		Region: aws.String(d.region),
 	})
@@ -265,7 +265,7 @@ func (d *DynamoDbStorer) DeleteRoutes(ctx context.Context, tid tenant.Id, ids []
 	ctx, span := tracer.Start(ctx, "deleteRoutes")
 	defer span.End()
 	span.SetAttributes(semconv.DBSystemDynamoDB)
-	span.SetAttributes(attribute.String("db.table", d.tableName))
+	span.SetAttributes(rtsemconv.DBTable.String(d.tableName))
 	sess, err := session.NewSession(&aws.Config{
 		Region: aws.String(d.region),
 	})

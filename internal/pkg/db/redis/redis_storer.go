@@ -20,10 +20,10 @@ import (
 	"fmt"
 	"github.com/go-redis/redis"
 	"github.com/rs/zerolog"
+	"github.com/xmidt-org/ears/internal/pkg/rtsemconv"
 	"github.com/xmidt-org/ears/pkg/route"
 	"github.com/xmidt-org/ears/pkg/tenant"
 	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/semconv"
 	"time"
 )
@@ -66,7 +66,7 @@ func (d *RedisDbStorer) GetRoute(ctx context.Context, tid tenant.Id, id string) 
 	defer span.End()
 	span.SetAttributes(semconv.DBSystemRedis)
 	span.SetAttributes(semconv.DBConnectionStringKey.String(d.endpoint))
-	span.SetAttributes(attribute.String("db.table", d.tableName))
+	span.SetAttributes(rtsemconv.DBTable.String(d.tableName))
 	r := route.Config{}
 	result, err := d.client.HGet(d.tableName, tid.KeyWithRoute(id)).Result()
 	if err != nil {
@@ -88,7 +88,7 @@ func (d *RedisDbStorer) GetAllRoutes(ctx context.Context) ([]route.Config, error
 	defer span.End()
 	span.SetAttributes(semconv.DBSystemRedis)
 	span.SetAttributes(semconv.DBConnectionStringKey.String(d.endpoint))
-	span.SetAttributes(attribute.String("db.table", d.tableName))
+	span.SetAttributes(rtsemconv.DBTable.String(d.tableName))
 	routes := make([]route.Config, 0)
 	results, err := d.client.HGetAll(d.tableName).Result()
 	if err != nil {
@@ -111,7 +111,7 @@ func (d *RedisDbStorer) GetAllTenantRoutes(ctx context.Context, tid tenant.Id) (
 	defer span.End()
 	span.SetAttributes(semconv.DBSystemRedis)
 	span.SetAttributes(semconv.DBConnectionStringKey.String(d.endpoint))
-	span.SetAttributes(attribute.String("db.table", d.tableName))
+	span.SetAttributes(rtsemconv.DBTable.String(d.tableName))
 	routes, err := d.GetAllRoutes(ctx)
 	if err != nil {
 		return nil, err
@@ -131,7 +131,7 @@ func (d *RedisDbStorer) SetRoute(ctx context.Context, r route.Config) error {
 	defer span.End()
 	span.SetAttributes(semconv.DBSystemRedis)
 	span.SetAttributes(semconv.DBConnectionStringKey.String(d.endpoint))
-	span.SetAttributes(attribute.String("db.table", d.tableName))
+	span.SetAttributes(rtsemconv.DBTable.String(d.tableName))
 	if r.Id == "" {
 		return fmt.Errorf("no route to store in redis")
 	}
@@ -172,7 +172,7 @@ func (d *RedisDbStorer) DeleteRoute(ctx context.Context, tid tenant.Id, id strin
 	defer span.End()
 	span.SetAttributes(semconv.DBSystemRedis)
 	span.SetAttributes(semconv.DBConnectionStringKey.String(d.endpoint))
-	span.SetAttributes(attribute.String("db.table", d.tableName))
+	span.SetAttributes(rtsemconv.DBTable.String(d.tableName))
 	if id == "" {
 		return fmt.Errorf("no route to delete in bolt")
 	}
