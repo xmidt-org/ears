@@ -20,7 +20,7 @@ RUN apk add --no-cache --no-progress \
 
 RUN go get github.com/geofffranks/spruce/cmd/spruce && chmod +x /go/bin/spruce
 COPY . .
-RUN make test release
+RUN make build
 
 FROM scratch AS runtime
 
@@ -33,4 +33,4 @@ CMD [ "run" ]
 
 HEALTHCHECK \
   --interval=10s --timeout=2s --retries=3 \
-  CMD ["/earth", "version"]
+  CMD ["/ears", "version"]
