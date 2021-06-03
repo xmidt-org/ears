@@ -19,6 +19,8 @@ import (
 	"github.com/xmidt-org/ears/internal/pkg/config"
 	"github.com/xmidt-org/ears/pkg/route"
 	"github.com/xmidt-org/ears/pkg/tenant"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
 	"sync"
 	"time"
 )
@@ -38,7 +40,10 @@ func NewInMemoryRouteStorer(config config.Config) *InMemoryRouteStorer {
 func (s *InMemoryRouteStorer) GetAllRoutes(ctx context.Context) ([]route.Config, error) {
 	s.lock.RLock()
 	defer s.lock.RUnlock()
-
+	tracer := otel.Tracer("ears")
+	ctx, span := tracer.Start(ctx, "getRoutes")
+	defer span.End()
+	span.SetAttributes(attribute.String("type", "inmemory"))
 	routes := make([]route.Config, 0)
 	for _, tenant := range s.tenants {
 		for _, r := range tenant {
@@ -51,19 +56,19 @@ func (s *InMemoryRouteStorer) GetAllRoutes(ctx context.Context) ([]route.Config,
 func (s *InMemoryRouteStorer) GetRoute(ctx context.Context, tid tenant.Id, id string) (route.Config, error) {
 	s.lock.RLock()
 	defer s.lock.RUnlock()
-
+	tracer := otel.Tracer("ears")
+	ctx, span := tracer.Start(ctx, "getRoute")
+	defer span.End()
+	span.SetAttributes(attribute.String("type", "inmemory"))
 	empty := route.Config{}
-
 	t, ok := s.tenants[tid.Key()]
 	if !ok {
 		return empty, &route.RouteNotFoundError{TenantId: tid, RouteId: id}
 	}
-
 	r, ok := t[id]
 	if !ok {
 		return empty, &route.RouteNotFoundError{TenantId: tid, RouteId: id}
 	}
-
 	newCopy := *r
 	return newCopy, nil
 }
@@ -71,13 +76,15 @@ func (s *InMemoryRouteStorer) GetRoute(ctx context.Context, tid tenant.Id, id st
 func (s *InMemoryRouteStorer) GetAllTenantRoutes(ctx context.Context, id tenant.Id) ([]route.Config, error) {
 	s.lock.RLock()
 	defer s.lock.RUnlock()
-
+	tracer := otel.Tracer("ears")
+	ctx, span := tracer.Start(ctx, "getTenantRoutes")
+	defer span.End()
+	span.SetAttributes(attribute.String("type", "inmemory"))
 	routes := make([]route.Config, 0)
 	t, ok := s.tenants[id.Key()]
 	if !ok {
 		return routes, nil
 	}
-
 	for _, r := range t {
 		routes = append(routes, *r)
 	}
@@ -93,7 +100,6 @@ func (s *InMemoryRouteStorer) setRoute(r route.Config) {
 	} else {
 		tenant = t
 	}
-
 	if existing, ok := tenant[r.Id]; !ok {
 		r.Created = r.Modified
 	} else {
@@ -105,7 +111,11 @@ func (s *InMemoryRouteStorer) setRoute(r route.Config) {
 func (s *InMemoryRouteStorer) SetRoute(ctx context.Context, r route.Config) error {
 	s.lock.Lock()
 	defer s.lock.Unlock()
-
+	tracer := otel.Tracer("ears")
+	ctx, span := tracer.Start(ctx, "storeRoute")
+	defer span.End()
+	span.SetAttributes(attribute.String("type", "inmemory"))
+	defer span.End()
 	s.setRoute(r)
 	return nil
 }
@@ -113,6 +123,10 @@ func (s *InMemoryRouteStorer) SetRoute(ctx context.Context, r route.Config) erro
 func (s *InMemoryRouteStorer) SetRoutes(ctx context.Context, routes []route.Config) error {
 	s.lock.Lock()
 	defer s.lock.Unlock()
+	tracer := otel.Tracer("ears")
+	ctx, span := tracer.Start(ctx, "storeRoutes")
+	defer span.End()
+	span.SetAttributes(attribute.String("type", "inmemory"))
 	for _, r := range routes {
 		s.setRoute(r)
 	}
@@ -122,12 +136,14 @@ func (s *InMemoryRouteStorer) SetRoutes(ctx context.Context, routes []route.Conf
 func (s *InMemoryRouteStorer) DeleteRoute(ctx context.Context, tid tenant.Id, id string) error {
 	s.lock.Lock()
 	defer s.lock.Unlock()
-
+	tracer := otel.Tracer("ears")
+	ctx, span := tracer.Start(ctx, "deleteRoute")
+	defer span.End()
+	span.SetAttributes(attribute.String("type", "inmemory"))
 	t, ok := s.tenants[tid.Key()]
 	if !ok {
 		return nil
 	}
-
 	delete(t, id)
 	return nil
 }
@@ -135,12 +151,14 @@ func (s *InMemoryRouteStorer) DeleteRoute(ctx context.Context, tid tenant.Id, id
 func (s *InMemoryRouteStorer) DeleteRoutes(ctx context.Context, tid tenant.Id, ids []string) error {
 	s.lock.Lock()
 	defer s.lock.Unlock()
-
+	tracer := otel.Tracer("ears")
+	ctx, span := tracer.Start(ctx, "deleteRoutes")
+	defer span.End()
+	span.SetAttributes(attribute.String("type", "inmemory"))
 	t, ok := s.tenants[tid.Key()]
 	if !ok {
 		return nil
 	}
-
 	for _, id := range ids {
 		delete(t, id)
 	}

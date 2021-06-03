@@ -22,6 +22,8 @@ import (
 	"github.com/rs/zerolog"
 	"github.com/xmidt-org/ears/pkg/route"
 	"github.com/xmidt-org/ears/pkg/tenant"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
 	"time"
 )
 
@@ -58,6 +60,10 @@ func NewRedisDbStorer(config Config, logger *zerolog.Logger) (*RedisDbStorer, er
 }
 
 func (d *RedisDbStorer) GetRoute(ctx context.Context, tid tenant.Id, id string) (route.Config, error) {
+	tracer := otel.Tracer("ears")
+	ctx, span := tracer.Start(ctx, "getRoute")
+	defer span.End()
+	span.SetAttributes(attribute.String("type", "redis"))
 	r := route.Config{}
 	result, err := d.client.HGet(d.tableName, tid.KeyWithRoute(id)).Result()
 	if err != nil {
@@ -74,6 +80,10 @@ func (d *RedisDbStorer) GetRoute(ctx context.Context, tid tenant.Id, id string) 
 }
 
 func (d *RedisDbStorer) GetAllRoutes(ctx context.Context) ([]route.Config, error) {
+	tracer := otel.Tracer("ears")
+	ctx, span := tracer.Start(ctx, "getRoutes")
+	defer span.End()
+	span.SetAttributes(attribute.String("type", "redis"))
 	routes := make([]route.Config, 0)
 	results, err := d.client.HGetAll(d.tableName).Result()
 	if err != nil {
@@ -90,8 +100,11 @@ func (d *RedisDbStorer) GetAllRoutes(ctx context.Context) ([]route.Config, error
 	return routes, nil
 }
 
-//TODO make this more efficient
 func (d *RedisDbStorer) GetAllTenantRoutes(ctx context.Context, tid tenant.Id) ([]route.Config, error) {
+	tracer := otel.Tracer("ears")
+	ctx, span := tracer.Start(ctx, "getTenantRoutes")
+	defer span.End()
+	span.SetAttributes(attribute.String("type", "redis"))
 	routes, err := d.GetAllRoutes(ctx)
 	if err != nil {
 		return nil, err
@@ -106,19 +119,20 @@ func (d *RedisDbStorer) GetAllTenantRoutes(ctx context.Context, tid tenant.Id) (
 }
 
 func (d *RedisDbStorer) SetRoute(ctx context.Context, r route.Config) error {
+	tracer := otel.Tracer("ears")
+	ctx, span := tracer.Start(ctx, "storeRoute")
+	defer span.End()
+	span.SetAttributes(attribute.String("type", "redis"))
 	if r.Id == "" {
 		return fmt.Errorf("no route to store in redis")
 	}
-
 	r.Modified = time.Now().Unix()
-
 	oldRoute, err := d.GetRoute(ctx, r.TenantId, r.Id)
 	if err == nil {
 		r.Created = oldRoute.Created
 	} else {
 		r.Created = r.Modified
 	}
-
 	val, err := json.Marshal(r)
 	if err != nil {
 		return err
@@ -144,10 +158,13 @@ func (d *RedisDbStorer) SetRoutes(ctx context.Context, routes []route.Config) er
 }
 
 func (d *RedisDbStorer) DeleteRoute(ctx context.Context, tid tenant.Id, id string) error {
+	tracer := otel.Tracer("ears")
+	ctx, span := tracer.Start(ctx, "deleteRoute")
+	defer span.End()
+	span.SetAttributes(attribute.String("type", "redis"))
 	if id == "" {
 		return fmt.Errorf("no route to delete in bolt")
 	}
-
 	_, err := d.client.HDel(d.tableName, tid.KeyWithRoute(id)).Result()
 	if err != nil {
 		return fmt.Errorf("could not delete route from redis: %v", err)
