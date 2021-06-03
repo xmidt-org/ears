@@ -20,7 +20,7 @@ import (
 	"github.com/xmidt-org/ears/pkg/route"
 	"github.com/xmidt-org/ears/pkg/tenant"
 	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/semconv"
 	"sync"
 	"time"
 )
@@ -43,7 +43,7 @@ func (s *InMemoryRouteStorer) GetAllRoutes(ctx context.Context) ([]route.Config,
 	tracer := otel.Tracer("ears")
 	ctx, span := tracer.Start(ctx, "getRoutes")
 	defer span.End()
-	span.SetAttributes(attribute.String("type", "inmemory"))
+	span.SetAttributes(semconv.DBSystemKey.String("inmemory"))
 	routes := make([]route.Config, 0)
 	for _, tenant := range s.tenants {
 		for _, r := range tenant {
@@ -59,7 +59,7 @@ func (s *InMemoryRouteStorer) GetRoute(ctx context.Context, tid tenant.Id, id st
 	tracer := otel.Tracer("ears")
 	ctx, span := tracer.Start(ctx, "getRoute")
 	defer span.End()
-	span.SetAttributes(attribute.String("type", "inmemory"))
+	span.SetAttributes(semconv.DBSystemKey.String("inmemory"))
 	empty := route.Config{}
 	t, ok := s.tenants[tid.Key()]
 	if !ok {
@@ -79,7 +79,7 @@ func (s *InMemoryRouteStorer) GetAllTenantRoutes(ctx context.Context, id tenant.
 	tracer := otel.Tracer("ears")
 	ctx, span := tracer.Start(ctx, "getTenantRoutes")
 	defer span.End()
-	span.SetAttributes(attribute.String("type", "inmemory"))
+	span.SetAttributes(semconv.DBSystemKey.String("inmemory"))
 	routes := make([]route.Config, 0)
 	t, ok := s.tenants[id.Key()]
 	if !ok {
@@ -114,7 +114,7 @@ func (s *InMemoryRouteStorer) SetRoute(ctx context.Context, r route.Config) erro
 	tracer := otel.Tracer("ears")
 	ctx, span := tracer.Start(ctx, "storeRoute")
 	defer span.End()
-	span.SetAttributes(attribute.String("type", "inmemory"))
+	span.SetAttributes(semconv.DBSystemKey.String("inmemory"))
 	defer span.End()
 	s.setRoute(r)
 	return nil
@@ -126,7 +126,7 @@ func (s *InMemoryRouteStorer) SetRoutes(ctx context.Context, routes []route.Conf
 	tracer := otel.Tracer("ears")
 	ctx, span := tracer.Start(ctx, "storeRoutes")
 	defer span.End()
-	span.SetAttributes(attribute.String("type", "inmemory"))
+	span.SetAttributes(semconv.DBSystemKey.String("inmemory"))
 	for _, r := range routes {
 		s.setRoute(r)
 	}
@@ -139,7 +139,7 @@ func (s *InMemoryRouteStorer) DeleteRoute(ctx context.Context, tid tenant.Id, id
 	tracer := otel.Tracer("ears")
 	ctx, span := tracer.Start(ctx, "deleteRoute")
 	defer span.End()
-	span.SetAttributes(attribute.String("type", "inmemory"))
+	span.SetAttributes(semconv.DBSystemKey.String("inmemory"))
 	t, ok := s.tenants[tid.Key()]
 	if !ok {
 		return nil
@@ -154,7 +154,7 @@ func (s *InMemoryRouteStorer) DeleteRoutes(ctx context.Context, tid tenant.Id, i
 	tracer := otel.Tracer("ears")
 	ctx, span := tracer.Start(ctx, "deleteRoutes")
 	defer span.End()
-	span.SetAttributes(attribute.String("type", "inmemory"))
+	span.SetAttributes(semconv.DBSystemKey.String("inmemory"))
 	t, ok := s.tenants[tid.Key()]
 	if !ok {
 		return nil
