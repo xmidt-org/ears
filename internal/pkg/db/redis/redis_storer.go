@@ -24,6 +24,7 @@ import (
 	"github.com/xmidt-org/ears/pkg/tenant"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/semconv"
 	"time"
 )
 
@@ -63,7 +64,9 @@ func (d *RedisDbStorer) GetRoute(ctx context.Context, tid tenant.Id, id string) 
 	tracer := otel.Tracer("ears")
 	ctx, span := tracer.Start(ctx, "getRoute")
 	defer span.End()
-	span.SetAttributes(attribute.String("type", "redis"))
+	span.SetAttributes(semconv.DBSystemRedis)
+	span.SetAttributes(semconv.DBConnectionStringKey.String(d.endpoint))
+	span.SetAttributes(attribute.String("db.table", d.tableName))
 	r := route.Config{}
 	result, err := d.client.HGet(d.tableName, tid.KeyWithRoute(id)).Result()
 	if err != nil {
@@ -83,7 +86,9 @@ func (d *RedisDbStorer) GetAllRoutes(ctx context.Context) ([]route.Config, error
 	tracer := otel.Tracer("ears")
 	ctx, span := tracer.Start(ctx, "getRoutes")
 	defer span.End()
-	span.SetAttributes(attribute.String("type", "redis"))
+	span.SetAttributes(semconv.DBSystemRedis)
+	span.SetAttributes(semconv.DBConnectionStringKey.String(d.endpoint))
+	span.SetAttributes(attribute.String("db.table", d.tableName))
 	routes := make([]route.Config, 0)
 	results, err := d.client.HGetAll(d.tableName).Result()
 	if err != nil {
@@ -104,7 +109,9 @@ func (d *RedisDbStorer) GetAllTenantRoutes(ctx context.Context, tid tenant.Id) (
 	tracer := otel.Tracer("ears")
 	ctx, span := tracer.Start(ctx, "getTenantRoutes")
 	defer span.End()
-	span.SetAttributes(attribute.String("type", "redis"))
+	span.SetAttributes(semconv.DBSystemRedis)
+	span.SetAttributes(semconv.DBConnectionStringKey.String(d.endpoint))
+	span.SetAttributes(attribute.String("db.table", d.tableName))
 	routes, err := d.GetAllRoutes(ctx)
 	if err != nil {
 		return nil, err
@@ -122,7 +129,9 @@ func (d *RedisDbStorer) SetRoute(ctx context.Context, r route.Config) error {
 	tracer := otel.Tracer("ears")
 	ctx, span := tracer.Start(ctx, "storeRoute")
 	defer span.End()
-	span.SetAttributes(attribute.String("type", "redis"))
+	span.SetAttributes(semconv.DBSystemRedis)
+	span.SetAttributes(semconv.DBConnectionStringKey.String(d.endpoint))
+	span.SetAttributes(attribute.String("db.table", d.tableName))
 	if r.Id == "" {
 		return fmt.Errorf("no route to store in redis")
 	}
@@ -161,7 +170,9 @@ func (d *RedisDbStorer) DeleteRoute(ctx context.Context, tid tenant.Id, id strin
 	tracer := otel.Tracer("ears")
 	ctx, span := tracer.Start(ctx, "deleteRoute")
 	defer span.End()
-	span.SetAttributes(attribute.String("type", "redis"))
+	span.SetAttributes(semconv.DBSystemRedis)
+	span.SetAttributes(semconv.DBConnectionStringKey.String(d.endpoint))
+	span.SetAttributes(attribute.String("db.table", d.tableName))
 	if id == "" {
 		return fmt.Errorf("no route to delete in bolt")
 	}
