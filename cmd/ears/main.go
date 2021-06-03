@@ -16,6 +16,8 @@
  */
 package main
 
+import "github.com/xmidt-org/ears/cmd/ears/subcmd"
+
 func main() {
-	Execute()
+	subcmd.Execute()
 }
