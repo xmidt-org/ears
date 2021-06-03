@@ -13,6 +13,8 @@ BUILDTIME = $(shell date -u '+%c')
 GITCOMMIT = $(shell git rev-parse --short HEAD)
 GOBUILDFLAGS = -a -ldflags "-w -s -X 'main.BuildTime=$(BUILDTIME)' -X main.GitCommit=$(GITCOMMIT) -X main.Version=$(VERSION)" -o $(APP)
 
+BUILD_DIR = ./cmd/ears
+
 default: build
 
 generate:
@@ -30,7 +32,7 @@ check:
 	golangci-lint run -n | tee errors.txt
 
 build:
-	CGO_ENABLED=0 $(GO) build $(GOBUILDFLAGS)
+	CGO_ENABLED=0 $(GO) build $(GOBUILDFLAGS) $(BUILD_DIR)
 
 release: build
 	upx $(APP)
@@ -42,8 +44,8 @@ docker:
 
 binaries: generate
 	mkdir -p ./.ignore
-	CGO_ENABLED=0 GOOS=darwin GOARCH=amd64 $(GO) build -o ./.ignore/$(APP)-$(PROGVER).darwin-amd64 -ldflags "-X 'main.BuildTime=$(BUILDTIME)' -X main.GitCommit=$(GITCOMMIT) -X main.Version=$(VERSION)"
-	CGO_ENABLED=0 GOOS=linux  GOARCH=amd64 $(GO) build -o ./.ignore/$(APP)-$(PROGVER).linux-amd64 -ldflags "-X 'main.BuildTime=$(BUILDTIME)' -X main.GitCommit=$(GITCOMMIT) -X main.Version=$(VERSION)"
+	CGO_ENABLED=0 GOOS=darwin GOARCH=amd64 $(GO) build -o ./.ignore/$(APP)-$(PROGVER).darwin-amd64 -ldflags "-X 'main.BuildTime=$(BUILDTIME)' -X main.GitCommit=$(GITCOMMIT) -X main.Version=$(VERSION)" $(BUILD_DIR)
+	CGO_ENABLED=0 GOOS=linux  GOARCH=amd64 $(GO) build -o ./.ignore/$(APP)-$(PROGVER).linux-amd64 -ldflags "-X 'main.BuildTime=$(BUILDTIME)' -X main.GitCommit=$(GITCOMMIT) -X main.Version=$(VERSION)" $(BUILD_DIR)
 
 	upx ./.ignore/$(APP)-$(PROGVER).darwin-amd64
 	upx ./.ignore/$(APP)-$(PROGVER).linux-amd64
