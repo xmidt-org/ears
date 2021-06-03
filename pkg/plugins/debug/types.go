@@ -56,6 +56,7 @@ var DefaultReceiverConfig = ReceiverConfig{
 	Rounds:     pointer.Int(4),
 	Payload:    "debug message",
 	MaxHistory: pointer.Int(100),
+	Trace:      pointer.Bool(false),
 }
 
 // ReceiverConfig determines how the receiver will operate.  To
@@ -67,9 +68,10 @@ var InfiniteRounds = pointer.Int(-1)
 
 type ReceiverConfig struct {
 	IntervalMs *int        `json:"intervalMs,omitempty"`
-	Rounds     *int        `json:"rounds,omitempty"` // InfiniteRounds (-1) Signifies "infinite"
+	Rounds     *int        `json:"rounds,omitempty"` // (-1) signifies infinite routes
 	Payload    interface{} `json:"payload,omitempty"`
 	MaxHistory *int        `json:"maxHistory,omitempty"`
+	Trace      *bool       `json:"trace,omitempty"`
 }
 
 type Receiver struct {
@@ -100,7 +102,6 @@ type SendStderr struct {
 // make use of SenderConfig.MaxHistory and History() instead.
 type SendSlice struct {
 	EventWriter
-
 	sync.Mutex
 	events []event.Event
 }
@@ -146,16 +147,13 @@ type SenderConfig struct {
 
 type Sender struct {
 	sync.Mutex
-
-	config  SenderConfig
-	history *history
-
+	config      SenderConfig
+	history     *history
 	destination EventWriter
 }
 
 type history struct {
 	sync.Mutex
-
 	size  int
 	count int
 	ring  *ring.Ring

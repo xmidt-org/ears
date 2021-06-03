@@ -14,5 +14,8 @@ const (
 )
 
 var (
+	EARSEventTrace = attribute.Key("ears.op").String("event")
+	EARSAPITrace   = attribute.Key("ears.op").String("api")
+
 	DBSystemInMemory = semconv.DBSystemKey.String("inmemory")
 )
