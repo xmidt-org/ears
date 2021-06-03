@@ -14,7 +14,7 @@ A working version of EARS including:
 - routing table manager and filter chain
 - routing configuration REST API  
 - github actions, normalize analysis tools, Dockerfiles and Makefiles. [#60](https://github.com/xmidt-org/ears/pull/60)
-- debug, sqs, kafka, http io plugin
+- debug, sqs, kafka, http sender/reciever plugins
 - various filter plugins
 - multi-tenant support
 - tenant quota and rate limiting
