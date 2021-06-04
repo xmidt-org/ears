@@ -65,7 +65,7 @@ func (h *Receiver) GetTraceId(r *http.Request) string {
 func (h *Receiver) Receive(next receiver.NextFn) error {
 
 	mux := http.NewServeMux()
-	h.srv = &http.Server{Addr: fmt.Sprintf(":%d", h.config.Port), Handler: mux}
+	h.srv = &http.Server{Addr: fmt.Sprintf(":%d", *h.config.Port), Handler: mux}
 
 	mux.HandleFunc(h.config.Path, func(w http.ResponseWriter, r *http.Request) {
 		defer fmt.Fprintln(w, "good")
