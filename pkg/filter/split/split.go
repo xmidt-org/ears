@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"github.com/xmidt-org/ears/pkg/event"
 	"github.com/xmidt-org/ears/pkg/filter"
+	"go.opentelemetry.io/otel"
 )
 
 // a SplitFilter splits and event into two or more events
@@ -46,6 +47,11 @@ func (f *Filter) Filter(evt event.Event) []event.Event {
 		evt.Nack(&filter.InvalidConfigError{
 			Err: fmt.Errorf("<nil> pointer filter")})
 		return nil
+	}
+	if evt.Trace() {
+		tracer := otel.Tracer("ears")
+		_, span := tracer.Start(evt.Context(), "splitFilter")
+		defer span.End()
 	}
 	events := []event.Event{}
 	obj, _, _ := evt.GetPathValue(f.config.Path)

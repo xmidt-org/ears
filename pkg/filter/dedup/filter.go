@@ -22,6 +22,7 @@ import (
 	lru "github.com/hashicorp/golang-lru"
 	"github.com/xmidt-org/ears/pkg/event"
 	"github.com/xmidt-org/ears/pkg/filter"
+	"go.opentelemetry.io/otel"
 )
 
 func NewFilter(config interface{}) (*Filter, error) {
@@ -52,6 +53,11 @@ func (f *Filter) Filter(evt event.Event) []event.Event {
 			Err: fmt.Errorf("<nil> pointer filter"),
 		})
 		return nil
+	}
+	if evt.Trace() {
+		tracer := otel.Tracer("ears")
+		_, span := tracer.Start(evt.Context(), "dedupFilter")
+		defer span.End()
 	}
 	obj, _, _ := evt.GetPathValue(f.config.Path)
 	if obj == nil {

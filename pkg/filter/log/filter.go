@@ -16,9 +16,11 @@ package log
 
 import (
 	"encoding/json"
+	"fmt"
 	"github.com/rs/zerolog/log"
 	"github.com/xmidt-org/ears/pkg/event"
 	"github.com/xmidt-org/ears/pkg/filter"
+	"go.opentelemetry.io/otel"
 )
 
 var _ filter.Filterer = (*Filter)(nil)
@@ -31,6 +33,17 @@ type Filter struct{}
 
 // Filter log event and pass it on
 func (f *Filter) Filter(evt event.Event) []event.Event {
+	if f == nil {
+		evt.Nack(&filter.InvalidConfigError{
+			Err: fmt.Errorf("<nil> pointer filter"),
+		})
+		return nil
+	}
+	if evt.Trace() {
+		tracer := otel.Tracer("ears")
+		_, span := tracer.Start(evt.Context(), "logFilter")
+		defer span.End()
+	}
 	m := make(map[string]interface{})
 	m["payload"] = evt.Payload()
 	m["metadata"] = evt.Metadata()

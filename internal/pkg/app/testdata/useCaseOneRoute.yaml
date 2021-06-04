@@ -25,6 +25,7 @@ receiver:
           Type: String
           Value: CREATE
     maxHistory: 100
+    trace: true
 sender:
   plugin: debug
   name: useCaseOneRouteSender

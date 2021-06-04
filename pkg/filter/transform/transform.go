@@ -19,6 +19,7 @@ import (
 	"github.com/mohae/deepcopy"
 	"github.com/xmidt-org/ears/pkg/event"
 	"github.com/xmidt-org/ears/pkg/filter"
+	"go.opentelemetry.io/otel"
 	"strings"
 )
 
@@ -47,6 +48,11 @@ func (f *Filter) Filter(evt event.Event) []event.Event {
 			Err: fmt.Errorf("<nil> pointer filter"),
 		})
 		return nil
+	}
+	if evt.Trace() {
+		tracer := otel.Tracer("ears")
+		_, span := tracer.Start(evt.Context(), "transformFilter")
+		defer span.End()
 	}
 	events := []event.Event{}
 	if f.config.Transformation == nil {
