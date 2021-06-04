@@ -6,11 +6,12 @@
     "plugin": "redis",
     "name": "myRedisReceiver",
     "config": {
+      "trace": true
     }
   },
   "sender": {
     "plugin": "debug",
-    "name": "myDebug",
+    "name": "myDebugSender",
     "config": {
       "destination": "stdout",
       "maxHistory": 1000

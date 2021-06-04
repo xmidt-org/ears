@@ -23,6 +23,9 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/sqs"
 	"github.com/rs/zerolog"
+	"github.com/xmidt-org/ears/internal/pkg/rtsemconv"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/trace"
 	"os"
 	"strconv"
 	"time"
@@ -113,6 +116,7 @@ func (r *Receiver) startReceiveWorker(svc *sqs.SQS, n int) {
 			}
 		}()
 		// receive messages
+		tracer := otel.Tracer("ears")
 		for {
 			approximateReceiveCount := "ApproximateReceiveCount"
 			sqsParams := &sqs.ReceiveMessageInput{
@@ -166,20 +170,35 @@ func (r *Receiver) startReceiveWorker(svc *sqs.SQS, n int) {
 					continue
 				}
 				ctx, cancel := context.WithTimeout(context.Background(), time.Duration(*r.config.AcknowledgeTimeout)*time.Second)
+				var span trace.Span
+				if *r.config.Trace {
+					ctx, span = tracer.Start(ctx, "sqsReceiver")
+					span.SetAttributes(rtsemconv.EARSEventTrace)
+				}
 				e, err := event.New(ctx, payload, event.WithMetadata(*message), event.WithAck(
 					func(e event.Event) {
 						msg := e.Metadata().(sqs.Message) // get metadata associated with this event
 						//r.logger.Info().Str("op", "SQS.receiveWorker").Int("batchSize", len(sqsResp.Messages)).Int("workerNum", n).Msg("processed message " + (*msg.MessageId))
 						entry := sqs.DeleteMessageBatchRequestEntry{Id: msg.MessageId, ReceiptHandle: msg.ReceiptHandle}
 						entries <- &entry
+						if *r.config.Trace {
+							span.AddEvent("ack")
+							span.End()
+						}
 						cancel()
 					},
 					func(e event.Event, err error) {
 						msg := e.Metadata().(sqs.Message) // get metadata associated with this event
 						r.logger.Error().Str("op", "SQS.receiveWorker").Int("workerNum", n).Msg("failed to process message " + (*msg.MessageId) + ": " + err.Error())
 						// a nack below max retries - this is the only case where we do not delete the message yet
+						if *r.config.Trace {
+							span.AddEvent("nack")
+							span.RecordError(err)
+							span.End()
+						}
 						cancel()
-					}))
+					}),
+					event.WithTrace(*r.config.Trace))
 				if err != nil {
 					r.logger.Error().Str("op", "SQS.receiveWorker").Int("workerNum", n).Msg("cannot create event: " + err.Error())
 					return
