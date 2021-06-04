@@ -130,7 +130,8 @@
           "Type": "Notification",
           "UnsubscribeURL": "http://unsubscribe"
         },
-        "rounds": 1
+        "rounds": 1,
+        "trace": true
       },
       "name": "tbltstuseCaseOneRouteuseCaseRouteReceiver",
       "plugin": "debug"

@@ -17,6 +17,7 @@ package block
 import (
 	"github.com/xmidt-org/ears/pkg/event"
 	"github.com/xmidt-org/ears/pkg/filter"
+	"go.opentelemetry.io/otel"
 )
 
 var _ filter.Filterer = (*Filter)(nil)
@@ -29,6 +30,11 @@ type Filter struct{}
 
 // Filter lets no event pass
 func (f *Filter) Filter(evt event.Event) []event.Event {
+	if evt.Trace() {
+		tracer := otel.Tracer("ears")
+		_, span := tracer.Start(evt.Context(), "blockFilter")
+		defer span.End()
+	}
 	evt.Ack()
 	return []event.Event{}
 }

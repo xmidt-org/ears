@@ -18,6 +18,7 @@ import (
 	"fmt"
 	"github.com/xmidt-org/ears/pkg/event"
 	"github.com/xmidt-org/ears/pkg/filter"
+	"go.opentelemetry.io/otel"
 )
 
 func NewFilter(config interface{}) (*Filter, error) {
@@ -46,6 +47,11 @@ func (f *Filter) Filter(evt event.Event) []event.Event {
 		return nil
 	}
 	traceId := "123-456-789-000"
+	if evt.Trace() {
+		tracer := otel.Tracer("ears")
+		_, span := tracer.Start(evt.Context(), "traceFilter")
+		defer span.End()
+	}
 	evt.SetPathValue(f.config.Path, traceId, true)
 	return []event.Event{evt}
 }

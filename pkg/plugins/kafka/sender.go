@@ -26,6 +26,7 @@ import (
 	"github.com/xmidt-org/ears/pkg/event"
 	pkgplugin "github.com/xmidt-org/ears/pkg/plugin"
 	"github.com/xmidt-org/ears/pkg/sender"
+	"go.opentelemetry.io/otel"
 	"os"
 	"strings"
 	"time"
@@ -257,6 +258,11 @@ func (mp *ManualHashPartitioner) Partition(message *sarama.ProducerMessage, numP
 }
 
 func (s *Sender) Send(e event.Event) {
+	if e.Trace() {
+		tracer := otel.Tracer("ears")
+		_, span := tracer.Start(e.Context(), "kafkaSender")
+		defer span.End()
+	}
 	if s.stopped {
 		s.logger.Info().Str("op", "kafka.Send").Msg("drop message due to closed sender")
 		return

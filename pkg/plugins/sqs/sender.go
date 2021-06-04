@@ -27,19 +27,13 @@ import (
 	"github.com/xmidt-org/ears/pkg/event"
 	pkgplugin "github.com/xmidt-org/ears/pkg/plugin"
 	"github.com/xmidt-org/ears/pkg/sender"
+	"go.opentelemetry.io/otel"
 	"os"
 	"time"
 )
 
 //TODO: MessageAttributes
 //TODO: improve graceful shutdown
-//TODO: increase code coverage
-//DONE: consider sender thread pool
-//DONE: rename sender BatchSize config
-//DONE: use ears routes to fill or drain an sqs queue
-//DONE: receiver thread pool
-//DONE: stop sender timer loop when route is updated or deleted
-//DONE: fix updating an sqs route (or any route for that matter)
 
 func NewSender(config interface{}) (sender.Sender, error) {
 	var cfg SenderConfig
@@ -179,6 +173,11 @@ func (s *Sender) startSendWorker(n int) {
 }
 
 func (s *Sender) Send(e event.Event) {
+	if e.Trace() {
+		tracer := otel.Tracer("ears")
+		_, span := tracer.Start(e.Context(), "sqsSender")
+		defer span.End()
+	}
 	s.Lock()
 	if s.eventBatch == nil {
 		s.eventBatch = make([]event.Event, 0)
