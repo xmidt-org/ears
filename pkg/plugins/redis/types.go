@@ -17,6 +17,7 @@ package redis
 import (
 	"github.com/go-redis/redis"
 	"github.com/rs/zerolog"
+	"github.com/xorcare/pointer"
 	"sync"
 	"time"
 
@@ -52,11 +53,13 @@ func NewPluginVersion(name string, version string, commitID string) (*pkgplugin.
 var DefaultReceiverConfig = ReceiverConfig{
 	Endpoint: "localhost:6379",
 	Channel:  "ears",
+	Trace:    pointer.Bool(false),
 }
 
 type ReceiverConfig struct {
 	Endpoint string `json:"endpoint,omitempty"`
 	Channel  string `json:"channel,omitempty"`
+	Trace    *bool  `json:"trace,omitempty"`
 }
 
 type Receiver struct {

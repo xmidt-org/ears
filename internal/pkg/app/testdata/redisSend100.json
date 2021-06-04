@@ -1,7 +1,7 @@
 {
-  "id": "redis108",
+  "id": "redis112",
   "userId": "boris",
-  "name": "redisSend1000Route",
+  "name": "redisSend100Route",
   "receiver": {
     "plugin": "debug",
     "name": "myDebugReceiver",

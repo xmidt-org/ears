@@ -60,6 +60,7 @@ var DefaultReceiverConfig = ReceiverConfig{
 	NumRetries:          pointer.Int(0),
 	ReceiverQueueDepth:  pointer.Int(100),
 	ReceiverPoolSize:    pointer.Int(1),
+	Trace:               pointer.Bool(false),
 }
 
 type ReceiverConfig struct {
@@ -71,6 +72,7 @@ type ReceiverConfig struct {
 	NumRetries          *int   `json:"numRetries,omitempty"`
 	ReceiverQueueDepth  *int   `json:"receiverQueueDepth,omitempty"`
 	ReceiverPoolSize    *int   `json:"receiverPoolSize,omitempty"`
+	Trace               *bool  `json:"trace,omitempty"`
 }
 
 type Receiver struct {
