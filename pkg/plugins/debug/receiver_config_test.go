@@ -48,6 +48,7 @@ func TestReceiverWithDefault(t *testing.T) {
 				Rounds:     debug.DefaultReceiverConfig.Rounds,
 				Payload:    debug.DefaultReceiverConfig.Payload,
 				MaxHistory: debug.DefaultReceiverConfig.MaxHistory,
+				Trace:      debug.DefaultReceiverConfig.Trace,
 			},
 		},
 
@@ -61,6 +62,7 @@ func TestReceiverWithDefault(t *testing.T) {
 				Rounds:     debug.DefaultReceiverConfig.Rounds,
 				Payload:    debug.DefaultReceiverConfig.Payload,
 				MaxHistory: debug.DefaultReceiverConfig.MaxHistory,
+				Trace:      debug.DefaultReceiverConfig.Trace,
 			},
 		},
 
@@ -74,6 +76,7 @@ func TestReceiverWithDefault(t *testing.T) {
 				Rounds:     debug.DefaultReceiverConfig.Rounds,
 				Payload:    debug.DefaultReceiverConfig.Payload,
 				MaxHistory: debug.DefaultReceiverConfig.MaxHistory,
+				Trace:      debug.DefaultReceiverConfig.Trace,
 			},
 		},
 
@@ -87,6 +90,7 @@ func TestReceiverWithDefault(t *testing.T) {
 				Rounds:     pointer.Int(-77),
 				Payload:    debug.DefaultReceiverConfig.Payload,
 				MaxHistory: debug.DefaultReceiverConfig.MaxHistory,
+				Trace:      debug.DefaultReceiverConfig.Trace,
 			},
 		},
 
@@ -100,6 +104,7 @@ func TestReceiverWithDefault(t *testing.T) {
 				Rounds:     pointer.Int(0),
 				Payload:    debug.DefaultReceiverConfig.Payload,
 				MaxHistory: debug.DefaultReceiverConfig.MaxHistory,
+				Trace:      debug.DefaultReceiverConfig.Trace,
 			},
 		},
 
@@ -113,6 +118,7 @@ func TestReceiverWithDefault(t *testing.T) {
 				Rounds:     pointer.Int(93),
 				Payload:    debug.DefaultReceiverConfig.Payload,
 				MaxHistory: debug.DefaultReceiverConfig.MaxHistory,
+				Trace:      debug.DefaultReceiverConfig.Trace,
 			},
 		},
 
@@ -126,6 +132,7 @@ func TestReceiverWithDefault(t *testing.T) {
 				Rounds:     debug.DefaultReceiverConfig.Rounds,
 				Payload:    pointer.String(""),
 				MaxHistory: debug.DefaultReceiverConfig.MaxHistory,
+				Trace:      debug.DefaultReceiverConfig.Trace,
 			},
 		},
 
@@ -139,6 +146,7 @@ func TestReceiverWithDefault(t *testing.T) {
 				Rounds:     debug.DefaultReceiverConfig.Rounds,
 				Payload:    pointer.String("somevalue"),
 				MaxHistory: debug.DefaultReceiverConfig.MaxHistory,
+				Trace:      debug.DefaultReceiverConfig.Trace,
 			},
 		},
 
@@ -152,6 +160,7 @@ func TestReceiverWithDefault(t *testing.T) {
 				Rounds:     debug.DefaultReceiverConfig.Rounds,
 				Payload:    debug.DefaultReceiverConfig.Payload,
 				MaxHistory: pointer.Int(-8),
+				Trace:      debug.DefaultReceiverConfig.Trace,
 			},
 		},
 
@@ -165,6 +174,7 @@ func TestReceiverWithDefault(t *testing.T) {
 				Rounds:     debug.DefaultReceiverConfig.Rounds,
 				Payload:    debug.DefaultReceiverConfig.Payload,
 				MaxHistory: pointer.Int(0),
+				Trace:      debug.DefaultReceiverConfig.Trace,
 			},
 		},
 
@@ -178,6 +188,7 @@ func TestReceiverWithDefault(t *testing.T) {
 				Rounds:     debug.DefaultReceiverConfig.Rounds,
 				Payload:    debug.DefaultReceiverConfig.Payload,
 				MaxHistory: pointer.Int(26),
+				Trace:      debug.DefaultReceiverConfig.Trace,
 			},
 		},
 
@@ -188,12 +199,14 @@ func TestReceiverWithDefault(t *testing.T) {
 				Rounds:     pointer.Int(47),
 				Payload:    "something expected",
 				MaxHistory: pointer.Int(2836),
+				Trace:      debug.DefaultReceiverConfig.Trace,
 			},
 			expected: debug.ReceiverConfig{
 				IntervalMs: pointer.Int(54),
 				Rounds:     pointer.Int(47),
 				Payload:    "something expected",
 				MaxHistory: pointer.Int(2836),
+				Trace:      debug.DefaultReceiverConfig.Trace,
 			},
 		},
 	}
