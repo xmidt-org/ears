@@ -53,9 +53,7 @@ func NewReceiver(config interface{}) (receiver.Receiver, error) {
 
 	logger := zerolog.New(os.Stdout).Level(zerolog.InfoLevel)
 	return &Receiver{
-		path:   cfg.Path,
-		method: cfg.Method,
-		port:   *cfg.Port,
+		config: cfg,
 		logger: &logger,
 	}, nil
 }
@@ -67,9 +65,9 @@ func (h *Receiver) GetTraceId(r *http.Request) string {
 func (h *Receiver) Receive(next receiver.NextFn) error {
 
 	mux := http.NewServeMux()
-	h.srv = &http.Server{Addr: fmt.Sprintf(":%d", h.port), Handler: mux}
+	h.srv = &http.Server{Addr: fmt.Sprintf(":%d", h.config.Port), Handler: mux}
 
-	mux.HandleFunc(h.path, func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc(h.config.Path, func(w http.ResponseWriter, r *http.Request) {
 		defer fmt.Fprintln(w, "good")
 
 		b, err := ioutil.ReadAll(r.Body)
@@ -114,4 +112,16 @@ func (h *Receiver) StopReceiving(ctx context.Context) error {
 		return h.srv.Shutdown(ctx)
 	}
 	return nil
+}
+
+func (r *Receiver) Config() interface{} {
+	return r.config
+}
+
+func (r *Receiver) Name() string {
+	return ""
+}
+
+func (r *Receiver) Plugin() string {
+	return "http"
 }

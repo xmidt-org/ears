@@ -53,11 +53,9 @@ type ReceiverConfig struct {
 }
 
 type Receiver struct {
-	path   string
-	method string
-	port   int
 	logger *zerolog.Logger
 	srv    *http.Server
+	config ReceiverConfig
 }
 
 type SenderConfig struct {
@@ -67,8 +65,7 @@ type SenderConfig struct {
 
 type Sender struct {
 	client *http.Client
-	method string
-	url    string
+	config SenderConfig
 }
 
 type BadHttpStatusError struct {
