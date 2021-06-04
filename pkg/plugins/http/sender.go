@@ -61,8 +61,7 @@ func NewSender(config interface{}) (sender.Sender, error) {
 		client: &http.Client{
 			Timeout: DEFAULT_TIMEOUT * time.Second,
 		},
-		method: cfg.Method,
-		url:    cfg.Url,
+		config: cfg,
 	}, nil
 }
 
@@ -78,7 +77,7 @@ func (s *Sender) Send(event event.Event) {
 		return
 	}
 
-	req, err := http.NewRequest(s.method, s.url, bytes.NewReader(body))
+	req, err := http.NewRequest(s.config.Method, s.config.Url, bytes.NewReader(body))
 	if err != nil {
 		event.Nack(err)
 		return
@@ -112,4 +111,16 @@ func (s *Sender) Unwrap() sender.Sender {
 
 func (s *Sender) StopSending(ctx context.Context) {
 	//nothing
+}
+
+func (r *Sender) Config() interface{} {
+	return r.config
+}
+
+func (r *Sender) Name() string {
+	return ""
+}
+
+func (r *Sender) Plugin() string {
+	return "http"
 }
