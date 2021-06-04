@@ -15,6 +15,7 @@
 package subcmd
 
 import (
+	"fmt"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
@@ -35,6 +36,7 @@ func Execute() {
 	log.Logger = log.With().Str("app.id", "ears").Logger()
 
 	if err := rootCmd.Execute(); err != nil {
+		fmt.Println(err.Error())
 		log.Fatal().Str("op", "Execute").Msg(err.Error())
 	}
 }
@@ -48,7 +50,7 @@ func init() {
 			cli.Argument{
 				Name: "config", Shorthand: "", Type: cli.ArgTypeString,
 				Default: "", Persistent: true,
-				Description: "config file (default is $HOME/earth.yaml)",
+				Description: "config file (default is $HOME/ears.yaml)",
 			},
 		},
 	)
