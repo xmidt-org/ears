@@ -73,7 +73,7 @@ func NewAPIManager(routingMgr tablemgr.RoutingTableManager, tenantStorer tenant.
 	meter := global.Meter(rtsemconv.EARSMeterName)
 	// labels represent additional key-value descriptors that can be bound to a metric observer or recorder (huh?)
 	commonLabels := []attribute.KeyValue{
-		attribute.String("labelFoo", "bar"),
+		//attribute.String("labelFoo", "bar"),
 	}
 	// what about up/down counter?
 	// metric recorders

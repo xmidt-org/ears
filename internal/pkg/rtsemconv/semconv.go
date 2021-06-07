@@ -9,6 +9,8 @@ const (
 	EARSTracerName = "ears"
 	EARSMeterName  = "ears-meter"
 
+	EARSMetricEventSuccess       = "eventSuccess"
+	EARSMetricEventFailure       = "eventFailure"
 	EARSMetricAddRouteSuccess    = "addRouteSuccess"
 	EARSMetricAddRouteFailure    = "addRouteFailure"
 	EARSMetricRemoveRouteSuccess = "removeRouteSuccess"
