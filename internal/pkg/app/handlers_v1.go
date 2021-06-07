@@ -143,6 +143,7 @@ func (a *APIManager) addRouteHandler(w http.ResponseWriter, r *http.Request) {
 	if apiErr != nil {
 		log.Ctx(ctx).Error().Str("op", "AddRouteHandler").Str("error", apiErr.Error()).Msg("orgId or appId empty")
 		a.addRouteFailureRecorder.Add(ctx, 1.0)
+		span.RecordError(apiErr)
 		resp := ErrorResponse(apiErr)
 		resp.Respond(ctx, w)
 		return
@@ -154,6 +155,7 @@ func (a *APIManager) addRouteHandler(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		log.Ctx(ctx).Error().Str("op", "addRouteHandler").Msg(err.Error())
 		a.addRouteFailureRecorder.Add(ctx, 1.0)
+		span.RecordError(err)
 		resp := ErrorResponse(&InternalServerError{err})
 		resp.Respond(ctx, w)
 		return
@@ -163,6 +165,7 @@ func (a *APIManager) addRouteHandler(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		log.Ctx(ctx).Error().Str("op", "addRouteHandler").Msg(err.Error())
 		a.addRouteFailureRecorder.Add(ctx, 1.0)
+		span.RecordError(err)
 		resp := ErrorResponse(&BadRequestError{"Cannot unmarshal request body", err})
 		resp.Respond(ctx, w)
 		return
@@ -171,6 +174,7 @@ func (a *APIManager) addRouteHandler(w http.ResponseWriter, r *http.Request) {
 		err := &BadRequestError{"route ID mismatch " + routeId + " vs " + route.Id, nil}
 		log.Ctx(ctx).Error().Str("op", "addRouteHandler").Msg(err.Error())
 		a.addRouteFailureRecorder.Add(ctx, 1.0)
+		span.RecordError(err)
 		resp := ErrorResponse(err)
 		resp.Respond(ctx, w)
 		return
@@ -185,6 +189,7 @@ func (a *APIManager) addRouteHandler(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		log.Ctx(ctx).Error().Str("op", "addRouteHandler").Msg(err.Error())
 		a.addRouteFailureRecorder.Add(ctx, 1.0)
+		span.RecordError(err)
 		resp := ErrorResponse(convertToApiError(ctx, err))
 		resp.Respond(ctx, w)
 		return
@@ -209,6 +214,7 @@ func (a *APIManager) removeRouteHandler(w http.ResponseWriter, r *http.Request) 
 	if apiErr != nil {
 		log.Ctx(ctx).Error().Str("op", "removeRouteHandler").Str("error", apiErr.Error()).Msg("orgId or appId empty")
 		a.removeRouteFailureRecorder.Add(ctx, 1.0)
+		span.RecordError(apiErr)
 		resp := ErrorResponse(apiErr)
 		resp.Respond(ctx, w)
 		return
@@ -221,6 +227,7 @@ func (a *APIManager) removeRouteHandler(w http.ResponseWriter, r *http.Request) 
 	if err != nil {
 		log.Ctx(ctx).Error().Str("op", "removeRouteHandler").Msg(err.Error())
 		a.removeRouteFailureRecorder.Add(ctx, 1.0)
+		span.RecordError(err)
 		resp := ErrorResponse(convertToApiError(ctx, err))
 		resp.Respond(ctx, w)
 		return
@@ -244,6 +251,7 @@ func (a *APIManager) getRouteHandler(w http.ResponseWriter, r *http.Request) {
 	tid, apiErr := getTenant(ctx, vars)
 	if apiErr != nil {
 		log.Ctx(ctx).Error().Str("op", "getRouteHandler").Str("error", apiErr.Error()).Msg("orgId or appId empty")
+		span.RecordError(apiErr)
 		resp := ErrorResponse(apiErr)
 		resp.Respond(ctx, w)
 		return
@@ -255,6 +263,7 @@ func (a *APIManager) getRouteHandler(w http.ResponseWriter, r *http.Request) {
 	routeConfig, err := a.routingTableMgr.GetRoute(ctx, *tid, routeId)
 	if err != nil {
 		log.Ctx(ctx).Error().Str("op", "getRouteHandler").Msg(err.Error())
+		span.RecordError(err)
 		resp := ErrorResponse(convertToApiError(ctx, err))
 		resp.Respond(ctx, w)
 		return
@@ -276,6 +285,7 @@ func (a *APIManager) getAllTenantRoutesHandler(w http.ResponseWriter, r *http.Re
 	tid, apiErr := getTenant(ctx, vars)
 	if apiErr != nil {
 		log.Ctx(ctx).Error().Str("op", "GetAllTenantRoutes").Str("error", apiErr.Error()).Msg("orgId or appId empty")
+		span.RecordError(apiErr)
 		resp := ErrorResponse(apiErr)
 		resp.Respond(ctx, w)
 		return
@@ -285,6 +295,7 @@ func (a *APIManager) getAllTenantRoutesHandler(w http.ResponseWriter, r *http.Re
 	allRouteConfigs, err := a.routingTableMgr.GetAllTenantRoutes(ctx, *tid)
 	if err != nil {
 		log.Ctx(ctx).Error().Str("op", "GetAllTenantRoutes").Msg(err.Error())
+		span.RecordError(err)
 		resp := ErrorResponse(convertToApiError(ctx, err))
 		resp.Respond(ctx, w)
 		return
@@ -306,6 +317,7 @@ func (a *APIManager) getAllSendersHandler(w http.ResponseWriter, r *http.Request
 	allSenders, err := a.routingTableMgr.GetAllSendersStatus(ctx)
 	if err != nil {
 		log.Ctx(ctx).Error().Str("op", "getAllSendersHandler").Msg(err.Error())
+		span.RecordError(err)
 		resp := ErrorResponse(convertToApiError(ctx, err))
 		resp.Respond(ctx, w)
 		return
@@ -327,6 +339,7 @@ func (a *APIManager) getAllReceiversHandler(w http.ResponseWriter, r *http.Reque
 	allReceivers, err := a.routingTableMgr.GetAllReceiversStatus(ctx)
 	if err != nil {
 		log.Ctx(ctx).Error().Str("op", "getAllReceiversHandler").Msg(err.Error())
+		span.RecordError(err)
 		resp := ErrorResponse(convertToApiError(ctx, err))
 		resp.Respond(ctx, w)
 		return
@@ -348,6 +361,7 @@ func (a *APIManager) getAllFiltersHandler(w http.ResponseWriter, r *http.Request
 	allFilters, err := a.routingTableMgr.GetAllFiltersStatus(ctx)
 	if err != nil {
 		log.Ctx(ctx).Error().Str("op", "getAllFiltersHandler").Msg(err.Error())
+		span.RecordError(err)
 		resp := ErrorResponse(convertToApiError(ctx, err))
 		resp.Respond(ctx, w)
 		return
@@ -370,6 +384,7 @@ func (a *APIManager) getTenantConfigHandler(w http.ResponseWriter, r *http.Reque
 	tid, apiErr := getTenant(ctx, vars)
 	if apiErr != nil {
 		log.Ctx(ctx).Error().Str("op", "getTenantConfigHandler").Str("error", apiErr.Error()).Msg("orgId or appId empty")
+		span.RecordError(apiErr)
 		resp := ErrorResponse(apiErr)
 		resp.Respond(ctx, w)
 		return
@@ -379,6 +394,7 @@ func (a *APIManager) getTenantConfigHandler(w http.ResponseWriter, r *http.Reque
 	config, err := a.tenantStorer.GetConfig(ctx, *tid)
 	if err != nil {
 		log.Ctx(ctx).Error().Str("op", "getTenantConfigHandler").Str("error", err.Error()).Msg("error getting tenant config")
+		span.RecordError(err)
 		resp := ErrorResponse(convertToApiError(ctx, err))
 		resp.Respond(ctx, w)
 		return
@@ -400,6 +416,7 @@ func (a *APIManager) setTenantConfigHandler(w http.ResponseWriter, r *http.Reque
 	tid, apiErr := getTenant(ctx, vars)
 	if apiErr != nil {
 		log.Ctx(ctx).Error().Str("op", "setTenantConfigHandler").Str("error", apiErr.Error()).Msg("orgId or appId empty")
+		span.RecordError(apiErr)
 		resp := ErrorResponse(apiErr)
 		resp.Respond(ctx, w)
 		return
@@ -409,6 +426,7 @@ func (a *APIManager) setTenantConfigHandler(w http.ResponseWriter, r *http.Reque
 	body, err := ioutil.ReadAll(r.Body)
 	if err != nil {
 		log.Ctx(ctx).Error().Str("op", "setTenantConfigHandler").Str("error", err.Error()).Msg("error reading request body")
+		span.RecordError(err)
 		resp := ErrorResponse(&InternalServerError{err})
 		resp.Respond(ctx, w)
 		return
@@ -418,6 +436,7 @@ func (a *APIManager) setTenantConfigHandler(w http.ResponseWriter, r *http.Reque
 	if err != nil {
 		log.Ctx(ctx).Error().Str("op", "setTenantConfigHandler").Str("error", err.Error()).Msg("error unmarshal request body")
 		err = &BadRequestError{"Cannot unmarshal request body", err}
+		span.RecordError(err)
 		resp := ErrorResponse(&InternalServerError{err})
 		resp.Respond(ctx, w)
 		return
@@ -426,6 +445,7 @@ func (a *APIManager) setTenantConfigHandler(w http.ResponseWriter, r *http.Reque
 	err = a.tenantStorer.SetConfig(ctx, tenantConfig)
 	if err != nil {
 		log.Ctx(ctx).Error().Str("op", "setTenantConfigHandler").Str("error", err.Error()).Msg("error setting tenant config")
+		span.RecordError(err)
 		resp := ErrorResponse(convertToApiError(ctx, err))
 		resp.Respond(ctx, w)
 		return
@@ -448,6 +468,7 @@ func (a *APIManager) deleteTenantConfigHandler(w http.ResponseWriter, r *http.Re
 	tid, apiErr := getTenant(ctx, vars)
 	if apiErr != nil {
 		log.Ctx(ctx).Error().Str("op", "deleteTenantConfigHandler").Str("error", apiErr.Error()).Msg("orgId or appId empty")
+		span.RecordError(apiErr)
 		resp := ErrorResponse(apiErr)
 		resp.Respond(ctx, w)
 		return
@@ -457,6 +478,7 @@ func (a *APIManager) deleteTenantConfigHandler(w http.ResponseWriter, r *http.Re
 	err := a.tenantStorer.DeleteConfig(ctx, *tid)
 	if err != nil {
 		log.Ctx(ctx).Error().Str("op", "deleteTenantConfigHandler").Str("error", err.Error()).Msg("error deleting tenant config")
+		span.RecordError(err)
 		resp := ErrorResponse(convertToApiError(ctx, err))
 		resp.Respond(ctx, w)
 		return
