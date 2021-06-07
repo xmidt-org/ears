@@ -215,7 +215,7 @@ func (r *Receiver) Receive(next receiver.NextFn) error {
 	r.done = make(chan struct{})
 	r.stopped = false
 	r.Unlock()
-	tracer := otel.Tracer("ears")
+	tracer := otel.Tracer(rtsemconv.EARSTracerName)
 	go func() {
 		r.Start(func(msg *sarama.ConsumerMessage) bool {
 			// bail if context has been canceled

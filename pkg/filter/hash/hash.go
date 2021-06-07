@@ -24,6 +24,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/xmidt-org/ears/internal/pkg/rtsemconv"
 	"github.com/xmidt-org/ears/pkg/event"
 	"github.com/xmidt-org/ears/pkg/filter"
 	"go.opentelemetry.io/otel"
@@ -56,7 +57,7 @@ func (f *Filter) Filter(evt event.Event) []event.Event {
 		return nil
 	}
 	if evt.Trace() {
-		tracer := otel.Tracer("ears")
+		tracer := otel.Tracer(rtsemconv.EARSTracerName)
 		_, span := tracer.Start(evt.Context(), "hashFilter")
 		defer span.End()
 	}

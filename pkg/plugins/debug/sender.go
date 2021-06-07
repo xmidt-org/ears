@@ -17,6 +17,7 @@ package debug
 import (
 	"context"
 	"fmt"
+	"github.com/xmidt-org/ears/internal/pkg/rtsemconv"
 
 	"github.com/goccy/go-yaml"
 	"github.com/xmidt-org/ears/pkg/event"
@@ -71,7 +72,7 @@ func NewSender(config interface{}) (sender.Sender, error) {
 
 func (s *Sender) Send(e event.Event) {
 	if e.Trace() {
-		tracer := otel.Tracer("ears")
+		tracer := otel.Tracer(rtsemconv.EARSTracerName)
 		_, span := tracer.Start(e.Context(), "debugSender")
 		defer span.End()
 	}

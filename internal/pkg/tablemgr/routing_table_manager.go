@@ -22,6 +22,7 @@ import (
 	"github.com/rs/zerolog"
 	"github.com/xmidt-org/ears/internal/pkg/config"
 	"github.com/xmidt-org/ears/internal/pkg/plugin"
+	"github.com/xmidt-org/ears/internal/pkg/rtsemconv"
 	"github.com/xmidt-org/ears/internal/pkg/syncer"
 	"github.com/xmidt-org/ears/pkg/route"
 	"github.com/xmidt-org/ears/pkg/tenant"
@@ -88,7 +89,7 @@ func NewRoutingTableManager(pluginMgr plugin.Manager, storageMgr route.RouteStor
 }
 
 func (r *DefaultRoutingTableManager) unregisterAndStopRoute(ctx context.Context, tid tenant.Id, routeId string) error {
-	tracer := otel.Tracer("ears")
+	tracer := otel.Tracer(rtsemconv.EARSTracerName)
 	ctx, span := tracer.Start(ctx, "unregisterAndStopRoute")
 	defer span.End()
 	var err error
@@ -121,7 +122,7 @@ func (r *DefaultRoutingTableManager) unregisterAndStopRoute(ctx context.Context,
 }
 
 func (r *DefaultRoutingTableManager) registerAndRunRoute(ctx context.Context, routeConfig *route.Config) error {
-	tracer := otel.Tracer("ears")
+	tracer := otel.Tracer(rtsemconv.EARSTracerName)
 	ctx, span := tracer.Start(ctx, "registerAndRunRoute")
 	defer span.End()
 	var err error

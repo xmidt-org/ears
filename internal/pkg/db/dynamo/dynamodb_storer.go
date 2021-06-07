@@ -81,7 +81,7 @@ func (d *DynamoDbStorer) getRoute(ctx context.Context, tid tenant.Id, routeId st
 }
 
 func (d *DynamoDbStorer) GetRoute(ctx context.Context, tid tenant.Id, id string) (route.Config, error) {
-	tracer := otel.Tracer("ears")
+	tracer := otel.Tracer(rtsemconv.EARSTracerName)
 	ctx, span := tracer.Start(ctx, "getRoute")
 	defer span.End()
 	span.SetAttributes(semconv.DBSystemDynamoDB)
@@ -102,7 +102,7 @@ func (d *DynamoDbStorer) GetRoute(ctx context.Context, tid tenant.Id, id string)
 }
 
 func (d *DynamoDbStorer) GetAllRoutes(ctx context.Context) ([]route.Config, error) {
-	tracer := otel.Tracer("ears")
+	tracer := otel.Tracer(rtsemconv.EARSTracerName)
 	ctx, span := tracer.Start(ctx, "getRoutes")
 	defer span.End()
 	span.SetAttributes(semconv.DBSystemDynamoDB)
@@ -188,7 +188,7 @@ func (d *DynamoDbStorer) setRoute(ctx context.Context, r route.Config, svc *dyna
 }
 
 func (d *DynamoDbStorer) SetRoute(ctx context.Context, r route.Config) error {
-	tracer := otel.Tracer("ears")
+	tracer := otel.Tracer(rtsemconv.EARSTracerName)
 	ctx, span := tracer.Start(ctx, "storeRoute")
 	defer span.End()
 	span.SetAttributes(semconv.DBSystemDynamoDB)
@@ -205,7 +205,7 @@ func (d *DynamoDbStorer) SetRoute(ctx context.Context, r route.Config) error {
 
 //TODO: make this more efficient
 func (d *DynamoDbStorer) SetRoutes(ctx context.Context, routes []route.Config) error {
-	tracer := otel.Tracer("ears")
+	tracer := otel.Tracer(rtsemconv.EARSTracerName)
 	ctx, span := tracer.Start(ctx, "storeRoutes")
 	defer span.End()
 	span.SetAttributes(semconv.DBSystemDynamoDB)
@@ -245,7 +245,7 @@ func (d *DynamoDbStorer) deleteRoute(ctx context.Context, tid tenant.Id, id stri
 }
 
 func (d *DynamoDbStorer) DeleteRoute(ctx context.Context, tid tenant.Id, id string) error {
-	tracer := otel.Tracer("ears")
+	tracer := otel.Tracer(rtsemconv.EARSTracerName)
 	ctx, span := tracer.Start(ctx, "deleteRoute")
 	defer span.End()
 	span.SetAttributes(semconv.DBSystemDynamoDB)
@@ -261,7 +261,7 @@ func (d *DynamoDbStorer) DeleteRoute(ctx context.Context, tid tenant.Id, id stri
 }
 
 func (d *DynamoDbStorer) DeleteRoutes(ctx context.Context, tid tenant.Id, ids []string) error {
-	tracer := otel.Tracer("ears")
+	tracer := otel.Tracer(rtsemconv.EARSTracerName)
 	ctx, span := tracer.Start(ctx, "deleteRoutes")
 	defer span.End()
 	span.SetAttributes(semconv.DBSystemDynamoDB)

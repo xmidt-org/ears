@@ -6,6 +6,9 @@ import (
 )
 
 const (
+	EARSTracerName = "ears"
+	EARSMeterName  = "ears-meter"
+
 	EARSRouteId = attribute.Key("ears.routeId")
 	EARSAppId   = attribute.Key("ears.appId")
 	EARSOrgId   = attribute.Key("ears.orgId")

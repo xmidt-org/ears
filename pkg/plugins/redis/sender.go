@@ -20,6 +20,7 @@ import (
 	"github.com/go-redis/redis"
 	"github.com/goccy/go-yaml"
 	"github.com/rs/zerolog"
+	"github.com/xmidt-org/ears/internal/pkg/rtsemconv"
 	"github.com/xmidt-org/ears/pkg/event"
 	pkgplugin "github.com/xmidt-org/ears/pkg/plugin"
 	"github.com/xmidt-org/ears/pkg/sender"
@@ -85,7 +86,7 @@ func (s *Sender) StopSending(ctx context.Context) {
 
 func (s *Sender) Send(e event.Event) {
 	if e.Trace() {
-		tracer := otel.Tracer("ears")
+		tracer := otel.Tracer(rtsemconv.EARSTracerName)
 		_, span := tracer.Start(e.Context(), "redisSender")
 		defer span.End()
 	}

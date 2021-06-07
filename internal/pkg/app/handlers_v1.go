@@ -39,12 +39,14 @@ import (
 )
 
 type APIManager struct {
-	muxRouter               *mux.Router
-	routingTableMgr         tablemgr.RoutingTableManager
-	tenantStorer            tenant.TenantStorer
-	quotaManager            *quota.QuotaManager
-	addRouteSuccessRecorder metric.BoundFloat64Counter
-	addRouteFailureRecorder metric.BoundFloat64Counter
+	muxRouter                  *mux.Router
+	routingTableMgr            tablemgr.RoutingTableManager
+	tenantStorer               tenant.TenantStorer
+	quotaManager               *quota.QuotaManager
+	addRouteSuccessRecorder    metric.BoundFloat64Counter
+	addRouteFailureRecorder    metric.BoundFloat64Counter
+	removeRouteSuccessRecorder metric.BoundFloat64Counter
+	removeRouteFailureRecorder metric.BoundFloat64Counter
 }
 
 func NewAPIManager(routingMgr tablemgr.RoutingTableManager, tenantStorer tenant.TenantStorer, quotaManager *quota.QuotaManager) (*APIManager, error) {
@@ -68,7 +70,7 @@ func NewAPIManager(routingMgr tablemgr.RoutingTableManager, tenantStorer tenant.
 	api.muxRouter.HandleFunc("/ears/v1/filters", api.getAllFiltersHandler).Methods(http.MethodGet)
 	// metrics
 	// where should meters live (api manager, uberfx, global variables,...)?
-	meter := global.Meter("ears-meter")
+	meter := global.Meter(rtsemconv.EARSMeterName)
 	// labels represent additional key-value descriptors that can be bound to a metric observer or recorder (huh?)
 	commonLabels := []attribute.KeyValue{
 		attribute.String("labelFoo", "bar"),
@@ -84,9 +86,21 @@ func NewAPIManager(routingMgr tablemgr.RoutingTableManager, tenantStorer tenant.
 	api.addRouteFailureRecorder = metric.Must(meter).
 		NewFloat64Counter(
 			"addRouteFailure",
-			metric.WithDescription("measures the number of routes add failures"),
+			metric.WithDescription("measures the number of route add failures"),
 		).Bind(commonLabels...)
 	//defer addRouteFailureRecorder.Unbind()
+	api.removeRouteSuccessRecorder = metric.Must(meter).
+		NewFloat64Counter(
+			"removeRouteSuccess",
+			metric.WithDescription("measures the number of routes removed"),
+		).Bind(commonLabels...)
+	//defer removeRouteSuccessRecorder.Unbind()
+	api.removeRouteFailureRecorder = metric.Must(meter).
+		NewFloat64Counter(
+			"removeRouteFailure",
+			metric.WithDescription("measures the number of route remove failures"),
+		).Bind(commonLabels...)
+	//defer removeRouteFailureRecorder.Unbind()
 	return api, nil
 }
 
@@ -116,7 +130,7 @@ func getTenant(ctx context.Context, vars map[string]string) (*tenant.Id, ApiErro
 
 func (a *APIManager) addRouteHandler(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
-	tracer := otel.Tracer("ears")
+	tracer := otel.Tracer(rtsemconv.EARSTracerName)
 	ctx, span := tracer.Start(ctx, "addRoute")
 	defer span.End()
 	span.SetAttributes(semconv.HTTPMethodKey.String(r.Method))
@@ -184,7 +198,7 @@ func (a *APIManager) addRouteHandler(w http.ResponseWriter, r *http.Request) {
 
 func (a *APIManager) removeRouteHandler(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
-	tracer := otel.Tracer("ears")
+	tracer := otel.Tracer(rtsemconv.EARSTracerName)
 	ctx, span := tracer.Start(ctx, "removeRoute")
 	defer span.End()
 	span.SetAttributes(semconv.HTTPMethodKey.String(r.Method))
@@ -194,6 +208,7 @@ func (a *APIManager) removeRouteHandler(w http.ResponseWriter, r *http.Request) 
 	tid, apiErr := getTenant(ctx, vars)
 	if apiErr != nil {
 		log.Ctx(ctx).Error().Str("op", "removeRouteHandler").Str("error", apiErr.Error()).Msg("orgId or appId empty")
+		a.removeRouteFailureRecorder.Add(ctx, 1.0)
 		resp := ErrorResponse(apiErr)
 		resp.Respond(ctx, w)
 		return
@@ -205,9 +220,12 @@ func (a *APIManager) removeRouteHandler(w http.ResponseWriter, r *http.Request) 
 	err := a.routingTableMgr.RemoveRoute(ctx, *tid, routeId)
 	if err != nil {
 		log.Ctx(ctx).Error().Str("op", "removeRouteHandler").Msg(err.Error())
+		a.removeRouteFailureRecorder.Add(ctx, 1.0)
 		resp := ErrorResponse(convertToApiError(ctx, err))
 		resp.Respond(ctx, w)
 		return
+	} else {
+		a.removeRouteSuccessRecorder.Add(ctx, 1.0)
 	}
 	span.SetAttributes(semconv.HTTPStatusCodeKey.Int(200))
 	resp := ItemResponse(routeId)
@@ -216,7 +234,7 @@ func (a *APIManager) removeRouteHandler(w http.ResponseWriter, r *http.Request) 
 
 func (a *APIManager) getRouteHandler(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
-	tracer := otel.Tracer("ears")
+	tracer := otel.Tracer(rtsemconv.EARSTracerName)
 	ctx, span := tracer.Start(ctx, "getRoute")
 	defer span.End()
 	span.SetAttributes(semconv.HTTPMethodKey.String(r.Method))
@@ -248,7 +266,7 @@ func (a *APIManager) getRouteHandler(w http.ResponseWriter, r *http.Request) {
 
 func (a *APIManager) getAllTenantRoutesHandler(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
-	tracer := otel.Tracer("ears")
+	tracer := otel.Tracer(rtsemconv.EARSTracerName)
 	ctx, span := tracer.Start(ctx, "getAllTenantRoutes")
 	defer span.End()
 	span.SetAttributes(semconv.HTTPMethodKey.String(r.Method))
@@ -279,7 +297,7 @@ func (a *APIManager) getAllTenantRoutesHandler(w http.ResponseWriter, r *http.Re
 
 func (a *APIManager) getAllSendersHandler(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
-	tracer := otel.Tracer("ears")
+	tracer := otel.Tracer(rtsemconv.EARSTracerName)
 	ctx, span := tracer.Start(ctx, "getAllSenders")
 	defer span.End()
 	span.SetAttributes(semconv.HTTPMethodKey.String(r.Method))
@@ -300,7 +318,7 @@ func (a *APIManager) getAllSendersHandler(w http.ResponseWriter, r *http.Request
 
 func (a *APIManager) getAllReceiversHandler(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
-	tracer := otel.Tracer("ears")
+	tracer := otel.Tracer(rtsemconv.EARSTracerName)
 	ctx, span := tracer.Start(ctx, "getAllReceivers")
 	defer span.End()
 	span.SetAttributes(semconv.HTTPMethodKey.String(r.Method))
@@ -321,7 +339,7 @@ func (a *APIManager) getAllReceiversHandler(w http.ResponseWriter, r *http.Reque
 
 func (a *APIManager) getAllFiltersHandler(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
-	tracer := otel.Tracer("ears")
+	tracer := otel.Tracer(rtsemconv.EARSTracerName)
 	ctx, span := tracer.Start(ctx, "getAllFilters")
 	defer span.End()
 	span.SetAttributes(semconv.HTTPMethodKey.String(r.Method))
@@ -342,7 +360,7 @@ func (a *APIManager) getAllFiltersHandler(w http.ResponseWriter, r *http.Request
 
 func (a *APIManager) getTenantConfigHandler(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
-	tracer := otel.Tracer("ears")
+	tracer := otel.Tracer(rtsemconv.EARSTracerName)
 	ctx, span := tracer.Start(ctx, "getTenant")
 	defer span.End()
 	span.SetAttributes(semconv.HTTPMethodKey.String(r.Method))
@@ -372,7 +390,7 @@ func (a *APIManager) getTenantConfigHandler(w http.ResponseWriter, r *http.Reque
 
 func (a *APIManager) setTenantConfigHandler(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
-	tracer := otel.Tracer("ears")
+	tracer := otel.Tracer(rtsemconv.EARSTracerName)
 	ctx, span := tracer.Start(ctx, "addTenant")
 	defer span.End()
 	span.SetAttributes(semconv.HTTPMethodKey.String(r.Method))
@@ -420,7 +438,7 @@ func (a *APIManager) setTenantConfigHandler(w http.ResponseWriter, r *http.Reque
 
 func (a *APIManager) deleteTenantConfigHandler(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
-	tracer := otel.Tracer("ears")
+	tracer := otel.Tracer(rtsemconv.EARSTracerName)
 	ctx, span := tracer.Start(ctx, "deleteTenant")
 	defer span.End()
 	span.SetAttributes(semconv.HTTPMethodKey.String(r.Method))
