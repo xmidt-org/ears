@@ -17,6 +17,7 @@ package debug
 import (
 	"container/ring"
 	"github.com/rs/zerolog"
+	"go.opentelemetry.io/otel/metric"
 	"sync"
 
 	"github.com/xmidt-org/ears/pkg/event"
@@ -76,12 +77,14 @@ type ReceiverConfig struct {
 
 type Receiver struct {
 	sync.Mutex
-	done    chan struct{}
-	stopped bool
-	config  ReceiverConfig
-	history *history
-	next    receiver.NextFn
-	logger  zerolog.Logger
+	done                 chan struct{}
+	stopped              bool
+	config               ReceiverConfig
+	history              *history
+	next                 receiver.NextFn
+	logger               zerolog.Logger
+	eventSuccessRecorder metric.BoundFloat64Counter
+	eventFailureRecorder metric.BoundFloat64Counter
 }
 
 type EventWriter interface {
