@@ -79,25 +79,25 @@ func NewAPIManager(routingMgr tablemgr.RoutingTableManager, tenantStorer tenant.
 	// metric recorders
 	api.addRouteSuccessRecorder = metric.Must(meter).
 		NewFloat64Counter(
-			"addRouteSuccess",
+			rtsemconv.EARSMetricAddRouteSuccess,
 			metric.WithDescription("measures the number of routes added"),
 		).Bind(commonLabels...)
 	//defer addRouteSuccessRecorder.Unbind()
 	api.addRouteFailureRecorder = metric.Must(meter).
 		NewFloat64Counter(
-			"addRouteFailure",
+			rtsemconv.EARSMetricAddRouteFailure,
 			metric.WithDescription("measures the number of route add failures"),
 		).Bind(commonLabels...)
 	//defer addRouteFailureRecorder.Unbind()
 	api.removeRouteSuccessRecorder = metric.Must(meter).
 		NewFloat64Counter(
-			"removeRouteSuccess",
+			rtsemconv.EARSMetricRemoveRouteSuccess,
 			metric.WithDescription("measures the number of routes removed"),
 		).Bind(commonLabels...)
 	//defer removeRouteSuccessRecorder.Unbind()
 	api.removeRouteFailureRecorder = metric.Must(meter).
 		NewFloat64Counter(
-			"removeRouteFailure",
+			rtsemconv.EARSMetricRemoveRouteFailure,
 			metric.WithDescription("measures the number of route remove failures"),
 		).Bind(commonLabels...)
 	//defer removeRouteFailureRecorder.Unbind()
