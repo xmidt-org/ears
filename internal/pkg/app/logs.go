@@ -19,20 +19,9 @@ import (
 	"github.com/rs/zerolog"
 	"github.com/xmidt-org/ears/internal/pkg/config"
 	"os"
-	"sync"
 )
 
-var appLogger *zerolog.Logger
-var appLoggerLock = &sync.Mutex{}
-
 func ProvideLogger(config config.Config) (*zerolog.Logger, error) {
-	appLoggerLock.Lock()
-	defer appLoggerLock.Unlock()
-
-	if appLogger != nil {
-		return appLogger, nil
-	}
-
 	logLevel, err := zerolog.ParseLevel(config.GetString("ears.logLevel"))
 	if err != nil {
 		return nil, &InvalidOptionError{
@@ -40,7 +29,6 @@ func ProvideLogger(config config.Config) (*zerolog.Logger, error) {
 		}
 	}
 	logger := zerolog.New(os.Stdout).Level(logLevel)
-	//zerolog.LevelFieldName = "log.level"
-	appLogger = &logger
-	return appLogger, nil
+	zerolog.LevelFieldName = "log.level"
+	return &logger, nil
 }

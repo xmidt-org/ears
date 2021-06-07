@@ -15,6 +15,7 @@
 package subcmd
 
 import (
+	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -29,6 +30,7 @@ import (
 	"github.com/xmidt-org/ears/pkg/cli"
 	"github.com/xmidt-org/ears/pkg/panics"
 	"go.uber.org/fx"
+	"os"
 )
 
 var runCmd = &cobra.Command{
@@ -46,11 +48,14 @@ var runCmd = &cobra.Command{
 			}
 		}()
 
-		logger, err := app.ProvideLogger(AppConfig())
-		if err != nil {
-			log.Logger.Fatal().Str("op", "InitLogger").Str("error", "panic").
-				Msg("Error initialize logger")
-		}
+		//create an init logger for uberfx initialization
+		//Uberfx uses Prtinf to log initialization messages, but
+		//zerolog only logs at debug level when using Printf. If
+		//we don't use a separate zerolog logger, the error
+		//message is suppressed if logLevel is above debug
+		initLogger := zerolog.New(os.Stdout)
+		zerolog.LevelFieldName = "log.level"
+
 		earsApp := fx.New(
 			pluginmanagerfx.Module,
 			routestorerfx.Module,
@@ -65,7 +70,7 @@ var runCmd = &cobra.Command{
 				app.NewMiddleware,
 				app.NewMux,
 			),
-			fx.Logger(logger),
+			fx.Logger(&initLogger),
 			fx.Invoke(syncerfx.SetupDeltaSyncer),
 			fx.Invoke(tablemgr.SetupRoutingManager),
 			fx.Invoke(quotamanagerfx.SetupQuotaManager),
