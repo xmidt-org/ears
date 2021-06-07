@@ -51,7 +51,7 @@ func (r *Receiver) Receive(next receiver.NextFn) error {
 	r.done = make(chan struct{})
 	r.stopped = false
 	r.next = next
-	tracer := otel.Tracer("ears")
+	tracer := otel.Tracer(rtsemconv.EARSTracerName)
 	r.Unlock()
 	go func() {
 		defer func() {

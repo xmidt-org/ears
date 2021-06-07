@@ -61,7 +61,7 @@ func NewRedisDbStorer(config Config, logger *zerolog.Logger) (*RedisDbStorer, er
 }
 
 func (d *RedisDbStorer) GetRoute(ctx context.Context, tid tenant.Id, id string) (route.Config, error) {
-	tracer := otel.Tracer("ears")
+	tracer := otel.Tracer(rtsemconv.EARSTracerName)
 	_, span := tracer.Start(ctx, "getRoute")
 	defer span.End()
 	span.SetAttributes(semconv.DBSystemRedis)
@@ -83,7 +83,7 @@ func (d *RedisDbStorer) GetRoute(ctx context.Context, tid tenant.Id, id string) 
 }
 
 func (d *RedisDbStorer) GetAllRoutes(ctx context.Context) ([]route.Config, error) {
-	tracer := otel.Tracer("ears")
+	tracer := otel.Tracer(rtsemconv.EARSTracerName)
 	_, span := tracer.Start(ctx, "getRoutes")
 	defer span.End()
 	span.SetAttributes(semconv.DBSystemRedis)
@@ -106,7 +106,7 @@ func (d *RedisDbStorer) GetAllRoutes(ctx context.Context) ([]route.Config, error
 }
 
 func (d *RedisDbStorer) GetAllTenantRoutes(ctx context.Context, tid tenant.Id) ([]route.Config, error) {
-	tracer := otel.Tracer("ears")
+	tracer := otel.Tracer(rtsemconv.EARSTracerName)
 	_, span := tracer.Start(ctx, "getTenantRoutes")
 	defer span.End()
 	span.SetAttributes(semconv.DBSystemRedis)
@@ -126,7 +126,7 @@ func (d *RedisDbStorer) GetAllTenantRoutes(ctx context.Context, tid tenant.Id) (
 }
 
 func (d *RedisDbStorer) SetRoute(ctx context.Context, r route.Config) error {
-	tracer := otel.Tracer("ears")
+	tracer := otel.Tracer(rtsemconv.EARSTracerName)
 	_, span := tracer.Start(ctx, "storeRoute")
 	defer span.End()
 	span.SetAttributes(semconv.DBSystemRedis)
@@ -167,7 +167,7 @@ func (d *RedisDbStorer) SetRoutes(ctx context.Context, routes []route.Config) er
 }
 
 func (d *RedisDbStorer) DeleteRoute(ctx context.Context, tid tenant.Id, id string) error {
-	tracer := otel.Tracer("ears")
+	tracer := otel.Tracer(rtsemconv.EARSTracerName)
 	_, span := tracer.Start(ctx, "deleteRoute")
 	defer span.End()
 	span.SetAttributes(semconv.DBSystemRedis)

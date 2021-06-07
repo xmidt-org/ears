@@ -16,6 +16,7 @@ package match
 
 import (
 	"fmt"
+	"github.com/xmidt-org/ears/internal/pkg/rtsemconv"
 	"github.com/xmidt-org/ears/pkg/filter/match/pattern"
 	"github.com/xmidt-org/ears/pkg/filter/match/patternregex"
 	"go.opentelemetry.io/otel"
@@ -83,7 +84,7 @@ func (f *Filter) Filter(evt event.Event) []event.Event {
 		return nil
 	}
 	if evt.Trace() {
-		tracer := otel.Tracer("ears")
+		tracer := otel.Tracer(rtsemconv.EARSTracerName)
 		_, span := tracer.Start(evt.Context(), "matchFilter")
 		defer span.End()
 	}

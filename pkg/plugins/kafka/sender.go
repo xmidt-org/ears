@@ -23,6 +23,7 @@ import (
 	"github.com/Shopify/sarama"
 	"github.com/goccy/go-yaml"
 	"github.com/rs/zerolog"
+	"github.com/xmidt-org/ears/internal/pkg/rtsemconv"
 	"github.com/xmidt-org/ears/pkg/event"
 	pkgplugin "github.com/xmidt-org/ears/pkg/plugin"
 	"github.com/xmidt-org/ears/pkg/sender"
@@ -259,7 +260,7 @@ func (mp *ManualHashPartitioner) Partition(message *sarama.ProducerMessage, numP
 
 func (s *Sender) Send(e event.Event) {
 	if e.Trace() {
-		tracer := otel.Tracer("ears")
+		tracer := otel.Tracer(rtsemconv.EARSTracerName)
 		_, span := tracer.Start(e.Context(), "kafkaSender")
 		defer span.End()
 	}

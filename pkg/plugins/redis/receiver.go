@@ -98,7 +98,7 @@ func (r *Receiver) Receive(next receiver.NextFn) error {
 		defer r.redisClient.Close()
 		r.pubsub = r.redisClient.Subscribe(r.config.Channel)
 		defer r.pubsub.Close()
-		tracer := otel.Tracer("ears")
+		tracer := otel.Tracer(rtsemconv.EARSTracerName)
 		for {
 			// could have a pool of go routines consuming from this channel here
 			msg := <-r.pubsub.Channel()

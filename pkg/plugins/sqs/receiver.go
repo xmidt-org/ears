@@ -116,7 +116,7 @@ func (r *Receiver) startReceiveWorker(svc *sqs.SQS, n int) {
 			}
 		}()
 		// receive messages
-		tracer := otel.Tracer("ears")
+		tracer := otel.Tracer(rtsemconv.EARSTracerName)
 		for {
 			approximateReceiveCount := "ApproximateReceiveCount"
 			sqsParams := &sqs.ReceiveMessageInput{
