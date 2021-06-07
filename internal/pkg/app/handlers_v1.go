@@ -25,6 +25,8 @@ import (
 	"github.com/xmidt-org/ears/pkg/tenant"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/metric"
+	"go.opentelemetry.io/otel/metric/global"
 	"go.opentelemetry.io/otel/semconv"
 	"go.opentelemetry.io/otel/trace"
 	"io/ioutil"
@@ -98,10 +100,33 @@ func (a *APIManager) addRouteHandler(w http.ResponseWriter, r *http.Request) {
 	span.SetAttributes(semconv.HTTPTargetKey.String(r.RequestURI))
 	span.SetAttributes(semconv.HTTPHostKey.String(r.Host))
 	span.SetAttributes(semconv.HTTPRequestContentLengthKey.Int(int(r.ContentLength)))
+	//
+	meter := global.Meter("ears-meter")
+	// labels represent additional key-value descriptors that can be bound to a metric observer or recorder (huh?)
+	commonLabels := []attribute.KeyValue{
+		attribute.String("labelFoo", "bar"),
+	}
+	//TODO: how long-lived should recorders be, where should they be initialized (api manager, uberfx, global variables,...)
+	//
+	// metric recorders
+	addRouteSuccessRecorder := metric.Must(meter).
+		NewFloat64Counter(
+			"addRouteSuccess",
+			metric.WithDescription("measures the number of routes added"),
+		).Bind(commonLabels...)
+	defer addRouteSuccessRecorder.Unbind()
+	addRouteFailureRecorder := metric.Must(meter).
+		NewFloat64Counter(
+			"addRouteFailure",
+			metric.WithDescription("measures the number of routes add failures"),
+		).Bind(commonLabels...)
+	defer addRouteFailureRecorder.Unbind()
+	//
 	vars := mux.Vars(r)
 	tid, apiErr := getTenant(ctx, vars)
 	if apiErr != nil {
 		log.Ctx(ctx).Error().Str("op", "AddRouteHandler").Str("error", apiErr.Error()).Msg("orgId or appId empty")
+		addRouteFailureRecorder.Add(ctx, 1.0)
 		resp := ErrorResponse(apiErr)
 		resp.Respond(ctx, w)
 		return
@@ -112,6 +137,7 @@ func (a *APIManager) addRouteHandler(w http.ResponseWriter, r *http.Request) {
 	body, err := ioutil.ReadAll(r.Body)
 	if err != nil {
 		log.Ctx(ctx).Error().Str("op", "addRouteHandler").Msg(err.Error())
+		addRouteFailureRecorder.Add(ctx, 1.0)
 		resp := ErrorResponse(&InternalServerError{err})
 		resp.Respond(ctx, w)
 		return
@@ -120,6 +146,7 @@ func (a *APIManager) addRouteHandler(w http.ResponseWriter, r *http.Request) {
 	err = yaml.Unmarshal(body, &route)
 	if err != nil {
 		log.Ctx(ctx).Error().Str("op", "addRouteHandler").Msg(err.Error())
+		addRouteFailureRecorder.Add(ctx, 1.0)
 		resp := ErrorResponse(&BadRequestError{"Cannot unmarshal request body", err})
 		resp.Respond(ctx, w)
 		return
@@ -127,6 +154,7 @@ func (a *APIManager) addRouteHandler(w http.ResponseWriter, r *http.Request) {
 	if routeId != "" && route.Id != "" && routeId != route.Id {
 		err := &BadRequestError{"route ID mismatch " + routeId + " vs " + route.Id, nil}
 		log.Ctx(ctx).Error().Str("op", "addRouteHandler").Msg(err.Error())
+		addRouteFailureRecorder.Add(ctx, 1.0)
 		resp := ErrorResponse(err)
 		resp.Respond(ctx, w)
 		return
@@ -140,9 +168,12 @@ func (a *APIManager) addRouteHandler(w http.ResponseWriter, r *http.Request) {
 	err = a.routingTableMgr.AddRoute(ctx, &route)
 	if err != nil {
 		log.Ctx(ctx).Error().Str("op", "addRouteHandler").Msg(err.Error())
+		addRouteFailureRecorder.Add(ctx, 1.0)
 		resp := ErrorResponse(convertToApiError(ctx, err))
 		resp.Respond(ctx, w)
 		return
+	} else {
+		addRouteSuccessRecorder.Add(ctx, 1.0)
 	}
 	span.SetAttributes(semconv.HTTPStatusCodeKey.Int(200))
 	resp := ItemResponse(route)
