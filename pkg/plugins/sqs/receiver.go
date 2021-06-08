@@ -73,16 +73,23 @@ func NewReceiver(config interface{}) (receiver.Receiver, error) {
 	meter := global.Meter(rtsemconv.EARSMeterName)
 	commonLabels := []attribute.KeyValue{
 		attribute.String(rtsemconv.EARSPluginType, rtsemconv.EARSPluginTypeSQS),
+		attribute.String(rtsemconv.EARSAppIdLabel, "default"),
+		attribute.String(rtsemconv.EARSOrgIdLabel, "default"),
 	}
-	r.eventSuccessRecorder = metric.Must(meter).
+	r.eventSuccessCounter = metric.Must(meter).
 		NewFloat64Counter(
 			rtsemconv.EARSMetricEventSuccess,
 			metric.WithDescription("measures the number of successful events"),
 		).Bind(commonLabels...)
-	r.eventFailureRecorder = metric.Must(meter).
+	r.eventFailureCounter = metric.Must(meter).
 		NewFloat64Counter(
 			rtsemconv.EARSMetricEventFailure,
 			metric.WithDescription("measures the number of unsuccessful events"),
+		).Bind(commonLabels...)
+	r.eventBytesCounter = metric.Must(meter).
+		NewInt64Counter(
+			rtsemconv.EARSMetricEventBytes,
+			metric.WithDescription("measures the number of event bytes processed"),
 		).Bind(commonLabels...)
 	return r, nil
 }
@@ -188,6 +195,7 @@ func (r *Receiver) startReceiveWorker(svc *sqs.SQS, n int) {
 					continue
 				}
 				ctx, cancel := context.WithTimeout(context.Background(), time.Duration(*r.config.AcknowledgeTimeout)*time.Second)
+				r.eventBytesCounter.Add(ctx, int64(len(*message.Body)))
 				var span trace.Span
 				if *r.config.Trace {
 					ctx, span = tracer.Start(ctx, "sqsReceiver")
@@ -203,7 +211,7 @@ func (r *Receiver) startReceiveWorker(svc *sqs.SQS, n int) {
 							span.AddEvent("ack")
 							span.End()
 						}
-						r.eventSuccessRecorder.Add(ctx, 1.0)
+						r.eventSuccessCounter.Add(ctx, 1.0)
 						cancel()
 					},
 					func(e event.Event, err error) {
@@ -215,7 +223,7 @@ func (r *Receiver) startReceiveWorker(svc *sqs.SQS, n int) {
 							span.RecordError(err)
 							span.End()
 						}
-						r.eventFailureRecorder.Add(ctx, 1.0)
+						r.eventFailureCounter.Add(ctx, 1.0)
 						cancel()
 					}),
 					event.WithTrace(*r.config.Trace))
@@ -284,8 +292,9 @@ func (r *Receiver) StopReceiving(ctx context.Context) error {
 	r.Lock()
 	if !r.stopped {
 		r.stopped = true
-		r.eventSuccessRecorder.Unbind()
-		r.eventFailureRecorder.Unbind()
+		r.eventSuccessCounter.Unbind()
+		r.eventFailureCounter.Unbind()
+		r.eventBytesCounter.Unbind()
 		close(r.done)
 	}
 	r.Unlock()

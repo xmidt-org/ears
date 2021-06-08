@@ -94,15 +94,16 @@ type Receiver struct {
 	count     int
 	startTime time.Time
 	sarama.ConsumerGroupSession
-	wg                   sync.WaitGroup
-	ready                chan bool
-	cancel               context.CancelFunc
-	ctx                  context.Context
-	client               sarama.ConsumerGroup
-	topics               []string
-	handler              func(message *sarama.ConsumerMessage) bool
-	eventSuccessRecorder metric.BoundFloat64Counter
-	eventFailureRecorder metric.BoundFloat64Counter
+	wg                  sync.WaitGroup
+	ready               chan bool
+	cancel              context.CancelFunc
+	ctx                 context.Context
+	client              sarama.ConsumerGroup
+	topics              []string
+	handler             func(message *sarama.ConsumerMessage) bool
+	eventSuccessCounter metric.BoundFloat64Counter
+	eventFailureCounter metric.BoundFloat64Counter
+	eventBytesCounter   metric.BoundInt64Counter
 }
 
 var DefaultSenderConfig = SenderConfig{
