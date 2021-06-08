@@ -166,7 +166,7 @@ func NewReceiver(config interface{}) (receiver.Receiver, error) {
 	// metric recorders
 	meter := global.Meter(rtsemconv.EARSMeterName)
 	commonLabels := []attribute.KeyValue{
-		attribute.String(rtsemconv.EARSPluginType, rtsemconv.EARSPluginTypeDebug),
+		attribute.String(rtsemconv.EARSPluginTypeLabel, rtsemconv.EARSPluginTypeDebug),
 		attribute.String(rtsemconv.EARSAppIdLabel, "default"),
 		attribute.String(rtsemconv.EARSOrgIdLabel, "default"),
 	}

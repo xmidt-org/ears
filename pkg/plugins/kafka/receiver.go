@@ -89,9 +89,11 @@ func NewReceiver(config interface{}) (receiver.Receiver, error) {
 	// metric recorders
 	meter := global.Meter(rtsemconv.EARSMeterName)
 	commonLabels := []attribute.KeyValue{
-		attribute.String(rtsemconv.EARSPluginType, rtsemconv.EARSPluginTypeKafka),
+		attribute.String(rtsemconv.EARSPluginTypeLabel, rtsemconv.EARSPluginTypeKafka),
 		attribute.String(rtsemconv.EARSAppIdLabel, "default"),
 		attribute.String(rtsemconv.EARSOrgIdLabel, "default"),
+		attribute.String(rtsemconv.KafkaTopicLabel, r.config.Topic),
+		attribute.String(rtsemconv.KafkaGroupIdLabel, r.config.GroupId),
 	}
 	r.eventSuccessCounter = metric.Must(meter).
 		NewFloat64Counter(
