@@ -84,13 +84,13 @@ func fanOut(events []event.Event, next receiver.NextFn) error {
 		return nil
 	}
 	for _, e := range events {
-		localE := e
+		//localE := e
 		go func(evt event.Event) {
 			defer func() {
 				p := recover()
 				if p != nil {
 					panicErr := panics.ToError(p)
-					log.Ctx(localE.Context()).Error().Str("op", "fanOutToSender").Str("error", panicErr.Error()).
+					log.Ctx(evt.Context()).Error().Str("op", "fanOutToSender").Str("error", panicErr.Error()).
 						Str("stackTrace", panicErr.StackTrace()).Msg("A panic has occurred")
 				}
 			}()

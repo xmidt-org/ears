@@ -40,13 +40,20 @@ type QuotaManager struct {
 	ctx    context.Context
 }
 
+const LimiterTypeNone = "none"
 const LimiterTypeRedis = "redis"
 const LimiterTypeInMemory = "inmemory"
+
+func validateLimiterType(limiterType string) bool {
+	return limiterType == LimiterTypeNone ||
+		limiterType == LimiterTypeRedis ||
+		limiterType == LimiterTypeInMemory
+}
 
 func NewQuotaManager(logger *zerolog.Logger, tenantStorer tenant.TenantStorer, syncer syncer.DeltaSyncer, config config.Config) (*QuotaManager, error) {
 	backendLimiterType := config.GetString("ears.ratelimiter.type")
 
-	if backendLimiterType != LimiterTypeRedis && backendLimiterType != LimiterTypeInMemory {
+	if !validateLimiterType(backendLimiterType) {
 		return nil, &BadConfigError{"ears.ratelimiter.type", backendLimiterType}
 	}
 
@@ -106,7 +113,7 @@ func (m *QuotaManager) Stop() {
 // Wait until rate limiter allows it to go through or context cancellation
 func (m *QuotaManager) Wait(ctx context.Context, tid tenant.Id) error {
 	limiter, err := m.getLimiter(ctx, tid)
-	if err != nil {
+	if limiter == nil || err != nil {
 		return nil
 	}
 	return limiter.Wait(ctx)
@@ -152,6 +159,10 @@ func (m *QuotaManager) PublishQuota(ctx context.Context, tid tenant.Id) error {
 func (m *QuotaManager) getLimiter(ctx context.Context, tid tenant.Id) (*QuotaLimiter, error) {
 	m.lock.Lock()
 	defer m.lock.Unlock()
+
+	if m.backendLimiterType == LimiterTypeNone {
+		return nil, nil
+	}
 
 	limiter, ok := m.limiters[tid.Key()]
 	if ok {
