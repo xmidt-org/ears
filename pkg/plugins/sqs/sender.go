@@ -207,5 +207,5 @@ func (s *Sender) Name() string {
 }
 
 func (s *Sender) Plugin() string {
-	return "sqs"
+	return rtsemconv.EARSPluginTypeSQS
 }

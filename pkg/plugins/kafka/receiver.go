@@ -89,7 +89,7 @@ func NewReceiver(config interface{}) (receiver.Receiver, error) {
 	// metric recorders
 	meter := global.Meter(rtsemconv.EARSMeterName)
 	commonLabels := []attribute.KeyValue{
-		attribute.String(rtsemconv.EARSPluginType, rtsemconv.EARSPluginTypeDebug),
+		attribute.String(rtsemconv.EARSPluginType, rtsemconv.EARSPluginTypeKafka),
 	}
 	r.eventSuccessRecorder = metric.Must(meter).
 		NewFloat64Counter(
@@ -335,5 +335,5 @@ func (r *Receiver) Name() string {
 }
 
 func (r *Receiver) Plugin() string {
-	return "kafka"
+	return rtsemconv.EARSPluginTypeKafka
 }
