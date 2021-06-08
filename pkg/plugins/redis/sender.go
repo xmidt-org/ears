@@ -122,5 +122,5 @@ func (s *Sender) Name() string {
 }
 
 func (s *Sender) Plugin() string {
-	return "kafka"
+	return rtsemconv.EARSPluginTypeRedis
 }

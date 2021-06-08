@@ -123,5 +123,5 @@ func (s *Sender) Name() string {
 }
 
 func (s *Sender) Plugin() string {
-	return "debug"
+	return rtsemconv.EARSPluginTypeDebug
 }
