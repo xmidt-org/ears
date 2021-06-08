@@ -18,6 +18,7 @@ import (
 	"github.com/go-redis/redis"
 	"github.com/rs/zerolog"
 	"github.com/xorcare/pointer"
+	"go.opentelemetry.io/otel/metric"
 	"sync"
 	"time"
 
@@ -64,15 +65,17 @@ type ReceiverConfig struct {
 
 type Receiver struct {
 	sync.Mutex
-	stopped     bool
-	redisClient *redis.Client
-	pubsub      *redis.PubSub
-	done        chan struct{}
-	config      ReceiverConfig
-	next        receiver.NextFn
-	logger      zerolog.Logger
-	count       int
-	startTime   time.Time
+	stopped              bool
+	redisClient          *redis.Client
+	pubsub               *redis.PubSub
+	done                 chan struct{}
+	config               ReceiverConfig
+	next                 receiver.NextFn
+	logger               zerolog.Logger
+	count                int
+	startTime            time.Time
+	eventSuccessRecorder metric.BoundFloat64Counter
+	eventFailureRecorder metric.BoundFloat64Counter
 }
 
 var DefaultSenderConfig = SenderConfig{

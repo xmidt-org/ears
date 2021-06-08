@@ -27,6 +27,9 @@ import (
 	"github.com/rs/zerolog"
 	"github.com/xmidt-org/ears/internal/pkg/rtsemconv"
 	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/metric"
+	"go.opentelemetry.io/otel/metric/global"
 	"go.opentelemetry.io/otel/trace"
 	"os"
 	"strings"
@@ -83,6 +86,21 @@ func NewReceiver(config interface{}) (receiver.Receiver, error) {
 		return nil, err
 	}
 	r.client = client
+	// metric recorders
+	meter := global.Meter(rtsemconv.EARSMeterName)
+	commonLabels := []attribute.KeyValue{
+		attribute.String(rtsemconv.EARSPluginType, rtsemconv.EARSPluginTypeDebug),
+	}
+	r.eventSuccessRecorder = metric.Must(meter).
+		NewFloat64Counter(
+			rtsemconv.EARSMetricEventSuccess,
+			metric.WithDescription("measures the number of successful events"),
+		).Bind(commonLabels...)
+	r.eventFailureRecorder = metric.Must(meter).
+		NewFloat64Counter(
+			rtsemconv.EARSMetricEventFailure,
+			metric.WithDescription("measures the number of unsuccessful events"),
+		).Bind(commonLabels...)
 	return r, nil
 }
 
@@ -246,6 +264,7 @@ func (r *Receiver) Receive(next receiver.NextFn) error {
 						span.AddEvent("ack")
 						span.End()
 					}
+					r.eventSuccessRecorder.Add(ctx, 1.0)
 					cancel()
 				},
 				func(e event.Event, err error) {
@@ -255,6 +274,7 @@ func (r *Receiver) Receive(next receiver.NextFn) error {
 						span.RecordError(err)
 						span.End()
 					}
+					r.eventFailureRecorder.Add(ctx, 1.0)
 					cancel()
 				}),
 				event.WithTrace(*r.config.Trace))
@@ -288,6 +308,8 @@ func (r *Receiver) StopReceiving(ctx context.Context) error {
 	r.Lock()
 	if !r.stopped {
 		r.stopped = true
+		r.eventSuccessRecorder.Unbind()
+		r.eventFailureRecorder.Unbind()
 		close(r.done)
 	}
 	r.Unlock()

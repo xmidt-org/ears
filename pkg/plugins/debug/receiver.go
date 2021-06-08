@@ -159,17 +159,17 @@ func NewReceiver(config interface{}) (receiver.Receiver, error) {
 	// metric recorders
 	meter := global.Meter(rtsemconv.EARSMeterName)
 	commonLabels := []attribute.KeyValue{
-		attribute.String("pluginType", "debug"),
+		attribute.String(rtsemconv.EARSPluginType, rtsemconv.EARSPluginTypeDebug),
 	}
 	r.eventSuccessRecorder = metric.Must(meter).
 		NewFloat64Counter(
 			rtsemconv.EARSMetricEventSuccess,
-			metric.WithDescription("measures the number of successful debug events"),
+			metric.WithDescription("measures the number of successful events"),
 		).Bind(commonLabels...)
 	r.eventFailureRecorder = metric.Must(meter).
 		NewFloat64Counter(
 			rtsemconv.EARSMetricEventFailure,
-			metric.WithDescription("measures the number of unsuccessful debug events"),
+			metric.WithDescription("measures the number of unsuccessful events"),
 		).Bind(commonLabels...)
 	return r, nil
 }
@@ -208,5 +208,5 @@ func (r *Receiver) Name() string {
 }
 
 func (r *Receiver) Plugin() string {
-	return "debug"
+	return rtsemconv.EARSPluginTypeDebug
 }
