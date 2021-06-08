@@ -52,7 +52,7 @@ func SetupAPIServer(lifecycle fx.Lifecycle, config config.Config, logger *zerolo
 		ls = launcher.ConfigureOpentelemetry(
 			launcher.WithServiceName("ears"),
 			launcher.WithAccessToken(config.GetString("ears.opentelemetry.lightstep.accessToken")),
-			launcher.WithServiceVersion(Version),
+			launcher.WithServiceVersion("1.0"),
 		)
 	}
 
