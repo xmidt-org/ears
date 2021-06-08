@@ -6,8 +6,14 @@ import (
 )
 
 const (
-	EARSTracerName = "ears"
-	EARSMeterName  = "ears-meter"
+	EARSTracerName      = "ears"
+	EARSMeterName       = "ears-meter"
+	EARSPluginType      = "pluginType"
+	EARSPluginTypeDebug = "debug"
+	EARSPluginTypeSQS   = "sqs"
+	EARSPluginTypeKafka = "kafka"
+	EARSPluginTypeHttp  = "http"
+	EARSPluginTypeRedis = "redis"
 
 	EARSMetricEventSuccess       = "eventSuccess"
 	EARSMetricEventFailure       = "eventFailure"

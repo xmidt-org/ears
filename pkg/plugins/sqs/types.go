@@ -19,6 +19,7 @@ import (
 	"github.com/rs/zerolog"
 	"github.com/xmidt-org/ears/pkg/event"
 	"github.com/xorcare/pointer"
+	"go.opentelemetry.io/otel/metric"
 	"sync"
 	"time"
 
@@ -77,14 +78,16 @@ type ReceiverConfig struct {
 
 type Receiver struct {
 	sync.Mutex
-	done         chan struct{}
-	stopped      bool
-	config       ReceiverConfig
-	next         receiver.NextFn
-	logger       zerolog.Logger
-	receiveCount int
-	deleteCount  int
-	startTime    time.Time
+	done                 chan struct{}
+	stopped              bool
+	config               ReceiverConfig
+	next                 receiver.NextFn
+	logger               zerolog.Logger
+	receiveCount         int
+	deleteCount          int
+	startTime            time.Time
+	eventSuccessRecorder metric.BoundFloat64Counter
+	eventFailureRecorder metric.BoundFloat64Counter
 }
 
 var DefaultSenderConfig = SenderConfig{
