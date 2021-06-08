@@ -77,6 +77,7 @@ type (
 	}
 	RouteTest struct {
 		SequenceNumber int              `json:"seq,omitempty"`
+		Disabled       bool             `json:"disabled,omitempty"`
 		RouteFiles     []string         `json:"routeFiles,omitempty"`
 		WaitMs         int              `json:"waitMs,omitempty"`
 		Events         []EventCheckTest `json:"events,omitempty"`
@@ -180,6 +181,9 @@ func TestRouteTable(t *testing.T) {
 	cnt := 0
 	for currentTestName, currentTest := range table.Table {
 		if table.TestToRunAllIfBlank != "" && table.TestToRunAllIfBlank != currentTestName {
+			continue
+		}
+		if currentTest.Disabled {
 			continue
 		}
 		cnt++
