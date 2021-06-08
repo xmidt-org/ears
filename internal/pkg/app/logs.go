@@ -28,7 +28,7 @@ func ProvideLogger(config config.Config) (*zerolog.Logger, error) {
 			Option: fmt.Sprintf("loglevel %s is not valid", config.GetString("ears.logLevel")),
 		}
 	}
-	logger := zerolog.New(os.Stdout).Level(logLevel)
+	logger := zerolog.New(os.Stdout).Level(logLevel).With().Timestamp().Logger()
 	zerolog.LevelFieldName = "log.level"
 	return &logger, nil
 }
