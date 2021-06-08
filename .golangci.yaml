@@ -104,3 +104,7 @@ issues:
       text: "type assertion on error"
       linters:
         - errorlint
+    - path: pkg/plugins/http/receiver\.go
+      text: "SA1029"
+      linters:
+        - staticcheck

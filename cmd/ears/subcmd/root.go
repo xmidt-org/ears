@@ -48,7 +48,7 @@ func init() {
 			cli.Argument{
 				Name: "config", Shorthand: "", Type: cli.ArgTypeString,
 				Default: "", Persistent: true,
-				Description: "config file (default is $HOME/earth.yaml)",
+				Description: "config file (default is $HOME/ears.yaml)",
 			},
 		},
 	)
