@@ -7,7 +7,7 @@ import (
 
 const (
 	EARSTracerName = "ears"
-	EARSMeterName  = "ears-meter"
+	EARSMeterName  = "ears"
 
 	EARSPluginTypeLabel = "pluginType"
 	EARSPluginTypeDebug = "debug"
