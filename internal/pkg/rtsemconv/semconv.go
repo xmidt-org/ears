@@ -17,6 +17,7 @@ const (
 
 	EARSMetricEventSuccess       = "eventSuccess"
 	EARSMetricEventFailure       = "eventFailure"
+	EARSMetricEventBytes         = "eventBytes"
 	EARSMetricAddRouteSuccess    = "addRouteSuccess"
 	EARSMetricAddRouteFailure    = "addRouteFailure"
 	EARSMetricRemoveRouteSuccess = "removeRouteSuccess"

@@ -16,6 +16,7 @@ package debug
 
 import (
 	"context"
+	"encoding/json"
 	"github.com/rs/zerolog"
 	"github.com/xmidt-org/ears/internal/pkg/rtsemconv"
 	"go.opentelemetry.io/otel"
@@ -64,6 +65,10 @@ func (r *Receiver) Receive(next receiver.NextFn) error {
 			}
 			r.Unlock()
 		}()
+		buf, err := json.Marshal(r.config.Payload)
+		if err != nil {
+			return
+		}
 		eventsDone := &sync.WaitGroup{}
 		eventsDone.Add(*r.config.Rounds)
 		for count := *r.config.Rounds; count != 0; {
@@ -77,6 +82,7 @@ func (r *Receiver) Receive(next receiver.NextFn) error {
 					ctx, span = tracer.Start(ctx, "debugReceiver")
 					span.SetAttributes(rtsemconv.EARSEventTrace)
 				}
+				r.eventBytesCounter.Add(ctx, int64(len(buf)))
 				e, err := event.New(ctx, r.config.Payload, event.WithAck(
 					func(evt event.Event) {
 						eventsDone.Done()
@@ -119,6 +125,7 @@ func (r *Receiver) StopReceiving(ctx context.Context) error {
 	if !r.stopped && r.done != nil {
 		r.eventSuccessCounter.Unbind()
 		r.eventFailureCounter.Unbind()
+		r.eventBytesCounter.Unbind()
 		close(r.done)
 		r.stopped = true
 	}
@@ -164,14 +171,19 @@ func NewReceiver(config interface{}) (receiver.Receiver, error) {
 		attribute.String(rtsemconv.EARSOrgIdLabel, "default"),
 	}
 	r.eventSuccessCounter = metric.Must(meter).
-		NewInt64Counter(
+		NewFloat64Counter(
 			rtsemconv.EARSMetricEventSuccess,
 			metric.WithDescription("measures the number of successful events"),
 		).Bind(commonLabels...)
 	r.eventFailureCounter = metric.Must(meter).
-		NewInt64Counter(
+		NewFloat64Counter(
 			rtsemconv.EARSMetricEventFailure,
 			metric.WithDescription("measures the number of unsuccessful events"),
+		).Bind(commonLabels...)
+	r.eventBytesCounter = metric.Must(meter).
+		NewInt64Counter(
+			rtsemconv.EARSMetricEventBytes,
+			metric.WithDescription("measures the number of event bytes processed"),
 		).Bind(commonLabels...)
 	return r, nil
 }
