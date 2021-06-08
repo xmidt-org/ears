@@ -124,5 +124,5 @@ func (r *Sender) Name() string {
 }
 
 func (r *Sender) Plugin() string {
-	return "http"
+	return rtsemconv.EARSPluginTypeHttp
 }
