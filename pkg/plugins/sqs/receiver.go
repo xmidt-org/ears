@@ -72,9 +72,10 @@ func NewReceiver(config interface{}) (receiver.Receiver, error) {
 	// metric recorders
 	meter := global.Meter(rtsemconv.EARSMeterName)
 	commonLabels := []attribute.KeyValue{
-		attribute.String(rtsemconv.EARSPluginType, rtsemconv.EARSPluginTypeSQS),
+		attribute.String(rtsemconv.EARSPluginTypeLabel, rtsemconv.EARSPluginTypeSQS),
 		attribute.String(rtsemconv.EARSAppIdLabel, "default"),
 		attribute.String(rtsemconv.EARSOrgIdLabel, "default"),
+		attribute.String(rtsemconv.SQSQueueUrlLabel, r.config.QueueUrl),
 	}
 	r.eventSuccessCounter = metric.Must(meter).
 		NewFloat64Counter(

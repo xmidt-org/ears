@@ -19,9 +19,11 @@ import (
 	"context"
 	"encoding/json"
 	"github.com/goccy/go-yaml"
+	"github.com/xmidt-org/ears/internal/pkg/rtsemconv"
 	"github.com/xmidt-org/ears/pkg/event"
 	pkgplugin "github.com/xmidt-org/ears/pkg/plugin"
 	"github.com/xmidt-org/ears/pkg/sender"
+	"go.opentelemetry.io/otel"
 	"io"
 	"io/ioutil"
 	"net/http"
@@ -70,38 +72,38 @@ func (s *Sender) SetTraceId(r *http.Request, traceId string) {
 }
 
 func (s *Sender) Send(event event.Event) {
+	if event.Trace() {
+		tracer := otel.Tracer(rtsemconv.EARSTracerName)
+		_, span := tracer.Start(event.Context(), "httpSender")
+		defer span.End()
+	}
 	payload := event.Payload()
 	body, err := json.Marshal(payload)
 	if err != nil {
 		event.Nack(err)
 		return
 	}
-
 	req, err := http.NewRequest(s.config.Method, s.config.Url, bytes.NewReader(body))
 	if err != nil {
 		event.Nack(err)
 		return
 	}
-
 	ctx := event.Context()
 	traceId := ctx.Value("traceId")
 	if traceId != nil {
 		s.SetTraceId(req, traceId.(string))
 	}
-
 	resp, err := s.client.Do(req)
 	if err != nil {
 		event.Nack(err)
 		return
 	}
-
 	io.Copy(ioutil.Discard, resp.Body)
 	defer resp.Body.Close()
 	if resp.StatusCode < http.StatusOK || resp.StatusCode >= http.StatusBadRequest {
 		event.Nack(&BadHttpStatusError{resp.StatusCode})
 		return
 	}
-
 	event.Ack()
 }
 
