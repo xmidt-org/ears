@@ -27,8 +27,6 @@ import (
 	"net/http"
 )
 
-var Version = "v0.0.0"
-
 func NewMux(a *APIManager, middleware []func(next http.Handler) http.Handler) (http.Handler, error) {
 	for _, m := range middleware {
 		a.muxRouter.Use(m)
