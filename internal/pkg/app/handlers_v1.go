@@ -22,6 +22,7 @@ import (
 	"github.com/xmidt-org/ears/internal/pkg/quota"
 	"github.com/xmidt-org/ears/internal/pkg/rtsemconv"
 	"github.com/xmidt-org/ears/internal/pkg/tablemgr"
+	"github.com/xmidt-org/ears/pkg/app"
 	"github.com/xmidt-org/ears/pkg/tenant"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
@@ -107,7 +108,7 @@ func NewAPIManager(routingMgr tablemgr.RoutingTableManager, tenantStorer tenant.
 func (a *APIManager) versionHandler(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	log.Ctx(ctx).Debug().Msg("versionHandler")
-	resp := ItemResponse(Version)
+	resp := ItemResponse(app.Version)
 	resp.Respond(ctx, w)
 }
 

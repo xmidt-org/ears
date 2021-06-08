@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package main
+package subcmd
 
 import (
 	"github.com/rs/zerolog"
@@ -48,7 +48,7 @@ func init() {
 			cli.Argument{
 				Name: "config", Shorthand: "", Type: cli.ArgTypeString,
 				Default: "", Persistent: true,
-				Description: "config file (default is $HOME/earth.yaml)",
+				Description: "config file (default is $HOME/ears.yaml)",
 			},
 		},
 	)

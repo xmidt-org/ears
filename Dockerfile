@@ -20,23 +20,17 @@ RUN apk add --no-cache --no-progress \
 
 RUN go get github.com/geofffranks/spruce/cmd/spruce && chmod +x /go/bin/spruce
 COPY . .
-RUN make test release
+RUN make build
 
-FROM alpine:3.12.1
+FROM scratch AS runtime
 
 COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
-COPY --from=builder /src/ears /src/ears.yaml /src/deploy/packaging/entrypoint.sh /go/bin/spruce /src/Dockerfile /src/NOTICE /src/LICENSE /src/CHANGELOG.md /
-COPY --from=builder /src/deploy/packaging/ears.yaml /tmp/ears.yaml
+COPY --from=builder /src/ears /src/NOTICE /src/LICENSE /src/CHANGELOG.md /
 
-RUN mkdir /etc/ears/ && touch /etc/ears/ears.yaml && chmod 666 /etc/ears/ears.yaml
+WORKDIR /
+ENTRYPOINT [ "/ears" ]
+CMD [ "run" ]
 
-USER nobody
-
-ENTRYPOINT ["/entrypoint.sh"]
-
-EXPOSE 6600
-EXPOSE 6601
-EXPOSE 6602
-EXPOSE 6603
-
-CMD ["/ears"]
+HEALTHCHECK \
+  --interval=10s --timeout=2s --retries=3 \
+  CMD ["/ears", "version"]
