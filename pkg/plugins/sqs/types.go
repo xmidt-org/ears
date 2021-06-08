@@ -78,16 +78,17 @@ type ReceiverConfig struct {
 
 type Receiver struct {
 	sync.Mutex
-	done                 chan struct{}
-	stopped              bool
-	config               ReceiverConfig
-	next                 receiver.NextFn
-	logger               zerolog.Logger
-	receiveCount         int
-	deleteCount          int
-	startTime            time.Time
-	eventSuccessRecorder metric.BoundFloat64Counter
-	eventFailureRecorder metric.BoundFloat64Counter
+	done                chan struct{}
+	stopped             bool
+	config              ReceiverConfig
+	next                receiver.NextFn
+	logger              zerolog.Logger
+	receiveCount        int
+	deleteCount         int
+	startTime           time.Time
+	eventSuccessCounter metric.BoundFloat64Counter
+	eventFailureCounter metric.BoundFloat64Counter
+	eventBytesCounter   metric.BoundInt64Counter
 }
 
 var DefaultSenderConfig = SenderConfig{
