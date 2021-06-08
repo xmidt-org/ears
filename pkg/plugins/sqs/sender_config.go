@@ -31,9 +31,6 @@ func (sc SenderConfig) WithDefaults() SenderConfig {
 	if cfg.DelaySeconds == nil {
 		cfg.DelaySeconds = DefaultSenderConfig.DelaySeconds
 	}
-	if cfg.SenderPoolSize == nil {
-		cfg.SenderPoolSize = DefaultSenderConfig.SenderPoolSize
-	}
 	return cfg
 }
 
@@ -77,11 +74,6 @@ const senderSchema = `
                     "type": "integer", 
 					"minimum": 0,
 					"maximum": 3600
-				},
-				"senderPoolSize": {
-                    "type": "integer", 
-					"minimum": 1,
-					"maximum": 100
 				}
             },
             "required": [
