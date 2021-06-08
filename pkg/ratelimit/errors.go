@@ -42,3 +42,10 @@ func (e *BackendError) Error() string {
 func (e *BackendError) Unwrap() error {
 	return e.Source
 }
+
+type ContextCancelled struct {
+}
+
+func (e *ContextCancelled) Error() string {
+	return errs.String("ContextCancelled", nil, nil)
+}

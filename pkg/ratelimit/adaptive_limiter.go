@@ -83,7 +83,7 @@ func (r *AdaptiveRateLimiter) Take(ctx context.Context, unit int) error {
 
 	if r.totalRqs == 0 {
 		//no limit
-		return nil
+		return &LimitReached{}
 	}
 
 	var err error

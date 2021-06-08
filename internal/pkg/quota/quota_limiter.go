@@ -61,7 +61,7 @@ func (r *QuotaLimiter) Wait(ctx context.Context) error {
 		}
 		select {
 		case <-ctx.Done():
-			return nil
+			return &ratelimit.ContextCancelled{}
 		case <-r.wakeup:
 			//keep looping
 		case <-time.After(sleepTO):
