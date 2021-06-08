@@ -53,7 +53,7 @@ var runCmd = &cobra.Command{
 		//zerolog only logs at debug level when using Printf. If
 		//we don't use a separate zerolog logger, the error
 		//message is suppressed if logLevel is above debug
-		initLogger := zerolog.New(os.Stdout)
+		initLogger := zerolog.New(os.Stdout).With().Timestamp().Logger()
 		zerolog.LevelFieldName = "log.level"
 
 		earsApp := fx.New(
