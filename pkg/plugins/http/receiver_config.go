@@ -52,6 +52,10 @@ const receiverSchema = `
                     "type": "integer", 
 					"minimum": 1024,
 					"maximum": 65535
+				},
+				"trace" : {
+					"type": "boolean",
+					"default": false
 				}
             },
             "required": [
