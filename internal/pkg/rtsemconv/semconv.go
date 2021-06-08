@@ -22,9 +22,11 @@ const (
 	EARSMetricRemoveRouteSuccess = "removeRouteSuccess"
 	EARSMetricRemoveRouteFailure = "removeRouteFailure"
 
-	EARSRouteId = attribute.Key("ears.routeId")
-	EARSAppId   = attribute.Key("ears.appId")
-	EARSOrgId   = attribute.Key("ears.orgId")
+	EARSRouteId    = attribute.Key("ears.routeId")
+	EARSAppId      = attribute.Key("ears.appId")
+	EARSOrgId      = attribute.Key("ears.orgId")
+	EARSAppIdLabel = "ears.appId"
+	EARSOrgIdLabel = "ears.orgId"
 
 	DBTable = attribute.Key("db.table")
 )

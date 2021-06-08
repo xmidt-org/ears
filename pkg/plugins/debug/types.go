@@ -77,14 +77,14 @@ type ReceiverConfig struct {
 
 type Receiver struct {
 	sync.Mutex
-	done                 chan struct{}
-	stopped              bool
-	config               ReceiverConfig
-	history              *history
-	next                 receiver.NextFn
-	logger               zerolog.Logger
-	eventSuccessRecorder metric.BoundFloat64Counter
-	eventFailureRecorder metric.BoundFloat64Counter
+	done                chan struct{}
+	stopped             bool
+	config              ReceiverConfig
+	history             *history
+	next                receiver.NextFn
+	logger              zerolog.Logger
+	eventSuccessCounter metric.BoundInt64Counter
+	eventFailureCounter metric.BoundInt64Counter
 }
 
 type EventWriter interface {

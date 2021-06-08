@@ -84,7 +84,7 @@ func (r *Receiver) Receive(next receiver.NextFn) error {
 							span.AddEvent("ack")
 							span.End()
 						}
-						r.eventSuccessRecorder.Add(ctx, 1.0)
+						r.eventSuccessCounter.Add(ctx, 1.0)
 						cancel()
 					}, func(evt event.Event, err error) {
 						r.logger.Error().Str("op", "debug.Receive").Msg("failed to process message: " + err.Error())
@@ -94,7 +94,7 @@ func (r *Receiver) Receive(next receiver.NextFn) error {
 							span.RecordError(err)
 							span.End()
 						}
-						r.eventFailureRecorder.Add(ctx, 1.0)
+						r.eventFailureCounter.Add(ctx, 1.0)
 						cancel()
 					}),
 					event.WithTrace(*r.config.Trace))
@@ -117,8 +117,8 @@ func (r *Receiver) StopReceiving(ctx context.Context) error {
 	r.Lock()
 	defer r.Unlock()
 	if !r.stopped && r.done != nil {
-		r.eventSuccessRecorder.Unbind()
-		r.eventFailureRecorder.Unbind()
+		r.eventSuccessCounter.Unbind()
+		r.eventFailureCounter.Unbind()
 		close(r.done)
 		r.stopped = true
 	}
@@ -160,14 +160,16 @@ func NewReceiver(config interface{}) (receiver.Receiver, error) {
 	meter := global.Meter(rtsemconv.EARSMeterName)
 	commonLabels := []attribute.KeyValue{
 		attribute.String(rtsemconv.EARSPluginType, rtsemconv.EARSPluginTypeDebug),
+		attribute.String(rtsemconv.EARSAppIdLabel, "default"),
+		attribute.String(rtsemconv.EARSOrgIdLabel, "default"),
 	}
-	r.eventSuccessRecorder = metric.Must(meter).
-		NewFloat64Counter(
+	r.eventSuccessCounter = metric.Must(meter).
+		NewInt64Counter(
 			rtsemconv.EARSMetricEventSuccess,
 			metric.WithDescription("measures the number of successful events"),
 		).Bind(commonLabels...)
-	r.eventFailureRecorder = metric.Must(meter).
-		NewFloat64Counter(
+	r.eventFailureCounter = metric.Must(meter).
+		NewInt64Counter(
 			rtsemconv.EARSMetricEventFailure,
 			metric.WithDescription("measures the number of unsuccessful events"),
 		).Bind(commonLabels...)
