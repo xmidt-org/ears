@@ -1,4 +1,4 @@
-// Copyright 2020 Comcast Cable Communications Management, LLC
+// Copyright 2021 Comcast Cable Communications Management, LLC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,28 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package handlers
+package app
 
-import (
-	"net/http"
-
-	"github.com/gorilla/mux"
-	"github.com/rs/zerolog/log"
-	"github.com/xmidt-org/ears/internal/pkg/app"
-)
-
-func NewRouter() (*mux.Router, error) {
-	r := mux.NewRouter()
-	r.HandleFunc("/version", versionHandler).Methods(http.MethodGet)
-	return r, nil
-}
-
-func versionHandler(w http.ResponseWriter, r *http.Request) {
-	ctx := r.Context()
-
-	log.Ctx(ctx).Debug().Msg("versionHandler")
-	resp := Response{
-		Item: app.Version,
-	}
-	resp.Respond(w)
-}
+var Version = "v0.0.0"

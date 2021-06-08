@@ -17,7 +17,7 @@ package subcmd
 import (
 	"fmt"
 	"github.com/spf13/cobra"
-	"github.com/xmidt-org/ears/internal/pkg/app"
+	"github.com/xmidt-org/ears/pkg/app"
 )
 
 // versionCmd represents the version command
