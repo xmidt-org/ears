@@ -17,6 +17,7 @@ package redis
 import (
 	"github.com/go-redis/redis"
 	"github.com/rs/zerolog"
+	"github.com/xmidt-org/ears/pkg/tenant"
 	"github.com/xorcare/pointer"
 	"go.opentelemetry.io/otel/metric"
 	"sync"
@@ -70,6 +71,9 @@ type Receiver struct {
 	pubsub              *redis.PubSub
 	done                chan struct{}
 	config              ReceiverConfig
+	name                string
+	plugin              string
+	tid                 tenant.Id
 	next                receiver.NextFn
 	logger              zerolog.Logger
 	count               int

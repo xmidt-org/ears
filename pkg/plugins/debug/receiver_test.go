@@ -16,6 +16,7 @@ package debug_test
 
 import (
 	"context"
+	"github.com/xmidt-org/ears/pkg/tenant"
 	"testing"
 	"time"
 
@@ -26,6 +27,8 @@ import (
 
 	. "github.com/onsi/gomega"
 )
+
+var tid = tenant.Id{OrgId: "myorg", AppId: "myapp"}
 
 func TestReceiver(t *testing.T) {
 	caseTimeout := 2 * time.Second
@@ -78,7 +81,7 @@ func TestReceiver(t *testing.T) {
 			// Make sure we fill in all values
 			tc.config = tc.config.WithDefaults()
 
-			r, err := p.NewReceiver(tc.config)
+			r, err := p.NewReceiver(tid, "debug", "mydebug", tc.config)
 			a.Expect(err).To(BeNil())
 
 			events := []event.Event{}

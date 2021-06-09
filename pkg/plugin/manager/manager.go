@@ -16,6 +16,7 @@ package manager
 
 import (
 	"fmt"
+	"github.com/xmidt-org/ears/pkg/tenant"
 	"reflect"
 	"sync"
 
@@ -287,14 +288,10 @@ func (m *manager) Receiverer(pluginName string) (receiver.NewReceiverer, error) 
 
 }
 
-func (m *manager) NewReceiver(pluginName string, config string) (receiver.Receiver, error) {
-
-	p, ok := m.registrations[pluginName].Plugin.(receiver.NewReceiverer)
-
+func (m *manager) NewReceiver(tid tenant.Id, plugin string, name string, config string) (receiver.Receiver, error) {
+	p, ok := m.registrations[plugin].Plugin.(receiver.NewReceiverer)
 	if !ok {
 		return nil, &NotFoundError{}
 	}
-
-	return p.NewReceiver(config)
-
+	return p.NewReceiver(tid, plugin, name, config)
 }

@@ -628,7 +628,7 @@ func newReceiverPlugin(t *testing.T) pkgplugin.Pluginer {
 		return "receiver_" + hasher.Hash(config), nil
 	}
 
-	plugMock.NewReceiverFunc = func(config interface{}) (pkgreceiver.Receiver, error) {
+	plugMock.NewReceiverFunc = func(tid tenant.Id, pluginType string, name string, config interface{}) (pkgreceiver.Receiver, error) {
 		return &receiverMock, nil
 	}
 

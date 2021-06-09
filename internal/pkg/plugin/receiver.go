@@ -55,6 +55,10 @@ func (r *receiver) Plugin() string {
 	return r.plugin
 }
 
+func (r *receiver) Tenant() tenant.Id {
+	return r.tid
+}
+
 func (r *receiver) Receive(next pkgreceiver.NextFn) error {
 	if r == nil {
 		return &pkgmanager.NilPluginError{}

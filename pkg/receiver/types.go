@@ -16,6 +16,7 @@ package receiver
 
 import (
 	"context"
+	"github.com/xmidt-org/ears/pkg/tenant"
 
 	"github.com/xmidt-org/ears/pkg/event"
 )
@@ -41,7 +42,7 @@ type NewReceiverer interface {
 	Hasher
 	// NewReceiver returns an object that implements the
 	// Receiver interface
-	NewReceiver(config interface{}) (Receiver, error)
+	NewReceiver(tid tenant.Id, plugin string, name string, config interface{}) (Receiver, error)
 }
 
 // NextFn defines the signature of a function that can take in an
@@ -60,4 +61,5 @@ type Receiver interface {
 	Config() interface{}
 	Name() string
 	Plugin() string
+	Tenant() tenant.Id
 }
