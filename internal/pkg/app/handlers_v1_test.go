@@ -101,7 +101,7 @@ type (
 
 const tenantPath = "/orgs/myorg/applications/myapp"
 
-var myTid = tenant.Id{"myorg", "myapp"}
+var myTid = tenant.Id{OrgId: "myorg", AppId: "myapp"}
 
 // should in memory storer also be implemented as singleton?
 
