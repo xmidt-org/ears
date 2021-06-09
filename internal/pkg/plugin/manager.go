@@ -605,5 +605,5 @@ func (m *manager) UnregisterSender(ctx context.Context, ps pkgsender.Sender) err
 // === Helper Functions ==============================================
 
 func (m *manager) mapkey(tid tenant.Id, name string, hash string) string {
-	return tid.Key() + "/" + name + "/" + hash
+	return tid.OrgId + "/" + tid.AppId + "/" + name + "/" + hash
 }
