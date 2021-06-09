@@ -93,7 +93,7 @@ func (p *plugin) Filter(e event.Event) []event.Event {
 
 // Sender ============================================================
 
-func NewSender(config interface{}) (sender.Sender, error) {
+func NewSender(tid tenant.Id, pluginType string, name string, config interface{}) (sender.Sender, error) {
 	return &plugin{}, nil
 }
 

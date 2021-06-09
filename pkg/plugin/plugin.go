@@ -247,7 +247,7 @@ func (p *Plugin) SenderHash(config interface{}) (string, error) {
 	return p.hashSender(config)
 }
 
-func (p *Plugin) NewSender(config interface{}) (sender.Sender, error) {
+func (p *Plugin) NewSender(tid tenant.Id, plugin string, name string, config interface{}) (sender.Sender, error) {
 	if p == nil {
 		return nil, &NilPluginError{}
 	}
@@ -256,7 +256,7 @@ func (p *Plugin) NewSender(config interface{}) (sender.Sender, error) {
 		return nil, &NotSupportedError{}
 	}
 
-	return p.newSender(config)
+	return p.newSender(tid, plugin, name, config)
 }
 
 // == Filterer ===========================================================

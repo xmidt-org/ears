@@ -562,7 +562,7 @@ func newSenderPlugin(t *testing.T) pkgplugin.Pluginer {
 		return "sender_" + hasher.Hash(config), nil
 	}
 
-	mock.NewSenderFunc = func(config interface{}) (pkgsender.Sender, error) {
+	mock.NewSenderFunc = func(tid tenant.Id, pluginType string, name string, config interface{}) (pkgsender.Sender, error) {
 		return &pkgsender.SenderMock{
 			SendFunc: func(e pkgevent.Event) {
 				defer e.Ack()

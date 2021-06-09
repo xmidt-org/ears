@@ -54,6 +54,10 @@ func (s *sender) Plugin() string {
 	return s.plugin
 }
 
+func (s *sender) Tenant() tenant.Id {
+	return s.tid
+}
+
 func (s *sender) Send(e event.Event) {
 	if s == nil {
 		e.Nack(&pkgmanager.NilPluginError{})

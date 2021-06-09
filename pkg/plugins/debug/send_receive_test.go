@@ -30,7 +30,7 @@ func TestSendReceive(t *testing.T) {
 
 	a.Expect(err).To(BeNil())
 
-	s, err := p.NewSender("")
+	s, err := p.NewSender(tid, "debug", "mydebug", "")
 	a.Expect(err).To(BeNil())
 
 	err = r.Receive(s.Send)

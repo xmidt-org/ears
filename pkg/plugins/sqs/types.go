@@ -114,6 +114,9 @@ type SenderConfig struct {
 type Sender struct {
 	sync.Mutex
 	sqsService *sqs.SQS
+	name       string
+	plugin     string
+	tid        tenant.Id
 	config     SenderConfig
 	count      int
 	logger     zerolog.Logger

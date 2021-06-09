@@ -511,7 +511,7 @@ func (m *manager) RegisterSender(
 
 	s, ok := m.senders[key]
 	if !ok {
-		s, err = ns.NewSender(config)
+		s, err = ns.NewSender(tid, plugin, name, config)
 		if err != nil {
 			return nil, &RegistrationError{
 				Message: "could not create sender",

@@ -23,6 +23,7 @@ import (
 	"github.com/xmidt-org/ears/pkg/event"
 	pkgplugin "github.com/xmidt-org/ears/pkg/plugin"
 	"github.com/xmidt-org/ears/pkg/sender"
+	"github.com/xmidt-org/ears/pkg/tenant"
 	"go.opentelemetry.io/otel"
 	"io"
 	"io/ioutil"
@@ -32,7 +33,7 @@ import (
 
 const DEFAULT_TIMEOUT = 10
 
-func NewSender(config interface{}) (sender.Sender, error) {
+func NewSender(tid tenant.Id, plugin string, name string, config interface{}) (sender.Sender, error) {
 	var cfg SenderConfig
 	var err error
 	switch c := config.(type) {
@@ -54,16 +55,17 @@ func NewSender(config interface{}) (sender.Sender, error) {
 	if err != nil {
 		return nil, err
 	}
-
 	//TODO Does this live here?
 	//TODO Make this a configuration?
 	http.DefaultTransport.(*http.Transport).MaxIdleConnsPerHost = 100
-
 	return &Sender{
 		client: &http.Client{
 			Timeout: DEFAULT_TIMEOUT * time.Second,
 		},
 		config: cfg,
+		name:   name,
+		plugin: plugin,
+		tid:    tid,
 	}, nil
 }
 
@@ -119,10 +121,14 @@ func (r *Sender) Config() interface{} {
 	return r.config
 }
 
-func (r *Sender) Name() string {
-	return ""
+func (s *Sender) Name() string {
+	return s.name
 }
 
-func (r *Sender) Plugin() string {
-	return rtsemconv.EARSPluginTypeHttp
+func (s *Sender) Plugin() string {
+	return s.plugin
+}
+
+func (s *Sender) Tenant() tenant.Id {
+	return s.tid
 }
