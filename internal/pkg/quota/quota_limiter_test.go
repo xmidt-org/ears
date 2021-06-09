@@ -109,7 +109,7 @@ func TestQuotaLimiter(t *testing.T) {
 
 func validateRps(limiter *quota.QuotaLimiter, rps int) error {
 	ctx := context.Background()
-	ctx, cancel := context.WithTimeout(ctx, 2*time.Second)
+	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
 
 	start := time.Now()
