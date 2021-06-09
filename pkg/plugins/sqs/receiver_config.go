@@ -45,6 +45,9 @@ func (rc *ReceiverConfig) WithDefaults() ReceiverConfig {
 	if cfg.ReceiverPoolSize == nil {
 		cfg.ReceiverPoolSize = DefaultReceiverConfig.ReceiverPoolSize
 	}
+	if cfg.Trace == nil {
+		cfg.Trace = DefaultReceiverConfig.Trace
+	}
 	return cfg
 }
 
@@ -106,6 +109,10 @@ const receiverSchema = `
                     "type": "integer", 
 					"minimum": 1,
 					"maximum": 100
+				},
+				"trace" : {
+					"type": "boolean",
+					"default": false
 				}
             },
             "required": [

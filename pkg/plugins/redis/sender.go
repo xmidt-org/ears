@@ -20,9 +20,11 @@ import (
 	"github.com/go-redis/redis"
 	"github.com/goccy/go-yaml"
 	"github.com/rs/zerolog"
+	"github.com/xmidt-org/ears/internal/pkg/rtsemconv"
 	"github.com/xmidt-org/ears/pkg/event"
 	pkgplugin "github.com/xmidt-org/ears/pkg/plugin"
 	"github.com/xmidt-org/ears/pkg/sender"
+	"go.opentelemetry.io/otel"
 	"os"
 )
 
@@ -83,6 +85,11 @@ func (s *Sender) StopSending(ctx context.Context) {
 }
 
 func (s *Sender) Send(e event.Event) {
+	if e.Trace() {
+		tracer := otel.Tracer(rtsemconv.EARSTracerName)
+		_, span := tracer.Start(e.Context(), "redisSender")
+		defer span.End()
+	}
 	buf, err := json.Marshal(e.Payload())
 	if err != nil {
 		s.logger.Error().Str("op", "redis.Send").Msg("failed to marshal message: " + err.Error())
@@ -115,5 +122,5 @@ func (s *Sender) Name() string {
 }
 
 func (s *Sender) Plugin() string {
-	return "kafka"
+	return rtsemconv.EARSPluginTypeRedis
 }

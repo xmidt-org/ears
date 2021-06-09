@@ -15,9 +15,12 @@
 package js
 
 import (
+	"fmt"
 	"github.com/rs/zerolog/log"
+	"github.com/xmidt-org/ears/internal/pkg/rtsemconv"
 	"github.com/xmidt-org/ears/pkg/event"
 	"github.com/xmidt-org/ears/pkg/filter"
+	"go.opentelemetry.io/otel"
 )
 
 func NewFilter(config interface{}) (*Filter, error) {
@@ -40,6 +43,17 @@ func NewFilter(config interface{}) (*Filter, error) {
 
 // Filter executes javascript transformation
 func (f *Filter) Filter(evt event.Event) []event.Event {
+	if f == nil {
+		evt.Nack(&filter.InvalidConfigError{
+			Err: fmt.Errorf("<nil> pointer filter"),
+		})
+		return nil
+	}
+	if evt.Trace() {
+		tracer := otel.Tracer(rtsemconv.EARSTracerName)
+		_, span := tracer.Start(evt.Context(), "jsFilter")
+		defer span.End()
+	}
 	transformedEvts, err := defaultInterpreter.Exec(evt, f.config.Source)
 	if err != nil {
 		log.Ctx(evt.Context()).Error().Str("op", "js.Filter").Msg("js filter error: " + err.Error())

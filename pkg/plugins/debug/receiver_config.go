@@ -24,41 +24,35 @@ import (
 // of the unset (nil) values filled in.
 func (rc *ReceiverConfig) WithDefaults() ReceiverConfig {
 	cfg := *rc
-
 	if cfg.IntervalMs == nil {
 		cfg.IntervalMs = DefaultReceiverConfig.IntervalMs
 	}
-
 	if cfg.Rounds == nil {
 		cfg.Rounds = DefaultReceiverConfig.Rounds
 	}
-
 	if cfg.Payload == nil {
 		cfg.Payload = DefaultReceiverConfig.Payload
 	}
-
 	if cfg.MaxHistory == nil {
 		cfg.MaxHistory = DefaultReceiverConfig.MaxHistory
 	}
-
+	if cfg.Trace == nil {
+		cfg.Trace = DefaultReceiverConfig.Trace
+	}
 	return cfg
 }
 
 // Validate returns an error upon validation failure
 func (rc *ReceiverConfig) Validate() error {
-
 	schema := gojsonschema.NewStringLoader(receiverSchema)
 	doc := gojsonschema.NewGoLoader(*rc)
 	result, err := gojsonschema.Validate(schema, doc)
-
 	if err != nil {
 		return err
 	}
-
 	if !result.Valid() {
 		return fmt.Errorf(fmt.Sprintf("%+v", result.Errors()))
 	}
-
 	return nil
 
 	// NOTE:  When `Min` was comparing against values other than 0,
@@ -81,7 +75,6 @@ func (rc *ReceiverConfig) Validate() error {
 	// 		validation.Min(*minReceiverConfig.MaxHistory),
 	// 	),
 	// )
-
 }
 
 const receiverSchema = `
@@ -95,19 +88,23 @@ const receiverSchema = `
             "properties": {
                 "intervalMs": {
                     "type": "integer",
-										"minimum": 1
+					"minimum": 1
                 },
                 "rounds": {
                     "type": "integer",
-										"minimum": -1
+					"minimum": -1
                 },
                 "payload": {
                     "type": ["string", "object", "array"]
                 },
                 "maxHistory": {
                     "type": "integer",
-										"minimum": 0
-                }
+					"minimum": 0
+                },
+				"trace" : {
+					"type": "boolean",
+					"default": false
+				}
             },
             "required": [
                 "intervalMs",

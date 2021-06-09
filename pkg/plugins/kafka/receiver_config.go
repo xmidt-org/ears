@@ -42,6 +42,9 @@ func (rc *ReceiverConfig) WithDefaults() ReceiverConfig {
 	if cfg.ChannelBufferSize == nil {
 		cfg.ChannelBufferSize = DefaultSenderConfig.ChannelBufferSize
 	}
+	if cfg.Trace == nil {
+		cfg.Trace = DefaultReceiverConfig.Trace
+	}
 	return cfg
 }
 
@@ -97,7 +100,11 @@ const receiverSchema = `
                 },
                 "channelBufferSize": {
                     "type": "integer"
-                }
+                },
+				"trace" : {
+					"type": "boolean",
+					"default": false
+				}
             },
             "required": [
                 "brokers", "topic", "groupId"

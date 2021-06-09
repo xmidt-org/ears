@@ -20,6 +20,7 @@ import (
 	pkgplugin "github.com/xmidt-org/ears/pkg/plugin"
 	"github.com/xmidt-org/ears/pkg/receiver"
 	"github.com/xmidt-org/ears/pkg/sender"
+	"go.opentelemetry.io/otel/metric"
 	"net/http"
 )
 
@@ -50,12 +51,16 @@ type ReceiverConfig struct {
 	Path   string `json:"path"`
 	Method string `json:"method"`
 	Port   *int   `json:"port"`
+	Trace  *bool  `json:"trace,omitempty"`
 }
 
 type Receiver struct {
-	logger *zerolog.Logger
-	srv    *http.Server
-	config ReceiverConfig
+	logger              *zerolog.Logger
+	srv                 *http.Server
+	config              ReceiverConfig
+	eventSuccessCounter metric.BoundFloat64Counter
+	eventFailureCounter metric.BoundFloat64Counter
+	eventBytesCounter   metric.BoundInt64Counter
 }
 
 type SenderConfig struct {

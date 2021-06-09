@@ -51,6 +51,12 @@ var _ Event = &EventMock{}
 // 			SetPayloadFunc: func(payload interface{}) error {
 // 				panic("mock out the SetPayload method")
 // 			},
+// 			SetTraceFunc: func(trace bool) error {
+// 				panic("mock out the SetTrace method")
+// 			},
+// 			TraceFunc: func() bool {
+// 				panic("mock out the Trace method")
+// 			},
 // 		}
 //
 // 		// use mockedEvent in code that requires Event
@@ -90,6 +96,12 @@ type EventMock struct {
 
 	// SetPayloadFunc mocks the SetPayload method.
 	SetPayloadFunc func(payload interface{}) error
+
+	// SetTraceFunc mocks the SetTrace method.
+	SetTraceFunc func(trace bool) error
+
+	// TraceFunc mocks the Trace method.
+	TraceFunc func() bool
 
 	// calls tracks calls to the methods.
 	calls struct {
@@ -144,6 +156,14 @@ type EventMock struct {
 			// Payload is the payload argument value.
 			Payload interface{}
 		}
+		// SetTrace holds details about calls to the SetTrace method.
+		SetTrace []struct {
+			// Trace is the trace argument value.
+			Trace bool
+		}
+		// Trace holds details about calls to the Trace method.
+		Trace []struct {
+		}
 	}
 	lockAck          sync.RWMutex
 	lockClone        sync.RWMutex
@@ -156,6 +176,8 @@ type EventMock struct {
 	lockSetMetadata  sync.RWMutex
 	lockSetPathValue sync.RWMutex
 	lockSetPayload   sync.RWMutex
+	lockSetTrace     sync.RWMutex
+	lockTrace        sync.RWMutex
 }
 
 // Ack calls AckFunc.
@@ -484,5 +506,62 @@ func (mock *EventMock) SetPayloadCalls() []struct {
 	mock.lockSetPayload.RLock()
 	calls = mock.calls.SetPayload
 	mock.lockSetPayload.RUnlock()
+	return calls
+}
+
+// SetTrace calls SetTraceFunc.
+func (mock *EventMock) SetTrace(trace bool) error {
+	if mock.SetTraceFunc == nil {
+		panic("EventMock.SetTraceFunc: method is nil but Event.SetTrace was just called")
+	}
+	callInfo := struct {
+		Trace bool
+	}{
+		Trace: trace,
+	}
+	mock.lockSetTrace.Lock()
+	mock.calls.SetTrace = append(mock.calls.SetTrace, callInfo)
+	mock.lockSetTrace.Unlock()
+	return mock.SetTraceFunc(trace)
+}
+
+// SetTraceCalls gets all the calls that were made to SetTrace.
+// Check the length with:
+//     len(mockedEvent.SetTraceCalls())
+func (mock *EventMock) SetTraceCalls() []struct {
+	Trace bool
+} {
+	var calls []struct {
+		Trace bool
+	}
+	mock.lockSetTrace.RLock()
+	calls = mock.calls.SetTrace
+	mock.lockSetTrace.RUnlock()
+	return calls
+}
+
+// Trace calls TraceFunc.
+func (mock *EventMock) Trace() bool {
+	if mock.TraceFunc == nil {
+		panic("EventMock.TraceFunc: method is nil but Event.Trace was just called")
+	}
+	callInfo := struct {
+	}{}
+	mock.lockTrace.Lock()
+	mock.calls.Trace = append(mock.calls.Trace, callInfo)
+	mock.lockTrace.Unlock()
+	return mock.TraceFunc()
+}
+
+// TraceCalls gets all the calls that were made to Trace.
+// Check the length with:
+//     len(mockedEvent.TraceCalls())
+func (mock *EventMock) TraceCalls() []struct {
+} {
+	var calls []struct {
+	}
+	mock.lockTrace.RLock()
+	calls = mock.calls.Trace
+	mock.lockTrace.RUnlock()
 	return calls
 }

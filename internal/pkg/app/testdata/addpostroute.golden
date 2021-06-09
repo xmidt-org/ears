@@ -14,7 +14,8 @@
         "payload": {
           "foo": "bar"
         },
-        "rounds": 5
+        "rounds": 5,
+        "trace": true
       },
       "name": "mydebug",
       "plugin": "debug"

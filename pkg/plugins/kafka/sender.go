@@ -23,9 +23,11 @@ import (
 	"github.com/Shopify/sarama"
 	"github.com/goccy/go-yaml"
 	"github.com/rs/zerolog"
+	"github.com/xmidt-org/ears/internal/pkg/rtsemconv"
 	"github.com/xmidt-org/ears/pkg/event"
 	pkgplugin "github.com/xmidt-org/ears/pkg/plugin"
 	"github.com/xmidt-org/ears/pkg/sender"
+	"go.opentelemetry.io/otel"
 	"os"
 	"strings"
 	"time"
@@ -257,6 +259,11 @@ func (mp *ManualHashPartitioner) Partition(message *sarama.ProducerMessage, numP
 }
 
 func (s *Sender) Send(e event.Event) {
+	if e.Trace() {
+		tracer := otel.Tracer(rtsemconv.EARSTracerName)
+		_, span := tracer.Start(e.Context(), "kafkaSender")
+		defer span.End()
+	}
 	if s.stopped {
 		s.logger.Info().Str("op", "kafka.Send").Msg("drop message due to closed sender")
 		return
@@ -303,5 +310,5 @@ func (s *Sender) Name() string {
 }
 
 func (s *Sender) Plugin() string {
-	return "kafka"
+	return rtsemconv.EARSPluginTypeKafka
 }

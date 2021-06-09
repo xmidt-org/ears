@@ -42,7 +42,7 @@ type StorageOut struct {
 
 func ProvideTenantStorer(in StorageIn) (StorageOut, error) {
 	out := StorageOut{}
-	storageType := in.Config.GetString("ears.storage.route.type")
+	storageType := in.Config.GetString("ears.storage.tenant.type")
 	switch storageType {
 	case "inmemory":
 		out.TenantStorer = db.NewTenantInmemoryStorer()

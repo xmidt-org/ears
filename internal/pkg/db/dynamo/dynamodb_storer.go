@@ -22,8 +22,11 @@ import (
 	"github.com/aws/aws-sdk-go/service/dynamodb"
 	"github.com/aws/aws-sdk-go/service/dynamodb/dynamodbattribute"
 	"github.com/xmidt-org/ears/internal/pkg/config"
+	"github.com/xmidt-org/ears/internal/pkg/rtsemconv"
 	"github.com/xmidt-org/ears/pkg/route"
 	"github.com/xmidt-org/ears/pkg/tenant"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/semconv"
 	"time"
 )
 
@@ -46,7 +49,6 @@ func NewDynamoDbStorer(config config.Config) (*DynamoDbStorer, error) {
 	if tableName == "" {
 		return nil, &MissingConfigError{"ears.storage.route.tableName"}
 	}
-
 	return &DynamoDbStorer{
 		region:    region,
 		tableName: tableName,
@@ -62,27 +64,28 @@ func (d *DynamoDbStorer) getRoute(ctx context.Context, tid tenant.Id, routeId st
 		},
 		TableName: aws.String(d.tableName),
 	}
-
 	result, err := svc.GetItemWithContext(ctx, input)
 	if err != nil {
 		return nil, &DynamoDbGetItemError{err}
 	}
-
 	if result.Item == nil {
 		return nil, &route.RouteNotFoundError{TenantId: tid, RouteId: routeId}
 	}
-
 	var item routeItem
 	err = dynamodbattribute.UnmarshalMap(result.Item, &item)
 	if err != nil {
 		return nil, &DynamoDbMarshalError{err}
 	}
-
 	routeConfig := item.Config
 	return &routeConfig, nil
 }
 
 func (d *DynamoDbStorer) GetRoute(ctx context.Context, tid tenant.Id, id string) (route.Config, error) {
+	tracer := otel.Tracer(rtsemconv.EARSTracerName)
+	ctx, span := tracer.Start(ctx, "getRoute")
+	defer span.End()
+	span.SetAttributes(semconv.DBSystemDynamoDB)
+	span.SetAttributes(rtsemconv.DBTable.String(d.tableName))
 	sess, err := session.NewSession(&aws.Config{
 		Region: aws.String(d.region),
 	})
@@ -90,7 +93,6 @@ func (d *DynamoDbStorer) GetRoute(ctx context.Context, tid tenant.Id, id string)
 	if err != nil {
 		return empty, &DynamoDbNewSessionError{err}
 	}
-
 	svc := dynamodb.New(sess)
 	r, err := d.getRoute(ctx, tid, id, svc)
 	if err != nil {
@@ -100,25 +102,27 @@ func (d *DynamoDbStorer) GetRoute(ctx context.Context, tid tenant.Id, id string)
 }
 
 func (d *DynamoDbStorer) GetAllRoutes(ctx context.Context) ([]route.Config, error) {
+	tracer := otel.Tracer(rtsemconv.EARSTracerName)
+	ctx, span := tracer.Start(ctx, "getRoutes")
+	defer span.End()
+	span.SetAttributes(semconv.DBSystemDynamoDB)
+	span.SetAttributes(rtsemconv.DBTable.String(d.tableName))
 	sess, err := session.NewSession(&aws.Config{
 		Region: aws.String(d.region),
 	})
 	if err != nil {
 		return nil, &DynamoDbNewSessionError{err}
 	}
-
 	svc := dynamodb.New(sess)
 	input := &dynamodb.ScanInput{
 		TableName: aws.String(d.tableName),
 	}
-
 	routes := make([]route.Config, 0)
 	for {
 		result, err := svc.ScanWithContext(ctx, input)
 		if err != nil {
 			return nil, &DynamoDbGetItemError{err}
 		}
-
 		for _, item := range result.Items {
 			var r routeItem
 			err = dynamodbattribute.UnmarshalMap(item, &r)
@@ -127,7 +131,6 @@ func (d *DynamoDbStorer) GetAllRoutes(ctx context.Context) ([]route.Config, erro
 			}
 			routes = append(routes, r.Config)
 		}
-
 		if result.LastEvaluatedKey == nil {
 			break
 		}
@@ -136,7 +139,6 @@ func (d *DynamoDbStorer) GetAllRoutes(ctx context.Context) ([]route.Config, erro
 	return routes, nil
 }
 
-//TODO make this more efficient
 func (d *DynamoDbStorer) GetAllTenantRoutes(ctx context.Context, tid tenant.Id) ([]route.Config, error) {
 	routes, err := d.GetAllRoutes(ctx)
 	if err != nil {
@@ -166,22 +168,18 @@ func (d *DynamoDbStorer) setRoute(ctx context.Context, r route.Config, svc *dyna
 		//Set created time from the old record
 		r.Created = oldRoute.Created
 	}
-
 	route := routeItem{
 		KeyId:  r.TenantId.KeyWithRoute(r.Id),
 		Config: r,
 	}
-
 	item, err := dynamodbattribute.MarshalMap(route)
 	if err != nil {
 		return &DynamoDbMarshalError{err}
 	}
-
 	input := &dynamodb.PutItemInput{
 		Item:      item,
 		TableName: aws.String(d.tableName),
 	}
-
 	_, err = svc.PutItemWithContext(ctx, input)
 	if err != nil {
 		return &DynamoDbPutItemError{err}
@@ -190,6 +188,11 @@ func (d *DynamoDbStorer) setRoute(ctx context.Context, r route.Config, svc *dyna
 }
 
 func (d *DynamoDbStorer) SetRoute(ctx context.Context, r route.Config) error {
+	tracer := otel.Tracer(rtsemconv.EARSTracerName)
+	ctx, span := tracer.Start(ctx, "storeRoute")
+	defer span.End()
+	span.SetAttributes(semconv.DBSystemDynamoDB)
+	span.SetAttributes(rtsemconv.DBTable.String(d.tableName))
 	sess, err := session.NewSession(&aws.Config{
 		Region: aws.String(d.region),
 	})
@@ -202,7 +205,11 @@ func (d *DynamoDbStorer) SetRoute(ctx context.Context, r route.Config) error {
 
 //TODO: make this more efficient
 func (d *DynamoDbStorer) SetRoutes(ctx context.Context, routes []route.Config) error {
-
+	tracer := otel.Tracer(rtsemconv.EARSTracerName)
+	ctx, span := tracer.Start(ctx, "storeRoutes")
+	defer span.End()
+	span.SetAttributes(semconv.DBSystemDynamoDB)
+	span.SetAttributes(rtsemconv.DBTable.String(d.tableName))
 	sess, err := session.NewSession(&aws.Config{
 		Region: aws.String(d.region),
 	})
@@ -210,7 +217,6 @@ func (d *DynamoDbStorer) SetRoutes(ctx context.Context, routes []route.Config) e
 		return &DynamoDbNewSessionError{err}
 	}
 	svc := dynamodb.New(sess)
-
 	//The following may be optimized with BatchWriteItem. Something to consider
 	//in the future
 	for _, r := range routes {
@@ -231,7 +237,6 @@ func (d *DynamoDbStorer) deleteRoute(ctx context.Context, tid tenant.Id, id stri
 		},
 		TableName: aws.String(d.tableName),
 	}
-
 	_, err := svc.DeleteItemWithContext(ctx, input)
 	if err != nil {
 		return &DynamoDbDeleteItemError{err}
@@ -240,6 +245,11 @@ func (d *DynamoDbStorer) deleteRoute(ctx context.Context, tid tenant.Id, id stri
 }
 
 func (d *DynamoDbStorer) DeleteRoute(ctx context.Context, tid tenant.Id, id string) error {
+	tracer := otel.Tracer(rtsemconv.EARSTracerName)
+	ctx, span := tracer.Start(ctx, "deleteRoute")
+	defer span.End()
+	span.SetAttributes(semconv.DBSystemDynamoDB)
+	span.SetAttributes(rtsemconv.DBTable.String(d.tableName))
 	sess, err := session.NewSession(&aws.Config{
 		Region: aws.String(d.region),
 	})
@@ -251,6 +261,11 @@ func (d *DynamoDbStorer) DeleteRoute(ctx context.Context, tid tenant.Id, id stri
 }
 
 func (d *DynamoDbStorer) DeleteRoutes(ctx context.Context, tid tenant.Id, ids []string) error {
+	tracer := otel.Tracer(rtsemconv.EARSTracerName)
+	ctx, span := tracer.Start(ctx, "deleteRoutes")
+	defer span.End()
+	span.SetAttributes(semconv.DBSystemDynamoDB)
+	span.SetAttributes(rtsemconv.DBTable.String(d.tableName))
 	sess, err := session.NewSession(&aws.Config{
 		Region: aws.String(d.region),
 	})
@@ -258,7 +273,6 @@ func (d *DynamoDbStorer) DeleteRoutes(ctx context.Context, tid tenant.Id, ids []
 		return &DynamoDbNewSessionError{err}
 	}
 	svc := dynamodb.New(sess)
-
 	//The following may be optimized with BatchWriteItem. Something to consider
 	//in the future
 	for _, id := range ids {
