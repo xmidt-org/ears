@@ -24,6 +24,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/sqs"
 	"github.com/rs/zerolog"
 	"github.com/xmidt-org/ears/internal/pkg/rtsemconv"
+	"github.com/xmidt-org/ears/pkg/tenant"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
@@ -39,7 +40,7 @@ import (
 	"github.com/xmidt-org/ears/pkg/receiver"
 )
 
-func NewReceiver(config interface{}) (receiver.Receiver, error) {
+func NewReceiver(tid tenant.Id, plugin string, name string, config interface{}) (receiver.Receiver, error) {
 	var cfg ReceiverConfig
 	var err error
 	switch c := config.(type) {
@@ -66,6 +67,9 @@ func NewReceiver(config interface{}) (receiver.Receiver, error) {
 	//zerolog.LevelFieldName = "log.level"
 	r := &Receiver{
 		config:  cfg,
+		name:    name,
+		plugin:  plugin,
+		tid:     tid,
 		logger:  logger,
 		stopped: true,
 	}
@@ -314,9 +318,13 @@ func (r *Receiver) Config() interface{} {
 }
 
 func (r *Receiver) Name() string {
-	return ""
+	return r.name
 }
 
 func (r *Receiver) Plugin() string {
-	return rtsemconv.EARSPluginTypeSQS
+	return r.plugin
+}
+
+func (r *Receiver) Tenant() tenant.Id {
+	return r.tid
 }

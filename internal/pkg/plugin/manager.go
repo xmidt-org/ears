@@ -136,7 +136,7 @@ func (m *manager) RegisterReceiver(
 
 	r, ok := m.receivers[key]
 	if !ok {
-		r, err = ns.NewReceiver(config)
+		r, err = ns.NewReceiver(tid, plugin, name, config)
 		if err != nil {
 			return nil, &RegistrationError{
 				Message: "could not create new receiver",

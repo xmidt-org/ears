@@ -20,6 +20,7 @@ import (
 	pkgplugin "github.com/xmidt-org/ears/pkg/plugin"
 	"github.com/xmidt-org/ears/pkg/receiver"
 	"github.com/xmidt-org/ears/pkg/sender"
+	"github.com/xmidt-org/ears/pkg/tenant"
 	"go.opentelemetry.io/otel/metric"
 	"net/http"
 )
@@ -58,6 +59,9 @@ type Receiver struct {
 	logger              *zerolog.Logger
 	srv                 *http.Server
 	config              ReceiverConfig
+	name                string
+	plugin              string
+	tid                 tenant.Id
 	eventSuccessCounter metric.BoundFloat64Counter
 	eventFailureCounter metric.BoundFloat64Counter
 	eventBytesCounter   metric.BoundInt64Counter

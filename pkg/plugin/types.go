@@ -15,6 +15,7 @@
 package plugin
 
 import (
+	"github.com/xmidt-org/ears/pkg/tenant"
 	"sync"
 
 	"github.com/xmidt-org/ears/pkg/bit"
@@ -67,7 +68,7 @@ type HashFn func(i interface{}) (string, error)
 // TODO: Question -- How do these stay in sync with the package?
 // Do we define them in the package alongside the interface definition?
 type NewPluginerFn func(config interface{}) (Pluginer, error)
-type NewReceiverFn func(config interface{}) (receiver.Receiver, error)
+type NewReceiverFn func(tid tenant.Id, plugin string, name string, config interface{}) (receiver.Receiver, error)
 type NewSenderFn func(config interface{}) (sender.Sender, error)
 type NewFiltererFn func(config interface{}) (filter.Filterer, error)
 
