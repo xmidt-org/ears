@@ -17,6 +17,7 @@ package plugin
 import (
 	"context"
 	"fmt"
+	"github.com/xmidt-org/ears/pkg/tenant"
 	"sync"
 
 	pkgmanager "github.com/xmidt-org/ears/pkg/plugin/manager"
@@ -32,6 +33,7 @@ type receiver struct {
 	name   string
 	plugin string
 	hash   string
+	tid    tenant.Id
 
 	manager *manager
 	active  bool
