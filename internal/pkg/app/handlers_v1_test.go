@@ -56,6 +56,7 @@ import (
 	"github.com/xmidt-org/ears/pkg/plugins/ttl"
 	"github.com/xmidt-org/ears/pkg/plugins/unwrap"
 	"github.com/xmidt-org/ears/pkg/route"
+	"github.com/xmidt-org/ears/pkg/tenant"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
@@ -99,6 +100,8 @@ type (
 )
 
 const tenantPath = "/orgs/myorg/applications/myapp"
+
+var myTid = tenant.Id{"myorg", "myapp"}
 
 // should in memory storer also be implemented as singleton?
 
@@ -638,7 +641,7 @@ func checkEventsSent(routeFileName string, testPrefix string, pluginMgr plugin.M
 		return err
 	}
 	prefixRouteConfig(&routeConfig, testPrefix)
-	sdr, err := pluginMgr.RegisterSender(ctx, routeConfig.Sender.Plugin, routeConfig.Sender.Name, stringify(routeConfig.Sender.Config), routeConfig.TenantId)
+	sdr, err := pluginMgr.RegisterSender(ctx, routeConfig.Sender.Plugin, routeConfig.Sender.Name, stringify(routeConfig.Sender.Config), myTid)
 	if err != nil {
 		return err
 	}
