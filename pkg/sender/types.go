@@ -17,6 +17,7 @@ package sender
 import (
 	"context"
 	"github.com/xmidt-org/ears/pkg/event"
+	"github.com/xmidt-org/ears/pkg/tenant"
 )
 
 //go:generate rm -f testing_mock.go
@@ -34,7 +35,7 @@ type Hasher interface {
 type NewSenderer interface {
 	Hasher
 	// Returns an objec that implements the Sender interface
-	NewSender(config interface{}) (Sender, error)
+	NewSender(tid tenant.Id, plugin string, name string, config interface{}) (Sender, error)
 }
 
 // or Outputter[√] or Producer[x] or Publisher[√]
@@ -50,4 +51,5 @@ type Sender interface {
 	Config() interface{}
 	Name() string
 	Plugin() string
+	Tenant() tenant.Id
 }

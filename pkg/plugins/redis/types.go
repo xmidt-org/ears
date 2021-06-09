@@ -97,6 +97,9 @@ type SenderConfig struct {
 
 type Sender struct {
 	sync.Mutex
+	name   string
+	plugin string
+	tid    tenant.Id
 	config SenderConfig
 	count  int
 	logger zerolog.Logger

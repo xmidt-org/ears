@@ -69,8 +69,8 @@ func NewReceiver(tid tenant.Id, plugin string, name string, config interface{}) 
 	meter := global.Meter(rtsemconv.EARSMeterName)
 	commonLabels := []attribute.KeyValue{
 		attribute.String(rtsemconv.EARSPluginTypeLabel, rtsemconv.EARSPluginTypeHttp),
-		attribute.String(rtsemconv.EARSAppIdLabel, "default"),
-		attribute.String(rtsemconv.EARSOrgIdLabel, "default"),
+		attribute.String(rtsemconv.EARSAppIdLabel, r.tid.AppId),
+		attribute.String(rtsemconv.EARSOrgIdLabel, r.tid.OrgId),
 	}
 	r.eventSuccessCounter = metric.Must(meter).
 		NewFloat64Counter(

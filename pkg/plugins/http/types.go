@@ -75,6 +75,9 @@ type SenderConfig struct {
 type Sender struct {
 	client *http.Client
 	config SenderConfig
+	name   string
+	plugin string
+	tid    tenant.Id
 }
 
 type BadHttpStatusError struct {

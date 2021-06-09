@@ -69,7 +69,7 @@ type HashFn func(i interface{}) (string, error)
 // Do we define them in the package alongside the interface definition?
 type NewPluginerFn func(config interface{}) (Pluginer, error)
 type NewReceiverFn func(tid tenant.Id, plugin string, name string, config interface{}) (receiver.Receiver, error)
-type NewSenderFn func(config interface{}) (sender.Sender, error)
+type NewSenderFn func(tid tenant.Id, plugin string, name string, config interface{}) (sender.Sender, error)
 type NewFiltererFn func(config interface{}) (filter.Filterer, error)
 
 // Plugin implements Pluginer

@@ -457,7 +457,7 @@ func TestNewSenderer(t *testing.T) {
 	nfe := &manager.NotFoundError{}
 
 	{
-		p, err := m.NewSender("mysenderer", "")
+		p, err := m.NewSender(tid, "mysenderer", "", "")
 		a.Expect(p).To(BeNil())
 		a.Expect(errTypeToString(err)).To(Equal(errTypeToString(nfe)))
 	}
@@ -467,20 +467,20 @@ func TestNewSenderer(t *testing.T) {
 			"mysenderer",
 			&newSendererMock{
 				sender.NewSendererMock{
-					NewSenderFunc: func(config interface{}) (sender.Sender, error) {
+					NewSenderFunc: func(tid tenant.Id, pluginType string, name string, config interface{}) (sender.Sender, error) {
 						return &sender.SenderMock{}, nil
 					},
 				},
 			},
 		)
-		p, err := m.NewSender("mysenderer", "")
+		p, err := m.NewSender(tid, "mysenderer", "", "")
 		a.Expect(p).ToNot(BeNil())
 		a.Expect(err).To(BeNil())
 		m.UnregisterPlugin("mysenderer")
 	}
 
 	{
-		p, err := m.NewSender("mysenderer", "")
+		p, err := m.NewSender(tid, "mysenderer", "", "")
 		a.Expect(p).To(BeNil())
 		a.Expect(errTypeToString(err)).To(Equal(errTypeToString(nfe)))
 	}
