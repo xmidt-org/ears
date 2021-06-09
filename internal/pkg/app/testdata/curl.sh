@@ -16,6 +16,10 @@ echo "version"
 
 curl -X GET http://localhost:3000/ears/version | jq .
 
+echo "add quota"
+
+curl -X PUT http://localhost:3000/ears/v1/orgs/myorg/applications/myapp/config --data-binary @quota.json | jq .
+
 echo "add routes"
 
 curl -X POST http://localhost:3000/ears/v1/orgs/myorg/applications/myapp/routes --data-binary @simpleRoute.json | jq .
