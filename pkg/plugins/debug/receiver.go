@@ -16,7 +16,14 @@ package debug
 
 import (
 	"context"
+	"encoding/json"
 	"github.com/rs/zerolog"
+	"github.com/xmidt-org/ears/internal/pkg/rtsemconv"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/metric"
+	"go.opentelemetry.io/otel/metric/global"
+	"go.opentelemetry.io/otel/trace"
 	"os"
 	"sync"
 
@@ -48,6 +55,7 @@ func (r *Receiver) Receive(next receiver.NextFn) error {
 	r.done = make(chan struct{})
 	r.stopped = false
 	r.next = next
+	tracer := otel.Tracer(rtsemconv.EARSTracerName)
 	r.Unlock()
 	go func() {
 		defer func() {
@@ -57,6 +65,10 @@ func (r *Receiver) Receive(next receiver.NextFn) error {
 			}
 			r.Unlock()
 		}()
+		buf, err := json.Marshal(r.config.Payload)
+		if err != nil {
+			return
+		}
 		eventsDone := &sync.WaitGroup{}
 		eventsDone.Add(*r.config.Rounds)
 		for count := *r.config.Rounds; count != 0; {
@@ -65,15 +77,33 @@ func (r *Receiver) Receive(next receiver.NextFn) error {
 				return
 			case <-time.After(time.Duration(*r.config.IntervalMs) * time.Millisecond):
 				ctx, cancel := context.WithTimeout(context.Background(), debugMaxTO)
+				var span trace.Span
+				if *r.config.Trace {
+					ctx, span = tracer.Start(ctx, "debugReceiver")
+					span.SetAttributes(rtsemconv.EARSEventTrace)
+				}
+				r.eventBytesCounter.Add(ctx, int64(len(buf)))
 				e, err := event.New(ctx, r.config.Payload, event.WithAck(
 					func(evt event.Event) {
 						eventsDone.Done()
+						if *r.config.Trace {
+							span.AddEvent("ack")
+							span.End()
+						}
+						r.eventSuccessCounter.Add(ctx, 1.0)
 						cancel()
 					}, func(evt event.Event, err error) {
 						r.logger.Error().Str("op", "debug.Receive").Msg("failed to process message: " + err.Error())
 						eventsDone.Done()
+						if *r.config.Trace {
+							span.AddEvent("nack")
+							span.RecordError(err)
+							span.End()
+						}
+						r.eventFailureCounter.Add(ctx, 1.0)
 						cancel()
-					}))
+					}),
+					event.WithTrace(*r.config.Trace))
 				if err != nil {
 					return
 				}
@@ -93,6 +123,9 @@ func (r *Receiver) StopReceiving(ctx context.Context) error {
 	r.Lock()
 	defer r.Unlock()
 	if !r.stopped && r.done != nil {
+		r.eventSuccessCounter.Unbind()
+		r.eventFailureCounter.Unbind()
+		r.eventBytesCounter.Unbind()
 		close(r.done)
 		r.stopped = true
 	}
@@ -130,6 +163,28 @@ func NewReceiver(config interface{}) (receiver.Receiver, error) {
 		stopped: true,
 	}
 	r.history = newHistory(*r.config.MaxHistory)
+	// metric recorders
+	meter := global.Meter(rtsemconv.EARSMeterName)
+	commonLabels := []attribute.KeyValue{
+		attribute.String(rtsemconv.EARSPluginTypeLabel, rtsemconv.EARSPluginTypeDebug),
+		attribute.String(rtsemconv.EARSAppIdLabel, "default"),
+		attribute.String(rtsemconv.EARSOrgIdLabel, "default"),
+	}
+	r.eventSuccessCounter = metric.Must(meter).
+		NewFloat64Counter(
+			rtsemconv.EARSMetricEventSuccess,
+			metric.WithDescription("measures the number of successful events"),
+		).Bind(commonLabels...)
+	r.eventFailureCounter = metric.Must(meter).
+		NewFloat64Counter(
+			rtsemconv.EARSMetricEventFailure,
+			metric.WithDescription("measures the number of unsuccessful events"),
+		).Bind(commonLabels...)
+	r.eventBytesCounter = metric.Must(meter).
+		NewInt64Counter(
+			rtsemconv.EARSMetricEventBytes,
+			metric.WithDescription("measures the number of event bytes processed"),
+		).Bind(commonLabels...)
 	return r, nil
 }
 
@@ -167,5 +222,5 @@ func (r *Receiver) Name() string {
 }
 
 func (r *Receiver) Plugin() string {
-	return "debug"
+	return rtsemconv.EARSPluginTypeDebug
 }

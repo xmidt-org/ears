@@ -29,7 +29,8 @@
           }
         }
       },
-      "maxHistory": 100
+      "maxHistory": 100,
+      "trace": true
     }
   },
   "sender": {

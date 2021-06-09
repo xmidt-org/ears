@@ -23,6 +23,12 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/sqs"
 	"github.com/rs/zerolog"
+	"github.com/xmidt-org/ears/internal/pkg/rtsemconv"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/metric"
+	"go.opentelemetry.io/otel/metric/global"
+	"go.opentelemetry.io/otel/trace"
 	"os"
 	"strconv"
 	"time"
@@ -63,6 +69,29 @@ func NewReceiver(config interface{}) (receiver.Receiver, error) {
 		logger:  logger,
 		stopped: true,
 	}
+	// metric recorders
+	meter := global.Meter(rtsemconv.EARSMeterName)
+	commonLabels := []attribute.KeyValue{
+		attribute.String(rtsemconv.EARSPluginTypeLabel, rtsemconv.EARSPluginTypeSQS),
+		attribute.String(rtsemconv.EARSAppIdLabel, "default"),
+		attribute.String(rtsemconv.EARSOrgIdLabel, "default"),
+		attribute.String(rtsemconv.SQSQueueUrlLabel, r.config.QueueUrl),
+	}
+	r.eventSuccessCounter = metric.Must(meter).
+		NewFloat64Counter(
+			rtsemconv.EARSMetricEventSuccess,
+			metric.WithDescription("measures the number of successful events"),
+		).Bind(commonLabels...)
+	r.eventFailureCounter = metric.Must(meter).
+		NewFloat64Counter(
+			rtsemconv.EARSMetricEventFailure,
+			metric.WithDescription("measures the number of unsuccessful events"),
+		).Bind(commonLabels...)
+	r.eventBytesCounter = metric.Must(meter).
+		NewInt64Counter(
+			rtsemconv.EARSMetricEventBytes,
+			metric.WithDescription("measures the number of event bytes processed"),
+		).Bind(commonLabels...)
 	return r, nil
 }
 
@@ -113,6 +142,7 @@ func (r *Receiver) startReceiveWorker(svc *sqs.SQS, n int) {
 			}
 		}()
 		// receive messages
+		tracer := otel.Tracer(rtsemconv.EARSTracerName)
 		for {
 			approximateReceiveCount := "ApproximateReceiveCount"
 			sqsParams := &sqs.ReceiveMessageInput{
@@ -166,20 +196,38 @@ func (r *Receiver) startReceiveWorker(svc *sqs.SQS, n int) {
 					continue
 				}
 				ctx, cancel := context.WithTimeout(context.Background(), time.Duration(*r.config.AcknowledgeTimeout)*time.Second)
+				r.eventBytesCounter.Add(ctx, int64(len(*message.Body)))
+				var span trace.Span
+				if *r.config.Trace {
+					ctx, span = tracer.Start(ctx, "sqsReceiver")
+					span.SetAttributes(rtsemconv.EARSEventTrace)
+				}
 				e, err := event.New(ctx, payload, event.WithMetadata(*message), event.WithAck(
 					func(e event.Event) {
 						msg := e.Metadata().(sqs.Message) // get metadata associated with this event
 						//r.logger.Info().Str("op", "SQS.receiveWorker").Int("batchSize", len(sqsResp.Messages)).Int("workerNum", n).Msg("processed message " + (*msg.MessageId))
 						entry := sqs.DeleteMessageBatchRequestEntry{Id: msg.MessageId, ReceiptHandle: msg.ReceiptHandle}
 						entries <- &entry
+						if *r.config.Trace {
+							span.AddEvent("ack")
+							span.End()
+						}
+						r.eventSuccessCounter.Add(ctx, 1.0)
 						cancel()
 					},
 					func(e event.Event, err error) {
 						msg := e.Metadata().(sqs.Message) // get metadata associated with this event
 						r.logger.Error().Str("op", "SQS.receiveWorker").Int("workerNum", n).Msg("failed to process message " + (*msg.MessageId) + ": " + err.Error())
 						// a nack below max retries - this is the only case where we do not delete the message yet
+						if *r.config.Trace {
+							span.AddEvent("nack")
+							span.RecordError(err)
+							span.End()
+						}
+						r.eventFailureCounter.Add(ctx, 1.0)
 						cancel()
-					}))
+					}),
+					event.WithTrace(*r.config.Trace))
 				if err != nil {
 					r.logger.Error().Str("op", "SQS.receiveWorker").Int("workerNum", n).Msg("cannot create event: " + err.Error())
 					return
@@ -245,6 +293,9 @@ func (r *Receiver) StopReceiving(ctx context.Context) error {
 	r.Lock()
 	if !r.stopped {
 		r.stopped = true
+		r.eventSuccessCounter.Unbind()
+		r.eventFailureCounter.Unbind()
+		r.eventBytesCounter.Unbind()
 		close(r.done)
 	}
 	r.Unlock()
@@ -267,5 +318,5 @@ func (r *Receiver) Name() string {
 }
 
 func (r *Receiver) Plugin() string {
-	return "sqs"
+	return rtsemconv.EARSPluginTypeSQS
 }

@@ -20,3 +20,8 @@ ears:
   ratelimiter:
     type: inmemory
     endpoint: localhost:6379
+
+  opentelemetry:
+    lightstep:
+      active: no
+      accessToken: ""

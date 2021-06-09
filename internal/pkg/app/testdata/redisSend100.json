@@ -1,26 +1,24 @@
 {
-  "id": "r100",
+  "id": "redis112",
   "userId": "boris",
-  "name": "simpleRoute",
+  "name": "redisSend100Route",
   "receiver": {
     "plugin": "debug",
-    "name": "mydebug",
+    "name": "myDebugReceiver",
     "config": {
-      "intervalMs": 10,
+      "intervalMs": 1,
       "maxHistory": 100,
       "payload": {
         "foo": "bar"
       },
-      "rounds": 5,
+      "rounds": 1000,
       "trace": true
     }
   },
   "sender": {
-    "plugin": "debug",
-    "name": "simpleRouteSender",
+    "plugin": "redis",
+    "name": "myRedisSender",
     "config": {
-      "destination": "stdout",
-      "maxHistory": 100
     }
   },
   "deliveryMode": "whoCares"

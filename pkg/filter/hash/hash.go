@@ -24,8 +24,10 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/xmidt-org/ears/internal/pkg/rtsemconv"
 	"github.com/xmidt-org/ears/pkg/event"
 	"github.com/xmidt-org/ears/pkg/filter"
+	"go.opentelemetry.io/otel"
 	"hash/fnv"
 )
 
@@ -53,6 +55,11 @@ func (f *Filter) Filter(evt event.Event) []event.Event {
 			Err: fmt.Errorf("<nil> pointer filter"),
 		})
 		return nil
+	}
+	if evt.Trace() {
+		tracer := otel.Tracer(rtsemconv.EARSTracerName)
+		_, span := tracer.Start(evt.Context(), "hashFilter")
+		defer span.End()
 	}
 	obj, _, _ := evt.GetPathValue(f.config.FromPath)
 	if obj == nil {

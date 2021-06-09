@@ -19,6 +19,7 @@ import (
 	"github.com/Shopify/sarama"
 	"github.com/rs/zerolog"
 	"github.com/xorcare/pointer"
+	"go.opentelemetry.io/otel/metric"
 	"sync"
 	"time"
 
@@ -63,6 +64,7 @@ var DefaultReceiverConfig = ReceiverConfig{
 	Version:           "",
 	CommitInterval:    pointer.Int(1),
 	ChannelBufferSize: pointer.Int(0),
+	Trace:             pointer.Bool(false),
 }
 
 type ReceiverConfig struct {
@@ -79,6 +81,7 @@ type ReceiverConfig struct {
 	ChannelBufferSize   *int   `json:"channelBufferSize,omitempty"`
 	ConsumeByPartitions bool   `json:"consumeByPartitions,omitempty"`
 	TLSEnable           bool   `json:"tlsEnable,omitempty"`
+	Trace               *bool  `json:"trace,omitempty"`
 }
 
 type Receiver struct {
@@ -91,13 +94,16 @@ type Receiver struct {
 	count     int
 	startTime time.Time
 	sarama.ConsumerGroupSession
-	wg      sync.WaitGroup
-	ready   chan bool
-	cancel  context.CancelFunc
-	ctx     context.Context
-	client  sarama.ConsumerGroup
-	topics  []string
-	handler func(message *sarama.ConsumerMessage) bool
+	wg                  sync.WaitGroup
+	ready               chan bool
+	cancel              context.CancelFunc
+	ctx                 context.Context
+	client              sarama.ConsumerGroup
+	topics              []string
+	handler             func(message *sarama.ConsumerMessage) bool
+	eventSuccessCounter metric.BoundFloat64Counter
+	eventFailureCounter metric.BoundFloat64Counter
+	eventBytesCounter   metric.BoundInt64Counter
 }
 
 var DefaultSenderConfig = SenderConfig{

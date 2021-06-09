@@ -20,6 +20,12 @@ import (
 	"fmt"
 	"github.com/go-redis/redis"
 	"github.com/rs/zerolog"
+	"github.com/xmidt-org/ears/internal/pkg/rtsemconv"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/metric"
+	"go.opentelemetry.io/otel/metric/global"
+	"go.opentelemetry.io/otel/trace"
 	"os"
 	"time"
 
@@ -59,6 +65,29 @@ func NewReceiver(config interface{}) (receiver.Receiver, error) {
 		logger:  logger,
 		stopped: true,
 	}
+	// metric recorders
+	meter := global.Meter(rtsemconv.EARSMeterName)
+	commonLabels := []attribute.KeyValue{
+		attribute.String(rtsemconv.EARSPluginTypeLabel, rtsemconv.EARSPluginTypeRedis),
+		attribute.String(rtsemconv.EARSAppIdLabel, "default"),
+		attribute.String(rtsemconv.EARSOrgIdLabel, "default"),
+		attribute.String(rtsemconv.RedisChannelLabel, r.config.Channel),
+	}
+	r.eventSuccessCounter = metric.Must(meter).
+		NewFloat64Counter(
+			rtsemconv.EARSMetricEventSuccess,
+			metric.WithDescription("measures the number of successful events"),
+		).Bind(commonLabels...)
+	r.eventFailureCounter = metric.Must(meter).
+		NewFloat64Counter(
+			rtsemconv.EARSMetricEventFailure,
+			metric.WithDescription("measures the number of unsuccessful events"),
+		).Bind(commonLabels...)
+	r.eventBytesCounter = metric.Must(meter).
+		NewInt64Counter(
+			rtsemconv.EARSMetricEventBytes,
+			metric.WithDescription("measures the number of event bytes processed"),
+		).Bind(commonLabels...)
 	return r, nil
 }
 
@@ -95,6 +124,7 @@ func (r *Receiver) Receive(next receiver.NextFn) error {
 		defer r.redisClient.Close()
 		r.pubsub = r.redisClient.Subscribe(r.config.Channel)
 		defer r.pubsub.Close()
+		tracer := otel.Tracer(rtsemconv.EARSTracerName)
 		for {
 			// could have a pool of go routines consuming from this channel here
 			msg := <-r.pubsub.Channel()
@@ -109,21 +139,39 @@ func (r *Receiver) Receive(next receiver.NextFn) error {
 				r.logger.Error().Str("op", "redis.Receive").Msg("cannot parse payload: " + err.Error())
 				continue
 			}
+			ctx, cancel := context.WithTimeout(context.Background(), time.Duration(5)*time.Second)
+			r.eventBytesCounter.Add(ctx, int64(len(msg.Payload)))
+			var span trace.Span
+			if *r.config.Trace {
+				ctx, span = tracer.Start(ctx, "redisReceiver")
+				span.SetAttributes(rtsemconv.EARSEventTrace)
+			}
 			r.Lock()
 			r.count++
 			r.Unlock()
-			ctx, cancel := context.WithTimeout(context.Background(), time.Duration(5)*time.Second)
 			// note: if we just pass msg.Payload into event, redis will blow up with an out of memory error within a
 			// few seconds - possibly a bug in the client library
 			e, err := event.New(ctx, pl, event.WithAck(
 				func(e event.Event) {
 					r.logger.Info().Str("op", "redis.Receive").Msg("processed message from redis channel")
+					if *r.config.Trace {
+						span.AddEvent("ack")
+						span.End()
+					}
+					r.eventSuccessCounter.Add(ctx, 1.0)
 					cancel()
 				},
 				func(e event.Event, err error) {
 					r.logger.Error().Str("op", "redis.Receive").Msg("failed to process message: " + err.Error())
+					if *r.config.Trace {
+						span.AddEvent("nack")
+						span.RecordError(err)
+						span.End()
+					}
+					r.eventFailureCounter.Add(ctx, 1.0)
 					cancel()
-				}))
+				}),
+				event.WithTrace(*r.config.Trace))
 			if err != nil {
 				r.logger.Error().Str("op", "redis.Receive").Msg("cannot create event: " + err.Error())
 				continue
@@ -154,6 +202,9 @@ func (r *Receiver) StopReceiving(ctx context.Context) error {
 		r.stopped = true
 		r.pubsub.Unsubscribe(r.config.Channel)
 		r.pubsub.Close()
+		r.eventSuccessCounter.Unbind()
+		r.eventFailureCounter.Unbind()
+		r.eventBytesCounter.Unbind()
 		close(r.done)
 	}
 	r.Unlock()
@@ -176,5 +227,5 @@ func (r *Receiver) Name() string {
 }
 
 func (r *Receiver) Plugin() string {
-	return "redis"
+	return rtsemconv.EARSPluginTypeRedis
 }

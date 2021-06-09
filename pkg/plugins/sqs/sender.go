@@ -24,22 +24,17 @@ import (
 	"github.com/goccy/go-yaml"
 	"github.com/google/uuid"
 	"github.com/rs/zerolog"
+	"github.com/xmidt-org/ears/internal/pkg/rtsemconv"
 	"github.com/xmidt-org/ears/pkg/event"
 	pkgplugin "github.com/xmidt-org/ears/pkg/plugin"
 	"github.com/xmidt-org/ears/pkg/sender"
+	"go.opentelemetry.io/otel"
 	"os"
 	"time"
 )
 
 //TODO: MessageAttributes
 //TODO: improve graceful shutdown
-//TODO: increase code coverage
-//DONE: consider sender thread pool
-//DONE: rename sender BatchSize config
-//DONE: use ears routes to fill or drain an sqs queue
-//DONE: receiver thread pool
-//DONE: stop sender timer loop when route is updated or deleted
-//DONE: fix updating an sqs route (or any route for that matter)
 
 func NewSender(config interface{}) (sender.Sender, error) {
 	var cfg SenderConfig
@@ -171,6 +166,11 @@ func (s *Sender) send(events []event.Event) {
 }
 
 func (s *Sender) Send(e event.Event) {
+	if e.Trace() {
+		tracer := otel.Tracer(rtsemconv.EARSTracerName)
+		_, span := tracer.Start(e.Context(), "sqsSender")
+		defer span.End()
+	}
 	s.Lock()
 	if s.eventBatch == nil {
 		s.eventBatch = make([]event.Event, 0)
@@ -199,5 +199,5 @@ func (s *Sender) Name() string {
 }
 
 func (s *Sender) Plugin() string {
-	return "sqs"
+	return rtsemconv.EARSPluginTypeSQS
 }

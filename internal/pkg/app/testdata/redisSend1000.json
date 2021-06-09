@@ -1,17 +1,18 @@
 {
   "id": "redis108",
   "userId": "boris",
-  "name": "redisSendRoute",
+  "name": "redisSend1000Route",
   "receiver": {
     "plugin": "debug",
-    "name": "mydebug",
+    "name": "myDebugReceiver",
     "config": {
       "intervalMs": 1,
       "maxHistory": 100,
       "payload": {
         "foo": "bar"
       },
-      "rounds": 1000
+      "rounds": 1000,
+      "trace": true
     }
   },
   "sender": {

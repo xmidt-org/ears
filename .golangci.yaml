@@ -36,6 +36,7 @@ issues:
     - path: internal/pkg/app/handlers_v1\.go
       linters:
         - funlen
+        - dupl
     - path: pkg/filter/match/patternregex/patternregex\.go
       linters:
         - funlen
@@ -54,7 +55,13 @@ issues:
     - path: internal/pkg/plugin/manager\.go
       linters:
         - dupl
+    - path: pkg/plugins/debug/receiver\.go
+      linters:
+        - funlen
     - path: pkg/plugins/sqs/receiver\.go
+      linters:
+        - funlen
+    - path: pkg/plugins/kafka/receiver\.go
       linters:
         - funlen
     - path: pkg/plugins/redis/receiver\.go

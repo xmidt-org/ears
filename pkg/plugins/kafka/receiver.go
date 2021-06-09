@@ -25,6 +25,12 @@ import (
 	"fmt"
 	"github.com/Shopify/sarama"
 	"github.com/rs/zerolog"
+	"github.com/xmidt-org/ears/internal/pkg/rtsemconv"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/metric"
+	"go.opentelemetry.io/otel/metric/global"
+	"go.opentelemetry.io/otel/trace"
 	"os"
 	"strings"
 	"time"
@@ -80,6 +86,30 @@ func NewReceiver(config interface{}) (receiver.Receiver, error) {
 		return nil, err
 	}
 	r.client = client
+	// metric recorders
+	meter := global.Meter(rtsemconv.EARSMeterName)
+	commonLabels := []attribute.KeyValue{
+		attribute.String(rtsemconv.EARSPluginTypeLabel, rtsemconv.EARSPluginTypeKafka),
+		attribute.String(rtsemconv.EARSAppIdLabel, "default"),
+		attribute.String(rtsemconv.EARSOrgIdLabel, "default"),
+		attribute.String(rtsemconv.KafkaTopicLabel, r.config.Topic),
+		attribute.String(rtsemconv.KafkaGroupIdLabel, r.config.GroupId),
+	}
+	r.eventSuccessCounter = metric.Must(meter).
+		NewFloat64Counter(
+			rtsemconv.EARSMetricEventSuccess,
+			metric.WithDescription("measures the number of successful events"),
+		).Bind(commonLabels...)
+	r.eventFailureCounter = metric.Must(meter).
+		NewFloat64Counter(
+			rtsemconv.EARSMetricEventFailure,
+			metric.WithDescription("measures the number of unsuccessful events"),
+		).Bind(commonLabels...)
+	r.eventBytesCounter = metric.Must(meter).
+		NewInt64Counter(
+			rtsemconv.EARSMetricEventBytes,
+			metric.WithDescription("measures the number of event bytes processed"),
+		).Bind(commonLabels...)
 	return r, nil
 }
 
@@ -212,6 +242,7 @@ func (r *Receiver) Receive(next receiver.NextFn) error {
 	r.done = make(chan struct{})
 	r.stopped = false
 	r.Unlock()
+	tracer := otel.Tracer(rtsemconv.EARSTracerName)
 	go func() {
 		r.Start(func(msg *sarama.ConsumerMessage) bool {
 			// bail if context has been canceled
@@ -229,16 +260,34 @@ func (r *Receiver) Receive(next receiver.NextFn) error {
 				r.logger.Error().Str("op", "kafka.Receive").Msg("cannot parse payload: " + err.Error())
 				return false
 			}
-			tctx, cancel := context.WithTimeout(context.Background(), time.Duration(5)*time.Second)
-			e, err := event.New(tctx, pl, event.WithAck(
+			ctx, cancel := context.WithTimeout(context.Background(), time.Duration(5)*time.Second)
+			r.eventBytesCounter.Add(ctx, int64(len(msg.Value)))
+			var span trace.Span
+			if *r.config.Trace {
+				ctx, span = tracer.Start(ctx, "kafkaReceiver")
+				span.SetAttributes(rtsemconv.EARSEventTrace)
+			}
+			e, err := event.New(ctx, pl, event.WithAck(
 				func(e event.Event) {
 					r.logger.Info().Str("op", "kafka.Receive").Msg("processed message from kafka topic")
+					if *r.config.Trace {
+						span.AddEvent("ack")
+						span.End()
+					}
+					r.eventSuccessCounter.Add(ctx, 1.0)
 					cancel()
 				},
 				func(e event.Event, err error) {
 					r.logger.Error().Str("op", "kafka.Receive").Msg("failed to process message: " + err.Error())
+					if *r.config.Trace {
+						span.AddEvent("nack")
+						span.RecordError(err)
+						span.End()
+					}
+					r.eventFailureCounter.Add(ctx, 1.0)
 					cancel()
-				}))
+				}),
+				event.WithTrace(*r.config.Trace))
 			if err != nil {
 				r.logger.Error().Str("op", "kafka.Receive").Msg("cannot create event: " + err.Error())
 				return false
@@ -269,6 +318,9 @@ func (r *Receiver) StopReceiving(ctx context.Context) error {
 	r.Lock()
 	if !r.stopped {
 		r.stopped = true
+		r.eventSuccessCounter.Unbind()
+		r.eventFailureCounter.Unbind()
+		r.eventBytesCounter.Unbind()
 		close(r.done)
 	}
 	r.Unlock()
@@ -294,5 +346,5 @@ func (r *Receiver) Name() string {
 }
 
 func (r *Receiver) Plugin() string {
-	return "kafka"
+	return rtsemconv.EARSPluginTypeKafka
 }
