@@ -18,6 +18,7 @@ import (
 	"github.com/xmidt-org/ears/pkg/filter"
 	pkgtrace "github.com/xmidt-org/ears/pkg/filter/trace"
 	pkgplugin "github.com/xmidt-org/ears/pkg/plugin"
+	"github.com/xmidt-org/ears/pkg/tenant"
 )
 
 var (
@@ -39,6 +40,6 @@ func NewPluginVersion(name string, version string, commitID string) (*pkgplugin.
 	)
 }
 
-func NewFilterer(config interface{}) (filter.Filterer, error) {
-	return pkgtrace.NewFilter(config)
+func NewFilterer(tid tenant.Id, plugin string, name string, config interface{}) (filter.Filterer, error) {
+	return pkgtrace.NewFilter(tid, plugin, name, config)
 }

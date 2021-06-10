@@ -70,7 +70,7 @@ type HashFn func(i interface{}) (string, error)
 type NewPluginerFn func(config interface{}) (Pluginer, error)
 type NewReceiverFn func(tid tenant.Id, plugin string, name string, config interface{}) (receiver.Receiver, error)
 type NewSenderFn func(tid tenant.Id, plugin string, name string, config interface{}) (sender.Sender, error)
-type NewFiltererFn func(config interface{}) (filter.Filterer, error)
+type NewFiltererFn func(tid tenant.Id, plugin string, name string, config interface{}) (filter.Filterer, error)
 
 // Plugin implements Pluginer
 type Plugin struct {

@@ -269,7 +269,7 @@ func (p *Plugin) FiltererHash(config interface{}) (string, error) {
 	return p.hashFilter(config)
 }
 
-func (p *Plugin) NewFilterer(config interface{}) (filter.Filterer, error) {
+func (p *Plugin) NewFilterer(tid tenant.Id, plugin string, name string, config interface{}) (filter.Filterer, error) {
 	if p == nil {
 		return nil, &NilPluginError{}
 	}
@@ -278,7 +278,7 @@ func (p *Plugin) NewFilterer(config interface{}) (filter.Filterer, error) {
 		return nil, &NotSupportedError{}
 	}
 
-	return p.newFilterer(config)
+	return p.newFilterer(tid, plugin, name, config)
 }
 
 // == Helpers =================================

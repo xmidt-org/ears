@@ -22,10 +22,11 @@ import (
 	"github.com/xmidt-org/ears/internal/pkg/rtsemconv"
 	"github.com/xmidt-org/ears/pkg/event"
 	"github.com/xmidt-org/ears/pkg/filter"
+	"github.com/xmidt-org/ears/pkg/tenant"
 	"go.opentelemetry.io/otel"
 )
 
-func NewFilter(config interface{}) (*Filter, error) {
+func NewFilter(tid tenant.Id, plugin string, name string, config interface{}) (*Filter, error) {
 	cfg, err := NewConfig(config)
 	if err != nil {
 		return nil, &filter.InvalidConfigError{
@@ -39,6 +40,9 @@ func NewFilter(config interface{}) (*Filter, error) {
 	}
 	f := &Filter{
 		config: *cfg,
+		name:   name,
+		plugin: plugin,
+		tid:    tid,
 	}
 	return f, nil
 }
@@ -96,9 +100,13 @@ func (f *Filter) Config() interface{} {
 }
 
 func (f *Filter) Name() string {
-	return ""
+	return f.name
 }
 
 func (f *Filter) Plugin() string {
-	return "decode"
+	return f.plugin
+}
+
+func (f *Filter) Tenant() tenant.Id {
+	return f.tid
 }
