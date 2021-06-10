@@ -226,12 +226,12 @@ func (m *manager) Filterer(pluginName string) (filter.NewFilterer, error) {
 	return p, nil
 }
 
-func (m *manager) NewFilterer(pluginName string, config string) (filter.Filterer, error) {
-	p, ok := m.registrations[pluginName].Plugin.(filter.NewFilterer)
+func (m *manager) NewFilterer(tid tenant.Id, plugin string, name string, config string) (filter.Filterer, error) {
+	p, ok := m.registrations[plugin].Plugin.(filter.NewFilterer)
 	if !ok {
 		return nil, &NotFoundError{}
 	}
-	return p.NewFilterer(config)
+	return p.NewFilterer(tid, plugin, name, config)
 }
 
 // === Receivers ======================================================

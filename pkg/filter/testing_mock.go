@@ -5,6 +5,7 @@ package filter
 
 import (
 	"github.com/xmidt-org/ears/pkg/event"
+	"github.com/xmidt-org/ears/pkg/tenant"
 	"sync"
 )
 
@@ -86,7 +87,7 @@ var _ NewFilterer = &NewFiltererMock{}
 // 			FiltererHashFunc: func(config interface{}) (string, error) {
 // 				panic("mock out the FiltererHash method")
 // 			},
-// 			NewFiltererFunc: func(config interface{}) (Filterer, error) {
+// 			NewFiltererFunc: func(tid tenant.Id, plugin string, name string, config interface{}) (Filterer, error) {
 // 				panic("mock out the NewFilterer method")
 // 			},
 // 		}
@@ -100,7 +101,7 @@ type NewFiltererMock struct {
 	FiltererHashFunc func(config interface{}) (string, error)
 
 	// NewFiltererFunc mocks the NewFilterer method.
-	NewFiltererFunc func(config interface{}) (Filterer, error)
+	NewFiltererFunc func(tid tenant.Id, plugin string, name string, config interface{}) (Filterer, error)
 
 	// calls tracks calls to the methods.
 	calls struct {
@@ -111,6 +112,12 @@ type NewFiltererMock struct {
 		}
 		// NewFilterer holds details about calls to the NewFilterer method.
 		NewFilterer []struct {
+			// Tid is the tid argument value.
+			Tid tenant.Id
+			// Plugin is the plugin argument value.
+			Plugin string
+			// Name is the name argument value.
+			Name string
 			// Config is the config argument value.
 			Config interface{}
 		}
@@ -151,28 +158,40 @@ func (mock *NewFiltererMock) FiltererHashCalls() []struct {
 }
 
 // NewFilterer calls NewFiltererFunc.
-func (mock *NewFiltererMock) NewFilterer(config interface{}) (Filterer, error) {
+func (mock *NewFiltererMock) NewFilterer(tid tenant.Id, plugin string, name string, config interface{}) (Filterer, error) {
 	if mock.NewFiltererFunc == nil {
 		panic("NewFiltererMock.NewFiltererFunc: method is nil but NewFilterer.NewFilterer was just called")
 	}
 	callInfo := struct {
+		Tid    tenant.Id
+		Plugin string
+		Name   string
 		Config interface{}
 	}{
+		Tid:    tid,
+		Plugin: plugin,
+		Name:   name,
 		Config: config,
 	}
 	mock.lockNewFilterer.Lock()
 	mock.calls.NewFilterer = append(mock.calls.NewFilterer, callInfo)
 	mock.lockNewFilterer.Unlock()
-	return mock.NewFiltererFunc(config)
+	return mock.NewFiltererFunc(tid, plugin, name, config)
 }
 
 // NewFiltererCalls gets all the calls that were made to NewFilterer.
 // Check the length with:
 //     len(mockedNewFilterer.NewFiltererCalls())
 func (mock *NewFiltererMock) NewFiltererCalls() []struct {
+	Tid    tenant.Id
+	Plugin string
+	Name   string
 	Config interface{}
 } {
 	var calls []struct {
+		Tid    tenant.Id
+		Plugin string
+		Name   string
 		Config interface{}
 	}
 	mock.lockNewFilterer.RLock()
@@ -203,6 +222,9 @@ var _ Filterer = &FiltererMock{}
 // 			PluginFunc: func() string {
 // 				panic("mock out the Plugin method")
 // 			},
+// 			TenantFunc: func() tenant.Id {
+// 				panic("mock out the Tenant method")
+// 			},
 // 		}
 //
 // 		// use mockedFilterer in code that requires Filterer
@@ -222,6 +244,9 @@ type FiltererMock struct {
 	// PluginFunc mocks the Plugin method.
 	PluginFunc func() string
 
+	// TenantFunc mocks the Tenant method.
+	TenantFunc func() tenant.Id
+
 	// calls tracks calls to the methods.
 	calls struct {
 		// Config holds details about calls to the Config method.
@@ -238,11 +263,15 @@ type FiltererMock struct {
 		// Plugin holds details about calls to the Plugin method.
 		Plugin []struct {
 		}
+		// Tenant holds details about calls to the Tenant method.
+		Tenant []struct {
+		}
 	}
 	lockConfig sync.RWMutex
 	lockFilter sync.RWMutex
 	lockName   sync.RWMutex
 	lockPlugin sync.RWMutex
+	lockTenant sync.RWMutex
 }
 
 // Config calls ConfigFunc.
@@ -354,6 +383,32 @@ func (mock *FiltererMock) PluginCalls() []struct {
 	return calls
 }
 
+// Tenant calls TenantFunc.
+func (mock *FiltererMock) Tenant() tenant.Id {
+	if mock.TenantFunc == nil {
+		panic("FiltererMock.TenantFunc: method is nil but Filterer.Tenant was just called")
+	}
+	callInfo := struct {
+	}{}
+	mock.lockTenant.Lock()
+	mock.calls.Tenant = append(mock.calls.Tenant, callInfo)
+	mock.lockTenant.Unlock()
+	return mock.TenantFunc()
+}
+
+// TenantCalls gets all the calls that were made to Tenant.
+// Check the length with:
+//     len(mockedFilterer.TenantCalls())
+func (mock *FiltererMock) TenantCalls() []struct {
+} {
+	var calls []struct {
+	}
+	mock.lockTenant.RLock()
+	calls = mock.calls.Tenant
+	mock.lockTenant.RUnlock()
+	return calls
+}
+
 // Ensure, that ChainerMock does implement Chainer.
 // If this is not the case, regenerate this file with moq.
 var _ Chainer = &ChainerMock{}
@@ -382,6 +437,9 @@ var _ Chainer = &ChainerMock{}
 // 			PluginFunc: func() string {
 // 				panic("mock out the Plugin method")
 // 			},
+// 			TenantFunc: func() tenant.Id {
+// 				panic("mock out the Tenant method")
+// 			},
 // 		}
 //
 // 		// use mockedChainer in code that requires Chainer
@@ -407,6 +465,9 @@ type ChainerMock struct {
 	// PluginFunc mocks the Plugin method.
 	PluginFunc func() string
 
+	// TenantFunc mocks the Tenant method.
+	TenantFunc func() tenant.Id
+
 	// calls tracks calls to the methods.
 	calls struct {
 		// Add holds details about calls to the Add method.
@@ -431,6 +492,9 @@ type ChainerMock struct {
 		// Plugin holds details about calls to the Plugin method.
 		Plugin []struct {
 		}
+		// Tenant holds details about calls to the Tenant method.
+		Tenant []struct {
+		}
 	}
 	lockAdd       sync.RWMutex
 	lockConfig    sync.RWMutex
@@ -438,6 +502,7 @@ type ChainerMock struct {
 	lockFilterers sync.RWMutex
 	lockName      sync.RWMutex
 	lockPlugin    sync.RWMutex
+	lockTenant    sync.RWMutex
 }
 
 // Add calls AddFunc.
@@ -603,5 +668,31 @@ func (mock *ChainerMock) PluginCalls() []struct {
 	mock.lockPlugin.RLock()
 	calls = mock.calls.Plugin
 	mock.lockPlugin.RUnlock()
+	return calls
+}
+
+// Tenant calls TenantFunc.
+func (mock *ChainerMock) Tenant() tenant.Id {
+	if mock.TenantFunc == nil {
+		panic("ChainerMock.TenantFunc: method is nil but Chainer.Tenant was just called")
+	}
+	callInfo := struct {
+	}{}
+	mock.lockTenant.Lock()
+	mock.calls.Tenant = append(mock.calls.Tenant, callInfo)
+	mock.lockTenant.Unlock()
+	return mock.TenantFunc()
+}
+
+// TenantCalls gets all the calls that were made to Tenant.
+// Check the length with:
+//     len(mockedChainer.TenantCalls())
+func (mock *ChainerMock) TenantCalls() []struct {
+} {
+	var calls []struct {
+	}
+	mock.lockTenant.RLock()
+	calls = mock.calls.Tenant
+	mock.lockTenant.RUnlock()
 	return calls
 }

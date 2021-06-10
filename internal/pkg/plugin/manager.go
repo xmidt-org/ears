@@ -361,7 +361,7 @@ func (m *manager) RegisterFilter(
 
 	f, ok := m.filters[key]
 	if !ok {
-		f, err = factory.NewFilterer(config)
+		f, err = factory.NewFilterer(tid, plugin, name, config)
 		if err != nil {
 			return nil, &RegistrationError{
 				Message: "could not create new filterer",

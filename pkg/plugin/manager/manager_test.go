@@ -420,7 +420,7 @@ func TestNewFilterer(t *testing.T) {
 	nfe := &manager.NotFoundError{}
 
 	{
-		p, err := m.NewFilterer("myfilterer", "")
+		p, err := m.NewFilterer(tid, "myfilterer", "", "")
 		a.Expect(p).To(BeNil())
 		a.Expect(errTypeToString(err)).To(Equal(errTypeToString(nfe)))
 	}
@@ -430,20 +430,20 @@ func TestNewFilterer(t *testing.T) {
 			"myfilterer",
 			&newFiltererMock{
 				filter.NewFiltererMock{
-					NewFiltererFunc: func(config interface{}) (filter.Filterer, error) {
+					NewFiltererFunc: func(tid tenant.Id, plugin string, name string, config interface{}) (filter.Filterer, error) {
 						return &filter.FiltererMock{}, nil
 					},
 				},
 			},
 		)
-		p, err := m.NewFilterer("myfilterer", "")
+		p, err := m.NewFilterer(tid, "myfilterer", "", "")
 		a.Expect(p).ToNot(BeNil())
 		a.Expect(err).To(BeNil())
 		m.UnregisterPlugin("myfilterer")
 	}
 
 	{
-		p, err := m.NewFilterer("myfilterer", "")
+		p, err := m.NewFilterer(tid, "myfilterer", "", "")
 		a.Expect(p).To(BeNil())
 		a.Expect(errTypeToString(err)).To(Equal(errTypeToString(nfe)))
 	}

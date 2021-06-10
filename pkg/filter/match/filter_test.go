@@ -17,6 +17,7 @@ package match_test
 import (
 	"context"
 	"fmt"
+	"github.com/xmidt-org/ears/pkg/tenant"
 	"testing"
 
 	"github.com/goccy/go-yaml"
@@ -101,7 +102,7 @@ func TestFilterRegex(t *testing.T) {
 
 			for _, mode := range []match.ModeType{match.ModeAllow, match.ModeDeny} {
 
-				f, err := match.NewFilter(match.Config{
+				f, err := match.NewFilter(tenant.Id{AppId: "myapp", OrgId: "myorg"}, "match", "mymatch", match.Config{
 					Mode:    mode,
 					Matcher: match.MatcherRegex,
 					Pattern: &tc.pattern,
@@ -236,7 +237,7 @@ func TestNewFilterConfig(t *testing.T) {
 						return
 					}
 
-					f, err := match.NewFilter(cfg)
+					f, err := match.NewFilter(tenant.Id{AppId: "myapp", OrgId: "myorg"}, "match", "mymatch", cfg)
 					a.Expect(err).To(BeNil())
 					a.Expect(f).ToNot(BeNil())
 
@@ -267,7 +268,7 @@ func TestNewFilterBadConfig(t *testing.T) {
 	a := NewWithT(t)
 
 	{
-		f, err := match.NewFilter(match.Config{
+		f, err := match.NewFilter(tenant.Id{AppId: "myapp", OrgId: "myorg"}, "match", "mymatch", match.Config{
 			Mode:    match.ModeType(93),
 			Matcher: match.MatcherRegex,
 			Pattern: pointer.String("pattern"),
@@ -277,7 +278,7 @@ func TestNewFilterBadConfig(t *testing.T) {
 	}
 
 	{
-		f, err := match.NewFilter(match.Config{
+		f, err := match.NewFilter(tenant.Id{AppId: "myapp", OrgId: "myorg"}, "match", "mymatch", match.Config{
 			Mode:    match.ModeAllow,
 			Matcher: match.MatcherType(34),
 			Pattern: pointer.String("pattern"),

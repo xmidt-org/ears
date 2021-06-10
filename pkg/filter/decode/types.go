@@ -14,20 +14,25 @@
 
 package decode
 
+import "github.com/xmidt-org/ears/pkg/tenant"
+
 // Config can be passed into NewFilter() in order to configure
 // the behavior of the sender.
 type Config struct {
-	FromPath     string `json:"fromPath,omitempty"`
-	ToPath       string `json:"toPath,omitempty"`
-	Encoding     string `json:"encoding,omitempty"`
+	FromPath string `json:"fromPath,omitempty"`
+	ToPath   string `json:"toPath,omitempty"`
+	Encoding string `json:"encoding,omitempty"`
 }
 
 var DefaultConfig = Config{
-	FromPath:     "",
-	ToPath:       "",
-	Encoding:     "base64",
+	FromPath: "",
+	ToPath:   "",
+	Encoding: "base64",
 }
 
 type Filter struct {
 	config Config
+	name   string
+	plugin string
+	tid    tenant.Id
 }

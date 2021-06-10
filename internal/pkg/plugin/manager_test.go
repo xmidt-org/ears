@@ -522,7 +522,7 @@ func newFiltererPlugin(t *testing.T) pkgplugin.Pluginer {
 		return "filter_" + hasher.Hash(config), nil
 	}
 
-	mock.NewFiltererFunc = func(config interface{}) (pkgfilter.Filterer, error) {
+	mock.NewFiltererFunc = func(tid tenant.Id, plugin string, name string, config interface{}) (pkgfilter.Filterer, error) {
 		return &pkgfilter.FiltererMock{
 			FilterFunc: func(e pkgevent.Event) []pkgevent.Event {
 				fmt.Printf("FILTER EVENT: %+v\n", e)

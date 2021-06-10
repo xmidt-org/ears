@@ -83,7 +83,7 @@ func (p *plugin) StopReceiving(ctx context.Context) error {
 
 // Filterer ============================================================
 
-func NewFilterer(config interface{}) (filter.Filterer, error) {
+func NewFilterer(tid tenant.Id, pluginType string, name string, config interface{}) (filter.Filterer, error) {
 	return &plugin{}, nil
 }
 

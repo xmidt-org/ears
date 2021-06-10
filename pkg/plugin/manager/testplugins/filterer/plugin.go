@@ -17,6 +17,7 @@ package main
 import (
 	"github.com/xmidt-org/ears/pkg/filter"
 	pkgplugin "github.com/xmidt-org/ears/pkg/plugin"
+	"github.com/xmidt-org/ears/pkg/tenant"
 
 	"github.com/xmidt-org/ears/pkg/event"
 )
@@ -58,7 +59,7 @@ func NewPluginVersion(name string, version string, commitID string) (*pkgplugin.
 
 // Filterer ============================================================
 
-func NewFilterer(config interface{}) (filter.Filterer, error) {
+func NewFilterer(tid tenant.Id, pluginType string, name string, config interface{}) (filter.Filterer, error) {
 	return &plugin{}, nil
 }
 
@@ -76,4 +77,8 @@ func (p *plugin) Name() string {
 
 func (p *plugin) Plugin() string {
 	return "filter"
+}
+
+func (p *plugin) Tenant() tenant.Id {
+	return tenant.Id{OrgId: "myorg", AppId: "myapp"}
 }

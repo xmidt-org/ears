@@ -14,6 +14,8 @@
 
 package split
 
+import "github.com/xmidt-org/ears/pkg/tenant"
+
 type Config struct {
 	Path string `json:"path,omitempty"`
 }
@@ -24,4 +26,7 @@ var DefaultConfig = Config{
 
 type Filter struct {
 	config Config
+	name   string
+	plugin string
+	tid    tenant.Id
 }

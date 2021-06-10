@@ -84,3 +84,7 @@ func (f *filter) Name() string {
 func (f *filter) Plugin() string {
 	return f.plugin
 }
+
+func (f *filter) Tenant() tenant.Id {
+	return f.tid
+}
