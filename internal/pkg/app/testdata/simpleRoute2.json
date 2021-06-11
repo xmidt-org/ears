@@ -1,0 +1,27 @@
+{
+  "id": "r102",
+  "userId": "boris",
+  "name": "simpleRoute2",
+  "receiver": {
+    "plugin": "debug",
+    "name": "mydebug",
+    "config": {
+      "intervalMs": 10,
+      "maxHistory": 100,
+      "payload": {
+        "foo": "bar"
+      },
+      "rounds": 5,
+      "trace": true
+    }
+  },
+  "sender": {
+    "plugin": "debug",
+    "name": "simpleRouteSender2",
+    "config": {
+      "destination": "stdout",
+      "maxHistory": 100
+    }
+  },
+  "deliveryMode": "whoCares"
+}

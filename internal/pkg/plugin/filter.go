@@ -16,6 +16,7 @@ package plugin
 
 import (
 	"context"
+	"github.com/xmidt-org/ears/pkg/tenant"
 	"sync"
 
 	"github.com/xmidt-org/ears/pkg/event"
@@ -32,6 +33,7 @@ type filter struct {
 	name   string
 	plugin string
 	hash   string
+	tid    tenant.Id
 
 	manager *manager
 
@@ -81,4 +83,8 @@ func (f *filter) Name() string {
 
 func (f *filter) Plugin() string {
 	return f.plugin
+}
+
+func (f *filter) Tenant() tenant.Id {
+	return f.tid
 }

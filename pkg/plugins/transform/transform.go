@@ -16,8 +16,9 @@ package transform
 
 import (
 	"github.com/xmidt-org/ears/pkg/filter"
-	pkguntransfrom "github.com/xmidt-org/ears/pkg/filter/transform"
+	pkgtransfrom "github.com/xmidt-org/ears/pkg/filter/transform"
 	pkgplugin "github.com/xmidt-org/ears/pkg/plugin"
+	"github.com/xmidt-org/ears/pkg/tenant"
 )
 
 var (
@@ -39,6 +40,6 @@ func NewPluginVersion(name string, version string, commitID string) (*pkgplugin.
 	)
 }
 
-func NewFilterer(config interface{}) (filter.Filterer, error) {
-	return pkguntransfrom.NewFilter(config)
+func NewFilterer(tid tenant.Id, plugin string, name string, config interface{}) (filter.Filterer, error) {
+	return pkgtransfrom.NewFilter(tid, plugin, name, config)
 }

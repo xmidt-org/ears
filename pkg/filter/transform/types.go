@@ -14,11 +14,13 @@
 
 package transform
 
+import "github.com/xmidt-org/ears/pkg/tenant"
+
 // Config can be passed into NewFilter() in order to configure
 // the behavior of the sender.
 type Config struct {
 	Transformation interface{} `json:"transformation,omitempty"`
-	ToPath       string      `json:"formPath,omitempty"`
+	ToPath         string      `json:"formPath,omitempty"`
 }
 
 var empty interface{}
@@ -29,4 +31,7 @@ var DefaultConfig = Config{
 
 type Filter struct {
 	config Config
+	name   string
+	plugin string
+	tid    tenant.Id
 }

@@ -6,6 +6,7 @@ package sender
 import (
 	"context"
 	"github.com/xmidt-org/ears/pkg/event"
+	"github.com/xmidt-org/ears/pkg/tenant"
 	"sync"
 )
 
@@ -84,7 +85,7 @@ var _ NewSenderer = &NewSendererMock{}
 //
 // 		// make and configure a mocked NewSenderer
 // 		mockedNewSenderer := &NewSendererMock{
-// 			NewSenderFunc: func(config interface{}) (Sender, error) {
+// 			NewSenderFunc: func(tid tenant.Id, plugin string, name string, config interface{}) (Sender, error) {
 // 				panic("mock out the NewSender method")
 // 			},
 // 			SenderHashFunc: func(config interface{}) (string, error) {
@@ -98,7 +99,7 @@ var _ NewSenderer = &NewSendererMock{}
 // 	}
 type NewSendererMock struct {
 	// NewSenderFunc mocks the NewSender method.
-	NewSenderFunc func(config interface{}) (Sender, error)
+	NewSenderFunc func(tid tenant.Id, plugin string, name string, config interface{}) (Sender, error)
 
 	// SenderHashFunc mocks the SenderHash method.
 	SenderHashFunc func(config interface{}) (string, error)
@@ -107,6 +108,12 @@ type NewSendererMock struct {
 	calls struct {
 		// NewSender holds details about calls to the NewSender method.
 		NewSender []struct {
+			// Tid is the tid argument value.
+			Tid tenant.Id
+			// Plugin is the plugin argument value.
+			Plugin string
+			// Name is the name argument value.
+			Name string
 			// Config is the config argument value.
 			Config interface{}
 		}
@@ -121,28 +128,40 @@ type NewSendererMock struct {
 }
 
 // NewSender calls NewSenderFunc.
-func (mock *NewSendererMock) NewSender(config interface{}) (Sender, error) {
+func (mock *NewSendererMock) NewSender(tid tenant.Id, plugin string, name string, config interface{}) (Sender, error) {
 	if mock.NewSenderFunc == nil {
 		panic("NewSendererMock.NewSenderFunc: method is nil but NewSenderer.NewSender was just called")
 	}
 	callInfo := struct {
+		Tid    tenant.Id
+		Plugin string
+		Name   string
 		Config interface{}
 	}{
+		Tid:    tid,
+		Plugin: plugin,
+		Name:   name,
 		Config: config,
 	}
 	mock.lockNewSender.Lock()
 	mock.calls.NewSender = append(mock.calls.NewSender, callInfo)
 	mock.lockNewSender.Unlock()
-	return mock.NewSenderFunc(config)
+	return mock.NewSenderFunc(tid, plugin, name, config)
 }
 
 // NewSenderCalls gets all the calls that were made to NewSender.
 // Check the length with:
 //     len(mockedNewSenderer.NewSenderCalls())
 func (mock *NewSendererMock) NewSenderCalls() []struct {
+	Tid    tenant.Id
+	Plugin string
+	Name   string
 	Config interface{}
 } {
 	var calls []struct {
+		Tid    tenant.Id
+		Plugin string
+		Name   string
 		Config interface{}
 	}
 	mock.lockNewSender.RLock()
@@ -207,6 +226,9 @@ var _ Sender = &SenderMock{}
 // 			StopSendingFunc: func(ctx context.Context)  {
 // 				panic("mock out the StopSending method")
 // 			},
+// 			TenantFunc: func() tenant.Id {
+// 				panic("mock out the Tenant method")
+// 			},
 // 			UnwrapFunc: func() Sender {
 // 				panic("mock out the Unwrap method")
 // 			},
@@ -232,6 +254,9 @@ type SenderMock struct {
 	// StopSendingFunc mocks the StopSending method.
 	StopSendingFunc func(ctx context.Context)
 
+	// TenantFunc mocks the Tenant method.
+	TenantFunc func() tenant.Id
+
 	// UnwrapFunc mocks the Unwrap method.
 	UnwrapFunc func() Sender
 
@@ -256,6 +281,9 @@ type SenderMock struct {
 			// Ctx is the ctx argument value.
 			Ctx context.Context
 		}
+		// Tenant holds details about calls to the Tenant method.
+		Tenant []struct {
+		}
 		// Unwrap holds details about calls to the Unwrap method.
 		Unwrap []struct {
 		}
@@ -265,6 +293,7 @@ type SenderMock struct {
 	lockPlugin      sync.RWMutex
 	lockSend        sync.RWMutex
 	lockStopSending sync.RWMutex
+	lockTenant      sync.RWMutex
 	lockUnwrap      sync.RWMutex
 }
 
@@ -405,6 +434,32 @@ func (mock *SenderMock) StopSendingCalls() []struct {
 	mock.lockStopSending.RLock()
 	calls = mock.calls.StopSending
 	mock.lockStopSending.RUnlock()
+	return calls
+}
+
+// Tenant calls TenantFunc.
+func (mock *SenderMock) Tenant() tenant.Id {
+	if mock.TenantFunc == nil {
+		panic("SenderMock.TenantFunc: method is nil but Sender.Tenant was just called")
+	}
+	callInfo := struct {
+	}{}
+	mock.lockTenant.Lock()
+	mock.calls.Tenant = append(mock.calls.Tenant, callInfo)
+	mock.lockTenant.Unlock()
+	return mock.TenantFunc()
+}
+
+// TenantCalls gets all the calls that were made to Tenant.
+// Check the length with:
+//     len(mockedSender.TenantCalls())
+func (mock *SenderMock) TenantCalls() []struct {
+} {
+	var calls []struct {
+	}
+	mock.lockTenant.RLock()
+	calls = mock.calls.Tenant
+	mock.lockTenant.RUnlock()
 	return calls
 }
 
