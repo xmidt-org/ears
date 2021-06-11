@@ -16,6 +16,7 @@ package batch
 
 import (
 	"github.com/xmidt-org/ears/pkg/event"
+	"github.com/xmidt-org/ears/pkg/tenant"
 	"github.com/xorcare/pointer"
 	"sync"
 )
@@ -32,6 +33,9 @@ var DefaultConfig = Config{
 
 type Filter struct {
 	sync.Mutex
-	config   Config
-	batch []event.Event
+	config Config
+	batch  []event.Event
+	name   string
+	plugin string
+	tid    tenant.Id
 }

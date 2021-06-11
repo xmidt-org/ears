@@ -5,6 +5,7 @@ package receiver
 
 import (
 	"context"
+	"github.com/xmidt-org/ears/pkg/tenant"
 	"sync"
 )
 
@@ -83,7 +84,7 @@ var _ NewReceiverer = &NewReceivererMock{}
 //
 // 		// make and configure a mocked NewReceiverer
 // 		mockedNewReceiverer := &NewReceivererMock{
-// 			NewReceiverFunc: func(config interface{}) (Receiver, error) {
+// 			NewReceiverFunc: func(tid tenant.Id, plugin string, name string, config interface{}) (Receiver, error) {
 // 				panic("mock out the NewReceiver method")
 // 			},
 // 			ReceiverHashFunc: func(config interface{}) (string, error) {
@@ -97,7 +98,7 @@ var _ NewReceiverer = &NewReceivererMock{}
 // 	}
 type NewReceivererMock struct {
 	// NewReceiverFunc mocks the NewReceiver method.
-	NewReceiverFunc func(config interface{}) (Receiver, error)
+	NewReceiverFunc func(tid tenant.Id, plugin string, name string, config interface{}) (Receiver, error)
 
 	// ReceiverHashFunc mocks the ReceiverHash method.
 	ReceiverHashFunc func(config interface{}) (string, error)
@@ -106,6 +107,12 @@ type NewReceivererMock struct {
 	calls struct {
 		// NewReceiver holds details about calls to the NewReceiver method.
 		NewReceiver []struct {
+			// Tid is the tid argument value.
+			Tid tenant.Id
+			// Plugin is the plugin argument value.
+			Plugin string
+			// Name is the name argument value.
+			Name string
 			// Config is the config argument value.
 			Config interface{}
 		}
@@ -120,28 +127,40 @@ type NewReceivererMock struct {
 }
 
 // NewReceiver calls NewReceiverFunc.
-func (mock *NewReceivererMock) NewReceiver(config interface{}) (Receiver, error) {
+func (mock *NewReceivererMock) NewReceiver(tid tenant.Id, plugin string, name string, config interface{}) (Receiver, error) {
 	if mock.NewReceiverFunc == nil {
 		panic("NewReceivererMock.NewReceiverFunc: method is nil but NewReceiverer.NewReceiver was just called")
 	}
 	callInfo := struct {
+		Tid    tenant.Id
+		Plugin string
+		Name   string
 		Config interface{}
 	}{
+		Tid:    tid,
+		Plugin: plugin,
+		Name:   name,
 		Config: config,
 	}
 	mock.lockNewReceiver.Lock()
 	mock.calls.NewReceiver = append(mock.calls.NewReceiver, callInfo)
 	mock.lockNewReceiver.Unlock()
-	return mock.NewReceiverFunc(config)
+	return mock.NewReceiverFunc(tid, plugin, name, config)
 }
 
 // NewReceiverCalls gets all the calls that were made to NewReceiver.
 // Check the length with:
 //     len(mockedNewReceiverer.NewReceiverCalls())
 func (mock *NewReceivererMock) NewReceiverCalls() []struct {
+	Tid    tenant.Id
+	Plugin string
+	Name   string
 	Config interface{}
 } {
 	var calls []struct {
+		Tid    tenant.Id
+		Plugin string
+		Name   string
 		Config interface{}
 	}
 	mock.lockNewReceiver.RLock()
@@ -206,6 +225,9 @@ var _ Receiver = &ReceiverMock{}
 // 			StopReceivingFunc: func(ctx context.Context) error {
 // 				panic("mock out the StopReceiving method")
 // 			},
+// 			TenantFunc: func() tenant.Id {
+// 				panic("mock out the Tenant method")
+// 			},
 // 		}
 //
 // 		// use mockedReceiver in code that requires Receiver
@@ -228,6 +250,9 @@ type ReceiverMock struct {
 	// StopReceivingFunc mocks the StopReceiving method.
 	StopReceivingFunc func(ctx context.Context) error
 
+	// TenantFunc mocks the Tenant method.
+	TenantFunc func() tenant.Id
+
 	// calls tracks calls to the methods.
 	calls struct {
 		// Config holds details about calls to the Config method.
@@ -249,12 +274,16 @@ type ReceiverMock struct {
 			// Ctx is the ctx argument value.
 			Ctx context.Context
 		}
+		// Tenant holds details about calls to the Tenant method.
+		Tenant []struct {
+		}
 	}
 	lockConfig        sync.RWMutex
 	lockName          sync.RWMutex
 	lockPlugin        sync.RWMutex
 	lockReceive       sync.RWMutex
 	lockStopReceiving sync.RWMutex
+	lockTenant        sync.RWMutex
 }
 
 // Config calls ConfigFunc.
@@ -394,5 +423,31 @@ func (mock *ReceiverMock) StopReceivingCalls() []struct {
 	mock.lockStopReceiving.RLock()
 	calls = mock.calls.StopReceiving
 	mock.lockStopReceiving.RUnlock()
+	return calls
+}
+
+// Tenant calls TenantFunc.
+func (mock *ReceiverMock) Tenant() tenant.Id {
+	if mock.TenantFunc == nil {
+		panic("ReceiverMock.TenantFunc: method is nil but Receiver.Tenant was just called")
+	}
+	callInfo := struct {
+	}{}
+	mock.lockTenant.Lock()
+	mock.calls.Tenant = append(mock.calls.Tenant, callInfo)
+	mock.lockTenant.Unlock()
+	return mock.TenantFunc()
+}
+
+// TenantCalls gets all the calls that were made to Tenant.
+// Check the length with:
+//     len(mockedReceiver.TenantCalls())
+func (mock *ReceiverMock) TenantCalls() []struct {
+} {
+	var calls []struct {
+	}
+	mock.lockTenant.RLock()
+	calls = mock.calls.Tenant
+	mock.lockTenant.RUnlock()
 	return calls
 }

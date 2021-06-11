@@ -16,6 +16,7 @@ package plugin
 
 import (
 	"fmt"
+	"github.com/xmidt-org/ears/pkg/tenant"
 	"strings"
 
 	"github.com/xmidt-org/ears/pkg/bit"
@@ -224,7 +225,7 @@ func (p *Plugin) ReceiverHash(config interface{}) (string, error) {
 	return p.hashReceiver(config)
 }
 
-func (p *Plugin) NewReceiver(config interface{}) (receiver.Receiver, error) {
+func (p *Plugin) NewReceiver(tid tenant.Id, plugin string, name string, config interface{}) (receiver.Receiver, error) {
 	if p == nil {
 		return nil, &NilPluginError{}
 	}
@@ -233,7 +234,7 @@ func (p *Plugin) NewReceiver(config interface{}) (receiver.Receiver, error) {
 		return nil, &NotSupportedError{}
 	}
 
-	return p.newReceiver(config)
+	return p.newReceiver(tid, plugin, name, config)
 }
 
 // == Senderer ===========================================================
@@ -246,7 +247,7 @@ func (p *Plugin) SenderHash(config interface{}) (string, error) {
 	return p.hashSender(config)
 }
 
-func (p *Plugin) NewSender(config interface{}) (sender.Sender, error) {
+func (p *Plugin) NewSender(tid tenant.Id, plugin string, name string, config interface{}) (sender.Sender, error) {
 	if p == nil {
 		return nil, &NilPluginError{}
 	}
@@ -255,7 +256,7 @@ func (p *Plugin) NewSender(config interface{}) (sender.Sender, error) {
 		return nil, &NotSupportedError{}
 	}
 
-	return p.newSender(config)
+	return p.newSender(tid, plugin, name, config)
 }
 
 // == Filterer ===========================================================
@@ -268,7 +269,7 @@ func (p *Plugin) FiltererHash(config interface{}) (string, error) {
 	return p.hashFilter(config)
 }
 
-func (p *Plugin) NewFilterer(config interface{}) (filter.Filterer, error) {
+func (p *Plugin) NewFilterer(tid tenant.Id, plugin string, name string, config interface{}) (filter.Filterer, error) {
 	if p == nil {
 		return nil, &NilPluginError{}
 	}
@@ -277,7 +278,7 @@ func (p *Plugin) NewFilterer(config interface{}) (filter.Filterer, error) {
 		return nil, &NotSupportedError{}
 	}
 
-	return p.newFilterer(config)
+	return p.newFilterer(tid, plugin, name, config)
 }
 
 // == Helpers =================================

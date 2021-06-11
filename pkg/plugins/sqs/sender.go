@@ -28,6 +28,7 @@ import (
 	"github.com/xmidt-org/ears/pkg/event"
 	pkgplugin "github.com/xmidt-org/ears/pkg/plugin"
 	"github.com/xmidt-org/ears/pkg/sender"
+	"github.com/xmidt-org/ears/pkg/tenant"
 	"go.opentelemetry.io/otel"
 	"os"
 	"time"
@@ -36,7 +37,7 @@ import (
 //TODO: MessageAttributes
 //TODO: improve graceful shutdown
 
-func NewSender(config interface{}) (sender.Sender, error) {
+func NewSender(tid tenant.Id, plugin string, name string, config interface{}) (sender.Sender, error) {
 	var cfg SenderConfig
 	var err error
 	switch c := config.(type) {
@@ -62,6 +63,9 @@ func NewSender(config interface{}) (sender.Sender, error) {
 	logger := zerolog.New(os.Stdout).Level(zerolog.DebugLevel).With().Timestamp().Logger()
 	//zerolog.LevelFieldName = "log.level"
 	s := &Sender{
+		name:   name,
+		plugin: plugin,
+		tid:    tid,
 		config: cfg,
 		logger: logger,
 	}
@@ -195,9 +199,13 @@ func (s *Sender) Config() interface{} {
 }
 
 func (s *Sender) Name() string {
-	return ""
+	return s.name
 }
 
 func (s *Sender) Plugin() string {
-	return rtsemconv.EARSPluginTypeSQS
+	return s.plugin
+}
+
+func (s *Sender) Tenant() tenant.Id {
+	return s.tid
 }

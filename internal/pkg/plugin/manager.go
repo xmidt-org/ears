@@ -129,14 +129,14 @@ func (m *manager) RegisterReceiver(
 		}
 	}
 
-	key := m.mapkey(name, hash)
+	key := m.mapkey(tid, name, hash)
 
 	m.Lock()
 	defer m.Unlock()
 
 	r, ok := m.receivers[key]
 	if !ok {
-		r, err = ns.NewReceiver(config)
+		r, err = ns.NewReceiver(tid, plugin, name, config)
 		if err != nil {
 			return nil, &RegistrationError{
 				Message: "could not create new receiver",
@@ -177,6 +177,7 @@ func (m *manager) RegisterReceiver(
 
 	w := &receiver{
 		id:       u.String(),
+		tid:      tid,
 		name:     name,
 		plugin:   plugin,
 		hash:     hash,
@@ -207,7 +208,7 @@ func (m *manager) ReceiversStatus() map[string]ReceiverStatus {
 	defer m.Unlock()
 	receivers := map[string]ReceiverStatus{}
 	for _, v := range m.receiversWrapped {
-		mapKey := m.mapkey(v.Name(), v.hash)
+		mapKey := m.mapkey(v.tid, v.Name(), v.hash)
 		status, ok := receivers[mapKey]
 		if ok {
 			status.ReferenceCount++
@@ -266,7 +267,7 @@ func (m *manager) receive(r *receiver, nextFn pkgreceiver.NextFn) error {
 	r.Unlock()
 
 	m.Lock()
-	m.receiversFn[m.mapkey(r.name, r.hash)][r.id] = nextFn
+	m.receiversFn[m.mapkey(r.tid, r.name, r.hash)][r.id] = nextFn
 	m.Unlock()
 
 	<-r.done
@@ -276,7 +277,7 @@ func (m *manager) receive(r *receiver, nextFn pkgreceiver.NextFn) error {
 
 func (m *manager) stopReceiving(ctx context.Context, r *receiver) error {
 	m.Lock()
-	delete(m.receiversFn[m.mapkey(r.name, r.hash)], r.id)
+	delete(m.receiversFn[m.mapkey(r.tid, r.name, r.hash)], r.id)
 	m.Unlock()
 	r.Lock()
 	defer r.Unlock()
@@ -299,7 +300,7 @@ func (m *manager) UnregisterReceiver(ctx context.Context, pr pkgreceiver.Receive
 		}
 	}
 	r.StopReceiving(ctx) // This in turn calls manager.stopreceiving()
-	key := m.mapkey(r.name, r.hash)
+	key := m.mapkey(r.tid, r.name, r.hash)
 	m.Lock()
 	defer m.Unlock()
 	m.receiversCount[key]--
@@ -353,14 +354,14 @@ func (m *manager) RegisterFilter(
 		}
 	}
 
-	key := m.mapkey(name, hash)
+	key := m.mapkey(tid, name, hash)
 
 	m.Lock()
 	defer m.Unlock()
 
 	f, ok := m.filters[key]
 	if !ok {
-		f, err = factory.NewFilterer(config)
+		f, err = factory.NewFilterer(tid, plugin, name, config)
 		if err != nil {
 			return nil, &RegistrationError{
 				Message: "could not create new filterer",
@@ -386,6 +387,7 @@ func (m *manager) RegisterFilter(
 
 	w := &filter{
 		id:      u.String(),
+		tid:     tid,
 		name:    name,
 		plugin:  plugin,
 		hash:    hash,
@@ -417,7 +419,7 @@ func (m *manager) FiltersStatus() map[string]FilterStatus {
 	defer m.Unlock()
 	filters := map[string]FilterStatus{}
 	for _, v := range m.filtersWrapped {
-		mapKey := m.mapkey(v.Name(), v.hash)
+		mapKey := m.mapkey(v.tid, v.Name(), v.hash)
 		status, ok := filters[mapKey]
 		if ok {
 			status.ReferenceCount++
@@ -439,7 +441,7 @@ func (m *manager) UnregisterFilter(ctx context.Context, pf pkgfilter.Filterer) e
 		}
 	}
 
-	key := m.mapkey(f.name, f.hash)
+	key := m.mapkey(f.tid, f.name, f.hash)
 
 	{
 		m.Lock()
@@ -502,14 +504,14 @@ func (m *manager) RegisterSender(
 		}
 	}
 
-	key := m.mapkey(name, hash)
+	key := m.mapkey(tid, name, hash)
 
 	m.Lock()
 	defer m.Unlock()
 
 	s, ok := m.senders[key]
 	if !ok {
-		s, err = ns.NewSender(config)
+		s, err = ns.NewSender(tid, plugin, name, config)
 		if err != nil {
 			return nil, &RegistrationError{
 				Message: "could not create sender",
@@ -535,6 +537,7 @@ func (m *manager) RegisterSender(
 
 	w := &sender{
 		id:      u.String(),
+		tid:     tid,
 		name:    name,
 		plugin:  plugin,
 		hash:    hash,
@@ -564,7 +567,7 @@ func (m *manager) SendersStatus() map[string]SenderStatus {
 	defer m.Unlock()
 	senders := map[string]SenderStatus{}
 	for _, v := range m.sendersWrapped {
-		mapKey := m.mapkey(v.Name(), v.hash)
+		mapKey := m.mapkey(v.tid, v.Name(), v.hash)
 		status, ok := senders[mapKey]
 		if ok {
 			status.ReferenceCount++
@@ -577,38 +580,30 @@ func (m *manager) SendersStatus() map[string]SenderStatus {
 }
 
 func (m *manager) UnregisterSender(ctx context.Context, ps pkgsender.Sender) error {
-
 	s, ok := ps.(*sender)
 	if !ok || !s.active {
 		return &RegistrationError{
 			Message: "sender not registered",
 		}
 	}
-
-	key := m.mapkey(s.name, s.hash)
-
+	key := m.mapkey(s.tid, s.name, s.hash)
 	m.Lock()
-
 	m.sendersCount[key]--
-
 	if m.sendersCount[key] <= 0 {
 		delete(m.sendersCount, key)
 		delete(m.senders, key)
 	}
-
 	delete(m.sendersWrapped, s.id)
 	m.Unlock()
-
 	s.Lock()
 	s.active = false
 	s.Unlock()
-
 	return nil
 
 }
 
 // === Helper Functions ==============================================
 
-func (m *manager) mapkey(name string, hash string) string {
-	return name + "/" + hash
+func (m *manager) mapkey(tid tenant.Id, name string, hash string) string {
+	return tid.OrgId + "/" + tid.AppId + "/" + name + "/" + hash
 }

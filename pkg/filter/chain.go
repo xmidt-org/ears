@@ -17,6 +17,7 @@ package filter
 import (
 	"container/list"
 	"fmt"
+	"github.com/xmidt-org/ears/pkg/tenant"
 
 	"github.com/xmidt-org/ears/pkg/event"
 )
@@ -94,4 +95,8 @@ func (c *Chain) Name() string {
 
 func (c *Chain) Plugin() string {
 	return "filter_chain"
+}
+
+func (c *Chain) Tenant() tenant.Id {
+	return tenant.Id{}
 }
