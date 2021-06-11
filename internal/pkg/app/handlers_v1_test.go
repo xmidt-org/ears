@@ -262,7 +262,6 @@ func TestRouteTable(t *testing.T) {
 			if err != nil {
 				t.Fatalf("%s test: route count issue: %s", currentTestName, err.Error())
 			}
-
 			for _, rt := range passiveRuntimes {
 				err = checkNumRoutes(rt.apiManager, currentTestName, len(routeIds))
 				if err != nil {
@@ -280,7 +279,6 @@ func TestRouteTable(t *testing.T) {
 					t.Fatalf("%s test: synchronized registered route count mismatch: %d (%d)", currentTestName, len(registeredRoutes), len(routeIds))
 				}
 			}
-
 			// check number of events and payloads if desired
 			for _, eventData := range currentTest.Events {
 				if eventData.SenderRouteFile == "" {
@@ -344,7 +342,7 @@ func TestRouteTable(t *testing.T) {
 				}
 			}
 			// sleep
-			time.Sleep(100 * time.Millisecond)
+			time.Sleep(250 * time.Millisecond)
 		})
 	}
 	// tear down ears runtime
