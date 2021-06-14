@@ -307,10 +307,12 @@ func (r *Receiver) StopReceiving(ctx context.Context) error {
 }
 
 func (r *Receiver) Trigger(e event.Event) {
+	r.logger.Debug().Msg("triggering")
 	r.Lock()
 	next := r.next
 	r.Unlock()
 	next(e)
+	r.logger.Debug().Msg("triggering complete")
 }
 
 func (r *Receiver) Config() interface{} {
