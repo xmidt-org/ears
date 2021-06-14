@@ -16,6 +16,7 @@ package match
 
 import (
 	"github.com/xmidt-org/ears/pkg/event"
+	"github.com/xmidt-org/ears/pkg/tenant"
 	"github.com/xorcare/pointer"
 )
 
@@ -47,20 +48,23 @@ const (
 // Config can be passed into NewFilter() in order to configure
 // the behavior of the sender.
 type Config struct {
-	Mode    ModeType     `json:"mode,omitempty"`
-	Matcher MatcherType  `json:"matcher,omitempty"`
-	Pattern interface{}  `json:"pattern,omitempty"`
-	ExactArrayMatch *bool `json:"exactArrayMatch,omitempty"`
+	Mode            ModeType    `json:"mode,omitempty"`
+	Matcher         MatcherType `json:"matcher,omitempty"`
+	Pattern         interface{} `json:"pattern,omitempty"`
+	ExactArrayMatch *bool       `json:"exactArrayMatch,omitempty"`
 }
 
 var DefaultConfig = Config{
-	Mode:    ModeAllow,
-	Matcher: MatcherRegex,
-	Pattern: `^.*$`,
+	Mode:            ModeAllow,
+	Matcher:         MatcherRegex,
+	Pattern:         `^.*$`,
 	ExactArrayMatch: pointer.Bool(true),
 }
 
 type Filter struct {
 	matcher Matcher
 	config  Config
+	name    string
+	plugin  string
+	tid     tenant.Id
 }

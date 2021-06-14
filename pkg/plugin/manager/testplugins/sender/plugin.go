@@ -17,6 +17,7 @@ package main
 import (
 	"context"
 	pkgplugin "github.com/xmidt-org/ears/pkg/plugin"
+	"github.com/xmidt-org/ears/pkg/tenant"
 
 	"github.com/xmidt-org/ears/pkg/event"
 	"github.com/xmidt-org/ears/pkg/sender"
@@ -59,7 +60,7 @@ func NewPluginVersion(name string, version string, commitID string) (*pkgplugin.
 
 // Sender ===========================================================
 
-func NewSender(config interface{}) (sender.Sender, error) {
+func NewSender(tid tenant.Id, pluginType string, name string, config interface{}) (sender.Sender, error) {
 	return &plugin{}, nil
 }
 
@@ -83,4 +84,8 @@ func (p *plugin) Name() string {
 
 func (p *plugin) Plugin() string {
 	return "plugin"
+}
+
+func (p *plugin) Tenant() tenant.Id {
+	return tenant.Id{OrgId: "myorg", AppId: "myapp"}
 }

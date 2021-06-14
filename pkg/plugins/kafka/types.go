@@ -18,6 +18,7 @@ import (
 	"context"
 	"github.com/Shopify/sarama"
 	"github.com/rs/zerolog"
+	"github.com/xmidt-org/ears/pkg/tenant"
 	"github.com/xorcare/pointer"
 	"go.opentelemetry.io/otel/metric"
 	"sync"
@@ -89,6 +90,9 @@ type Receiver struct {
 	done      chan struct{}
 	stopped   bool
 	config    ReceiverConfig
+	name      string
+	plugin    string
+	tid       tenant.Id
 	next      receiver.NextFn
 	logger    zerolog.Logger
 	count     int
@@ -141,6 +145,9 @@ type SenderConfig struct {
 
 type Sender struct {
 	sync.Mutex
+	name     string
+	plugin   string
+	tid      tenant.Id
 	config   SenderConfig
 	count    int
 	logger   zerolog.Logger

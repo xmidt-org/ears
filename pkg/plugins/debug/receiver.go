@@ -17,8 +17,10 @@ package debug
 import (
 	"context"
 	"encoding/json"
+	"github.com/goccy/go-yaml"
 	"github.com/rs/zerolog"
 	"github.com/xmidt-org/ears/internal/pkg/rtsemconv"
+	"github.com/xmidt-org/ears/pkg/tenant"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
@@ -30,7 +32,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/goccy/go-yaml"
 	"github.com/xmidt-org/ears/pkg/event"
 	pkgplugin "github.com/xmidt-org/ears/pkg/plugin"
 	"github.com/xmidt-org/ears/pkg/receiver"
@@ -39,6 +40,65 @@ import (
 //TODO a configuration option to make this configurable
 
 var debugMaxTO = time.Second * 10 //Default acknowledge timeout (10 seconds)
+
+func NewReceiver(tid tenant.Id, plugin string, name string, config interface{}) (receiver.Receiver, error) {
+	var cfg ReceiverConfig
+	var err error
+	switch c := config.(type) {
+	case string:
+		err = yaml.Unmarshal([]byte(c), &cfg)
+	case []byte:
+		err = yaml.Unmarshal(c, &cfg)
+	case ReceiverConfig:
+		cfg = c
+	case *ReceiverConfig:
+		cfg = *c
+	}
+	if err != nil {
+		return nil, &pkgplugin.InvalidConfigError{
+			Err: err,
+		}
+	}
+	cfg = cfg.WithDefaults()
+	err = cfg.Validate()
+	if err != nil {
+		return nil, err
+	}
+	logger := zerolog.New(os.Stdout).Level(zerolog.DebugLevel)
+	//zerolog.LevelFieldName = "log.level"
+	r := &Receiver{
+		config:  cfg,
+		name:    name,
+		plugin:  plugin,
+		tid:     tid,
+		logger:  logger,
+		stopped: true,
+	}
+	r.history = newHistory(*r.config.MaxHistory)
+	// metric recorders
+	meter := global.Meter(rtsemconv.EARSMeterName)
+	commonLabels := []attribute.KeyValue{
+		attribute.String(rtsemconv.EARSPluginTypeLabel, rtsemconv.EARSPluginTypeDebug),
+		attribute.String(rtsemconv.EARSAppIdLabel, r.tid.AppId),
+		attribute.String(rtsemconv.EARSOrgIdLabel, r.tid.OrgId),
+	}
+	r.eventSuccessCounter = metric.Must(meter).
+		NewFloat64Counter(
+			rtsemconv.EARSMetricEventSuccess,
+			metric.WithDescription("measures the number of successful events"),
+		).Bind(commonLabels...)
+	r.eventFailureCounter = metric.Must(meter).
+		NewFloat64Counter(
+			rtsemconv.EARSMetricEventFailure,
+			metric.WithDescription("measures the number of unsuccessful events"),
+		).Bind(commonLabels...)
+	r.eventBytesCounter = metric.Must(meter).
+		NewInt64Counter(
+			rtsemconv.EARSMetricEventBytes,
+			metric.WithDescription("measures the number of event bytes processed"),
+		).Bind(commonLabels...)
+	return r, nil
+}
 
 func (r *Receiver) Receive(next receiver.NextFn) error {
 	if r == nil {
@@ -132,62 +192,6 @@ func (r *Receiver) StopReceiving(ctx context.Context) error {
 	return nil
 }
 
-func NewReceiver(config interface{}) (receiver.Receiver, error) {
-	var cfg ReceiverConfig
-	var err error
-	switch c := config.(type) {
-	case string:
-		err = yaml.Unmarshal([]byte(c), &cfg)
-	case []byte:
-		err = yaml.Unmarshal(c, &cfg)
-	case ReceiverConfig:
-		cfg = c
-	case *ReceiverConfig:
-		cfg = *c
-	}
-	if err != nil {
-		return nil, &pkgplugin.InvalidConfigError{
-			Err: err,
-		}
-	}
-	cfg = cfg.WithDefaults()
-	err = cfg.Validate()
-	if err != nil {
-		return nil, err
-	}
-	logger := zerolog.New(os.Stdout).Level(zerolog.DebugLevel)
-	//zerolog.LevelFieldName = "log.level"
-	r := &Receiver{
-		config:  cfg,
-		logger:  logger,
-		stopped: true,
-	}
-	r.history = newHistory(*r.config.MaxHistory)
-	// metric recorders
-	meter := global.Meter(rtsemconv.EARSMeterName)
-	commonLabels := []attribute.KeyValue{
-		attribute.String(rtsemconv.EARSPluginTypeLabel, rtsemconv.EARSPluginTypeDebug),
-		attribute.String(rtsemconv.EARSAppIdLabel, "default"),
-		attribute.String(rtsemconv.EARSOrgIdLabel, "default"),
-	}
-	r.eventSuccessCounter = metric.Must(meter).
-		NewFloat64Counter(
-			rtsemconv.EARSMetricEventSuccess,
-			metric.WithDescription("measures the number of successful events"),
-		).Bind(commonLabels...)
-	r.eventFailureCounter = metric.Must(meter).
-		NewFloat64Counter(
-			rtsemconv.EARSMetricEventFailure,
-			metric.WithDescription("measures the number of unsuccessful events"),
-		).Bind(commonLabels...)
-	r.eventBytesCounter = metric.Must(meter).
-		NewInt64Counter(
-			rtsemconv.EARSMetricEventBytes,
-			metric.WithDescription("measures the number of event bytes processed"),
-		).Bind(commonLabels...)
-	return r, nil
-}
-
 func (r *Receiver) Count() int {
 	return r.history.Count()
 }
@@ -218,9 +222,13 @@ func (r *Receiver) Config() interface{} {
 }
 
 func (r *Receiver) Name() string {
-	return ""
+	return r.name
 }
 
 func (r *Receiver) Plugin() string {
-	return rtsemconv.EARSPluginTypeDebug
+	return r.plugin
+}
+
+func (r *Receiver) Tenant() tenant.Id {
+	return r.tid
 }

@@ -18,6 +18,7 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"github.com/xmidt-org/ears/pkg/tenant"
 	"io/ioutil"
 	"log"
 	"os"
@@ -47,6 +48,8 @@ const (
 )
 
 var logger *log.Logger
+
+var tid = tenant.Id{OrgId: "myorg", AppId: "myapp"}
 
 func TestMain(m *testing.M) {
 
@@ -380,7 +383,7 @@ func TestNewReceiver(t *testing.T) {
 	nfe := &manager.NotFoundError{}
 
 	{
-		p, err := m.NewReceiver("myreceiver", "")
+		p, err := m.NewReceiver(tid, "myreceiver", "", "")
 		a.Expect(p).To(BeNil())
 		a.Expect(errTypeToString(err)).To(Equal(errTypeToString(nfe)))
 	}
@@ -390,20 +393,20 @@ func TestNewReceiver(t *testing.T) {
 			"myreceiver",
 			&newReceivererMock{
 				receiver.NewReceivererMock{
-					NewReceiverFunc: func(config interface{}) (receiver.Receiver, error) {
+					NewReceiverFunc: func(tid tenant.Id, plugin string, name string, config interface{}) (receiver.Receiver, error) {
 						return &receiver.ReceiverMock{}, nil
 					},
 				},
 			},
 		)
-		p, err := m.NewReceiver("myreceiver", "")
+		p, err := m.NewReceiver(tid, "myreceiver", "", "")
 		a.Expect(p).ToNot(BeNil())
 		a.Expect(err).To(BeNil())
 		m.UnregisterPlugin("myreceiver")
 	}
 
 	{
-		p, err := m.NewReceiver("myreceiver", "")
+		p, err := m.NewReceiver(tid, "myreceiver", "", "")
 		a.Expect(p).To(BeNil())
 		a.Expect(errTypeToString(err)).To(Equal(errTypeToString(nfe)))
 	}
@@ -417,7 +420,7 @@ func TestNewFilterer(t *testing.T) {
 	nfe := &manager.NotFoundError{}
 
 	{
-		p, err := m.NewFilterer("myfilterer", "")
+		p, err := m.NewFilterer(tid, "myfilterer", "", "")
 		a.Expect(p).To(BeNil())
 		a.Expect(errTypeToString(err)).To(Equal(errTypeToString(nfe)))
 	}
@@ -427,20 +430,20 @@ func TestNewFilterer(t *testing.T) {
 			"myfilterer",
 			&newFiltererMock{
 				filter.NewFiltererMock{
-					NewFiltererFunc: func(config interface{}) (filter.Filterer, error) {
+					NewFiltererFunc: func(tid tenant.Id, plugin string, name string, config interface{}) (filter.Filterer, error) {
 						return &filter.FiltererMock{}, nil
 					},
 				},
 			},
 		)
-		p, err := m.NewFilterer("myfilterer", "")
+		p, err := m.NewFilterer(tid, "myfilterer", "", "")
 		a.Expect(p).ToNot(BeNil())
 		a.Expect(err).To(BeNil())
 		m.UnregisterPlugin("myfilterer")
 	}
 
 	{
-		p, err := m.NewFilterer("myfilterer", "")
+		p, err := m.NewFilterer(tid, "myfilterer", "", "")
 		a.Expect(p).To(BeNil())
 		a.Expect(errTypeToString(err)).To(Equal(errTypeToString(nfe)))
 	}
@@ -454,7 +457,7 @@ func TestNewSenderer(t *testing.T) {
 	nfe := &manager.NotFoundError{}
 
 	{
-		p, err := m.NewSender("mysenderer", "")
+		p, err := m.NewSender(tid, "mysenderer", "", "")
 		a.Expect(p).To(BeNil())
 		a.Expect(errTypeToString(err)).To(Equal(errTypeToString(nfe)))
 	}
@@ -464,20 +467,20 @@ func TestNewSenderer(t *testing.T) {
 			"mysenderer",
 			&newSendererMock{
 				sender.NewSendererMock{
-					NewSenderFunc: func(config interface{}) (sender.Sender, error) {
+					NewSenderFunc: func(tid tenant.Id, pluginType string, name string, config interface{}) (sender.Sender, error) {
 						return &sender.SenderMock{}, nil
 					},
 				},
 			},
 		)
-		p, err := m.NewSender("mysenderer", "")
+		p, err := m.NewSender(tid, "mysenderer", "", "")
 		a.Expect(p).ToNot(BeNil())
 		a.Expect(err).To(BeNil())
 		m.UnregisterPlugin("mysenderer")
 	}
 
 	{
-		p, err := m.NewSender("mysenderer", "")
+		p, err := m.NewSender(tid, "mysenderer", "", "")
 		a.Expect(p).To(BeNil())
 		a.Expect(errTypeToString(err)).To(Equal(errTypeToString(nfe)))
 	}
