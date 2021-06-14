@@ -24,6 +24,7 @@ import (
 	"github.com/goccy/go-yaml"
 	"github.com/google/uuid"
 	"github.com/rs/zerolog"
+	"github.com/rs/zerolog/log"
 	"github.com/xmidt-org/ears/internal/pkg/rtsemconv"
 	"github.com/xmidt-org/ears/pkg/event"
 	pkgplugin "github.com/xmidt-org/ears/pkg/plugin"
@@ -170,6 +171,8 @@ func (s *Sender) send(events []event.Event) {
 }
 
 func (s *Sender) Send(e event.Event) {
+	log.Ctx(e.Context()).Debug().Str("op", "SQS.sendWorker").Msg("sending message...")
+
 	if e.Trace() {
 		tracer := otel.Tracer(rtsemconv.EARSTracerName)
 		_, span := tracer.Start(e.Context(), "sqsSender")
