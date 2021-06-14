@@ -16,6 +16,7 @@ package plugin
 
 import (
 	"context"
+	"github.com/xmidt-org/ears/pkg/tenant"
 	"sync"
 
 	"github.com/xmidt-org/ears/pkg/event"
@@ -28,6 +29,7 @@ var _ pkgsender.Sender = (*sender)(nil)
 type sender struct {
 	sync.Mutex
 	id      string
+	tid     tenant.Id
 	name    string
 	plugin  string
 	hash    string
@@ -50,6 +52,10 @@ func (s *sender) Name() string {
 
 func (s *sender) Plugin() string {
 	return s.plugin
+}
+
+func (s *sender) Tenant() tenant.Id {
+	return s.tid
 }
 
 func (s *sender) Send(e event.Event) {

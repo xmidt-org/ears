@@ -19,6 +19,7 @@ import (
 	"github.com/xmidt-org/ears/internal/pkg/rtsemconv"
 	"github.com/xmidt-org/ears/pkg/filter/match/pattern"
 	"github.com/xmidt-org/ears/pkg/filter/match/patternregex"
+	"github.com/xmidt-org/ears/pkg/tenant"
 	"go.opentelemetry.io/otel"
 
 	"github.com/xmidt-org/ears/pkg/event"
@@ -29,7 +30,7 @@ import (
 // Ensure supporting matchers implement Matcher interface
 var _ Matcher = (*regex.Matcher)(nil)
 
-func NewFilter(config interface{}) (*Filter, error) {
+func NewFilter(tid tenant.Id, plugin string, name string, config interface{}) (*Filter, error) {
 	cfg, err := NewConfig(config)
 	if err != nil {
 		return nil, &filter.InvalidConfigError{
@@ -71,6 +72,9 @@ func NewFilter(config interface{}) (*Filter, error) {
 	}
 	f := &Filter{
 		config:  *cfg,
+		name:    name,
+		plugin:  plugin,
+		tid:     tid,
 		matcher: matcher,
 	}
 	return f, nil
@@ -110,9 +114,13 @@ func (f *Filter) Config() interface{} {
 }
 
 func (f *Filter) Name() string {
-	return ""
+	return f.name
 }
 
 func (f *Filter) Plugin() string {
-	return "match"
+	return f.plugin
+}
+
+func (f *Filter) Tenant() tenant.Id {
+	return f.tid
 }

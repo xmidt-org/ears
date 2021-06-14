@@ -21,6 +21,7 @@ import (
 	"github.com/go-redis/redis"
 	"github.com/rs/zerolog"
 	"github.com/xmidt-org/ears/internal/pkg/rtsemconv"
+	"github.com/xmidt-org/ears/pkg/tenant"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
@@ -35,7 +36,7 @@ import (
 	"github.com/xmidt-org/ears/pkg/receiver"
 )
 
-func NewReceiver(config interface{}) (receiver.Receiver, error) {
+func NewReceiver(tid tenant.Id, plugin string, name string, config interface{}) (receiver.Receiver, error) {
 	var cfg ReceiverConfig
 	var err error
 	switch c := config.(type) {
@@ -62,6 +63,9 @@ func NewReceiver(config interface{}) (receiver.Receiver, error) {
 	//zerolog.LevelFieldName = "log.level"
 	r := &Receiver{
 		config:  cfg,
+		name:    name,
+		plugin:  plugin,
+		tid:     tid,
 		logger:  logger,
 		stopped: true,
 	}
@@ -69,8 +73,8 @@ func NewReceiver(config interface{}) (receiver.Receiver, error) {
 	meter := global.Meter(rtsemconv.EARSMeterName)
 	commonLabels := []attribute.KeyValue{
 		attribute.String(rtsemconv.EARSPluginTypeLabel, rtsemconv.EARSPluginTypeRedis),
-		attribute.String(rtsemconv.EARSAppIdLabel, "default"),
-		attribute.String(rtsemconv.EARSOrgIdLabel, "default"),
+		attribute.String(rtsemconv.EARSAppIdLabel, r.tid.AppId),
+		attribute.String(rtsemconv.EARSOrgIdLabel, r.tid.OrgId),
 		attribute.String(rtsemconv.RedisChannelLabel, r.config.Channel),
 	}
 	r.eventSuccessCounter = metric.Must(meter).
@@ -223,9 +227,13 @@ func (r *Receiver) Config() interface{} {
 }
 
 func (r *Receiver) Name() string {
-	return ""
+	return r.name
 }
 
 func (r *Receiver) Plugin() string {
-	return rtsemconv.EARSPluginTypeRedis
+	return r.plugin
+}
+
+func (r *Receiver) Tenant() tenant.Id {
+	return r.tid
 }

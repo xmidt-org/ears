@@ -24,6 +24,7 @@ import (
 	"github.com/xmidt-org/ears/pkg/event"
 	pkgplugin "github.com/xmidt-org/ears/pkg/plugin"
 	"github.com/xmidt-org/ears/pkg/receiver"
+	"github.com/xmidt-org/ears/pkg/tenant"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
@@ -34,7 +35,7 @@ import (
 	"os"
 )
 
-func NewReceiver(config interface{}) (receiver.Receiver, error) {
+func NewReceiver(tid tenant.Id, plugin string, name string, config interface{}) (receiver.Receiver, error) {
 	var cfg ReceiverConfig
 	var err error
 	switch c := config.(type) {
@@ -59,14 +60,17 @@ func NewReceiver(config interface{}) (receiver.Receiver, error) {
 	logger := zerolog.New(os.Stdout).Level(zerolog.InfoLevel)
 	r := &Receiver{
 		config: cfg,
+		name:   name,
+		plugin: plugin,
+		tid:    tid,
 		logger: &logger,
 	}
 	// metric recorders
 	meter := global.Meter(rtsemconv.EARSMeterName)
 	commonLabels := []attribute.KeyValue{
 		attribute.String(rtsemconv.EARSPluginTypeLabel, rtsemconv.EARSPluginTypeHttp),
-		attribute.String(rtsemconv.EARSAppIdLabel, "default"),
-		attribute.String(rtsemconv.EARSOrgIdLabel, "default"),
+		attribute.String(rtsemconv.EARSAppIdLabel, r.tid.AppId),
+		attribute.String(rtsemconv.EARSOrgIdLabel, r.tid.OrgId),
 	}
 	r.eventSuccessCounter = metric.Must(meter).
 		NewFloat64Counter(
@@ -159,9 +163,13 @@ func (r *Receiver) Config() interface{} {
 }
 
 func (r *Receiver) Name() string {
-	return ""
+	return r.name
 }
 
 func (r *Receiver) Plugin() string {
-	return rtsemconv.EARSPluginTypeHttp
+	return r.plugin
+}
+
+func (r *Receiver) Tenant() tenant.Id {
+	return r.tid
 }

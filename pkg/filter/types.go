@@ -18,6 +18,7 @@
 package filter
 
 import (
+	"github.com/xmidt-org/ears/pkg/tenant"
 	"sync"
 
 	"github.com/xmidt-org/ears/pkg/event"
@@ -50,7 +51,7 @@ type NewFilterer interface {
 	Hasher
 
 	// NewFilterer returns an object that implements the Filterer interface
-	NewFilterer(config interface{}) (Filterer, error)
+	NewFilterer(tid tenant.Id, plugin string, name string, config interface{}) (Filterer, error)
 }
 
 // Filterer defines the interface that a filterer must implement
@@ -61,6 +62,7 @@ type Filterer interface {
 	Config() interface{}
 	Name() string
 	Plugin() string
+	Tenant() tenant.Id
 }
 
 // Chainer

@@ -16,6 +16,7 @@ package manager
 
 import (
 	"fmt"
+	"github.com/xmidt-org/ears/pkg/tenant"
 	"reflect"
 	"sync"
 
@@ -123,22 +124,17 @@ func (m *manager) LoadPlugin(config Config) (plugin.Pluginer, error) {
 }
 
 func (m *manager) RegisterPlugin(pluginName string, p plugin.Pluginer) error {
-
 	if p == nil {
 		return &NilPluginError{}
 	}
-
 	isReceiver := p.SupportedTypes().IsSet(plugin.TypeReceiver)
 	isFilterer := p.SupportedTypes().IsSet(plugin.TypeFilter)
 	isSender := p.SupportedTypes().IsSet(plugin.TypeSender)
-
 	m.Lock()
 	defer m.Unlock()
-
 	if _, ok := m.registrations[pluginName]; ok {
 		return &AlreadyRegisteredError{}
 	}
-
 	m.registrations[pluginName] = Registration{
 		Config: Config{Name: pluginName},
 		Plugin: p,
@@ -148,14 +144,12 @@ func (m *manager) RegisterPlugin(pluginName string, p plugin.Pluginer) error {
 			Sender:   isSender,
 		},
 	}
-
 	return nil
 }
 
 func (m *manager) UnregisterPlugin(pluginName string) error {
 	m.Lock()
 	defer m.Unlock()
-
 	delete(m.registrations, pluginName)
 	return nil
 }
@@ -184,38 +178,29 @@ func (m *manager) Senderers() map[string]sender.NewSenderer {
 	hash := map[string]sender.NewSenderer{}
 	m.Lock()
 	defer m.Unlock()
-
 	for k, r := range m.registrations {
 		p, ok := r.Plugin.(sender.NewSenderer)
 		if ok {
 			hash[k] = p
 		}
 	}
-
 	return hash
 }
 
 func (m *manager) Senderer(pluginName string) (sender.NewSenderer, error) {
 	p, ok := m.registrations[pluginName].Plugin.(sender.NewSenderer)
-
 	if !ok {
 		return nil, &NotFoundError{}
 	}
-
 	return p, nil
-
 }
 
-func (m *manager) NewSender(pluginName string, config string) (sender.Sender, error) {
-
-	p, ok := m.registrations[pluginName].Plugin.(sender.NewSenderer)
-
+func (m *manager) NewSender(tid tenant.Id, plugin string, name string, config string) (sender.Sender, error) {
+	p, ok := m.registrations[plugin].Plugin.(sender.NewSenderer)
 	if !ok {
 		return nil, &NotFoundError{}
 	}
-
-	return p.NewSender(config)
-
+	return p.NewSender(tid, plugin, name, config)
 }
 
 // === Filters ========================================================
@@ -224,39 +209,29 @@ func (m *manager) Filterers() map[string]filter.NewFilterer {
 	hash := map[string]filter.NewFilterer{}
 	m.Lock()
 	defer m.Unlock()
-
 	for k, r := range m.registrations {
 		p, ok := r.Plugin.(filter.NewFilterer)
 		if ok {
 			hash[k] = p
 		}
 	}
-
 	return hash
 }
 
 func (m *manager) Filterer(pluginName string) (filter.NewFilterer, error) {
-
 	p, ok := m.registrations[pluginName].Plugin.(filter.NewFilterer)
-
 	if !ok {
 		return nil, &NotFoundError{}
 	}
-
 	return p, nil
-
 }
 
-func (m *manager) NewFilterer(pluginName string, config string) (filter.Filterer, error) {
-
-	p, ok := m.registrations[pluginName].Plugin.(filter.NewFilterer)
-
+func (m *manager) NewFilterer(tid tenant.Id, plugin string, name string, config string) (filter.Filterer, error) {
+	p, ok := m.registrations[plugin].Plugin.(filter.NewFilterer)
 	if !ok {
 		return nil, &NotFoundError{}
 	}
-
-	return p.NewFilterer(config)
-
+	return p.NewFilterer(tid, plugin, name, config)
 }
 
 // === Receivers ======================================================
@@ -265,36 +240,27 @@ func (m *manager) Receiverers() map[string]receiver.NewReceiverer {
 	hash := map[string]receiver.NewReceiverer{}
 	m.Lock()
 	defer m.Unlock()
-
 	for k, r := range m.registrations {
 		p, ok := r.Plugin.(receiver.NewReceiverer)
 		if ok {
 			hash[k] = p
 		}
 	}
-
 	return hash
 }
 
 func (m *manager) Receiverer(pluginName string) (receiver.NewReceiverer, error) {
 	p, ok := m.registrations[pluginName].Plugin.(receiver.NewReceiverer)
-
 	if !ok {
 		return nil, &NotFoundError{}
 	}
-
 	return p, nil
-
 }
 
-func (m *manager) NewReceiver(pluginName string, config string) (receiver.Receiver, error) {
-
-	p, ok := m.registrations[pluginName].Plugin.(receiver.NewReceiverer)
-
+func (m *manager) NewReceiver(tid tenant.Id, plugin string, name string, config string) (receiver.Receiver, error) {
+	p, ok := m.registrations[plugin].Plugin.(receiver.NewReceiverer)
 	if !ok {
 		return nil, &NotFoundError{}
 	}
-
-	return p.NewReceiver(config)
-
+	return p.NewReceiver(tid, plugin, name, config)
 }
