@@ -154,8 +154,10 @@ func (m *manager) RegisterReceiver(
 			r.Receive(func(e event.Event) {
 				if m.quotaManager != nil {
 					//ratelimit
+					ctx := e.Context()
 					err = m.quotaManager.Wait(e.Context(), tid)
 					if err != nil {
+						log.Ctx(ctx).Debug().Str("tenantId", tid.ToString()).Msg("Tenant Ratelimited")
 						e.Nack(err)
 						return
 					}
