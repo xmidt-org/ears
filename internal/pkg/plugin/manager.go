@@ -161,20 +161,18 @@ func (m *manager) RegisterReceiver(
 					}
 				}()
 
-				ctx := e.Context()
-
-				log.Ctx(ctx).Debug().Str("tenantId", tid.ToString()).Msg("Checking ratelimit")
+				m.logger.Debug().Str("tenantId", tid.ToString()).Msg("Checking ratelimit")
 				if m.quotaManager != nil {
 					//ratelimit
 
 					err = m.quotaManager.Wait(e.Context(), tid)
 					if err != nil {
-						log.Ctx(ctx).Debug().Str("tenantId", tid.ToString()).Msg("Tenant Ratelimited")
+						m.logger.Debug().Str("tenantId", tid.ToString()).Msg("Tenant Ratelimited")
 						e.Nack(err)
 						return
 					}
 				}
-				log.Ctx(ctx).Debug().Str("tenantId", tid.ToString()).Msg("Ratelimit allowed")
+				m.logger.Debug().Str("tenantId", tid.ToString()).Msg("Ratelimit allowed")
 
 				m.next(key, e)
 			})
@@ -264,11 +262,11 @@ func (m *manager) next(receiverKey string, e pkgevent.Event) {
 					p := recover()
 					if p != nil {
 						panicErr := panics.ToError(p)
-						log.Ctx(e.Context()).Error().Str("op", "nextRoute").Str("error", panicErr.Error()).
+						log.Ctx(evt.Context()).Error().Str("op", "nextRoute").Str("error", panicErr.Error()).
 							Str("stackTrace", panicErr.StackTrace()).Msg("A panic has occurred")
 					}
 				}()
-				log.Ctx(e.Context()).Debug().Msg("Calling nextRoute")
+				log.Ctx(evt.Context()).Debug().Msg("Calling nextRoute")
 				fn(evt)
 			}(n, childEvt)
 		}
