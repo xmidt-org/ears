@@ -161,19 +161,16 @@ func (m *manager) RegisterReceiver(
 					}
 				}()
 
-				m.logger.Debug().Str("tenantId", tid.ToString()).Msg("Checking ratelimit")
 				if m.quotaManager != nil {
 					//ratelimit
 
 					err = m.quotaManager.Wait(e.Context(), tid)
 					if err != nil {
-						m.logger.Debug().Str("tenantId", tid.ToString()).Msg("Tenant Ratelimited")
+						m.logger.Debug().Str("op", "receiverNext").Str("tenantId", tid.ToString()).Msg("Tenant Ratelimited")
 						e.Nack(err)
 						return
 					}
 				}
-				m.logger.Debug().Str("tenantId", tid.ToString()).Msg("Ratelimit allowed")
-
 				m.next(key, e)
 			})
 		}()
@@ -266,7 +263,6 @@ func (m *manager) next(receiverKey string, e pkgevent.Event) {
 							Str("stackTrace", panicErr.StackTrace()).Msg("A panic has occurred")
 					}
 				}()
-				log.Ctx(evt.Context()).Debug().Msg("Calling nextRoute")
 				fn(evt)
 			}(n, childEvt)
 		}
