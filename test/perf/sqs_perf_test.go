@@ -24,7 +24,8 @@ var routeConfig = `
     "name": "sqsReceiver",
     "config": {
       "queueUrl": "https://sqs.us-west-2.amazonaws.com/447701116110/mchiang_queue2",
-      "receiverPoolSize": 40
+      "receiverPoolSize": 40,
+      "numRetries": 2
     } 
   },
   "sender": {
@@ -88,9 +89,19 @@ var testConfig = `
 func TestPerfSQSPlugin(t *testing.T) {
 	tid := tenant.Id{OrgId: "perfOrg", AppId: "perfApp"}
 	routeId := "sqsPerf"
-	minimumExpectedEps := 100
+	minimumExpectedEps := 500
 
-	setupQuota(t, *earsEp, tid, 1000)
+	setupQuota(t, *earsEp, tid, 2000)
+	createRoute(t, *earsEp, tid, routeId, routeConfig)
+	runPerfTest(t, *earthEp, testConfig, minimumExpectedEps)
+}
+
+func TestPerfQuotaPlugin(t *testing.T) {
+	tid := tenant.Id{OrgId: "quotaOrg", AppId: "quotaApp"}
+	routeId := "sqsQuota"
+	minimumExpectedEps := 80
+
+	setupQuota(t, *earsEp, tid, 100)
 	createRoute(t, *earsEp, tid, routeId, routeConfig)
 	runPerfTest(t, *earthEp, testConfig, minimumExpectedEps)
 }
@@ -169,6 +180,7 @@ func runPerfTest(t *testing.T, earthEp string, testConfig string, minimumExpecte
 					jobReport.Item.DstThroughput,
 					minimumExpectedEps)
 			}
+			fmt.Printf("Throughput %f events/sec\n", jobReport.Item.DstThroughput)
 			break
 		} else if jobReport.Item.Status == "error" {
 			t.Fatalf("Test failed with error status %v\n", jobReport)
