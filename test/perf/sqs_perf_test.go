@@ -45,8 +45,8 @@ var routeConfig = `
     } 
   },
   "sender": {
-    "plugin": "kafka",
-    "name": "kafkasender",
+    "plugin": "sqs",
+    "name": "sqsSender",
     "config": {
       "queueUrl": "{{YOUR_SQS_QUEUE_2_URL_HERE}}"
     } 
