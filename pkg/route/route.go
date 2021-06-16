@@ -94,7 +94,6 @@ func fanOut(events []event.Event, next receiver.NextFn) error {
 						Str("stackTrace", panicErr.StackTrace()).Msg("A panic has occurred")
 				}
 			}()
-			log.Ctx(e.Context()).Debug().Msg("fanOut")
 			next(evt)
 		}(e)
 	}
