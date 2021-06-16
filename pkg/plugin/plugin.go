@@ -16,6 +16,7 @@ package plugin
 
 import (
 	"fmt"
+	"github.com/xmidt-org/ears/pkg/secret"
 	"github.com/xmidt-org/ears/pkg/tenant"
 	"strings"
 
@@ -225,7 +226,7 @@ func (p *Plugin) ReceiverHash(config interface{}) (string, error) {
 	return p.hashReceiver(config)
 }
 
-func (p *Plugin) NewReceiver(tid tenant.Id, plugin string, name string, config interface{}) (receiver.Receiver, error) {
+func (p *Plugin) NewReceiver(tid tenant.Id, plugin string, name string, config interface{}, secrets secret.Vault) (receiver.Receiver, error) {
 	if p == nil {
 		return nil, &NilPluginError{}
 	}
@@ -234,7 +235,7 @@ func (p *Plugin) NewReceiver(tid tenant.Id, plugin string, name string, config i
 		return nil, &NotSupportedError{}
 	}
 
-	return p.newReceiver(tid, plugin, name, config)
+	return p.newReceiver(tid, plugin, name, config, secrets)
 }
 
 // == Senderer ===========================================================
@@ -247,7 +248,7 @@ func (p *Plugin) SenderHash(config interface{}) (string, error) {
 	return p.hashSender(config)
 }
 
-func (p *Plugin) NewSender(tid tenant.Id, plugin string, name string, config interface{}) (sender.Sender, error) {
+func (p *Plugin) NewSender(tid tenant.Id, plugin string, name string, config interface{}, secrets secret.Vault) (sender.Sender, error) {
 	if p == nil {
 		return nil, &NilPluginError{}
 	}
@@ -256,7 +257,7 @@ func (p *Plugin) NewSender(tid tenant.Id, plugin string, name string, config int
 		return nil, &NotSupportedError{}
 	}
 
-	return p.newSender(tid, plugin, name, config)
+	return p.newSender(tid, plugin, name, config, secrets)
 }
 
 // == Filterer ===========================================================
@@ -269,7 +270,7 @@ func (p *Plugin) FiltererHash(config interface{}) (string, error) {
 	return p.hashFilter(config)
 }
 
-func (p *Plugin) NewFilterer(tid tenant.Id, plugin string, name string, config interface{}) (filter.Filterer, error) {
+func (p *Plugin) NewFilterer(tid tenant.Id, plugin string, name string, config interface{}, secrets secret.Vault) (filter.Filterer, error) {
 	if p == nil {
 		return nil, &NilPluginError{}
 	}
@@ -278,7 +279,7 @@ func (p *Plugin) NewFilterer(tid tenant.Id, plugin string, name string, config i
 		return nil, &NotSupportedError{}
 	}
 
-	return p.newFilterer(tid, plugin, name, config)
+	return p.newFilterer(tid, plugin, name, config, secrets)
 }
 
 // == Helpers =================================

@@ -22,6 +22,7 @@ import (
 	"github.com/xmidt-org/ears/internal/pkg/logs"
 	"github.com/xmidt-org/ears/internal/pkg/quota"
 	"github.com/xmidt-org/ears/pkg/panics"
+	"github.com/xmidt-org/ears/pkg/secret"
 	"github.com/xmidt-org/ears/pkg/tenant"
 	"sync"
 	"time"
@@ -58,6 +59,7 @@ type manager struct {
 	logger *zerolog.Logger
 
 	quotaManager *quota.QuotaManager
+	secrets      secret.Vault
 }
 
 // === Initialization ================================================
@@ -136,7 +138,7 @@ func (m *manager) RegisterReceiver(
 
 	r, ok := m.receivers[key]
 	if !ok {
-		r, err = ns.NewReceiver(tid, plugin, name, config)
+		r, err = ns.NewReceiver(tid, plugin, name, config, m.secrets)
 		if err != nil {
 			return nil, &RegistrationError{
 				Message: "could not create new receiver",
@@ -372,7 +374,7 @@ func (m *manager) RegisterFilter(
 
 	f, ok := m.filters[key]
 	if !ok {
-		f, err = factory.NewFilterer(tid, plugin, name, config)
+		f, err = factory.NewFilterer(tid, plugin, name, config, m.secrets)
 		if err != nil {
 			return nil, &RegistrationError{
 				Message: "could not create new filterer",
@@ -522,7 +524,7 @@ func (m *manager) RegisterSender(
 
 	s, ok := m.senders[key]
 	if !ok {
-		s, err = ns.NewSender(tid, plugin, name, config)
+		s, err = ns.NewSender(tid, plugin, name, config, m.secrets)
 		if err != nil {
 			return nil, &RegistrationError{
 				Message: "could not create sender",

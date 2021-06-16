@@ -26,6 +26,7 @@ import (
 	"github.com/xmidt-org/ears/internal/pkg/fx/routestorerfx"
 	"github.com/xmidt-org/ears/internal/pkg/fx/syncerfx"
 	"github.com/xmidt-org/ears/internal/pkg/fx/tenantstorerfx"
+	"github.com/xmidt-org/ears/internal/pkg/secret"
 	"github.com/xmidt-org/ears/internal/pkg/tablemgr"
 	testLog "github.com/xmidt-org/ears/test/log"
 	"go.uber.org/fx"
@@ -101,6 +102,7 @@ func TestAppRunSuccess(t *testing.T) {
 		quotamanagerfx.Module,
 		fx.Provide(
 			AppConfig,
+			secret.NewConfigVault,
 			GetTestLogger,
 			app.NewAPIManager,
 			tablemgr.NewRoutingTableManager,

@@ -26,6 +26,7 @@ import (
 	"github.com/xmidt-org/ears/internal/pkg/fx/routestorerfx"
 	"github.com/xmidt-org/ears/internal/pkg/fx/syncerfx"
 	"github.com/xmidt-org/ears/internal/pkg/fx/tenantstorerfx"
+	"github.com/xmidt-org/ears/internal/pkg/secret"
 	"github.com/xmidt-org/ears/internal/pkg/tablemgr"
 	"github.com/xmidt-org/ears/pkg/cli"
 	"github.com/xmidt-org/ears/pkg/panics"
@@ -64,6 +65,7 @@ var runCmd = &cobra.Command{
 			quotamanagerfx.Module,
 			fx.Provide(
 				AppConfig,
+				secret.NewConfigVault,
 				app.ProvideLogger,
 				tablemgr.NewRoutingTableManager,
 				app.NewAPIManager,

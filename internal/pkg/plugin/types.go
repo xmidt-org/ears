@@ -18,6 +18,7 @@ import (
 	"context"
 	"github.com/rs/zerolog"
 	"github.com/xmidt-org/ears/internal/pkg/quota"
+	"github.com/xmidt-org/ears/pkg/secret"
 	"github.com/xmidt-org/ears/pkg/tenant"
 	"time"
 
@@ -83,6 +84,13 @@ func WithLogger(l *zerolog.Logger) ManagerOption {
 func WithQuotaManager(q *quota.QuotaManager) ManagerOption {
 	return func(m *manager) error {
 		m.quotaManager = q
+		return nil
+	}
+}
+
+func WithSecretVaults(s secret.Vault) ManagerOption {
+	return func(m *manager) error {
+		m.secrets = s
 		return nil
 	}
 }
