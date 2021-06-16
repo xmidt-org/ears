@@ -1,3 +1,19 @@
+// Copyright 2021 Comcast Cable Communications Management, LLC
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+// +build integration
+
 package perf
 
 import (
@@ -23,16 +39,17 @@ var routeConfig = `
     "plugin": "sqs",
     "name": "sqsReceiver",
     "config": {
-      "queueUrl": "https://sqs.us-west-2.amazonaws.com/447701116110/mchiang_queue2",
-      "receiverPoolSize": 40,
+      "queueUrl": "{{YOUR_SQS_QUEUE_URL_HERE}}",
+      "receiverPoolSize": 10,
       "numRetries": 2
     } 
   },
   "sender": {
-    "plugin": "sqs",
-    "name": "sqsSender",
+    "plugin": "kafka",
+    "name": "kafkasender",
     "config": {
       "queueUrl": "https://sqs.us-west-2.amazonaws.com/447701116110/mchiang_queue3",
+      "username": "secret://ear.avien.username"
     } 
   },
   "deliveryMode": "whoCares"
@@ -43,7 +60,7 @@ var testConfig = `
 {
   "source": {  
     "startInSec": 0,
-    "num": 10000,
+    "num": 10,
     "ratePerSec": 0,
     "eventDistribution": { 
       "default": 50,
@@ -75,7 +92,7 @@ var testConfig = `
     }
   },
   "destination": {
-    "numEventsExpected": 10000,
+    "numEventsExpected": 10,
     "saveEvents": true,
     "type": "sqs",
     "config": {
