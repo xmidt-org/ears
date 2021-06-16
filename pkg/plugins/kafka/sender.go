@@ -69,6 +69,7 @@ func NewSender(tid tenant.Id, plugin string, name string, config interface{}) (s
 		config: cfg,
 		logger: logger,
 	}
+
 	err = s.initPlugin()
 	if err != nil {
 		return nil, err
