@@ -19,6 +19,7 @@ import (
 	"github.com/xmidt-org/ears/internal/pkg/rtsemconv"
 	"github.com/xmidt-org/ears/pkg/filter/match/pattern"
 	"github.com/xmidt-org/ears/pkg/filter/match/patternregex"
+	"github.com/xmidt-org/ears/pkg/secret"
 	"github.com/xmidt-org/ears/pkg/tenant"
 	"go.opentelemetry.io/otel"
 
@@ -30,7 +31,7 @@ import (
 // Ensure supporting matchers implement Matcher interface
 var _ Matcher = (*regex.Matcher)(nil)
 
-func NewFilter(tid tenant.Id, plugin string, name string, config interface{}) (*Filter, error) {
+func NewFilter(tid tenant.Id, plugin string, name string, config interface{}, secrets secret.Vault) (*Filter, error) {
 	cfg, err := NewConfig(config)
 	if err != nil {
 		return nil, &filter.InvalidConfigError{

@@ -6,6 +6,7 @@ package sender
 import (
 	"context"
 	"github.com/xmidt-org/ears/pkg/event"
+	"github.com/xmidt-org/ears/pkg/secret"
 	"github.com/xmidt-org/ears/pkg/tenant"
 	"sync"
 )
@@ -85,7 +86,7 @@ var _ NewSenderer = &NewSendererMock{}
 //
 // 		// make and configure a mocked NewSenderer
 // 		mockedNewSenderer := &NewSendererMock{
-// 			NewSenderFunc: func(tid tenant.Id, plugin string, name string, config interface{}) (Sender, error) {
+// 			NewSenderFunc: func(tid tenant.Id, plugin string, name string, config interface{}, secrets secret.Vault) (Sender, error) {
 // 				panic("mock out the NewSender method")
 // 			},
 // 			SenderHashFunc: func(config interface{}) (string, error) {
@@ -99,7 +100,7 @@ var _ NewSenderer = &NewSendererMock{}
 // 	}
 type NewSendererMock struct {
 	// NewSenderFunc mocks the NewSender method.
-	NewSenderFunc func(tid tenant.Id, plugin string, name string, config interface{}) (Sender, error)
+	NewSenderFunc func(tid tenant.Id, plugin string, name string, config interface{}, secrets secret.Vault) (Sender, error)
 
 	// SenderHashFunc mocks the SenderHash method.
 	SenderHashFunc func(config interface{}) (string, error)
@@ -116,6 +117,8 @@ type NewSendererMock struct {
 			Name string
 			// Config is the config argument value.
 			Config interface{}
+			// Secrets is the secrets argument value.
+			Secrets secret.Vault
 		}
 		// SenderHash holds details about calls to the SenderHash method.
 		SenderHash []struct {
@@ -128,41 +131,45 @@ type NewSendererMock struct {
 }
 
 // NewSender calls NewSenderFunc.
-func (mock *NewSendererMock) NewSender(tid tenant.Id, plugin string, name string, config interface{}) (Sender, error) {
+func (mock *NewSendererMock) NewSender(tid tenant.Id, plugin string, name string, config interface{}, secrets secret.Vault) (Sender, error) {
 	if mock.NewSenderFunc == nil {
 		panic("NewSendererMock.NewSenderFunc: method is nil but NewSenderer.NewSender was just called")
 	}
 	callInfo := struct {
-		Tid    tenant.Id
-		Plugin string
-		Name   string
-		Config interface{}
+		Tid     tenant.Id
+		Plugin  string
+		Name    string
+		Config  interface{}
+		Secrets secret.Vault
 	}{
-		Tid:    tid,
-		Plugin: plugin,
-		Name:   name,
-		Config: config,
+		Tid:     tid,
+		Plugin:  plugin,
+		Name:    name,
+		Config:  config,
+		Secrets: secrets,
 	}
 	mock.lockNewSender.Lock()
 	mock.calls.NewSender = append(mock.calls.NewSender, callInfo)
 	mock.lockNewSender.Unlock()
-	return mock.NewSenderFunc(tid, plugin, name, config)
+	return mock.NewSenderFunc(tid, plugin, name, config, secrets)
 }
 
 // NewSenderCalls gets all the calls that were made to NewSender.
 // Check the length with:
 //     len(mockedNewSenderer.NewSenderCalls())
 func (mock *NewSendererMock) NewSenderCalls() []struct {
-	Tid    tenant.Id
-	Plugin string
-	Name   string
-	Config interface{}
+	Tid     tenant.Id
+	Plugin  string
+	Name    string
+	Config  interface{}
+	Secrets secret.Vault
 } {
 	var calls []struct {
-		Tid    tenant.Id
-		Plugin string
-		Name   string
-		Config interface{}
+		Tid     tenant.Id
+		Plugin  string
+		Name    string
+		Config  interface{}
+		Secrets secret.Vault
 	}
 	mock.lockNewSender.RLock()
 	calls = mock.calls.NewSender
