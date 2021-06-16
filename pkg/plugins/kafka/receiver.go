@@ -81,6 +81,7 @@ func NewReceiver(tid tenant.Id, plugin string, name string, config interface{}, 
 		ready:   make(chan bool),
 		topics:  []string{cfg.Topic},
 		stopped: true,
+		secrets: secrets,
 	}
 	saramaConfig, err := r.getSaramaConfig(*r.config.CommitInterval)
 	if err != nil {
