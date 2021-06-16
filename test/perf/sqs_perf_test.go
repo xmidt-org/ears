@@ -39,7 +39,7 @@ var routeConfig = `
     "plugin": "sqs",
     "name": "sqsReceiver",
     "config": {
-      "queueUrl": "{{YOUR_SQS_QUEUE_URL_HERE}}",
+      "queueUrl": "{{YOUR_SQS_QUEUE_1_URL_HERE}}",
       "receiverPoolSize": 10,
       "numRetries": 2
     } 
@@ -48,8 +48,7 @@ var routeConfig = `
     "plugin": "kafka",
     "name": "kafkasender",
     "config": {
-      "queueUrl": "https://sqs.us-west-2.amazonaws.com/447701116110/mchiang_queue3",
-      "username": "secret://ear.avien.username"
+      "queueUrl": "{{YOUR_SQS_QUEUE_2_URL_HERE}}"
     } 
   },
   "deliveryMode": "whoCares"
@@ -88,7 +87,7 @@ var testConfig = `
     },
     "type": "sqs",
     "config": {
-      "queueUrl": "https://sqs.us-west-2.amazonaws.com/447701116110/mchiang_queue2"
+      "queueUrl": "{{YOUR_SQS_QUEUE_1_URL_HERE}}"
     }
   },
   "destination": {
@@ -96,7 +95,7 @@ var testConfig = `
     "saveEvents": true,
     "type": "sqs",
     "config": {
-      "queueUrl": "https://sqs.us-west-2.amazonaws.com/447701116110/mchiang_queue3",
+      "queueUrl": "{{YOUR_SQS_QUEUE_2_URL_HERE}}",
       "receiverPoolSize": 40
     } 
   }
