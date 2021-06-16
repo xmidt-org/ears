@@ -22,6 +22,7 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"github.com/Shopify/sarama"
 	"github.com/rs/zerolog"
@@ -212,14 +213,43 @@ func (r *Receiver) getSaramaConfig(commitIntervalSec int) (*sarama.Config, error
 		config.Net.TLS.Enable = true
 		config.Net.SASL.Enable = true
 		config.Net.SASL.User = r.config.Username
-		config.Net.SASL.Password = r.config.Password
+		if strings.HasPrefix(r.config.Password, secret.Protocol) {
+			if r.secrets == nil {
+				return nil, &pkgplugin.InvalidConfigError{errors.New("No secret vault provided")}
+			}
+			config.Net.SASL.Password = r.secrets.Secret(r.tid, r.config.Password[len(secret.Protocol):])
+		} else {
+			config.Net.SASL.Password = r.config.Password
+		}
 	} else if "" != r.config.AccessCert {
-		keypair, err := tls.X509KeyPair([]byte(r.config.AccessCert), []byte(r.config.AccessKey))
+		accessCert := r.config.AccessCert
+		if strings.HasPrefix(accessCert, secret.Protocol) {
+			if r.secrets == nil {
+				return nil, &pkgplugin.InvalidConfigError{errors.New("No secret vault provided")}
+			}
+			accessCert = r.secrets.Secret(r.tid, r.config.AccessCert[len(secret.Protocol):])
+		}
+		accessKey := r.config.AccessKey
+		if strings.HasPrefix(accessKey, secret.Protocol) {
+			if r.secrets == nil {
+				return nil, &pkgplugin.InvalidConfigError{errors.New("No secret vault provided")}
+			}
+			accessKey = r.secrets.Secret(r.tid, r.config.AccessKey[len(secret.Protocol):])
+		}
+		caCert := r.config.CACert
+		if strings.HasPrefix(caCert, secret.Protocol) {
+			if r.secrets == nil {
+				return nil, &pkgplugin.InvalidConfigError{errors.New("No secret vault provided")}
+			}
+			caCert = r.secrets.Secret(r.tid, r.config.CACert[len(secret.Protocol):])
+		}
+
+		keypair, err := tls.X509KeyPair([]byte(accessCert), []byte(accessKey))
 		if err != nil {
 			return nil, err
 		}
 		caAuthorityPool := x509.NewCertPool()
-		caAuthorityPool.AppendCertsFromPEM([]byte(r.config.CACert))
+		caAuthorityPool.AppendCertsFromPEM([]byte(caCert))
 		tlsConfig := &tls.Config{
 			Certificates: []tls.Certificate{keypair},
 			RootCAs:      caAuthorityPool,
