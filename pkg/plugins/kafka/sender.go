@@ -64,11 +64,12 @@ func NewSender(tid tenant.Id, plugin string, name string, config interface{}, se
 	logger := zerolog.New(os.Stdout).Level(zerolog.DebugLevel)
 	//zerolog.LevelFieldName = "log.level"
 	s := &Sender{
-		name:   name,
-		plugin: plugin,
-		tid:    tid,
-		config: cfg,
-		logger: logger,
+		name:    name,
+		plugin:  plugin,
+		tid:     tid,
+		config:  cfg,
+		logger:  logger,
+		secrets: secrets,
 	}
 
 	err = s.initPlugin()
@@ -130,6 +131,8 @@ func NewManualHashPartitioner(topic string) sarama.Partitioner {
 	}
 }
 
+const secretProtocol = "secret://"
+
 func (s *Sender) setConfig(config *sarama.Config) error {
 	if "" != s.config.Version {
 		v, err := sarama.ParseKafkaVersion(s.config.Version)
@@ -146,14 +149,31 @@ func (s *Sender) setConfig(config *sarama.Config) error {
 		config.Net.TLS.Enable = true
 		config.Net.SASL.Enable = true
 		config.Net.SASL.User = s.config.Username
-		config.Net.SASL.Password = s.config.Password
+		if strings.HasPrefix(s.config.Password, secretProtocol) {
+			config.Net.SASL.Password = s.secrets.Secret(s.tid, s.config.Password[len(secretProtocol):])
+		} else {
+			config.Net.SASL.Password = s.config.Password
+		}
 	} else if "" != s.config.AccessCert {
-		keypair, err := tls.X509KeyPair([]byte(s.config.AccessCert), []byte(s.config.AccessKey))
+		accessCert := s.config.AccessCert
+		if strings.HasPrefix(accessCert, secretProtocol) {
+			accessCert = s.secrets.Secret(s.tid, s.config.AccessCert[len(secretProtocol):])
+		}
+		accessKey := s.config.AccessKey
+		if strings.HasPrefix(accessKey, secretProtocol) {
+			accessKey = s.secrets.Secret(s.tid, s.config.AccessKey[len(secretProtocol):])
+		}
+		caCert := s.config.CACert
+		if strings.HasPrefix(caCert, secretProtocol) {
+			caCert = s.secrets.Secret(s.tid, s.config.CACert[len(secretProtocol):])
+		}
+
+		keypair, err := tls.X509KeyPair([]byte(accessCert), []byte(accessKey))
 		if err != nil {
 			return err
 		}
 		caAuthorityPool := x509.NewCertPool()
-		caAuthorityPool.AppendCertsFromPEM([]byte(s.config.CACert))
+		caAuthorityPool.AppendCertsFromPEM([]byte(caCert))
 		tlsConfig := &tls.Config{
 			Certificates: []tls.Certificate{keypair},
 			RootCAs:      caAuthorityPool,

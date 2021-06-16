@@ -18,6 +18,7 @@ import (
 	"context"
 	"github.com/Shopify/sarama"
 	"github.com/rs/zerolog"
+	"github.com/xmidt-org/ears/pkg/secret"
 	"github.com/xmidt-org/ears/pkg/tenant"
 	"github.com/xorcare/pointer"
 	"go.opentelemetry.io/otel/metric"
@@ -108,6 +109,7 @@ type Receiver struct {
 	eventSuccessCounter metric.BoundFloat64Counter
 	eventFailureCounter metric.BoundFloat64Counter
 	eventBytesCounter   metric.BoundInt64Counter
+	secrets             secret.Vault
 }
 
 var DefaultSenderConfig = SenderConfig{
@@ -153,6 +155,7 @@ type Sender struct {
 	logger   zerolog.Logger
 	producer *Producer
 	stopped  bool
+	secrets  secret.Vault
 }
 
 type ManualHashPartitioner struct {
