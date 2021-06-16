@@ -87,14 +87,14 @@ func (r *RedisRateLimiter) take(ctx context.Context, unit int) error {
 	err := r.client.Watch(ctx, func(tx *redis.Tx) error {
 		allowance, err := tx.Get(ctx, bucketKey).Float64()
 		if err != nil {
-			if errors.Is(err, redis.Nil) {
+			if !errors.Is(err, redis.Nil) {
 				return err
 			}
 			allowance = float64(r.rqs)
 		}
 		refillTs, err := tx.Get(ctx, tsKey).Int64()
 		if err != nil {
-			if errors.Is(err, redis.Nil) {
+			if !errors.Is(err, redis.Nil) {
 				return err
 			}
 			refillTs = time.Now().UnixNano()
