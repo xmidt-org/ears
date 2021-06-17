@@ -17,7 +17,7 @@ exporters:
     service: ears
     version: v1.1
     tags:
-      - environment:dev
+      - env:dev
       - team:va
       - region:bwregion
       - role:bwrole
