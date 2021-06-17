@@ -1,0 +1,29 @@
+receivers:
+  otlp:
+    protocols:
+      grpc:
+      http:
+
+processors:
+  batch:
+    timeout: 10s
+
+exporters:
+  datadog/api:
+    hostname: earstesthost
+    env: dev
+    service: ears
+    version: v1.1
+
+    tags:
+      - ears:test
+
+    api:
+      key:
+
+service:
+  pipelines:
+    traces:
+      receivers: [otlp]
+      processors: [batch]
+      exporters: [datadog/api]

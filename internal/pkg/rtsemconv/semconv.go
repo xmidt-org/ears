@@ -20,8 +20,9 @@ import (
 )
 
 const (
-	EARSTracerName = "ears"
-	EARSMeterName  = "ears"
+	EARSServiceName = "ears"
+	EARSTracerName  = "ears"
+	EARSMeterName   = "ears"
 
 	EARSPluginTypeLabel = "pluginType"
 	EARSPluginTypeDebug = "debug"
