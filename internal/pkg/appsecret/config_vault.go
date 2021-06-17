@@ -4,6 +4,7 @@ import (
 	"github.com/xmidt-org/ears/internal/pkg/config"
 	"github.com/xmidt-org/ears/pkg/secret"
 	"github.com/xmidt-org/ears/pkg/tenant"
+	"strings"
 )
 
 //ConfigVault provides secrets from ears app configuration
@@ -16,7 +17,10 @@ func NewConfigVault(config config.Config) secret.Vault {
 }
 
 func (v *ConfigVault) Secret(key string) string {
-	configKey := "ears.secrets." + key
+	if !strings.HasPrefix(key, secret.Protocol) {
+		return ""
+	}
+	configKey := "ears.secrets." + key[len(secret.Protocol):]
 	return v.config.GetString(configKey)
 }
 
@@ -33,6 +37,9 @@ func NewTenantConfigVault(tid tenant.Id, parentVault secret.Vault) secret.Vault 
 }
 
 func (v *TenantConfigVault) Secret(key string) string {
-	configKey := v.tid.OrgId + "." + v.tid.AppId + "." + key
+	if !strings.HasPrefix(key, secret.Protocol) {
+		return ""
+	}
+	configKey := key[0:len(secret.Protocol)] + v.tid.OrgId + "." + v.tid.AppId + "." + key[len(secret.Protocol):]
 	return v.parentVault.Secret(configKey)
 }

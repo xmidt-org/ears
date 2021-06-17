@@ -26,14 +26,24 @@ func TestConfigVault(t *testing.T) {
 	v := appsecret.NewConfigVault(config)
 
 	g := goldie.New(t)
-	val := v.Secret("myorg.myapp.kafka.secret1")
+	val := v.Secret("secret://myorg.myapp.kafka.secret1")
 	g.Assert(t, "secret1", []byte(val))
-	val = v.Secret("myorg.myapp.kafka.secret2")
+	val = v.Secret("secret://myorg.myapp.kafka.secret2")
 	g.Assert(t, "secret2", []byte(val))
 
+	val = v.Secret("myorg.myapp.kafka.secret1")
+	if val != "" {
+		t.Fatalf("Expect empty secret, got %s\n", val)
+	}
+
 	v = appsecret.NewTenantConfigVault(tenant.Id{OrgId: "myorg", AppId: "myapp"}, v)
-	val = v.Secret("kafka.secret1")
+	val = v.Secret("secret://kafka.secret1")
 	g.Assert(t, "secret1", []byte(val))
-	val = v.Secret("kafka.secret2")
+	val = v.Secret("secret://kafka.secret2")
 	g.Assert(t, "secret2", []byte(val))
+
+	val = v.Secret("kafka.secret1")
+	if val != "" {
+		t.Fatalf("Expect empty secret, got %s\n", val)
+	}
 }
