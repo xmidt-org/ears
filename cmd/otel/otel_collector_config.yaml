@@ -19,11 +19,14 @@ exporters:
       - ears:test
 
     api:
-      key:
+      key: 
 
 service:
   pipelines:
     traces:
       receivers: [otlp]
       processors: [batch]
+      exporters: [datadog/api]
+    metrics:
+      receivers: [otlp]
       exporters: [datadog/api]
