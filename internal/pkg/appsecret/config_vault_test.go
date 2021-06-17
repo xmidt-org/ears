@@ -1,10 +1,10 @@
-package secret_test
+package appsecret_test
 
 import (
 	"github.com/sebdah/goldie/v2"
 	"github.com/spf13/viper"
+	"github.com/xmidt-org/ears/internal/pkg/appsecret"
 	"github.com/xmidt-org/ears/internal/pkg/config"
-	"github.com/xmidt-org/ears/internal/pkg/secret"
 	"github.com/xmidt-org/ears/pkg/tenant"
 	"testing"
 )
@@ -23,11 +23,17 @@ func SetupConfig(t *testing.T) config.Config {
 
 func TestConfigVault(t *testing.T) {
 	config := SetupConfig(t)
-	v := secret.NewConfigVault(config)
+	v := appsecret.NewConfigVault(config)
 
 	g := goldie.New(t)
-	val := v.Secret(tenant.Id{OrgId: "myorg", AppId: "myapp"}, "kafka.secret1")
+	val := v.Secret("myorg.myapp.kafka.secret1")
 	g.Assert(t, "secret1", []byte(val))
-	val = v.Secret(tenant.Id{OrgId: "myorg", AppId: "myapp"}, "kafka.secret2")
+	val = v.Secret("myorg.myapp.kafka.secret2")
+	g.Assert(t, "secret2", []byte(val))
+
+	v = appsecret.NewTenantConfigVault(tenant.Id{OrgId: "myorg", AppId: "myapp"}, v)
+	val = v.Secret("kafka.secret1")
+	g.Assert(t, "secret1", []byte(val))
+	val = v.Secret("kafka.secret2")
 	g.Assert(t, "secret2", []byte(val))
 }
