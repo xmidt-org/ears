@@ -6,6 +6,12 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 
+## [v0.3.0]
+- Added basic metrics and tracing
+- Added secret managements
+- Fix bugs in quota manager
+- Fix bugs in sqs plugins
+
 ## [v0.2.0]
 
 A working version of EARS including:
