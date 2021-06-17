@@ -150,7 +150,7 @@ func (s *Sender) setConfig(config *sarama.Config) error {
 		config.Net.SASL.User = s.config.Username
 		if strings.HasPrefix(s.config.Password, secret.Protocol) {
 			if s.secrets == nil {
-				return &pkgplugin.InvalidConfigError{errors.New("No secret vault provided")}
+				return &pkgplugin.InvalidConfigError{Err: errors.New("No secret vault provided")}
 			}
 			config.Net.SASL.Password = s.secrets.Secret(s.tid, s.config.Password[len(secret.Protocol):])
 		} else {
@@ -160,25 +160,24 @@ func (s *Sender) setConfig(config *sarama.Config) error {
 		accessCert := s.config.AccessCert
 		if strings.HasPrefix(accessCert, secret.Protocol) {
 			if s.secrets == nil {
-				return &pkgplugin.InvalidConfigError{errors.New("No secret vault provided")}
+				return &pkgplugin.InvalidConfigError{Err: errors.New("No secret vault provided")}
 			}
 			accessCert = s.secrets.Secret(s.tid, s.config.AccessCert[len(secret.Protocol):])
 		}
 		accessKey := s.config.AccessKey
 		if strings.HasPrefix(accessKey, secret.Protocol) {
 			if s.secrets == nil {
-				return &pkgplugin.InvalidConfigError{errors.New("No secret vault provided")}
+				return &pkgplugin.InvalidConfigError{Err: errors.New("No secret vault provided")}
 			}
 			accessKey = s.secrets.Secret(s.tid, s.config.AccessKey[len(secret.Protocol):])
 		}
 		caCert := s.config.CACert
 		if strings.HasPrefix(caCert, secret.Protocol) {
 			if s.secrets == nil {
-				return &pkgplugin.InvalidConfigError{errors.New("No secret vault provided")}
+				return &pkgplugin.InvalidConfigError{Err: errors.New("No secret vault provided")}
 			}
 			caCert = s.secrets.Secret(s.tid, s.config.CACert[len(secret.Protocol):])
 		}
-
 		keypair, err := tls.X509KeyPair([]byte(accessCert), []byte(accessKey))
 		if err != nil {
 			return err

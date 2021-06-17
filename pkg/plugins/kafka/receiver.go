@@ -215,7 +215,7 @@ func (r *Receiver) getSaramaConfig(commitIntervalSec int) (*sarama.Config, error
 		config.Net.SASL.User = r.config.Username
 		if strings.HasPrefix(r.config.Password, secret.Protocol) {
 			if r.secrets == nil {
-				return nil, &pkgplugin.InvalidConfigError{errors.New("No secret vault provided")}
+				return nil, &pkgplugin.InvalidConfigError{Err: errors.New("No secret vault provided")}
 			}
 			config.Net.SASL.Password = r.secrets.Secret(r.tid, r.config.Password[len(secret.Protocol):])
 		} else {
@@ -225,21 +225,21 @@ func (r *Receiver) getSaramaConfig(commitIntervalSec int) (*sarama.Config, error
 		accessCert := r.config.AccessCert
 		if strings.HasPrefix(accessCert, secret.Protocol) {
 			if r.secrets == nil {
-				return nil, &pkgplugin.InvalidConfigError{errors.New("No secret vault provided")}
+				return nil, &pkgplugin.InvalidConfigError{Err: errors.New("No secret vault provided")}
 			}
 			accessCert = r.secrets.Secret(r.tid, r.config.AccessCert[len(secret.Protocol):])
 		}
 		accessKey := r.config.AccessKey
 		if strings.HasPrefix(accessKey, secret.Protocol) {
 			if r.secrets == nil {
-				return nil, &pkgplugin.InvalidConfigError{errors.New("No secret vault provided")}
+				return nil, &pkgplugin.InvalidConfigError{Err: errors.New("No secret vault provided")}
 			}
 			accessKey = r.secrets.Secret(r.tid, r.config.AccessKey[len(secret.Protocol):])
 		}
 		caCert := r.config.CACert
 		if strings.HasPrefix(caCert, secret.Protocol) {
 			if r.secrets == nil {
-				return nil, &pkgplugin.InvalidConfigError{errors.New("No secret vault provided")}
+				return nil, &pkgplugin.InvalidConfigError{Err: errors.New("No secret vault provided")}
 			}
 			caCert = r.secrets.Secret(r.tid, r.config.CACert[len(secret.Protocol):])
 		}
