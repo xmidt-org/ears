@@ -2,7 +2,9 @@ receivers:
   otlp:
     protocols:
       grpc:
+        endpoint: "localhost:55680"
       http:
+        endpoint: "localhost:55681"
 
 processors:
   batch:
@@ -14,10 +16,11 @@ exporters:
     env: dev
     service: ears
     version: v1.1
-
     tags:
-      - ears:test
-
+      - environment:dev
+      - team:va
+      - region:bwregion
+      - role:bwrole
     api:
       key: 
 
