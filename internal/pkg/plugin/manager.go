@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
+	"github.com/xmidt-org/ears/internal/pkg/appsecret"
 	"github.com/xmidt-org/ears/internal/pkg/logs"
 	"github.com/xmidt-org/ears/internal/pkg/quota"
 	"github.com/xmidt-org/ears/pkg/panics"
@@ -138,7 +139,11 @@ func (m *manager) RegisterReceiver(
 
 	r, ok := m.receivers[key]
 	if !ok {
-		r, err = ns.NewReceiver(tid, plugin, name, config, m.secrets)
+		var secrets secret.Vault
+		if m.secrets != nil {
+			secrets = appsecret.NewTenantConfigVault(tid, m.secrets)
+		}
+		r, err = ns.NewReceiver(tid, plugin, name, config, secrets)
 		if err != nil {
 			return nil, &RegistrationError{
 				Message: "could not create new receiver",
@@ -374,7 +379,11 @@ func (m *manager) RegisterFilter(
 
 	f, ok := m.filters[key]
 	if !ok {
-		f, err = factory.NewFilterer(tid, plugin, name, config, m.secrets)
+		var secrets secret.Vault
+		if m.secrets != nil {
+			secrets = appsecret.NewTenantConfigVault(tid, m.secrets)
+		}
+		f, err = factory.NewFilterer(tid, plugin, name, config, secrets)
 		if err != nil {
 			return nil, &RegistrationError{
 				Message: "could not create new filterer",
@@ -524,7 +533,11 @@ func (m *manager) RegisterSender(
 
 	s, ok := m.senders[key]
 	if !ok {
-		s, err = ns.NewSender(tid, plugin, name, config, m.secrets)
+		var secrets secret.Vault
+		if m.secrets != nil {
+			secrets = appsecret.NewTenantConfigVault(tid, m.secrets)
+		}
+		s, err = ns.NewSender(tid, plugin, name, config, secrets)
 		if err != nil {
 			return nil, &RegistrationError{
 				Message: "could not create sender",
