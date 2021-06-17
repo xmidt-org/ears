@@ -92,6 +92,9 @@ const receiverSchema = `
                 "accessCert": {
                     "type": "string"
                 },
+                "accessKey": {
+                    "type": "string"
+                },
                 "version": {
                     "type": "string"
                 },
