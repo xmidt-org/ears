@@ -1,3 +1,7 @@
+extensions:
+  health_check:
+    endpoint: "localhost:13133"
+
 receivers:
   otlp:
     protocols:
@@ -13,11 +17,11 @@ processors:
 exporters:
   datadog/api:
     hostname: earstesthost
-    env: dev
+    env: local
     service: ears
     version: v1.1
     tags:
-      - env:dev
+      - env:testlocal
       - team:va
       - region:bwregion
       - role:bwrole
@@ -25,6 +29,7 @@ exporters:
       key: 
 
 service:
+  extensions: [health_check]
   pipelines:
     traces:
       receivers: [otlp]
