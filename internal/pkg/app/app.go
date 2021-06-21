@@ -73,11 +73,11 @@ func SetupAPIServer(lifecycle fx.Lifecycle, config config.Config, logger *zerolo
 			launcher.WithServiceVersion("1.0"),
 		)
 		logger.Info().Str("telemetryexporter", "lightstep").Msg("started")
-	} else if config.GetBool("ears.opentelemetry.datadog.active") {
+	} else if config.GetBool("ears.opentelemetry.otel-collector.active") {
 		// setup tracing
 		exporter, err := otlp.NewExporter(ctx,
 			otlpgrpc.NewDriver(
-				otlpgrpc.WithEndpoint("localhost:55680"),
+				otlpgrpc.WithEndpoint(config.GetString("ears.opentelemetry.otel-collector.endpoint")),
 				otlpgrpc.WithInsecure(),
 			),
 		)
@@ -110,7 +110,7 @@ func SetupAPIServer(lifecycle fx.Lifecycle, config config.Config, logger *zerolo
 		global.SetMeterProvider(metricsPusher.MeterProvider())
 		propagator := propagation.NewCompositeTextMapPropagator(propagation.Baggage{}, propagation.TraceContext{})
 		otel.SetTextMapPropagator(propagator)
-		logger.Info().Str("telemetryexporter", "otel").Msg("started")
+		logger.Info().Str("telemetryexporter", "otel").Str("endpoint", config.GetString("ears.opentelemetry.otel-collector.endpoint")).Msg("started")
 	} else if config.GetBool("ears.opentelemetry.stdout.active") {
 		// setup tracing
 		exporter, err := stdout.NewExporter(
@@ -160,7 +160,7 @@ func SetupAPIServer(lifecycle fx.Lifecycle, config config.Config, logger *zerolo
 					ls.Shutdown()
 					logger.Info().Msg("lightstep exporter stopped")
 				}
-				if config.GetBool("ears.opentelemetry.datadog.active") || config.GetBool("ears.opentelemetry.stdout.active") {
+				if config.GetBool("ears.opentelemetry.otel-collector.active") || config.GetBool("ears.opentelemetry.stdout.active") {
 					traceProvider.Shutdown(ctx)
 					metricsPusher.Stop(ctx)
 					logger.Info().Msg("otel exporter stopped")
