@@ -7,11 +7,13 @@ ears:
 
   storage:
     route:
-      type: inmemory
-#      type: redis
-      endpoint: localhost:6379
+      type: dynamodb
+      region: us-west-2
+      tableName: bw.ears.routes
     tenant:
-      type: inmemory
+      type: dynamodb
+      region: us-west-2
+      tableName: bw.ears.tenants
 
   synchronization:
     type: inmemory
@@ -26,6 +28,11 @@ ears:
   opentelemetry:
     lightstep:
       active: no
-      accessToken: ""
+      accessToken:
+    otel-collector:
+      active: yes
+      endpoint: "localhost:55680"
+    stdout:
+      active: no
 
 
