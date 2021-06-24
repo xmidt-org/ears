@@ -1,9 +1,6 @@
-#
-# find traces here:
-#
-# https://dh-comcast.datadoghq.com/apm/traces?query=service%3Aears&streamTraces=true
-#
-#
+#!/bin/bash
 
-./otelcontribcol_darwin_amd64 --config otel_collector_config.yaml
+./otelcontribcol_darwin_amd64 --config otel_collector_config.yaml --log-level DEBUG --log-format json > otel.log 2>&1 &
+
+
 
