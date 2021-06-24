@@ -7,19 +7,17 @@ ears:
 
   storage:
     route:
-      type: dynamodb
+      type: inmemory
       region: us-west-2
       tableName: bw.ears.routes
     tenant:
-      type: dynamodb
+      type: inmemory
       region: us-west-2
       tableName: bw.ears.tenants
 
   synchronization:
     type: inmemory
-#    type: redis
-    endpoint: localhost:6379
-    active: yes
+    active: no
 
   ratelimiter:
     type: inmemory
@@ -30,7 +28,7 @@ ears:
       active: no
       accessToken:
     otel-collector:
-      active: yes
+      active: no
       protocol: "grpc"
       endpoint: "localhost:55680"
 #      urlPath: "/otel"
@@ -38,7 +36,7 @@ ears:
 #      endpoint: "127.0.0.1:8080"
 #      endpoint: "dev-us-west-2.gears.comcast.com"
       sidecar:
-        active: yes
+        active: no
         configKey: "otel"
         configFilePath: "otel_collector_config.yaml"
         commandLine: "./otelcontribcol --config otel_collector_config.yaml --log-level DEBUG --log-format json"
