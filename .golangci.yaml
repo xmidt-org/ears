@@ -40,6 +40,7 @@ issues:
     - path: internal/pkg/app/app\.go
       linters:
         - funlen
+        - gosec
     - path: pkg/filter/match/patternregex/patternregex\.go
       linters:
         - funlen
