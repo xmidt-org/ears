@@ -66,6 +66,8 @@ func SetupAPIServer(lifecycle fx.Lifecycle, config config.Config, logger *zerolo
 	var metricsPusher *controller.Controller
 	ctx := context.Background() // long lived context
 
+	// setup telemetry stuff
+
 	if config.GetBool("ears.opentelemetry.lightstep.active") {
 		ls = launcher.ConfigureOpentelemetry(
 			launcher.WithServiceName(rtsemconv.EARSServiceName),
@@ -75,12 +77,23 @@ func SetupAPIServer(lifecycle fx.Lifecycle, config config.Config, logger *zerolo
 		logger.Info().Str("telemetryexporter", "lightstep").Msg("started")
 	} else if config.GetBool("ears.opentelemetry.otel-collector.active") {
 		// setup tracing
+		// grpc does not allow a uri path which makes it hard to set this up behind a proxy or load balancer
 		exporter, err := otlp.NewExporter(ctx,
 			otlpgrpc.NewDriver(
 				otlpgrpc.WithEndpoint(config.GetString("ears.opentelemetry.otel-collector.endpoint")),
 				otlpgrpc.WithInsecure(),
 			),
 		)
+		// http allows uri path but unfortunately http is not fully implemented yet
+		/*exporter, err := otlp.NewExporter(ctx,
+				otlphttp.NewDriver(
+					otlphttp.WithEndpoint(config.GetString("ears.opentelemetry.otel-collector.endpoint")),
+					otlphttp.WithInsecure(),
+					otlphttp.WithTracesURLPath(config.GetString("ears.opentelemetry.otel-collector.urlPath")),
+					otlphttp.WithMetricsURLPath(config.GetString("ears.opentelemetry.otel-collector.urlPath")),
+				),
+			)
+		}*/
 		if err != nil {
 			return err
 		}
@@ -110,7 +123,11 @@ func SetupAPIServer(lifecycle fx.Lifecycle, config config.Config, logger *zerolo
 		global.SetMeterProvider(metricsPusher.MeterProvider())
 		propagator := propagation.NewCompositeTextMapPropagator(propagation.Baggage{}, propagation.TraceContext{})
 		otel.SetTextMapPropagator(propagator)
-		logger.Info().Str("telemetryexporter", "otel").Str("endpoint", config.GetString("ears.opentelemetry.otel-collector.endpoint")).Msg("started")
+		logger.Info().Str("telemetryexporter", "otel").
+			Str("endpoint", config.GetString("ears.opentelemetry.otel-collector.endpoint")).
+			Str("urlPath", config.GetString("ears.opentelemetry.otel-collector.urlPath")).
+			Str("protocol", config.GetString("ears.opentelemetry.otel-collector.protocol")).
+			Msg("started")
 	} else if config.GetBool("ears.opentelemetry.stdout.active") {
 		// setup tracing
 		exporter, err := stdout.NewExporter(
