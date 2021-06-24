@@ -19,9 +19,13 @@ package app
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"github.com/goccy/go-yaml"
 	"github.com/lightstep/otel-launcher-go/launcher"
 	"github.com/rs/zerolog"
+	"github.com/spf13/viper"
+	"github.com/xmidt-org/ears/internal/pkg/aws/s3"
 	"github.com/xmidt-org/ears/internal/pkg/config"
 	"github.com/xmidt-org/ears/internal/pkg/rtsemconv"
 	"go.opentelemetry.io/otel"
@@ -37,7 +41,11 @@ import (
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/semconv"
 	"go.uber.org/fx"
+	"io/ioutil"
 	"net/http"
+	"os"
+	"os/exec"
+	"strings"
 	"time"
 )
 
@@ -157,6 +165,62 @@ func SetupAPIServer(lifecycle fx.Lifecycle, config config.Config, logger *zerolo
 		propagator := propagation.NewCompositeTextMapPropagator(propagation.Baggage{}, propagation.TraceContext{})
 		otel.SetTextMapPropagator(propagator)
 		logger.Info().Str("telemetryexporter", "stdout").Msg("started")
+	}
+
+	// launch side car
+
+	if config.GetBool("ears.opentelemetry.otel-collector.sidecar.active") {
+		configPath := viper.GetString("config")
+		if configPath == "" {
+			return errors.New("no sidecar config path present")
+		}
+		svc, err := s3.New()
+		if err != nil {
+			return err
+		}
+		configData, err := svc.GetObject(configPath)
+		if err != nil {
+			return err
+		}
+		var fullConfig map[string]interface{}
+		err = yaml.Unmarshal([]byte(configData), &fullConfig)
+		if err != nil {
+			return err
+		}
+		configKey := config.GetString("ears.opentelemetry.otel-collector.sidecar.configKey")
+		var otelConfig interface{}
+		if configKey != "" {
+			var ok bool
+			otelConfig, ok = fullConfig[configKey]
+			if !ok {
+				return errors.New("no sidecar config present")
+			}
+		} else {
+			otelConfig = fullConfig
+		}
+		buf, err := yaml.Marshal(otelConfig)
+		if err != nil {
+			return err
+		}
+		configFilePath := config.GetString("ears.opentelemetry.otel-collector.sidecar.configFilePath")
+		err = ioutil.WriteFile(configFilePath, buf, 0644)
+		if err != nil {
+			return err
+		}
+		// launch sidecar
+		commandLine := config.GetString("ears.opentelemetry.otel-collector.sidecar.commandLine")
+		if commandLine == "" {
+			return errors.New("no sidecar command line")
+		}
+		cmdElems := strings.Split(commandLine, " ")
+		cmd := exec.Command(cmdElems[0], cmdElems[1:]...)
+		cmd.Stdout = os.Stdout
+		cmd.Stderr = os.Stdout
+		err = cmd.Start()
+		if err != nil {
+			return err
+		}
+		logger.Info().Str("sidecar", commandLine).Msg("started")
 	}
 
 	lifecycle.Append(
