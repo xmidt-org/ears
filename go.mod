@@ -38,7 +38,11 @@ require (
 	github.com/xeipuuv/gojsonschema v1.2.0
 	github.com/xorcare/pointer v1.1.0
 	go.opentelemetry.io/otel v0.20.0
+	go.opentelemetry.io/otel/exporters/otlp v0.20.0
+	go.opentelemetry.io/otel/exporters/stdout v0.20.0
 	go.opentelemetry.io/otel/metric v0.20.0
+	go.opentelemetry.io/otel/sdk v0.20.0
+	go.opentelemetry.io/otel/sdk/metric v0.20.0
 	go.opentelemetry.io/otel/trace v0.20.0
 	go.uber.org/fx v1.13.1
 	go.uber.org/multierr v1.7.0 // indirect

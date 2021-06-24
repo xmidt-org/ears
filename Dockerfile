@@ -1,13 +1,12 @@
 FROM docker.io/library/golang:1.15-alpine as builder
 
-MAINTAINER Jack Murdock <jack_murdock@comcast.com>
+MAINTAINER Michael Chiang <michael_chiang@cable.comcast.com>
 
 WORKDIR /src
 
 ARG VERSION
 ARG GITCOMMIT
 ARG BUILDTIME
-
 
 RUN apk add --no-cache --no-progress \
     ca-certificates \
@@ -16,16 +15,21 @@ RUN apk add --no-cache --no-progress \
     openssh \
     gcc \
     libc-dev \
-    upx
+    upx \
+    wget
 
 RUN go get github.com/geofffranks/spruce/cmd/spruce && chmod +x /go/bin/spruce
 COPY . .
 RUN make build
 
+RUN wget -nv https://github.com/open-telemetry/opentelemetry-collector-contrib/releases/download/v0.27.0/otelcontribcol_linux_arm64 \
+    && chmod +x otelcontribcol_linux_arm64
+
 FROM scratch AS runtime
 
 COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
 COPY --from=builder /src/ears /src/NOTICE /src/LICENSE /src/CHANGELOG.md /
+COPY --from=builder /src/otelcontribcol_linux_arm64 /otelcontribcol
 
 WORKDIR /
 ENTRYPOINT [ "/ears" ]
