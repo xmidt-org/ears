@@ -19,12 +19,34 @@ package app
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"github.com/goccy/go-yaml"
 	"github.com/lightstep/otel-launcher-go/launcher"
 	"github.com/rs/zerolog"
+	"github.com/spf13/viper"
+	"github.com/xmidt-org/ears/internal/pkg/aws/s3"
 	"github.com/xmidt-org/ears/internal/pkg/config"
+	"github.com/xmidt-org/ears/internal/pkg/rtsemconv"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/exporters/otlp"
+	"go.opentelemetry.io/otel/exporters/otlp/otlpgrpc"
+	"go.opentelemetry.io/otel/exporters/stdout"
+	"go.opentelemetry.io/otel/metric/global"
+	"go.opentelemetry.io/otel/propagation"
+	controller "go.opentelemetry.io/otel/sdk/metric/controller/basic"
+	processor "go.opentelemetry.io/otel/sdk/metric/processor/basic"
+	"go.opentelemetry.io/otel/sdk/metric/selector/simple"
+	"go.opentelemetry.io/otel/sdk/resource"
+	sdktrace "go.opentelemetry.io/otel/sdk/trace"
+	"go.opentelemetry.io/otel/semconv"
 	"go.uber.org/fx"
+	"io/ioutil"
 	"net/http"
+	"os"
+	"os/exec"
+	"strings"
+	"time"
 )
 
 func NewMux(a *APIManager, middleware []func(next http.Handler) http.Handler) (http.Handler, error) {
@@ -48,12 +70,157 @@ func SetupAPIServer(lifecycle fx.Lifecycle, config config.Config, logger *zerolo
 	}
 
 	var ls launcher.Launcher
+	var traceProvider *sdktrace.TracerProvider
+	var metricsPusher *controller.Controller
+	ctx := context.Background() // long lived context
+
+	// setup telemetry stuff
+
 	if config.GetBool("ears.opentelemetry.lightstep.active") {
 		ls = launcher.ConfigureOpentelemetry(
-			launcher.WithServiceName("ears"),
+			launcher.WithServiceName(rtsemconv.EARSServiceName),
 			launcher.WithAccessToken(config.GetString("ears.opentelemetry.lightstep.accessToken")),
 			launcher.WithServiceVersion("1.0"),
 		)
+		logger.Info().Str("telemetryexporter", "lightstep").Msg("started")
+	} else if config.GetBool("ears.opentelemetry.otel-collector.active") {
+		// setup tracing
+		// grpc does not allow a uri path which makes it hard to set this up behind a proxy or load balancer
+		exporter, err := otlp.NewExporter(ctx,
+			otlpgrpc.NewDriver(
+				otlpgrpc.WithEndpoint(config.GetString("ears.opentelemetry.otel-collector.endpoint")),
+				otlpgrpc.WithInsecure(),
+			),
+		)
+		// http allows uri path but unfortunately http is not fully implemented yet
+		/*exporter, err := otlp.NewExporter(ctx,
+				otlphttp.NewDriver(
+					otlphttp.WithEndpoint(config.GetString("ears.opentelemetry.otel-collector.endpoint")),
+					otlphttp.WithInsecure(),
+					otlphttp.WithTracesURLPath(config.GetString("ears.opentelemetry.otel-collector.urlPath")),
+					otlphttp.WithMetricsURLPath(config.GetString("ears.opentelemetry.otel-collector.urlPath")),
+				),
+			)
+		}*/
+		if err != nil {
+			return err
+		}
+		traceProvider = sdktrace.NewTracerProvider(
+			sdktrace.WithBatcher(exporter),
+			sdktrace.WithResource(
+				resource.NewWithAttributes(
+					semconv.ServiceNameKey.String(rtsemconv.EARSServiceName),
+				),
+			),
+		)
+		// setup metrics
+		metricsPusher = controller.New(
+			processor.New(
+				simple.NewWithExactDistribution(),
+				exporter,
+			),
+			controller.WithExporter(exporter),
+			controller.WithCollectPeriod(5*time.Second),
+		)
+		err = metricsPusher.Start(ctx)
+		if err != nil {
+			return err
+		}
+		// global settings
+		otel.SetTracerProvider(traceProvider)
+		global.SetMeterProvider(metricsPusher.MeterProvider())
+		propagator := propagation.NewCompositeTextMapPropagator(propagation.Baggage{}, propagation.TraceContext{})
+		otel.SetTextMapPropagator(propagator)
+		logger.Info().Str("telemetryexporter", "otel").
+			Str("endpoint", config.GetString("ears.opentelemetry.otel-collector.endpoint")).
+			Str("urlPath", config.GetString("ears.opentelemetry.otel-collector.urlPath")).
+			Str("protocol", config.GetString("ears.opentelemetry.otel-collector.protocol")).
+			Msg("started")
+	} else if config.GetBool("ears.opentelemetry.stdout.active") {
+		// setup tracing
+		exporter, err := stdout.NewExporter(
+			stdout.WithPrettyPrint(),
+		)
+		if err != nil {
+			return err
+		}
+		bsp := sdktrace.NewBatchSpanProcessor(exporter)
+		traceProvider = sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(bsp))
+		// setup metrics
+		metricsPusher = controller.New(
+			processor.New(
+				simple.NewWithExactDistribution(),
+				exporter,
+			),
+			controller.WithExporter(exporter),
+			controller.WithCollectPeriod(5*time.Second),
+		)
+		err = metricsPusher.Start(ctx)
+		if err != nil {
+			return err
+		}
+		// global settings
+		otel.SetTracerProvider(traceProvider)
+		global.SetMeterProvider(metricsPusher.MeterProvider())
+		propagator := propagation.NewCompositeTextMapPropagator(propagation.Baggage{}, propagation.TraceContext{})
+		otel.SetTextMapPropagator(propagator)
+		logger.Info().Str("telemetryexporter", "stdout").Msg("started")
+	}
+
+	// launch side car
+
+	if config.GetBool("ears.opentelemetry.otel-collector.sidecar.active") {
+		configPath := viper.GetString("config")
+		if configPath == "" {
+			return errors.New("no sidecar config path present")
+		}
+		svc, err := s3.New()
+		if err != nil {
+			return err
+		}
+		configData, err := svc.GetObject(configPath)
+		if err != nil {
+			return err
+		}
+		var fullConfig map[string]interface{}
+		err = yaml.Unmarshal([]byte(configData), &fullConfig)
+		if err != nil {
+			return err
+		}
+		configKey := config.GetString("ears.opentelemetry.otel-collector.sidecar.configKey")
+		var otelConfig interface{}
+		if configKey != "" {
+			var ok bool
+			otelConfig, ok = fullConfig[configKey]
+			if !ok {
+				return errors.New("no sidecar config present")
+			}
+		} else {
+			otelConfig = fullConfig
+		}
+		buf, err := yaml.Marshal(otelConfig)
+		if err != nil {
+			return err
+		}
+		configFilePath := config.GetString("ears.opentelemetry.otel-collector.sidecar.configFilePath")
+		err = ioutil.WriteFile(configFilePath, buf, 0644)
+		if err != nil {
+			return err
+		}
+		// launch sidecar
+		commandLine := config.GetString("ears.opentelemetry.otel-collector.sidecar.commandLine")
+		if commandLine == "" {
+			return errors.New("no sidecar command line")
+		}
+		cmdElems := strings.Split(commandLine, " ")
+		cmd := exec.Command(cmdElems[0], cmdElems[1:]...)
+		cmd.Stdout = os.Stdout
+		cmd.Stderr = os.Stdout
+		err = cmd.Start()
+		if err != nil {
+			return err
+		}
+		logger.Info().Str("sidecar", commandLine).Msg("started")
 	}
 
 	lifecycle.Append(
@@ -72,6 +239,12 @@ func SetupAPIServer(lifecycle fx.Lifecycle, config config.Config, logger *zerolo
 				}
 				if config.GetBool("ears.opentelemetry.lightstep.active") {
 					ls.Shutdown()
+					logger.Info().Msg("lightstep exporter stopped")
+				}
+				if config.GetBool("ears.opentelemetry.otel-collector.active") || config.GetBool("ears.opentelemetry.stdout.active") {
+					traceProvider.Shutdown(ctx)
+					metricsPusher.Stop(ctx)
+					logger.Info().Msg("otel exporter stopped")
 				}
 				return nil
 			},

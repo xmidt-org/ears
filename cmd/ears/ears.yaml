@@ -8,16 +8,16 @@ ears:
   storage:
     route:
       type: inmemory
-#      type: redis
-      endpoint: localhost:6379
+      region: us-west-2
+      tableName: bw.ears.routes
     tenant:
       type: inmemory
+      region: us-west-2
+      tableName: bw.ears.tenants
 
   synchronization:
     type: inmemory
-#    type: redis
-    endpoint: localhost:6379
-    active: yes
+    active: no
 
   ratelimiter:
     type: inmemory
@@ -26,6 +26,21 @@ ears:
   opentelemetry:
     lightstep:
       active: no
-      accessToken: ""
+      accessToken:
+    otel-collector:
+      active: no
+      protocol: "grpc"
+      endpoint: "localhost:55680"
+#      urlPath: "/otel"
+#      endpoint: "localhost:55681"
+#      endpoint: "127.0.0.1:8080"
+#      endpoint: "dev-us-west-2.gears.comcast.com"
+      sidecar:
+        active: no
+        configKey: "otel"
+        configFilePath: "otel_collector_config.yaml"
+        commandLine: "./otelcontribcol --config otel_collector_config.yaml --log-level DEBUG --log-format json"
+    stdout:
+      active: no
 
 

@@ -20,8 +20,9 @@ import (
 )
 
 const (
-	EARSTracerName = "ears"
-	EARSMeterName  = "ears"
+	EARSServiceName = "ears"
+	EARSTracerName  = "ears"
+	EARSMeterName   = "ears"
 
 	EARSPluginTypeLabel = "pluginType"
 	EARSPluginTypeDebug = "debug"
@@ -30,13 +31,13 @@ const (
 	EARSPluginTypeHttp  = "http"
 	EARSPluginTypeRedis = "redis"
 
-	EARSMetricEventSuccess       = "eventSuccess"
-	EARSMetricEventFailure       = "eventFailure"
-	EARSMetricEventBytes         = "eventBytes"
-	EARSMetricAddRouteSuccess    = "addRouteSuccess"
-	EARSMetricAddRouteFailure    = "addRouteFailure"
-	EARSMetricRemoveRouteSuccess = "removeRouteSuccess"
-	EARSMetricRemoveRouteFailure = "removeRouteFailure"
+	EARSMetricEventSuccess       = "ears.eventSuccess"
+	EARSMetricEventFailure       = "ears.eventFailure"
+	EARSMetricEventBytes         = "ears.eventBytes"
+	EARSMetricAddRouteSuccess    = "ears.addRouteSuccess"
+	EARSMetricAddRouteFailure    = "ears.addRouteFailure"
+	EARSMetricRemoveRouteSuccess = "ears.removeRouteSuccess"
+	EARSMetricRemoveRouteFailure = "ears.removeRouteFailure"
 
 	EARSRouteId = attribute.Key("ears.routeId")
 
