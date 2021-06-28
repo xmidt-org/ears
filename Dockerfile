@@ -1,6 +1,6 @@
 FROM docker.io/library/golang:1.15-alpine as builder
 
-MAINTAINER Michael Chiang <michael_chiang@cable.comcast.com>
+MAINTAINER Jack Murdock <jack_murdock@comcast.com>
 
 WORKDIR /src
 
