@@ -7,9 +7,8 @@ GOFMT        ?= $(GO)fmt
 APP          := ears
 DOCKER_ORG   := xmidt
 
-VERSION = 1.3
+VERSION ?= $(shell git describe --tag --always --dirty)
 
-#VERSION ?= $(shell git describe --tag --always --dirty)
 #PROGVER ?= $(shell git describe --tags `git rev-list --tags --max-count=1` | tail -1 | sed 's/v\(.*\)/\1/')
 #BUILDTIME = $(shell date -u '+%c')
 #GITCOMMIT = $(shell git rev-parse --short HEAD)
