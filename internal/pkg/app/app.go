@@ -56,6 +56,60 @@ func NewMux(a *APIManager, middleware []func(next http.Handler) http.Handler) (h
 	return a.muxRouter, nil
 }
 
+func startOtelSidecar(config config.Config) error {
+	configPath := viper.GetString("config")
+	if configPath == "" {
+		return errors.New("no sidecar config path present")
+	}
+	svc, err := s3.New()
+	if err != nil {
+		return err
+	}
+	configData, err := svc.GetObject(configPath)
+	if err != nil {
+		return err
+	}
+	var fullConfig map[string]interface{}
+	err = yaml.Unmarshal([]byte(configData), &fullConfig)
+	if err != nil {
+		return err
+	}
+	configKey := config.GetString("ears.opentelemetry.otel-collector.sidecar.configKey")
+	var otelConfig interface{}
+	if configKey != "" {
+		var ok bool
+		otelConfig, ok = fullConfig[configKey]
+		if !ok {
+			return errors.New("no sidecar config present")
+		}
+	} else {
+		otelConfig = fullConfig
+	}
+	buf, err := yaml.Marshal(otelConfig)
+	if err != nil {
+		return err
+	}
+	configFilePath := config.GetString("ears.opentelemetry.otel-collector.sidecar.configFilePath")
+	err = ioutil.WriteFile(configFilePath, buf, 0644)
+	if err != nil {
+		return err
+	}
+	// launch sidecar
+	commandLine := config.GetString("ears.opentelemetry.otel-collector.sidecar.commandLine")
+	if commandLine == "" {
+		return errors.New("no sidecar command line")
+	}
+	cmdElems := strings.Split(commandLine, " ")
+	cmd := exec.Command(cmdElems[0], cmdElems[1:]...)
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stdout
+	err = cmd.Start()
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 func SetupAPIServer(lifecycle fx.Lifecycle, config config.Config, logger *zerolog.Logger, mux http.Handler) error {
 	port := config.GetInt("ears.api.port")
 	if port < 1 {
@@ -170,57 +224,12 @@ func SetupAPIServer(lifecycle fx.Lifecycle, config config.Config, logger *zerolo
 	// launch side car
 
 	if config.GetBool("ears.opentelemetry.otel-collector.sidecar.active") {
-		configPath := viper.GetString("config")
-		if configPath == "" {
-			return errors.New("no sidecar config path present")
-		}
-		svc, err := s3.New()
+		err := startOtelSidecar(config)
 		if err != nil {
-			return err
-		}
-		configData, err := svc.GetObject(configPath)
-		if err != nil {
-			return err
-		}
-		var fullConfig map[string]interface{}
-		err = yaml.Unmarshal([]byte(configData), &fullConfig)
-		if err != nil {
-			return err
-		}
-		configKey := config.GetString("ears.opentelemetry.otel-collector.sidecar.configKey")
-		var otelConfig interface{}
-		if configKey != "" {
-			var ok bool
-			otelConfig, ok = fullConfig[configKey]
-			if !ok {
-				return errors.New("no sidecar config present")
-			}
+			logger.Error().Str("sidecar", "otel").Msg(err.Error())
 		} else {
-			otelConfig = fullConfig
+			logger.Info().Str("sidecar", "otel").Msg("started")
 		}
-		buf, err := yaml.Marshal(otelConfig)
-		if err != nil {
-			return err
-		}
-		configFilePath := config.GetString("ears.opentelemetry.otel-collector.sidecar.configFilePath")
-		err = ioutil.WriteFile(configFilePath, buf, 0644)
-		if err != nil {
-			return err
-		}
-		// launch sidecar
-		commandLine := config.GetString("ears.opentelemetry.otel-collector.sidecar.commandLine")
-		if commandLine == "" {
-			return errors.New("no sidecar command line")
-		}
-		cmdElems := strings.Split(commandLine, " ")
-		cmd := exec.Command(cmdElems[0], cmdElems[1:]...)
-		cmd.Stdout = os.Stdout
-		cmd.Stderr = os.Stdout
-		err = cmd.Start()
-		if err != nil {
-			return err
-		}
-		logger.Info().Str("sidecar", commandLine).Msg("started")
 	}
 
 	lifecycle.Append(
