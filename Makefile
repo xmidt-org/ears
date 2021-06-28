@@ -7,11 +7,15 @@ GOFMT        ?= $(GO)fmt
 APP          := ears
 DOCKER_ORG   := xmidt
 
-VERSION ?= $(shell git describe --tag --always --dirty)
-PROGVER ?= $(shell git describe --tags `git rev-list --tags --max-count=1` | tail -1 | sed 's/v\(.*\)/\1/')
-BUILDTIME = $(shell date -u '+%c')
-GITCOMMIT = $(shell git rev-parse --short HEAD)
-GOBUILDFLAGS = -a -ldflags "-w -s -X 'main.BuildTime=$(BUILDTIME)' -X main.GitCommit=$(GITCOMMIT) -X github.com/xmidt-org/ears/pkg/app.Version=$(VERSION)" -o $(APP)
+VERSION = 1.3
+
+#VERSION ?= $(shell git describe --tag --always --dirty)
+#PROGVER ?= $(shell git describe --tags `git rev-list --tags --max-count=1` | tail -1 | sed 's/v\(.*\)/\1/')
+#BUILDTIME = $(shell date -u '+%c')
+#GITCOMMIT = $(shell git rev-parse --short HEAD)
+#GOBUILDFLAGS = -a -ldflags "-w -s -X 'main.BuildTime=$(BUILDTIME)' -X main.GitCommit=$(GITCOMMIT) -X github.com/xmidt-org/ears/pkg/app.Version=$(VERSION)" -o $(APP)
+
+GOBUILDFLAGS = -a -ldflags "-w -s -X github.com/xmidt-org/ears/pkg/app.Version=$(VERSION)" -o $(APP)
 
 BUILD_DIR = ./cmd/ears
 
