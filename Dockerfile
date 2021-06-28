@@ -22,14 +22,14 @@ RUN go get github.com/geofffranks/spruce/cmd/spruce && chmod +x /go/bin/spruce
 COPY . .
 RUN make build
 
-RUN wget -nv https://github.com/open-telemetry/opentelemetry-collector-contrib/releases/download/v0.27.0/otelcontribcol_linux_arm64 \
-    && chmod +x otelcontribcol_linux_arm64
+RUN wget -nv https://github.com/open-telemetry/opentelemetry-collector-contrib/releases/download/v0.27.0/otelcontribcol_linux_amd64 \
+    && chmod +x otelcontribcol_linux_amd64
 
 FROM scratch AS runtime
 
 COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
 COPY --from=builder /src/ears /src/NOTICE /src/LICENSE /src/CHANGELOG.md /
-COPY --from=builder /src/otelcontribcol_linux_arm64 /otelcontribcol
+COPY --from=builder /src/otelcontribcol_linux_amd64 /otelcontribcol
 
 WORKDIR /
 ENTRYPOINT [ "/ears" ]
