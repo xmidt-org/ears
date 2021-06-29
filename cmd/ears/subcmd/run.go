@@ -20,6 +20,7 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"github.com/xmidt-org/ears/internal/pkg/app"
+	"github.com/xmidt-org/ears/internal/pkg/appsecret"
 	"github.com/xmidt-org/ears/internal/pkg/config"
 	"github.com/xmidt-org/ears/internal/pkg/fx/pluginmanagerfx"
 	"github.com/xmidt-org/ears/internal/pkg/fx/quotamanagerfx"
@@ -64,6 +65,7 @@ var runCmd = &cobra.Command{
 			quotamanagerfx.Module,
 			fx.Provide(
 				AppConfig,
+				appsecret.NewConfigVault,
 				app.ProvideLogger,
 				tablemgr.NewRoutingTableManager,
 				app.NewAPIManager,

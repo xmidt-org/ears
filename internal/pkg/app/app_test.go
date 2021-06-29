@@ -20,6 +20,7 @@ import (
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/viper"
 	"github.com/xmidt-org/ears/internal/pkg/app"
+	"github.com/xmidt-org/ears/internal/pkg/appsecret"
 	"github.com/xmidt-org/ears/internal/pkg/config"
 	"github.com/xmidt-org/ears/internal/pkg/fx/pluginmanagerfx"
 	"github.com/xmidt-org/ears/internal/pkg/fx/quotamanagerfx"
@@ -101,6 +102,7 @@ func TestAppRunSuccess(t *testing.T) {
 		quotamanagerfx.Module,
 		fx.Provide(
 			AppConfig,
+			appsecret.NewConfigVault,
 			GetTestLogger,
 			app.NewAPIManager,
 			tablemgr.NewRoutingTableManager,

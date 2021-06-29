@@ -18,6 +18,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/xmidt-org/ears/pkg/secret"
 	"github.com/xmidt-org/ears/pkg/tenant"
 	"sync"
 	"testing"
@@ -522,7 +523,7 @@ func newFiltererPlugin(t *testing.T) pkgplugin.Pluginer {
 		return "filter_" + hasher.Hash(config), nil
 	}
 
-	mock.NewFiltererFunc = func(tid tenant.Id, plugin string, name string, config interface{}) (pkgfilter.Filterer, error) {
+	mock.NewFiltererFunc = func(tid tenant.Id, plugin string, name string, config interface{}, secrets secret.Vault) (pkgfilter.Filterer, error) {
 		return &pkgfilter.FiltererMock{
 			FilterFunc: func(e pkgevent.Event) []pkgevent.Event {
 				fmt.Printf("FILTER EVENT: %+v\n", e)
@@ -562,7 +563,7 @@ func newSenderPlugin(t *testing.T) pkgplugin.Pluginer {
 		return "sender_" + hasher.Hash(config), nil
 	}
 
-	mock.NewSenderFunc = func(tid tenant.Id, pluginType string, name string, config interface{}) (pkgsender.Sender, error) {
+	mock.NewSenderFunc = func(tid tenant.Id, pluginType string, name string, config interface{}, secrets secret.Vault) (pkgsender.Sender, error) {
 		return &pkgsender.SenderMock{
 			SendFunc: func(e pkgevent.Event) {
 				defer e.Ack()
@@ -628,7 +629,7 @@ func newReceiverPlugin(t *testing.T) pkgplugin.Pluginer {
 		return "receiver_" + hasher.Hash(config), nil
 	}
 
-	plugMock.NewReceiverFunc = func(tid tenant.Id, pluginType string, name string, config interface{}) (pkgreceiver.Receiver, error) {
+	plugMock.NewReceiverFunc = func(tid tenant.Id, pluginType string, name string, config interface{}, secrets secret.Vault) (pkgreceiver.Receiver, error) {
 		return &receiverMock, nil
 	}
 

@@ -16,6 +16,7 @@ package main
 
 import (
 	"context"
+	"github.com/xmidt-org/ears/pkg/secret"
 	"github.com/xmidt-org/ears/pkg/tenant"
 
 	"github.com/xmidt-org/ears/pkg/filter"
@@ -69,7 +70,7 @@ func NewPluginVersion(name string, version string, commitID string) (*pkgplugin.
 
 // Receiver ============================================================
 
-func NewReceiver(tid tenant.Id, pluginType string, name string, config interface{}) (receiver.Receiver, error) {
+func NewReceiver(tid tenant.Id, pluginType string, name string, config interface{}, secrets secret.Vault) (receiver.Receiver, error) {
 	return &plugin{}, nil
 }
 
@@ -83,7 +84,7 @@ func (p *plugin) StopReceiving(ctx context.Context) error {
 
 // Filterer ============================================================
 
-func NewFilterer(tid tenant.Id, pluginType string, name string, config interface{}) (filter.Filterer, error) {
+func NewFilterer(tid tenant.Id, pluginType string, name string, config interface{}, secrets secret.Vault) (filter.Filterer, error) {
 	return &plugin{}, nil
 }
 
@@ -93,7 +94,7 @@ func (p *plugin) Filter(e event.Event) []event.Event {
 
 // Sender ============================================================
 
-func NewSender(tid tenant.Id, pluginType string, name string, config interface{}) (sender.Sender, error) {
+func NewSender(tid tenant.Id, pluginType string, name string, config interface{}, secrets secret.Vault) (sender.Sender, error) {
 	return &plugin{}, nil
 }
 

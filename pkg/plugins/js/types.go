@@ -18,6 +18,7 @@ import (
 	"github.com/xmidt-org/ears/pkg/filter"
 	pkgjs "github.com/xmidt-org/ears/pkg/filter/js"
 	pkgplugin "github.com/xmidt-org/ears/pkg/plugin"
+	"github.com/xmidt-org/ears/pkg/secret"
 	"github.com/xmidt-org/ears/pkg/tenant"
 )
 
@@ -40,6 +41,6 @@ func NewPluginVersion(name string, version string, commitID string) (*pkgplugin.
 	)
 }
 
-func NewFilterer(tid tenant.Id, plugin string, name string, config interface{}) (filter.Filterer, error) {
-	return pkgjs.NewFilter(tid, plugin, name, config)
+func NewFilterer(tid tenant.Id, plugin string, name string, config interface{}, secrets secret.Vault) (filter.Filterer, error) {
+	return pkgjs.NewFilter(tid, plugin, name, config, secrets)
 }

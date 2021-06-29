@@ -40,6 +40,7 @@ import (
 	"github.com/xmidt-org/ears/pkg/plugins/transform"
 	"github.com/xmidt-org/ears/pkg/plugins/ttl"
 	"github.com/xmidt-org/ears/pkg/plugins/unwrap"
+	"github.com/xmidt-org/ears/pkg/secret"
 
 	pkgplugin "github.com/xmidt-org/ears/pkg/plugin"
 	"go.uber.org/fx"
@@ -56,6 +57,7 @@ type PluginIn struct {
 
 	Logger       *zerolog.Logger
 	QuotaManager *quota.QuotaManager
+	Secrets      secret.Vault
 }
 
 type PluginOut struct {
@@ -170,7 +172,8 @@ func ProvidePluginManager(in PluginIn) (PluginOut, error) {
 
 	m, err := p.NewManager(p.WithPluginManager(mgr),
 		p.WithLogger(in.Logger),
-		p.WithQuotaManager(in.QuotaManager))
+		p.WithQuotaManager(in.QuotaManager),
+		p.WithSecretVaults(in.Secrets))
 	if err != nil {
 		return out, fmt.Errorf("could not provide plugin manager: %w", err)
 	}

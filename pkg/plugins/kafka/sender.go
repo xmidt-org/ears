@@ -26,6 +26,7 @@ import (
 	"github.com/xmidt-org/ears/internal/pkg/rtsemconv"
 	"github.com/xmidt-org/ears/pkg/event"
 	pkgplugin "github.com/xmidt-org/ears/pkg/plugin"
+	"github.com/xmidt-org/ears/pkg/secret"
 	"github.com/xmidt-org/ears/pkg/sender"
 	"github.com/xmidt-org/ears/pkg/tenant"
 	"go.opentelemetry.io/otel"
@@ -37,7 +38,7 @@ import (
 //TODO: support headers
 //
 
-func NewSender(tid tenant.Id, plugin string, name string, config interface{}) (sender.Sender, error) {
+func NewSender(tid tenant.Id, plugin string, name string, config interface{}, secrets secret.Vault) (sender.Sender, error) {
 	var cfg SenderConfig
 	var err error
 	switch c := config.(type) {
@@ -63,11 +64,12 @@ func NewSender(tid tenant.Id, plugin string, name string, config interface{}) (s
 	logger := zerolog.New(os.Stdout).Level(zerolog.DebugLevel)
 	//zerolog.LevelFieldName = "log.level"
 	s := &Sender{
-		name:   name,
-		plugin: plugin,
-		tid:    tid,
-		config: cfg,
-		logger: logger,
+		name:    name,
+		plugin:  plugin,
+		tid:     tid,
+		config:  cfg,
+		logger:  logger,
+		secrets: secrets,
 	}
 
 	err = s.initPlugin()
@@ -145,14 +147,29 @@ func (s *Sender) setConfig(config *sarama.Config) error {
 		config.Net.TLS.Enable = true
 		config.Net.SASL.Enable = true
 		config.Net.SASL.User = s.config.Username
-		config.Net.SASL.Password = s.config.Password
+		config.Net.SASL.Password = s.secrets.Secret(s.config.Password)
+		if config.Net.SASL.Password == "" {
+			config.Net.SASL.Password = s.config.Password
+		}
 	} else if "" != s.config.AccessCert {
-		keypair, err := tls.X509KeyPair([]byte(s.config.AccessCert), []byte(s.config.AccessKey))
+		accessCert := s.secrets.Secret(s.config.AccessCert)
+		if accessCert == "" {
+			accessCert = s.config.AccessCert
+		}
+		accessKey := s.secrets.Secret(s.config.AccessKey)
+		if accessKey == "" {
+			accessKey = s.config.AccessKey
+		}
+		caCert := s.secrets.Secret(s.config.CACert)
+		if caCert == "" {
+			caCert = s.config.CACert
+		}
+		keypair, err := tls.X509KeyPair([]byte(accessCert), []byte(accessKey))
 		if err != nil {
 			return err
 		}
 		caAuthorityPool := x509.NewCertPool()
-		caAuthorityPool.AppendCertsFromPEM([]byte(s.config.CACert))
+		caAuthorityPool.AppendCertsFromPEM([]byte(caCert))
 		tlsConfig := &tls.Config{
 			Certificates: []tls.Certificate{keypair},
 			RootCAs:      caAuthorityPool,

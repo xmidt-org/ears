@@ -96,6 +96,9 @@ const senderSchema = `
                 "accessCert": {
                     "type": "string"
                 },
+                "accessKey": {
+                    "type": "string"
+                },
                 "version": {
                     "type": "string"
                 },

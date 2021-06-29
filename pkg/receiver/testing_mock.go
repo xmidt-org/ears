@@ -5,6 +5,7 @@ package receiver
 
 import (
 	"context"
+	"github.com/xmidt-org/ears/pkg/secret"
 	"github.com/xmidt-org/ears/pkg/tenant"
 	"sync"
 )
@@ -84,7 +85,7 @@ var _ NewReceiverer = &NewReceivererMock{}
 //
 // 		// make and configure a mocked NewReceiverer
 // 		mockedNewReceiverer := &NewReceivererMock{
-// 			NewReceiverFunc: func(tid tenant.Id, plugin string, name string, config interface{}) (Receiver, error) {
+// 			NewReceiverFunc: func(tid tenant.Id, plugin string, name string, config interface{}, secrets secret.Vault) (Receiver, error) {
 // 				panic("mock out the NewReceiver method")
 // 			},
 // 			ReceiverHashFunc: func(config interface{}) (string, error) {
@@ -98,7 +99,7 @@ var _ NewReceiverer = &NewReceivererMock{}
 // 	}
 type NewReceivererMock struct {
 	// NewReceiverFunc mocks the NewReceiver method.
-	NewReceiverFunc func(tid tenant.Id, plugin string, name string, config interface{}) (Receiver, error)
+	NewReceiverFunc func(tid tenant.Id, plugin string, name string, config interface{}, secrets secret.Vault) (Receiver, error)
 
 	// ReceiverHashFunc mocks the ReceiverHash method.
 	ReceiverHashFunc func(config interface{}) (string, error)
@@ -115,6 +116,8 @@ type NewReceivererMock struct {
 			Name string
 			// Config is the config argument value.
 			Config interface{}
+			// Secrets is the secrets argument value.
+			Secrets secret.Vault
 		}
 		// ReceiverHash holds details about calls to the ReceiverHash method.
 		ReceiverHash []struct {
@@ -127,41 +130,45 @@ type NewReceivererMock struct {
 }
 
 // NewReceiver calls NewReceiverFunc.
-func (mock *NewReceivererMock) NewReceiver(tid tenant.Id, plugin string, name string, config interface{}) (Receiver, error) {
+func (mock *NewReceivererMock) NewReceiver(tid tenant.Id, plugin string, name string, config interface{}, secrets secret.Vault) (Receiver, error) {
 	if mock.NewReceiverFunc == nil {
 		panic("NewReceivererMock.NewReceiverFunc: method is nil but NewReceiverer.NewReceiver was just called")
 	}
 	callInfo := struct {
-		Tid    tenant.Id
-		Plugin string
-		Name   string
-		Config interface{}
+		Tid     tenant.Id
+		Plugin  string
+		Name    string
+		Config  interface{}
+		Secrets secret.Vault
 	}{
-		Tid:    tid,
-		Plugin: plugin,
-		Name:   name,
-		Config: config,
+		Tid:     tid,
+		Plugin:  plugin,
+		Name:    name,
+		Config:  config,
+		Secrets: secrets,
 	}
 	mock.lockNewReceiver.Lock()
 	mock.calls.NewReceiver = append(mock.calls.NewReceiver, callInfo)
 	mock.lockNewReceiver.Unlock()
-	return mock.NewReceiverFunc(tid, plugin, name, config)
+	return mock.NewReceiverFunc(tid, plugin, name, config, secrets)
 }
 
 // NewReceiverCalls gets all the calls that were made to NewReceiver.
 // Check the length with:
 //     len(mockedNewReceiverer.NewReceiverCalls())
 func (mock *NewReceivererMock) NewReceiverCalls() []struct {
-	Tid    tenant.Id
-	Plugin string
-	Name   string
-	Config interface{}
+	Tid     tenant.Id
+	Plugin  string
+	Name    string
+	Config  interface{}
+	Secrets secret.Vault
 } {
 	var calls []struct {
-		Tid    tenant.Id
-		Plugin string
-		Name   string
-		Config interface{}
+		Tid     tenant.Id
+		Plugin  string
+		Name    string
+		Config  interface{}
+		Secrets secret.Vault
 	}
 	mock.lockNewReceiver.RLock()
 	calls = mock.calls.NewReceiver
