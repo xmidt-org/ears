@@ -18,6 +18,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/xmidt-org/ears/internal/pkg/rtsemconv"
+	"github.com/xmidt-org/ears/pkg/secret"
 	"github.com/xmidt-org/ears/pkg/tenant"
 
 	"github.com/goccy/go-yaml"
@@ -27,7 +28,7 @@ import (
 	"go.opentelemetry.io/otel"
 )
 
-func NewSender(tid tenant.Id, plugin string, name string, config interface{}) (sender.Sender, error) {
+func NewSender(tid tenant.Id, plugin string, name string, config interface{}, secrets secret.Vault) (sender.Sender, error) {
 	var cfg SenderConfig
 	var err error
 	switch c := config.(type) {

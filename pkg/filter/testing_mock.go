@@ -5,6 +5,7 @@ package filter
 
 import (
 	"github.com/xmidt-org/ears/pkg/event"
+	"github.com/xmidt-org/ears/pkg/secret"
 	"github.com/xmidt-org/ears/pkg/tenant"
 	"sync"
 )
@@ -87,7 +88,7 @@ var _ NewFilterer = &NewFiltererMock{}
 // 			FiltererHashFunc: func(config interface{}) (string, error) {
 // 				panic("mock out the FiltererHash method")
 // 			},
-// 			NewFiltererFunc: func(tid tenant.Id, plugin string, name string, config interface{}) (Filterer, error) {
+// 			NewFiltererFunc: func(tid tenant.Id, plugin string, name string, config interface{}, secrets secret.Vault) (Filterer, error) {
 // 				panic("mock out the NewFilterer method")
 // 			},
 // 		}
@@ -101,7 +102,7 @@ type NewFiltererMock struct {
 	FiltererHashFunc func(config interface{}) (string, error)
 
 	// NewFiltererFunc mocks the NewFilterer method.
-	NewFiltererFunc func(tid tenant.Id, plugin string, name string, config interface{}) (Filterer, error)
+	NewFiltererFunc func(tid tenant.Id, plugin string, name string, config interface{}, secrets secret.Vault) (Filterer, error)
 
 	// calls tracks calls to the methods.
 	calls struct {
@@ -120,6 +121,8 @@ type NewFiltererMock struct {
 			Name string
 			// Config is the config argument value.
 			Config interface{}
+			// Secrets is the secrets argument value.
+			Secrets secret.Vault
 		}
 	}
 	lockFiltererHash sync.RWMutex
@@ -158,41 +161,45 @@ func (mock *NewFiltererMock) FiltererHashCalls() []struct {
 }
 
 // NewFilterer calls NewFiltererFunc.
-func (mock *NewFiltererMock) NewFilterer(tid tenant.Id, plugin string, name string, config interface{}) (Filterer, error) {
+func (mock *NewFiltererMock) NewFilterer(tid tenant.Id, plugin string, name string, config interface{}, secrets secret.Vault) (Filterer, error) {
 	if mock.NewFiltererFunc == nil {
 		panic("NewFiltererMock.NewFiltererFunc: method is nil but NewFilterer.NewFilterer was just called")
 	}
 	callInfo := struct {
-		Tid    tenant.Id
-		Plugin string
-		Name   string
-		Config interface{}
+		Tid     tenant.Id
+		Plugin  string
+		Name    string
+		Config  interface{}
+		Secrets secret.Vault
 	}{
-		Tid:    tid,
-		Plugin: plugin,
-		Name:   name,
-		Config: config,
+		Tid:     tid,
+		Plugin:  plugin,
+		Name:    name,
+		Config:  config,
+		Secrets: secrets,
 	}
 	mock.lockNewFilterer.Lock()
 	mock.calls.NewFilterer = append(mock.calls.NewFilterer, callInfo)
 	mock.lockNewFilterer.Unlock()
-	return mock.NewFiltererFunc(tid, plugin, name, config)
+	return mock.NewFiltererFunc(tid, plugin, name, config, secrets)
 }
 
 // NewFiltererCalls gets all the calls that were made to NewFilterer.
 // Check the length with:
 //     len(mockedNewFilterer.NewFiltererCalls())
 func (mock *NewFiltererMock) NewFiltererCalls() []struct {
-	Tid    tenant.Id
-	Plugin string
-	Name   string
-	Config interface{}
+	Tid     tenant.Id
+	Plugin  string
+	Name    string
+	Config  interface{}
+	Secrets secret.Vault
 } {
 	var calls []struct {
-		Tid    tenant.Id
-		Plugin string
-		Name   string
-		Config interface{}
+		Tid     tenant.Id
+		Plugin  string
+		Name    string
+		Config  interface{}
+		Secrets secret.Vault
 	}
 	mock.lockNewFilterer.RLock()
 	calls = mock.calls.NewFilterer

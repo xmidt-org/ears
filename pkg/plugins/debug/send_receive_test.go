@@ -26,11 +26,11 @@ func TestSendReceive(t *testing.T) {
 	p, err := debug.NewPlugin()
 	a.Expect(err).To(BeNil())
 
-	r, err := p.NewReceiver(tid, "debug", "mydebug", "")
+	r, err := p.NewReceiver(tid, "debug", "mydebug", "", nil)
 
 	a.Expect(err).To(BeNil())
 
-	s, err := p.NewSender(tid, "debug", "mydebug", "")
+	s, err := p.NewSender(tid, "debug", "mydebug", "", nil)
 	a.Expect(err).To(BeNil())
 
 	err = r.Receive(s.Send)

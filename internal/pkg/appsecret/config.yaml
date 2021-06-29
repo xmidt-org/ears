@@ -1,0 +1,11 @@
+ears:
+  abc: xyz
+  secrets:
+    myorg:
+      myapp:
+        kafka:
+          secret1: abcdefg1234567
+          secret2: |-
+            ThisIsAMultilineSecret
+            Line1SecretLine1Secret
+            Line2SecretLine2Secret

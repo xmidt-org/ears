@@ -20,11 +20,12 @@ import (
 	"github.com/xmidt-org/ears/internal/pkg/rtsemconv"
 	"github.com/xmidt-org/ears/pkg/event"
 	"github.com/xmidt-org/ears/pkg/filter"
+	"github.com/xmidt-org/ears/pkg/secret"
 	"github.com/xmidt-org/ears/pkg/tenant"
 	"go.opentelemetry.io/otel"
 )
 
-func NewFilter(tid tenant.Id, plugin string, name string, config interface{}) (*Filter, error) {
+func NewFilter(tid tenant.Id, plugin string, name string, config interface{}, secrets secret.Vault) (*Filter, error) {
 	cfg, err := NewConfig(config)
 	if err != nil {
 		return nil, &filter.InvalidConfigError{

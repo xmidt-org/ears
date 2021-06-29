@@ -26,6 +26,7 @@ import (
 	"github.com/Shopify/sarama"
 	"github.com/rs/zerolog"
 	"github.com/xmidt-org/ears/internal/pkg/rtsemconv"
+	"github.com/xmidt-org/ears/pkg/secret"
 	"github.com/xmidt-org/ears/pkg/tenant"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
@@ -42,7 +43,7 @@ import (
 	"github.com/xmidt-org/ears/pkg/receiver"
 )
 
-func NewReceiver(tid tenant.Id, plugin string, name string, config interface{}) (receiver.Receiver, error) {
+func NewReceiver(tid tenant.Id, plugin string, name string, config interface{}, secrets secret.Vault) (receiver.Receiver, error) {
 	var cfg ReceiverConfig
 	var err error
 	switch c := config.(type) {
@@ -80,6 +81,7 @@ func NewReceiver(tid tenant.Id, plugin string, name string, config interface{}) 
 		ready:   make(chan bool),
 		topics:  []string{cfg.Topic},
 		stopped: true,
+		secrets: secrets,
 	}
 	saramaConfig, err := r.getSaramaConfig(*r.config.CommitInterval)
 	if err != nil {
@@ -210,14 +212,30 @@ func (r *Receiver) getSaramaConfig(commitIntervalSec int) (*sarama.Config, error
 		config.Net.TLS.Enable = true
 		config.Net.SASL.Enable = true
 		config.Net.SASL.User = r.config.Username
-		config.Net.SASL.Password = r.config.Password
+		config.Net.SASL.Password = r.secrets.Secret(r.config.Password)
+		if config.Net.SASL.Password == "" {
+			config.Net.SASL.Password = r.config.Password
+		}
+
 	} else if "" != r.config.AccessCert {
-		keypair, err := tls.X509KeyPair([]byte(r.config.AccessCert), []byte(r.config.AccessKey))
+		accessCert := r.secrets.Secret(r.config.AccessCert)
+		if accessCert == "" {
+			accessCert = r.config.AccessCert
+		}
+		accessKey := r.secrets.Secret(r.config.AccessKey)
+		if accessKey == "" {
+			accessKey = r.config.AccessKey
+		}
+		caCert := r.secrets.Secret(r.config.CACert)
+		if caCert == "" {
+			caCert = r.config.CACert
+		}
+		keypair, err := tls.X509KeyPair([]byte(accessCert), []byte(accessKey))
 		if err != nil {
 			return nil, err
 		}
 		caAuthorityPool := x509.NewCertPool()
-		caAuthorityPool.AppendCertsFromPEM([]byte(r.config.CACert))
+		caAuthorityPool.AppendCertsFromPEM([]byte(caCert))
 		tlsConfig := &tls.Config{
 			Certificates: []tls.Certificate{keypair},
 			RootCAs:      caAuthorityPool,

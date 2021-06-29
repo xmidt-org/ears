@@ -22,6 +22,7 @@ import (
 	"github.com/xmidt-org/ears/internal/pkg/rtsemconv"
 	"github.com/xmidt-org/ears/pkg/event"
 	pkgplugin "github.com/xmidt-org/ears/pkg/plugin"
+	"github.com/xmidt-org/ears/pkg/secret"
 	"github.com/xmidt-org/ears/pkg/sender"
 	"github.com/xmidt-org/ears/pkg/tenant"
 	"go.opentelemetry.io/otel"
@@ -33,7 +34,7 @@ import (
 
 const DEFAULT_TIMEOUT = 10
 
-func NewSender(tid tenant.Id, plugin string, name string, config interface{}) (sender.Sender, error) {
+func NewSender(tid tenant.Id, plugin string, name string, config interface{}, secrets secret.Vault) (sender.Sender, error) {
 	var cfg SenderConfig
 	var err error
 	switch c := config.(type) {

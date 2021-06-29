@@ -106,7 +106,7 @@ func TestFilterRegex(t *testing.T) {
 					Mode:    mode,
 					Matcher: match.MatcherRegex,
 					Pattern: &tc.pattern,
-				})
+				}, nil)
 				a.Expect(err).To(BeNil())
 
 				succeed := tc.succeed
@@ -237,7 +237,7 @@ func TestNewFilterConfig(t *testing.T) {
 						return
 					}
 
-					f, err := match.NewFilter(tenant.Id{AppId: "myapp", OrgId: "myorg"}, "match", "mymatch", cfg)
+					f, err := match.NewFilter(tenant.Id{AppId: "myapp", OrgId: "myorg"}, "match", "mymatch", cfg, nil)
 					a.Expect(err).To(BeNil())
 					a.Expect(f).ToNot(BeNil())
 
@@ -272,7 +272,7 @@ func TestNewFilterBadConfig(t *testing.T) {
 			Mode:    match.ModeType(93),
 			Matcher: match.MatcherRegex,
 			Pattern: pointer.String("pattern"),
-		})
+		}, nil)
 		a.Expect(err).ToNot(BeNil())
 		a.Expect(f).To(BeNil())
 	}
@@ -282,7 +282,7 @@ func TestNewFilterBadConfig(t *testing.T) {
 			Mode:    match.ModeAllow,
 			Matcher: match.MatcherType(34),
 			Pattern: pointer.String("pattern"),
-		})
+		}, nil)
 		a.Expect(err).ToNot(BeNil())
 		a.Expect(f).To(BeNil())
 	}

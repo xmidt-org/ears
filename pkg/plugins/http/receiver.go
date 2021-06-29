@@ -24,6 +24,7 @@ import (
 	"github.com/xmidt-org/ears/pkg/event"
 	pkgplugin "github.com/xmidt-org/ears/pkg/plugin"
 	"github.com/xmidt-org/ears/pkg/receiver"
+	"github.com/xmidt-org/ears/pkg/secret"
 	"github.com/xmidt-org/ears/pkg/tenant"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
@@ -35,7 +36,7 @@ import (
 	"os"
 )
 
-func NewReceiver(tid tenant.Id, plugin string, name string, config interface{}) (receiver.Receiver, error) {
+func NewReceiver(tid tenant.Id, plugin string, name string, config interface{}, secrets secret.Vault) (receiver.Receiver, error) {
 	var cfg ReceiverConfig
 	var err error
 	switch c := config.(type) {

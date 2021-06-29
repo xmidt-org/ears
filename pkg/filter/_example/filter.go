@@ -15,7 +15,7 @@
 package _example
 
 import (
-	"context"
+	"github.com/xmidt-org/ears/pkg/tenant"
 
 	"github.com/xmidt-org/ears/pkg/event"
 	"github.com/xmidt-org/ears/pkg/filter"
@@ -56,6 +56,22 @@ type Filter struct{}
 
 // Filter the event based on the configuration information.
 // This example passes the event on as-is.
-func (f *Filter) Filter(ctx context.Context, evt event.Event) ([]event.Event, error) {
-	return []event.Event{evt}, nil
+func (f *Filter) Filter(evt event.Event) []event.Event {
+	return []event.Event{evt}
+}
+
+func (f *Filter) Config() interface{} {
+	return nil
+}
+
+func (f *Filter) Name() string {
+	return ""
+}
+
+func (f *Filter) Plugin() string {
+	return ""
+}
+
+func (f *Filter) Tenant() tenant.Id {
+	return tenant.Id{}
 }

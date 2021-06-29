@@ -21,6 +21,7 @@ import (
 	"github.com/go-redis/redis"
 	"github.com/rs/zerolog"
 	"github.com/xmidt-org/ears/internal/pkg/rtsemconv"
+	"github.com/xmidt-org/ears/pkg/secret"
 	"github.com/xmidt-org/ears/pkg/tenant"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
@@ -36,7 +37,7 @@ import (
 	"github.com/xmidt-org/ears/pkg/receiver"
 )
 
-func NewReceiver(tid tenant.Id, plugin string, name string, config interface{}) (receiver.Receiver, error) {
+func NewReceiver(tid tenant.Id, plugin string, name string, config interface{}, secrets secret.Vault) (receiver.Receiver, error) {
 	var cfg ReceiverConfig
 	var err error
 	switch c := config.(type) {
