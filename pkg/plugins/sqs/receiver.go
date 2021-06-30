@@ -115,7 +115,7 @@ func (r *Receiver) startReceiveWorker(svc *sqs.SQS, n int) {
 				case <-time.After(1 * time.Second):
 					delEntry = nil
 				}
-				if delEntry != nil {
+				if delEntry != nil && !*r.config.NeverDelete {
 					deleteBatch = append(deleteBatch, delEntry)
 				}
 				if len(deleteBatch) >= *r.config.MaxNumberOfMessages || (delEntry == nil && len(deleteBatch) > 0) {
