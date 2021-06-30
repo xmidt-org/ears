@@ -13,11 +13,14 @@
     }
   },
   "sender": {
-    "plugin": "debug",
-    "name": "useCaseOneTestRouteSender",
+    "plugin": "kafka",
+    "name": "kafkaSender",
     "config": {
-      "destination": "stdout",
-      "maxHistory": 100
+      "brokers": "yourkafkabroker:16383",
+      "topic": "yourtopic",
+      "caCert": "secret://kafka.caCert",
+      "accessCert": "secret://kafka.accessCert",
+      "accessKey": "secret://kafka.accessKey"
     }
   },
   "filterChain": [
