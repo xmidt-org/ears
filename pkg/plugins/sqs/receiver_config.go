@@ -48,6 +48,9 @@ func (rc *ReceiverConfig) WithDefaults() ReceiverConfig {
 	if cfg.Trace == nil {
 		cfg.Trace = DefaultReceiverConfig.Trace
 	}
+	if cfg.NeverDelete == nil {
+		cfg.NeverDelete = DefaultReceiverConfig.NeverDelete
+	}
 	return cfg
 }
 
@@ -111,6 +114,10 @@ const receiverSchema = `
 					"maximum": 100
 				},
 				"trace" : {
+					"type": "boolean",
+					"default": false
+				},
+				"neverDelete" : {
 					"type": "boolean",
 					"default": false
 				}
