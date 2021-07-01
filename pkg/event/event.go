@@ -20,6 +20,7 @@ package event
 import (
 	"context"
 	"github.com/xmidt-org/ears/internal/pkg/ack"
+	"go.opentelemetry.io/otel/trace"
 	"strings"
 
 	"github.com/mohae/deepcopy"
@@ -128,7 +129,8 @@ func (e *event) SetMetadata(metadata interface{}) error {
 func (e *event) GetPathValue(path string) (interface{}, interface{}, string) {
 	// in the future we need proper evaluation of tenant and trace paths here
 	if path == TRACE+".id" {
-		return "123-456-789-000", nil, ""
+		return trace.SpanFromContext(e.ctx).SpanContext().TraceID().String(), nil, ""
+		//return "123-456-789-000", nil, ""
 	}
 	obj := e.Payload()
 	if strings.HasPrefix(path, METADATA+".") || path == METADATA {
