@@ -81,7 +81,8 @@
           },
           "to": {
             "location": "{.Message.body.account.id}",
-            "app": "myapp"
+            "partner": "{tenant.orgId}",
+            "app": "{tenant.appId}"
           },
           "tx": {
             "traceId" : "{trace.id}"
