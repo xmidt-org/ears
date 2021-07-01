@@ -1,5 +1,5 @@
 {
-  "id": "u108",
+  "id": "u109",
   "userId": "boris",
   "name": "deviceRoute",
   "receiver": {
@@ -14,9 +14,9 @@
   },
   "sender": {
     "plugin": "kafka",
-    "name": "deviceRouteSender",
+    "name": "accountRouteSender",
     "config": {
-      "brokers": "yourkafkabroker:16383",
+      "brokers": "yourbroker:16383",
       "topic": "yourtopic",
       "caCert": "secret://kafka.caCert",
       "accessCert": "secret://kafka.accessCert",
@@ -73,6 +73,13 @@
             }
           }
         }
+      }
+    },
+    {
+      "plugin": "js",
+      "name": "deviceRouteJsMatcher",
+      "config": {
+        "source": "var e = _.event.payload.Message; if (e.header.event == 'DELETE' || (e.body.device.status == 'Delete' && (e.header.event == 'UPDATE' || e.header.event == 'DEPROVISION' || e.header.event == 'REFRESH'))) { return null } else { return _.event; }"
       }
     },
     {
