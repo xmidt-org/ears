@@ -152,10 +152,10 @@ func (e *event) GetPathValue(path string) (interface{}, interface{}, string) {
 		//return trace.SpanFromContext(e.ctx).SpanContext().TraceID().String(), nil, ""
 		return "123-456-789-000", nil, ""
 	}
-	if path == TENANT+".appID" {
+	if path == TENANT+".appId" {
 		return e.Tenant().AppId, nil, ""
 	}
-	if path == TENANT+".orgID" {
+	if path == TENANT+".orgId" {
 		return e.Tenant().OrgId, nil, ""
 	}
 	obj := e.Payload()
@@ -290,5 +290,6 @@ func (e *event) Clone(ctx context.Context) (Event, error) {
 		ctx:      ctx,
 		ack:      subTree,
 		trace:    e.trace,
+		tid:      e.tid,
 	}, nil
 }
