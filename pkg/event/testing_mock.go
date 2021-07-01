@@ -5,6 +5,7 @@ package event
 
 import (
 	"context"
+	"github.com/xmidt-org/ears/pkg/tenant"
 	"sync"
 )
 
@@ -51,8 +52,14 @@ var _ Event = &EventMock{}
 // 			SetPayloadFunc: func(payload interface{}) error {
 // 				panic("mock out the SetPayload method")
 // 			},
+// 			SetTenantFunc: func(tid tenant.Id) error {
+// 				panic("mock out the SetTenant method")
+// 			},
 // 			SetTraceFunc: func(trace bool) error {
 // 				panic("mock out the SetTrace method")
+// 			},
+// 			TenantFunc: func() tenant.Id {
+// 				panic("mock out the Tenant method")
 // 			},
 // 			TraceFunc: func() bool {
 // 				panic("mock out the Trace method")
@@ -97,8 +104,14 @@ type EventMock struct {
 	// SetPayloadFunc mocks the SetPayload method.
 	SetPayloadFunc func(payload interface{}) error
 
+	// SetTenantFunc mocks the SetTenant method.
+	SetTenantFunc func(tid tenant.Id) error
+
 	// SetTraceFunc mocks the SetTrace method.
 	SetTraceFunc func(trace bool) error
+
+	// TenantFunc mocks the Tenant method.
+	TenantFunc func() tenant.Id
 
 	// TraceFunc mocks the Trace method.
 	TraceFunc func() bool
@@ -156,10 +169,18 @@ type EventMock struct {
 			// Payload is the payload argument value.
 			Payload interface{}
 		}
+		// SetTenant holds details about calls to the SetTenant method.
+		SetTenant []struct {
+			// Tid is the tid argument value.
+			Tid tenant.Id
+		}
 		// SetTrace holds details about calls to the SetTrace method.
 		SetTrace []struct {
 			// Trace is the trace argument value.
 			Trace bool
+		}
+		// Tenant holds details about calls to the Tenant method.
+		Tenant []struct {
 		}
 		// Trace holds details about calls to the Trace method.
 		Trace []struct {
@@ -176,7 +197,9 @@ type EventMock struct {
 	lockSetMetadata  sync.RWMutex
 	lockSetPathValue sync.RWMutex
 	lockSetPayload   sync.RWMutex
+	lockSetTenant    sync.RWMutex
 	lockSetTrace     sync.RWMutex
+	lockTenant       sync.RWMutex
 	lockTrace        sync.RWMutex
 }
 
@@ -509,6 +532,37 @@ func (mock *EventMock) SetPayloadCalls() []struct {
 	return calls
 }
 
+// SetTenant calls SetTenantFunc.
+func (mock *EventMock) SetTenant(tid tenant.Id) error {
+	if mock.SetTenantFunc == nil {
+		panic("EventMock.SetTenantFunc: method is nil but Event.SetTenant was just called")
+	}
+	callInfo := struct {
+		Tid tenant.Id
+	}{
+		Tid: tid,
+	}
+	mock.lockSetTenant.Lock()
+	mock.calls.SetTenant = append(mock.calls.SetTenant, callInfo)
+	mock.lockSetTenant.Unlock()
+	return mock.SetTenantFunc(tid)
+}
+
+// SetTenantCalls gets all the calls that were made to SetTenant.
+// Check the length with:
+//     len(mockedEvent.SetTenantCalls())
+func (mock *EventMock) SetTenantCalls() []struct {
+	Tid tenant.Id
+} {
+	var calls []struct {
+		Tid tenant.Id
+	}
+	mock.lockSetTenant.RLock()
+	calls = mock.calls.SetTenant
+	mock.lockSetTenant.RUnlock()
+	return calls
+}
+
 // SetTrace calls SetTraceFunc.
 func (mock *EventMock) SetTrace(trace bool) error {
 	if mock.SetTraceFunc == nil {
@@ -537,6 +591,32 @@ func (mock *EventMock) SetTraceCalls() []struct {
 	mock.lockSetTrace.RLock()
 	calls = mock.calls.SetTrace
 	mock.lockSetTrace.RUnlock()
+	return calls
+}
+
+// Tenant calls TenantFunc.
+func (mock *EventMock) Tenant() tenant.Id {
+	if mock.TenantFunc == nil {
+		panic("EventMock.TenantFunc: method is nil but Event.Tenant was just called")
+	}
+	callInfo := struct {
+	}{}
+	mock.lockTenant.Lock()
+	mock.calls.Tenant = append(mock.calls.Tenant, callInfo)
+	mock.lockTenant.Unlock()
+	return mock.TenantFunc()
+}
+
+// TenantCalls gets all the calls that were made to Tenant.
+// Check the length with:
+//     len(mockedEvent.TenantCalls())
+func (mock *EventMock) TenantCalls() []struct {
+} {
+	var calls []struct {
+	}
+	mock.lockTenant.RLock()
+	calls = mock.calls.Tenant
+	mock.lockTenant.RUnlock()
 	return calls
 }
 
