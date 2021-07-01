@@ -1,0 +1,129 @@
+{
+  "id": "u109",
+  "userId": "boris",
+  "name": "deviceRoute",
+  "receiver": {
+    "plugin": "sqs",
+    "name": "accountProductRouteReceiver",
+    "config": {
+      "queueUrl": "https://sqs.us-west-2.amazonaws.com/youraccount/yourqueue",
+      "receiverPoolSize": 1,
+      "visibilityTimeout": 5,
+      "neverDelete": true
+    }
+  },
+  "sender": {
+    "plugin": "kafka",
+    "name": "accountRouteSender",
+    "config": {
+      "brokers": "yourbroker:16383",
+      "topic": "yourtopic",
+      "caCert": "secret://kafka.caCert",
+      "accessCert": "secret://kafka.accessCert",
+      "accessKey": "secret://kafka.accessKey"
+    }
+  },
+  "filterChain": [
+    {
+      "plugin": "match",
+      "name": "deviceRouteMatcher",
+      "config": {
+        "mode": "allow",
+        "matcher": "patternregex",
+        "pattern": {
+          "TopicArn": ".*_DEVICE$"
+        }
+      }
+    },
+    {
+      "plugin": "decode",
+      "name": "deviceRouteDecoder",
+      "config": {
+        "fromPath": ".Message"
+      }
+    },
+    {
+      "plugin": "match",
+      "name": "deviceRoutePartnerMatcher",
+      "config": {
+        "mode": "allow",
+        "matcher": "pattern",
+        "pattern": {
+          "Message": {
+            "header": {
+              "partner": "Comcast",
+              "type": "DEVICE"
+            }
+          }
+        }
+      }
+    },
+    {
+      "plugin": "match",
+      "name": "deviceRouteTypeMatcher",
+      "config": {
+        "mode": "allow",
+        "matcher": "pattern",
+        "pattern": {
+          "Message": {
+            "body": {
+              "device": {
+                "deviceType": "IpCamera"
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "plugin": "js",
+      "name": "deviceRouteJsMatcher",
+      "config": {
+        "source": "var e = _.event.payload.Message; if (e.header.event == 'DELETE' || (e.body.device.status == 'Delete' && (e.header.event == 'UPDATE' || e.header.event == 'DEPROVISION' || e.header.event == 'REFRESH'))) { return null } else { return _.event; }"
+      }
+    },
+    {
+      "plugin": "transform",
+      "name": "deviceRouteTransformer",
+      "config": {
+        "transformation": {
+          "message": {
+            "op": "process",
+            "uses": "sys-device-deprovision",
+            "payload": {
+              "id": "{.Message.body.device.id}",
+              "schema": "camera.v1.schema.json",
+              "state": "unpaired",
+              "ts": "{.Message.header.timestampMs}",
+              "xboAccountId": "{.Message.body.account.id}"
+            }
+          },
+          "to": {
+            "location": "{.Message.body.account.id}",
+            "partner": "{tenant.orgId}",
+            "app": "{tenant.appId}"
+          },
+          "tx": {
+            "traceId" : "{trace.id}"
+          }
+        }
+      }
+    },
+    {
+      "plugin": "hash",
+      "name": "deviceRouteHasher",
+      "config": {
+        "fromPath": ".to.location",
+        "toPath": "metadata.kafka.partition",
+        "hashAlgorithm": "fnv"
+      }
+    },
+    {
+      "plugin": "log",
+      "name": "deviceRouteLogger",
+      "config": null
+    }
+  ],
+  "deliveryMode": "whoCares"
+}
+

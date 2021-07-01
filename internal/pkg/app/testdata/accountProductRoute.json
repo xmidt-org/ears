@@ -1,0 +1,128 @@
+{
+  "id": "u107",
+  "userId": "boris",
+  "name": "accountProductRoute",
+  "receiver": {
+    "plugin": "sqs",
+    "name": "accountProductReceiver",
+    "config": {
+      "queueUrl": "https://sqs.us-west-2.amazonaws.com/youraccount/yourqueue",
+      "receiverPoolSize": 1,
+      "visibilityTimeout": 5,
+      "neverDelete": true
+    }
+  },
+  "sender": {
+    "plugin": "kafka",
+    "name": "accountProductRouteSender",
+    "config": {
+      "brokers": "yourkafkabroker:16383",
+      "topic": "yourtopic",
+      "caCert": "secret://kafka.caCert",
+      "accessCert": "secret://kafka.accessCert",
+      "accessKey": "secret://kafka.accessKey"
+    }
+  },
+  "filterChain": [
+    {
+      "plugin": "match",
+      "name": "accountProductRouteMatcher",
+      "config": {
+        "mode": "allow",
+        "matcher": "patternregex",
+        "pattern": {
+          "TopicArn": ".*_ACCOUNTPRODUCT$"
+        }
+      }
+    },
+    {
+      "plugin": "decode",
+      "name": "accountProductRouteDecoder",
+      "config": {
+        "fromPath": ".Message"
+      }
+    },
+    {
+      "plugin": "match",
+      "name": "accountProductRoutePartnerMatcher",
+      "config": {
+        "mode": "allow",
+        "matcher": "pattern",
+        "pattern": {
+          "Message": {
+            "header": {
+              "partner": "Comcast",
+              "type": "ACCOUNT_PRODUCT"
+            }
+          }
+        }
+      }
+    },
+    {
+      "plugin": "transform",
+      "name": "accountProductRouteTransformer",
+      "config": {
+        "transformation": {
+          "message": {
+            "op": "process",
+            "uses": "xbo_account",
+            "payload": {
+              "metadata": {
+                "type": "{.Message.header.type}",
+                "event": "{.Message.header.event}",
+                "timestamp": "{.Message.header.timestampMs}",
+                "id": "{.Message.body.account.id}"
+              },
+              "body": {
+                "addedAccountProducts": "{.Message.body.addedAccountProducts}",
+                "removedAccountProducts": "{.Message.body.removedAccountProducts}"
+              }
+            }
+          },
+          "to": {
+            "location": "{.Message.body.account.id}",
+            "partner": "{tenant.orgId}",
+            "app": "{tenant.appId}"
+          },
+          "tx": {
+            "traceId" : "{trace.id}"
+          }
+        }
+      }
+    },
+    {
+      "plugin": "match",
+      "name": "accountProductRouteEmptyMatcher",
+      "config": {
+        "mode": "deny",
+        "matcher": "pattern",
+        "pattern": {
+          "message": {
+            "payload" : {
+              "body" : {
+                "addedAccountProducts" : [],
+                "removedAccountProducts": []
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "plugin": "hash",
+      "name": "accountProductRouteHasher",
+      "config": {
+        "fromPath": ".to.location",
+        "toPath": "metadata.kafka.partition",
+        "hashAlgorithm": "fnv"
+      }
+    },
+    {
+      "plugin": "log",
+      "name": "accountProductRouteLogger",
+      "config": null
+    }
+  ],
+  "deliveryMode": "whoCares"
+}
+

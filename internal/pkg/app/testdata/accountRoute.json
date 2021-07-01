@@ -1,20 +1,20 @@
 {
-  "id": "u107",
+  "id": "u108",
   "userId": "boris",
-  "name": "useCaseOneTestRoute",
+  "name": "accountRoute",
   "receiver": {
     "plugin": "sqs",
-    "name": "useCaseOneRouteReceiver",
+    "name": "accountProductRouteReceiver",
     "config": {
-      "queueUrl": "https://sqs.us-west-2.amazonaws.com/447701116110/prod-xbo-accountproduct",
+      "queueUrl": "https://sqs.us-west-2.amazonaws.com/youraccount/yourqueue",
       "receiverPoolSize": 1,
-      "visibilityTimeout": 2,
+      "visibilityTimeout": 5,
       "neverDelete": true
     }
   },
   "sender": {
     "plugin": "kafka",
-    "name": "kafkaSender",
+    "name": "accountRouteSender",
     "config": {
       "brokers": "yourkafkabroker:16383",
       "topic": "yourtopic",
@@ -26,25 +26,25 @@
   "filterChain": [
     {
       "plugin": "match",
-      "name": "useCaseOneTestRouteMatcher",
+      "name": "accountRouteMatcher",
       "config": {
         "mode": "allow",
         "matcher": "patternregex",
         "pattern": {
-          "TopicArn": ".*_ACCOUNTPRODUCT$"
+          "TopicArn": ".*_ACCOUNT$"
         }
       }
     },
     {
       "plugin": "decode",
-      "name": "useCaseOneTestRouteDecoder",
+      "name": "accountRouteDecoder",
       "config": {
         "fromPath": ".Message"
       }
     },
     {
       "plugin": "match",
-      "name": "useCaseOneTestRouteMatcher",
+      "name": "accountRoutePartnerMatcher",
       "config": {
         "mode": "allow",
         "matcher": "pattern",
@@ -52,7 +52,24 @@
           "Message": {
             "header": {
               "partner": "Comcast",
-              "type": "ACCOUNT_PRODUCT"
+              "type": "ACCOUNT"
+            }
+          }
+        }
+      }
+    },
+    {
+      "plugin": "match",
+      "name": "accountRouteStatusMatcher",
+      "config": {
+        "mode": "allow",
+        "matcher": "pattern",
+        "pattern": {
+          "Message": {
+            "body": {
+              "account": {
+                "status": "*"
+              }
             }
           }
         }
@@ -60,7 +77,7 @@
     },
     {
       "plugin": "transform",
-      "name": "useCaseOneTestRouteTransformer",
+      "name": "accountRouteTransformer",
       "config": {
         "transformation": {
           "message": {
@@ -74,14 +91,14 @@
                 "id": "{.Message.body.account.id}"
               },
               "body": {
-                "addedAccountProducts": "{.Message.body.addedAccountProducts}",
-                "removedAccountProducts": "{.Message.body.removedAccountProducts}"
+                "status": "{.Message.body.account.status}"
               }
             }
           },
           "to": {
             "location": "{.Message.body.account.id}",
-            "app": "myapp"
+            "partner": "{tenant.orgId}",
+            "app": "{tenant.appId}"
           },
           "tx": {
             "traceId" : "{trace.id}"
@@ -90,26 +107,8 @@
       }
     },
     {
-      "plugin": "match",
-      "name": "useCaseOneTestRouteEmptyMatcher",
-      "config": {
-        "mode": "deny",
-        "matcher": "pattern",
-        "pattern": {
-          "message": {
-            "payload" : {
-              "body" : {
-                "addedAccountProducts" : [],
-                "removedAccountProducts": []
-              }
-            }
-          }
-        }
-      }
-    },
-    {
       "plugin": "hash",
-      "name": "useCaseOneTestRouteHasher",
+      "name": "accountRouteHasher",
       "config": {
         "fromPath": ".to.location",
         "toPath": "metadata.kafka.partition",
@@ -118,7 +117,7 @@
     },
     {
       "plugin": "log",
-      "name": "useCaseOneTestRouteLoggerStep",
+      "name": "accountRouteLogger",
       "config": null
     }
   ],
