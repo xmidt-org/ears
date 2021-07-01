@@ -20,6 +20,7 @@ package event
 import (
 	"context"
 	"github.com/xmidt-org/ears/internal/pkg/ack"
+	"github.com/xmidt-org/ears/pkg/tenant"
 	"go.opentelemetry.io/otel/trace"
 	"strings"
 
@@ -31,6 +32,7 @@ type event struct {
 	payload  interface{}
 	ctx      context.Context
 	ack      ack.SubTree
+	tid      tenant.Id
 	trace    bool
 }
 
@@ -90,6 +92,13 @@ func WithTrace(trace bool) EventOption {
 	}
 }
 
+func WithTenant(tid tenant.Id) EventOption {
+	return func(e *event) error {
+		e.SetTenant(tid)
+		return nil
+	}
+}
+
 func (e *event) Trace() bool {
 	return e.trace
 }
@@ -126,11 +135,29 @@ func (e *event) SetMetadata(metadata interface{}) error {
 	return nil
 }
 
+func (e *event) Tenant() tenant.Id {
+	return e.tid
+}
+
+func (e *event) SetTenant(tid tenant.Id) error {
+	if e.ack != nil && e.ack.IsAcked() {
+		return &ack.AlreadyAckedError{}
+	}
+	e.tid = tid
+	return nil
+}
+
 func (e *event) GetPathValue(path string) (interface{}, interface{}, string) {
 	// in the future we need proper evaluation of tenant and trace paths here
 	if path == TRACE+".id" {
 		return trace.SpanFromContext(e.ctx).SpanContext().TraceID().String(), nil, ""
 		//return "123-456-789-000", nil, ""
+	}
+	if path == TENANT+".appID" {
+		return e.Tenant().AppId, nil, ""
+	}
+	if path == TENANT+".orgID" {
+		return e.Tenant().OrgId, nil, ""
 	}
 	obj := e.Payload()
 	if strings.HasPrefix(path, METADATA+".") || path == METADATA {

@@ -20,6 +20,7 @@ package event
 import (
 	"context"
 	"github.com/xmidt-org/ears/pkg/errs"
+	"github.com/xmidt-org/ears/pkg/tenant"
 )
 
 //go:generate rm -f testing_mock.go
@@ -41,6 +42,9 @@ type Event interface {
 	//Get the event metadata
 	Metadata() interface{}
 
+	//Get the event tenant
+	Tenant() tenant.Id
+
 	//Get the event trace flag
 	Trace() bool
 
@@ -54,6 +58,10 @@ type Event interface {
 	//Set the event metadata
 	//Will return an error if the event is done
 	SetMetadata(metadata interface{}) error
+
+	//Set the event tenant
+	//Will return an error if the event is done
+	SetTenant(tid tenant.Id) error
 
 	//Set trace flag
 	//Will return an error if the event is done

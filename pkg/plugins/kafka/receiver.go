@@ -309,7 +309,7 @@ func (r *Receiver) Receive(next receiver.NextFn) error {
 					r.eventFailureCounter.Add(ctx, 1.0)
 					cancel()
 				}),
-				event.WithTrace(*r.config.Trace))
+				event.WithTrace(*r.config.Trace), event.WithTenant(r.Tenant()))
 			if err != nil {
 				r.logger.Error().Str("op", "kafka.Receive").Msg("cannot create event: " + err.Error())
 				return false

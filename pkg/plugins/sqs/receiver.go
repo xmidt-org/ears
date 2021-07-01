@@ -232,7 +232,7 @@ func (r *Receiver) startReceiveWorker(svc *sqs.SQS, n int) {
 						r.eventFailureCounter.Add(ctx, 1.0)
 						cancel()
 					}),
-					event.WithTrace(*r.config.Trace))
+					event.WithTrace(*r.config.Trace), event.WithTenant(r.Tenant()))
 				if err != nil {
 					r.logger.Error().Str("op", "SQS.receiveWorker").Int("workerNum", n).Msg("cannot create event: " + err.Error())
 					return
