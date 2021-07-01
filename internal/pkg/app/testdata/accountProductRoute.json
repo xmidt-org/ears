@@ -1,20 +1,20 @@
 {
   "id": "u107",
   "userId": "boris",
-  "name": "useCaseOneTestRoute",
+  "name": "accountProductRoute",
   "receiver": {
     "plugin": "sqs",
-    "name": "useCaseOneRouteReceiver",
+    "name": "accountProductReceiver",
     "config": {
-      "queueUrl": "https://sqs.us-west-2.amazonaws.com/447701116110/prod-xbo-accountproduct",
+      "queueUrl": "https://sqs.us-west-2.amazonaws.com/youraccount/yourqueue",
       "receiverPoolSize": 1,
-      "visibilityTimeout": 2,
+      "visibilityTimeout": 5,
       "neverDelete": true
     }
   },
   "sender": {
     "plugin": "kafka",
-    "name": "kafkaSender",
+    "name": "accountProductRouteSender",
     "config": {
       "brokers": "yourkafkabroker:16383",
       "topic": "yourtopic",
@@ -26,7 +26,7 @@
   "filterChain": [
     {
       "plugin": "match",
-      "name": "useCaseOneTestRouteMatcher",
+      "name": "accountProductRouteMatcher",
       "config": {
         "mode": "allow",
         "matcher": "patternregex",
@@ -37,14 +37,14 @@
     },
     {
       "plugin": "decode",
-      "name": "useCaseOneTestRouteDecoder",
+      "name": "accountProductRouteDecoder",
       "config": {
         "fromPath": ".Message"
       }
     },
     {
       "plugin": "match",
-      "name": "useCaseOneTestRouteMatcher",
+      "name": "accountProductRoutePartnerMatcher",
       "config": {
         "mode": "allow",
         "matcher": "pattern",
@@ -60,7 +60,7 @@
     },
     {
       "plugin": "transform",
-      "name": "useCaseOneTestRouteTransformer",
+      "name": "accountProductRouteTransformer",
       "config": {
         "transformation": {
           "message": {
@@ -91,7 +91,7 @@
     },
     {
       "plugin": "match",
-      "name": "useCaseOneTestRouteEmptyMatcher",
+      "name": "accountProductRouteEmptyMatcher",
       "config": {
         "mode": "deny",
         "matcher": "pattern",
@@ -109,7 +109,7 @@
     },
     {
       "plugin": "hash",
-      "name": "useCaseOneTestRouteHasher",
+      "name": "accountProductRouteHasher",
       "config": {
         "fromPath": ".to.location",
         "toPath": "metadata.kafka.partition",
@@ -118,7 +118,7 @@
     },
     {
       "plugin": "log",
-      "name": "useCaseOneTestRouteLoggerStep",
+      "name": "accountProductRouteLogger",
       "config": null
     }
   ],
