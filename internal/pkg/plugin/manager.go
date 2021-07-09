@@ -20,8 +20,8 @@ import (
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"github.com/xmidt-org/ears/internal/pkg/appsecret"
-	"github.com/xmidt-org/ears/internal/pkg/logs"
 	"github.com/xmidt-org/ears/internal/pkg/quota"
+	"github.com/xmidt-org/ears/pkg/logs"
 	"github.com/xmidt-org/ears/pkg/panics"
 	"github.com/xmidt-org/ears/pkg/secret"
 	"github.com/xmidt-org/ears/pkg/tenant"
@@ -254,7 +254,7 @@ func (m *manager) next(receiverKey string, e pkgevent.Event) {
 	nextFns := m.receiversFn[receiverKey]
 
 	for wid, n := range nextFns {
-		subCtx := logs.SubLoggerCtx(e.Context(), m.logger)
+		subCtx := logs.SubCtx(e.Context())
 		logs.StrToLogCtx(subCtx, "wid", wid)
 		logs.StrToLogCtx(subCtx, "receiverKey", receiverKey)
 		childEvt, err := e.Clone(subCtx)
@@ -270,6 +270,8 @@ func (m *manager) next(receiverKey string, e pkgevent.Event) {
 							Str("stackTrace", panicErr.StackTrace()).Msg("A panic has occurred")
 					}
 				}()
+
+				log.Ctx(evt.Context()).Info().Str("op", "nextRoute").Msg("Sending Event to next route")
 				fn(evt)
 			}(n, childEvt)
 		}

@@ -128,6 +128,9 @@ func SetupAPIServer(lifecycle fx.Lifecycle, config config.Config, logger *zerolo
 	var metricsPusher *controller.Controller
 	ctx := context.Background() // long lived context
 
+	//initialize event logger
+	//event.SetEventLogger(logger)
+
 	// setup telemetry stuff
 
 	if config.GetBool("ears.opentelemetry.lightstep.active") {
