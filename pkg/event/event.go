@@ -33,9 +33,16 @@ type event struct {
 	ack      ack.SubTree
 	tid      tenant.Id
 	trace    bool
+	traceId  string
 }
 
 type EventOption func(*event) error
+
+//var eventLogger *zerolog.Logger
+//
+//func SetEventLogger(logger *zerolog.Logger) {
+//	eventLogger = logger
+//}
 
 //Create a new event given a context, a payload, and other event options
 func New(ctx context.Context, payload interface{}, options ...EventOption) (Event, error) {
@@ -50,6 +57,14 @@ func New(ctx context.Context, payload interface{}, options ...EventOption) (Even
 			return nil, err
 		}
 	}
+	//if eventLogger != nil {
+	//	if e.traceId == "" {
+	//		e.traceId = uuid.New().String()
+	//	}
+	//	ctx = logs.SubLoggerCtx(ctx, eventLogger)
+	//	logs.StrToLogCtx(ctx, "tx.traceId", e.traceId)
+	//	e.SetContext(ctx)
+	//}
 	return e, nil
 }
 
@@ -94,6 +109,13 @@ func WithTrace(trace bool) EventOption {
 func WithTenant(tid tenant.Id) EventOption {
 	return func(e *event) error {
 		e.SetTenant(tid)
+		return nil
+	}
+}
+
+func WithTraceId(traceId string) EventOption {
+	return func(e *event) error {
+		e.traceId = traceId
 		return nil
 	}
 }

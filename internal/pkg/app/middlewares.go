@@ -18,8 +18,10 @@ import (
 	"github.com/google/uuid"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
-	"github.com/xmidt-org/ears/internal/pkg/logs"
+	logs2 "github.com/xmidt-org/ears/pkg/logs"
 	"github.com/xmidt-org/ears/pkg/panics"
+	"go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux"
+	"go.opentelemetry.io/contrib/propagators/b3"
 	"net/http"
 )
 
@@ -27,16 +29,19 @@ var middlewareLogger *zerolog.Logger
 
 func NewMiddleware(logger *zerolog.Logger) []func(next http.Handler) http.Handler {
 	middlewareLogger = logger
+	otelMiddleware := otelmux.Middleware("ears", otelmux.WithPropagators(b3.B3{}))
+
 	return []func(next http.Handler) http.Handler{
-		initRequestMiddleware,
 		authenticateMiddleware,
+		otelMiddleware,
+		initRequestMiddleware,
 	}
 }
 
 func initRequestMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
-		subCtx := logs.SubLoggerCtx(ctx, middlewareLogger)
+		subCtx := logs2.SubLoggerCtx(ctx, middlewareLogger)
 
 		defer func() {
 			p := recover()
@@ -53,11 +58,11 @@ func initRequestMiddleware(next http.Handler) http.Handler {
 		if traceId == "" {
 			traceId = uuid.New().String()
 		}
-		logs.StrToLogCtx(subCtx, LogTraceId, traceId)
+		logs2.StrToLogCtx(subCtx, LogTraceId, traceId)
 
 		appId := r.Header.Get(HeaderTenantId)
 		if appId != "" {
-			logs.StrToLogCtx(subCtx, LogTenantId, appId)
+			logs2.StrToLogCtx(subCtx, LogTenantId, appId)
 		}
 		log.Ctx(subCtx).Debug().Msg("initializeRequestMiddleware")
 
@@ -67,8 +72,7 @@ func initRequestMiddleware(next http.Handler) http.Handler {
 
 func authenticateMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		subCtx := r.Context()
-		log.Ctx(subCtx).Debug().Msg("authenticateMiddleware")
-		next.ServeHTTP(w, r.WithContext(subCtx))
+		//TODO implement API authentication
+		next.ServeHTTP(w, r)
 	})
 }

@@ -23,6 +23,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/sqs"
 	"github.com/rs/zerolog"
+	"github.com/rs/zerolog/log"
 	"github.com/xmidt-org/ears/internal/pkg/rtsemconv"
 	"github.com/xmidt-org/ears/pkg/secret"
 	"github.com/xmidt-org/ears/pkg/tenant"
@@ -207,6 +208,7 @@ func (r *Receiver) startReceiveWorker(svc *sqs.SQS, n int) {
 					ctx, span = tracer.Start(ctx, "sqsReceiver")
 					span.SetAttributes(rtsemconv.EARSEventTrace)
 				}
+
 				e, err := event.New(ctx, payload, event.WithMetadata(*message), event.WithAck(
 					func(e event.Event) {
 						msg := e.Metadata().(sqs.Message) // get metadata associated with this event
@@ -232,11 +234,14 @@ func (r *Receiver) startReceiveWorker(svc *sqs.SQS, n int) {
 						r.eventFailureCounter.Add(ctx, 1.0)
 						cancel()
 					}),
-					event.WithTrace(*r.config.Trace), event.WithTenant(r.Tenant()))
+					event.WithTrace(*r.config.Trace),
+					event.WithTenant(r.Tenant()),
+					event.WithTraceId(*message.MessageId)) //TODO figure out if we want to use a different id for trace ID
 				if err != nil {
 					r.logger.Error().Str("op", "SQS.receiveWorker").Int("workerNum", n).Msg("cannot create event: " + err.Error())
 					return
 				}
+				log.Ctx(e.Context()).Info().Str("op", "SQS.Trigger").Msg("Triggering message....")
 				r.Trigger(e)
 			}
 		}
