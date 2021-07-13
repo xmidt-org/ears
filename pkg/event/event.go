@@ -19,12 +19,15 @@ package event
 
 import (
 	"context"
+	"github.com/rs/zerolog"
 	"github.com/xmidt-org/ears/internal/pkg/ack"
 	"github.com/xmidt-org/ears/internal/pkg/rtsemconv"
+	"github.com/xmidt-org/ears/pkg/logs"
 	"github.com/xmidt-org/ears/pkg/tenant"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/trace"
 	"strings"
+	"sync/atomic"
 
 	"github.com/mohae/deepcopy"
 )
@@ -36,10 +39,16 @@ type event struct {
 	ack      ack.SubTree
 	tid      tenant.Id
 	spanName string
-	span     trace.Span
+	span     trace.Span //Only valid in the root event
 }
 
 type EventOption func(*event) error
+
+var logger atomic.Value
+
+func SetEventLogger(l *zerolog.Logger) {
+	logger.Store(l)
+}
 
 //Create a new event given a context, a payload, and other event options
 func New(ctx context.Context, payload interface{}, options ...EventOption) (Event, error) {
@@ -48,7 +57,7 @@ func New(ctx context.Context, payload interface{}, options ...EventOption) (Even
 		payload: payload,
 		ctx:     ctx,
 		ack:     nil,
-		tid:     tenant.Id{"", ""},
+		tid:     tenant.Id{OrgId: "", AppId: ""},
 	}
 	for _, option := range options {
 		err := option(e)
@@ -58,14 +67,23 @@ func New(ctx context.Context, payload interface{}, options ...EventOption) (Even
 	}
 
 	//Creating span for the event
-	if e.spanName != "" {
-		tracer := otel.Tracer(rtsemconv.EARSTracerName)
-		ctx, span := tracer.Start(ctx, e.spanName)
-		span.SetAttributes(rtsemconv.EARSEventTrace)
-		e.span = span
-		e.SetContext(ctx)
+	if e.spanName == "" {
+		e.spanName = "generic"
+	}
+	tracer := otel.Tracer(rtsemconv.EARSTracerName)
+	ctx, span := tracer.Start(ctx, e.spanName)
+	span.SetAttributes(rtsemconv.EARSEventTrace)
+	e.span = span
+
+	//Setting up logger for the event
+	parentLogger, ok := logger.Load().(*zerolog.Logger)
+	if ok {
+		ctx = logs.SubLoggerCtx(ctx, parentLogger)
+		traceId := span.SpanContext().TraceID().String()
+		logs.StrToLogCtx(ctx, "tx.traceId", traceId)
 	}
 
+	e.SetContext(ctx)
 	return e, nil
 }
 
@@ -116,7 +134,7 @@ func WithTenant(tid tenant.Id) EventOption {
 	}
 }
 
-//WithSpan enables event tracking with otel tracing
+//WithSpan provides a span name for event tracing
 func WithSpan(spanName string) EventOption {
 	return func(e *event) error {
 		e.spanName = spanName
@@ -153,10 +171,9 @@ func (e *event) Tenant() tenant.Id {
 }
 
 func (e *event) GetPathValue(path string) (interface{}, interface{}, string) {
-	// in the future we need proper evaluation of tenant and trace paths here
 	if path == TRACE+".id" {
-		//return trace.SpanFromContext(e.ctx).SpanContext().TraceID().String(), nil, ""
-		return "123-456-789-000", nil, ""
+		traceId := trace.SpanFromContext(e.ctx).SpanContext().TraceID().String()
+		return traceId, nil, ""
 	}
 	if path == TENANT+".appId" {
 		return e.Tenant().AppId, nil, ""

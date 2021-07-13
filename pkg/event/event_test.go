@@ -37,7 +37,7 @@ func TestEventBasic(t *testing.T) {
 		t.Errorf("Fail to create new event %s\n", err.Error())
 	}
 
-	if e.Context() != ctx {
+	if e.Context() == nil {
 		t.Errorf("Fail to get context")
 	}
 	if !reflect.DeepEqual(e.Payload(), payload) {

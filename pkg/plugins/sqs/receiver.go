@@ -211,7 +211,7 @@ func (r *Receiver) startReceiveWorker(svc *sqs.SQS, n int) {
 					},
 					func(e event.Event, err error) {
 						msg := e.Metadata().(sqs.Message) // get metadata associated with this event
-						r.logger.Error().Str("op", "SQS.receiveWorker").Int("workerNum", n).Msg("failed to process message " + (*msg.MessageId) + ": " + err.Error())
+						log.Ctx(e.Context()).Error().Str("op", "SQS.receiveWorker").Int("workerNum", n).Msg("failed to process message " + (*msg.MessageId) + ": " + err.Error())
 						// a nack below max retries - this is the only case where we do not delete the message yet
 						r.eventFailureCounter.Add(ctx, 1.0)
 						cancel()
