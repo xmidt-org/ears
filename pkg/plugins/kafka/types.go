@@ -66,7 +66,6 @@ var DefaultReceiverConfig = ReceiverConfig{
 	Version:           "",
 	CommitInterval:    pointer.Int(1),
 	ChannelBufferSize: pointer.Int(0),
-	Trace:             pointer.Bool(false),
 }
 
 type ReceiverConfig struct {
@@ -83,7 +82,6 @@ type ReceiverConfig struct {
 	ChannelBufferSize   *int   `json:"channelBufferSize,omitempty"`
 	ConsumeByPartitions bool   `json:"consumeByPartitions,omitempty"`
 	TLSEnable           bool   `json:"tlsEnable,omitempty"`
-	Trace               *bool  `json:"trace,omitempty"`
 }
 
 type Receiver struct {

@@ -26,11 +26,9 @@ import (
 	"github.com/xmidt-org/ears/pkg/receiver"
 	"github.com/xmidt-org/ears/pkg/secret"
 	"github.com/xmidt-org/ears/pkg/tenant"
-	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/global"
-	"go.opentelemetry.io/otel/trace"
 	"io/ioutil"
 	"net/http"
 	"os"
@@ -115,29 +113,19 @@ func (h *Receiver) Receive(next receiver.NextFn) error {
 			return
 		}
 		ctx := context.Background() // acknowledge timeout?
-		tracer := otel.Tracer(rtsemconv.EARSTracerName)
-		var span trace.Span
-		if *h.config.Trace {
-			ctx, span = tracer.Start(ctx, "httpReceiver")
-			span.SetAttributes(rtsemconv.EARSEventTrace)
-		}
 		h.eventBytesCounter.Add(ctx, int64(len(b)))
-		event, err := event.New(ctx, body, event.WithAck(func(e event.Event) {
-			if *h.config.Trace {
-				span.AddEvent("ack")
-				span.End()
-			}
-			h.eventSuccessCounter.Add(ctx, 1.0)
-		}, func(e event.Event, err error) {
-			h.logger.Error().Str("error", err.Error()).Msg("Nack handling events")
-			if *h.config.Trace {
-				span.AddEvent("nack")
-				span.RecordError(err)
-				span.End()
-			}
-			h.eventFailureCounter.Add(ctx, 1.0)
-		},
-		))
+		event, err := event.New(ctx, body,
+			event.WithAck(
+				func(e event.Event) {
+					h.eventSuccessCounter.Add(ctx, 1.0)
+				}, func(e event.Event, err error) {
+					h.logger.Error().Str("error", err.Error()).Msg("Nack handling events")
+					h.eventFailureCounter.Add(ctx, 1.0)
+				},
+			),
+			event.WithTenant(h.Tenant()),
+			event.WithSpan(h.Name()),
+		)
 		if err != nil {
 			h.logger.Error().Str("error", err.Error()).Msg("error creating event")
 		}
