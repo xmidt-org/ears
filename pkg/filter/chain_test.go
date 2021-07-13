@@ -150,6 +150,9 @@ func newBlockFilterer() filter.Filterer {
 			e.Ack()
 			return []event.Event{}
 		},
+		NameFunc: func() string {
+			return "mockBlock"
+		},
 	}
 }
 
@@ -157,6 +160,9 @@ func newPassFilterer() filter.Filterer {
 	return &filter.FiltererMock{
 		FilterFunc: func(e event.Event) []event.Event {
 			return []event.Event{e}
+		},
+		NameFunc: func() string {
+			return "mockPass"
 		},
 	}
 }
@@ -176,6 +182,9 @@ func newDoubleFilterer() filter.Filterer {
 			}
 			e.Ack()
 			return []event.Event{e1, e2}
+		},
+		NameFunc: func() string {
+			return "mockDouble"
 		},
 	}
 }

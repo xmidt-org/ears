@@ -28,11 +28,9 @@ import (
 	"github.com/xmidt-org/ears/internal/pkg/rtsemconv"
 	"github.com/xmidt-org/ears/pkg/secret"
 	"github.com/xmidt-org/ears/pkg/tenant"
-	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/global"
-	"go.opentelemetry.io/otel/trace"
 	"os"
 	"strings"
 	"time"
@@ -264,7 +262,6 @@ func (r *Receiver) Receive(next receiver.NextFn) error {
 	r.done = make(chan struct{})
 	r.stopped = false
 	r.Unlock()
-	tracer := otel.Tracer(rtsemconv.EARSTracerName)
 	go func() {
 		r.Start(func(msg *sarama.ConsumerMessage) bool {
 			// bail if context has been canceled
@@ -284,32 +281,19 @@ func (r *Receiver) Receive(next receiver.NextFn) error {
 			}
 			ctx, cancel := context.WithTimeout(context.Background(), time.Duration(5)*time.Second)
 			r.eventBytesCounter.Add(ctx, int64(len(msg.Value)))
-			var span trace.Span
-			if *r.config.Trace {
-				ctx, span = tracer.Start(ctx, "kafkaReceiver")
-				span.SetAttributes(rtsemconv.EARSEventTrace)
-			}
 			e, err := event.New(ctx, pl, event.WithAck(
 				func(e event.Event) {
 					r.logger.Info().Str("op", "kafka.Receive").Msg("processed message from kafka topic")
-					if *r.config.Trace {
-						span.AddEvent("ack")
-						span.End()
-					}
 					r.eventSuccessCounter.Add(ctx, 1.0)
 					cancel()
 				},
 				func(e event.Event, err error) {
 					r.logger.Error().Str("op", "kafka.Receive").Msg("failed to process message: " + err.Error())
-					if *r.config.Trace {
-						span.AddEvent("nack")
-						span.RecordError(err)
-						span.End()
-					}
 					r.eventFailureCounter.Add(ctx, 1.0)
 					cancel()
 				}),
-				event.WithTrace(*r.config.Trace), event.WithTenant(r.Tenant()))
+				event.WithSpan(r.Name()),
+				event.WithTenant(r.Tenant()))
 			if err != nil {
 				r.logger.Error().Str("op", "kafka.Receive").Msg("cannot create event: " + err.Error())
 				return false
