@@ -20,6 +20,7 @@ import (
 	"github.com/xmidt-org/ears/pkg/filter"
 	"github.com/xmidt-org/ears/pkg/secret"
 	"github.com/xmidt-org/ears/pkg/tenant"
+	"go.opentelemetry.io/otel/trace"
 )
 
 func NewFilter(tid tenant.Id, plugin string, name string, config interface{}, secrets secret.Vault) (*Filter, error) {
@@ -51,8 +52,7 @@ func (f *Filter) Filter(evt event.Event) []event.Event {
 		return nil
 	}
 
-	//TODO fix this
-	traceId := "123-456-789-000"
+	traceId := trace.SpanFromContext(evt.Context()).SpanContext().TraceID().String()
 	evt.SetPathValue(f.config.Path, traceId, true)
 	return []event.Event{evt}
 }

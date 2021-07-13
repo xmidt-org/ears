@@ -90,10 +90,6 @@ func TestAppRunSuccess(t *testing.T) {
 	logListener := testLog.NewLogListener()
 	applogger = zerolog.New(logListener)
 
-	_, err := app.ProvideLogger(AppConfig())
-	if err != nil {
-		t.Errorf("Fail to initLogger: %s\n", err.Error())
-	}
 	earsApp := fx.New(
 		pluginmanagerfx.Module,
 		routestorerfx.Module,
