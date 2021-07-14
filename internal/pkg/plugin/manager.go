@@ -21,10 +21,12 @@ import (
 	"github.com/rs/zerolog/log"
 	"github.com/xmidt-org/ears/internal/pkg/appsecret"
 	"github.com/xmidt-org/ears/internal/pkg/quota"
+	"github.com/xmidt-org/ears/internal/pkg/rtsemconv"
 	"github.com/xmidt-org/ears/pkg/logs"
 	"github.com/xmidt-org/ears/pkg/panics"
 	"github.com/xmidt-org/ears/pkg/secret"
 	"github.com/xmidt-org/ears/pkg/tenant"
+	"go.opentelemetry.io/otel"
 	"sync"
 	"time"
 
@@ -170,8 +172,10 @@ func (m *manager) RegisterReceiver(
 
 				if m.quotaManager != nil {
 					//ratelimit
-
+					tracer := otel.Tracer(rtsemconv.EARSTracerName)
+					_, span := tracer.Start(e.Context(), "rateLimit")
 					err = m.quotaManager.Wait(e.Context(), tid)
+					span.End()
 					if err != nil {
 						m.logger.Debug().Str("op", "receiverNext").Str("tenantId", tid.ToString()).Msg("Tenant Ratelimited")
 						e.Nack(err)
