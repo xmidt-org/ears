@@ -121,8 +121,8 @@ var DefaultSenderConfig = SenderConfig{
 	AccessCert:        "",
 	AccessKey:         "",
 	Version:           "",
-	//SenderPoolSize:    pointer.Int(1),
-	PartitionPath: "",
+	SenderPoolSize:    pointer.Int(1),
+	PartitionPath:     "",
 }
 
 // SenderConfig can be passed into NewSender() in order to configure
@@ -140,7 +140,7 @@ type SenderConfig struct {
 	Version           string `json:"version,omitempty"`
 	ChannelBufferSize *int   `json:"channelBufferSize,omitempty"`
 	TLSEnable         bool   `json:"tlsEnable,omitempty"`
-	//SenderPoolSize    *int   `json:"senderPoolSize,omitempty"`
+	SenderPoolSize    *int   `json:"senderPoolSize,omitempty"`
 }
 
 type Sender struct {
@@ -161,9 +161,8 @@ type ManualHashPartitioner struct {
 }
 
 type Producer struct {
-	//pool   chan sarama.SyncProducer
-	syncProducer sarama.SyncProducer
-	done         chan bool
-	client       sarama.Client
-	logger       zerolog.Logger
+	pool   chan sarama.SyncProducer
+	done   chan bool
+	client sarama.Client
+	logger zerolog.Logger
 }
