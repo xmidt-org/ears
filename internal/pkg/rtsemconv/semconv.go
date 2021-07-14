@@ -53,6 +53,9 @@ const (
 	KafkaGroupIdLabel = "kafka.groupId"
 	RedisChannelLabel = "redis.channel"
 	SQSQueueUrlLabel  = "sqs.QueueUrl"
+
+	EarsLogTraceIdKey  = "tx.traceId"
+	EarsLogTenantIdKey = "tenantId"
 )
 
 var (

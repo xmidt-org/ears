@@ -71,8 +71,10 @@ func New(ctx context.Context, payload interface{}, options ...EventOption) (Even
 		e.spanName = "generic"
 	}
 	tracer := otel.Tracer(rtsemconv.EARSTracerName)
-	ctx, span := tracer.Start(ctx, e.spanName)
+	var span trace.Span
+	ctx, span = tracer.Start(ctx, e.spanName)
 	span.SetAttributes(rtsemconv.EARSEventTrace)
+	span.SetAttributes(rtsemconv.EARSOrgId.String(e.tid.OrgId), rtsemconv.EARSAppId.String(e.tid.AppId))
 	e.span = span
 
 	//Setting up logger for the event
@@ -80,7 +82,8 @@ func New(ctx context.Context, payload interface{}, options ...EventOption) (Even
 	if ok {
 		ctx = logs.SubLoggerCtx(ctx, parentLogger)
 		traceId := span.SpanContext().TraceID().String()
-		logs.StrToLogCtx(ctx, "tx.traceId", traceId)
+		logs.StrToLogCtx(ctx, rtsemconv.EarsLogTraceIdKey, traceId)
+		logs.StrToLogCtx(ctx, rtsemconv.EarsLogTenantIdKey, e.tid.ToString())
 	}
 
 	e.SetContext(ctx)

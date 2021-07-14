@@ -18,6 +18,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
+	"github.com/xmidt-org/ears/internal/pkg/rtsemconv"
 	"github.com/xmidt-org/ears/pkg/logs"
 	"github.com/xmidt-org/ears/pkg/panics"
 	"go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux"
@@ -58,12 +59,8 @@ func initRequestMiddleware(next http.Handler) http.Handler {
 		if traceId == "" {
 			traceId = uuid.New().String()
 		}
-		logs.StrToLogCtx(subCtx, LogTraceId, traceId)
+		logs.StrToLogCtx(subCtx, rtsemconv.EarsLogTraceIdKey, traceId)
 
-		appId := r.Header.Get(HeaderTenantId)
-		if appId != "" {
-			logs.StrToLogCtx(subCtx, LogTenantId, appId)
-		}
 		log.Ctx(subCtx).Debug().Msg("initializeRequestMiddleware")
 
 		next.ServeHTTP(w, r.WithContext(subCtx))
