@@ -107,19 +107,20 @@ func (s *Sender) NewProducer(count int) (*Producer, error) {
 	if s.config.Brokers == "" {
 		return nil, fmt.Errorf("Brokers cannot be empty")
 	}
-	ps, c, err := s.NewSyncProducers(count)
+	ps, c, err := s.NewSyncProducer()
 	if nil != err {
 		return nil, err
 	}
-	pool := make(chan sarama.SyncProducer, count)
-	for _, p := range ps {
-		pool <- p
-	}
+	//pool := make(chan sarama.SyncProducer, count)
+	//for _, p := range ps {
+	//	pool <- p
+	//}
 	return &Producer{
-		pool:   pool,
-		done:   make(chan bool),
-		client: c,
-		logger: s.logger,
+		//pool:   pool,
+		syncProducer: ps,
+		done:         make(chan bool),
+		client:       c,
+		logger:       s.logger,
 	}, nil
 }
 
@@ -179,7 +180,7 @@ func (s *Sender) setConfig(config *sarama.Config) error {
 	return nil
 }
 
-func (s *Sender) NewSyncProducers(count int) ([]sarama.SyncProducer, sarama.Client, error) {
+func (s *Sender) NewSyncProducer() (sarama.SyncProducer, sarama.Client, error) {
 	brokers := strings.Split(s.config.Brokers, ",")
 	config := sarama.NewConfig()
 	config.Producer.Partitioner = NewManualHashPartitioner
@@ -188,22 +189,18 @@ func (s *Sender) NewSyncProducers(count int) ([]sarama.SyncProducer, sarama.Clie
 	if err := s.setConfig(config); nil != err {
 		return nil, nil, err
 	}
-	ret := make([]sarama.SyncProducer, count)
-	var client sarama.Client
-	for i := 0; i < count; i++ {
-		c, err := sarama.NewClient(brokers, config)
-		if err != nil {
-			return nil, nil, err
-		}
-		p, err := sarama.NewSyncProducerFromClient(c)
-		if nil != err {
-			c.Close()
-			return nil, nil, err
-		}
-		ret[i] = p
-		client = c
+
+	c, err := sarama.NewClient(brokers, config)
+	if err != nil {
+		return nil, nil, err
 	}
-	return ret, client, nil
+	p, err := sarama.NewSyncProducerFromClient(c)
+	if nil != err {
+		c.Close()
+		return nil, nil, err
+	}
+
+	return p, c, nil
 }
 
 func (p *Producer) Partitions(topic string) ([]int32, error) {
@@ -212,14 +209,12 @@ func (p *Producer) Partitions(topic string) ([]int32, error) {
 
 func (p *Producer) Close(ctx context.Context) {
 	close(p.done)
-	for i := 0; i < len(p.pool); i++ {
-		producer := <-p.pool
-		err := producer.Close()
-		if err != nil {
-			p.logger.Error().Str("op", "Producer.Close").Msg(err.Error())
-		} else {
-			p.logger.Info().Str("op", "Producer.Close").Msg("kafka producer closed")
-		}
+
+	err := p.syncProducer.Close()
+	if err != nil {
+		p.logger.Error().Str("op", "Producer.Close").Msg(err.Error())
+	} else {
+		p.logger.Info().Str("op", "Producer.Close").Msg("kafka producer closed")
 	}
 }
 
@@ -233,16 +228,7 @@ func (p *Producer) SendMessage(topic string, partition int, headers map[string]s
 		}
 		idx++
 	}
-	var producer sarama.SyncProducer
-	select {
-	case <-p.done:
-		//p.logger.Info().Str("op", "kafka.Send").Msg("producer done")
-		return fmt.Errorf("producer closed")
-	case producer = <-p.pool:
-	}
-	defer func() {
-		p.pool <- producer
-	}()
+
 	start := time.Now()
 	if partition != -1 {
 		p.client.Partitions(topic)
@@ -259,7 +245,7 @@ func (p *Producer) SendMessage(topic string, partition int, headers map[string]s
 		Headers:   hs,
 		Timestamp: time.Now(),
 	}
-	part, offset, err := producer.SendMessage(message)
+	part, offset, err := p.syncProducer.SendMessage(message)
 	if nil != err {
 		return err
 	}
