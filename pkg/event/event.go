@@ -25,6 +25,8 @@ import (
 	"github.com/xmidt-org/ears/pkg/logs"
 	"github.com/xmidt-org/ears/pkg/tenant"
 	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/codes"
+	"go.opentelemetry.io/otel/semconv"
 	"go.opentelemetry.io/otel/trace"
 	"os"
 	"strings"
@@ -78,7 +80,7 @@ func New(ctx context.Context, payload interface{}, options ...EventOption) (Even
 	ctx, span = tracer.Start(ctx, e.spanName)
 	span.SetAttributes(rtsemconv.EARSEventTrace)
 	span.SetAttributes(rtsemconv.EARSOrgId.String(e.tid.OrgId), rtsemconv.EARSAppId.String(e.tid.AppId))
-	span.SetAttributes(rtsemconv.EARSInstanceId.String(hostname))
+	span.SetAttributes(semconv.NetHostNameKey.String(hostname))
 	e.span = span
 
 	//Setting up logger for the event
@@ -120,6 +122,7 @@ func WithAck(handledFn func(Event), errFn func(Event, error)) EventOption {
 			if e.span != nil {
 				e.span.AddEvent("nack")
 				e.span.RecordError(err)
+				e.span.SetStatus(codes.Error, "event processing error")
 				e.span.End()
 			}
 		})
