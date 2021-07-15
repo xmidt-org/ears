@@ -42,15 +42,14 @@ func TestInitRequestMiddleware(t *testing.T) {
 	validator := &Validator{func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
 		log.Ctx(ctx).Debug().Msg("test")
-		listener.AssertLastLogLine(t, "gears.app.id", "myapp")
 		listener.AssertLastLogLine(t, "tx.traceId", "123456")
 	}}
 
-	m := middleware[0](validator)
+	//3rd middleware should be the InitRequestMiddleware
+	m := middleware[2](validator)
 
 	w := httptest.NewRecorder()
 	r := httptest.NewRequest(http.MethodGet, "/", nil)
-	r.Header.Set("Application-Id", "myapp")
 	r.Header.Set("X-B3-TraceId", "123456")
 
 	m.ServeHTTP(w, r)
@@ -59,11 +58,11 @@ func TestInitRequestMiddleware(t *testing.T) {
 	validator = &Validator{func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
 		log.Ctx(ctx).Debug().Msg("test")
-		listener.AssertLastLogLine(t, "gears.app.id", "myapp2")
 	}}
-	m = middleware[0](validator)
+
+	//3rd middleware should be the InitRequestMiddleware
+	m = middleware[2](validator)
 	r = httptest.NewRequest(http.MethodGet, "/", nil)
-	r.Header.Set("Application-Id", "myapp2")
 
 	m.ServeHTTP(w, r)
 }
@@ -83,13 +82,11 @@ func TestAuthMiddleware(t *testing.T) {
 		listener.AssertLastLogLine(t, "message", "good")
 	}}
 
-	m := middleware[1](validator)
+	m := middleware[0](validator)
 
 	w := httptest.NewRecorder()
 	r := httptest.NewRequest(http.MethodGet, "/", nil)
-	r.Header.Set("Application-Id", "myapp")
 	r.Header.Set("X-B3-TraceId", "123456")
-	//r.WithContext(log.Logger.WithContext(context.Background()))
 
 	m.ServeHTTP(w, r.WithContext(subCtx))
 }

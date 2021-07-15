@@ -18,12 +18,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/rs/zerolog/log"
-	"github.com/xmidt-org/ears/internal/pkg/rtsemconv"
 	"github.com/xmidt-org/ears/pkg/event"
 	"github.com/xmidt-org/ears/pkg/filter"
 	"github.com/xmidt-org/ears/pkg/secret"
 	"github.com/xmidt-org/ears/pkg/tenant"
-	"go.opentelemetry.io/otel"
 )
 
 var _ filter.Filterer = (*Filter)(nil)
@@ -49,11 +47,6 @@ func (f *Filter) Filter(evt event.Event) []event.Event {
 			Err: fmt.Errorf("<nil> pointer filter"),
 		})
 		return nil
-	}
-	if evt.Trace() {
-		tracer := otel.Tracer(rtsemconv.EARSTracerName)
-		_, span := tracer.Start(evt.Context(), "logFilter")
-		defer span.End()
 	}
 	m := make(map[string]interface{})
 	m["payload"] = evt.Payload()

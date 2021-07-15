@@ -45,9 +45,6 @@ type Event interface {
 	//Get the event tenant
 	Tenant() tenant.Id
 
-	//Get the event trace flag
-	Trace() bool
-
 	//Get the event context
 	Context() context.Context
 
@@ -58,14 +55,6 @@ type Event interface {
 	//Set the event metadata
 	//Will return an error if the event is done
 	SetMetadata(metadata interface{}) error
-
-	//Set the event tenant
-	//Will return an error if the event is done
-	SetTenant(tid tenant.Id) error
-
-	//Set trace flag
-	//Will return an error if the event is done
-	SetTrace(trace bool) error
 
 	// SetPathValue sets object value at path in either payload or metadata and returns its parent
 	// object and parent key if those exist

@@ -18,12 +18,13 @@ import (
 	"context"
 	"fmt"
 	"github.com/rs/zerolog/log"
-	"github.com/xmidt-org/ears/pkg/panics"
-
+	"github.com/xmidt-org/ears/internal/pkg/rtsemconv"
 	"github.com/xmidt-org/ears/pkg/event"
 	"github.com/xmidt-org/ears/pkg/filter"
+	"github.com/xmidt-org/ears/pkg/panics"
 	"github.com/xmidt-org/ears/pkg/receiver"
 	"github.com/xmidt-org/ears/pkg/sender"
+	"go.opentelemetry.io/otel"
 )
 
 func (rte *Route) Run(r receiver.Receiver, f filter.Filterer, s sender.Sender) error {
@@ -44,11 +45,16 @@ func (rte *Route) Run(r receiver.Receiver, f filter.Filterer, s sender.Sender) e
 	rte.Unlock()
 	var next receiver.NextFn
 	if f == nil {
-		next = s.Send
+		next = func(e event.Event) {
+			tracer := otel.Tracer(rtsemconv.EARSTracerName)
+			_, span := tracer.Start(e.Context(), s.Name())
+			s.Send(e)
+			span.End()
+		}
 	} else {
 		next = func(e event.Event) {
 			events := f.Filter(e)
-			err := fanOut(events, s.Send)
+			err := fanOut(events, s.Send, s.Name())
 			if err != nil {
 				e.Nack(err)
 			}
@@ -74,7 +80,7 @@ func (rte *Route) Stop(ctx context.Context) error {
 	return err
 }
 
-func fanOut(events []event.Event, next receiver.NextFn) error {
+func fanOut(events []event.Event, next receiver.NextFn, senderName string) error {
 	if next == nil {
 		return &InvalidRouteError{
 			Err: fmt.Errorf("next cannot be nil"),
@@ -84,7 +90,6 @@ func fanOut(events []event.Event, next receiver.NextFn) error {
 		return nil
 	}
 	for _, e := range events {
-		//localE := e
 		go func(evt event.Event) {
 			defer func() {
 				p := recover()
@@ -94,7 +99,10 @@ func fanOut(events []event.Event, next receiver.NextFn) error {
 						Str("stackTrace", panicErr.StackTrace()).Msg("A panic has occurred")
 				}
 			}()
+			tracer := otel.Tracer(rtsemconv.EARSTracerName)
+			_, span := tracer.Start(evt.Context(), senderName)
 			next(evt)
+			span.End()
 		}(e)
 	}
 	return nil

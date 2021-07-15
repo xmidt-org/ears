@@ -19,13 +19,11 @@ import (
 	"context"
 	"encoding/json"
 	"github.com/goccy/go-yaml"
-	"github.com/xmidt-org/ears/internal/pkg/rtsemconv"
 	"github.com/xmidt-org/ears/pkg/event"
 	pkgplugin "github.com/xmidt-org/ears/pkg/plugin"
 	"github.com/xmidt-org/ears/pkg/secret"
 	"github.com/xmidt-org/ears/pkg/sender"
 	"github.com/xmidt-org/ears/pkg/tenant"
-	"go.opentelemetry.io/otel"
 	"io"
 	"io/ioutil"
 	"net/http"
@@ -75,11 +73,6 @@ func (s *Sender) SetTraceId(r *http.Request, traceId string) {
 }
 
 func (s *Sender) Send(event event.Event) {
-	if event.Trace() {
-		tracer := otel.Tracer(rtsemconv.EARSTracerName)
-		_, span := tracer.Start(event.Context(), "httpSender")
-		defer span.End()
-	}
 	payload := event.Payload()
 	body, err := json.Marshal(payload)
 	if err != nil {

@@ -17,24 +17,14 @@ package app
 import (
 	"context"
 	"encoding/json"
+	"github.com/xmidt-org/ears/internal/pkg/rtsemconv"
 	"net/http"
-)
-
-// Logging expected keys
-const (
-	LogTraceId      = "tx.traceId"
-	LogSpanId       = "tx.spanId"
-	LogParentSpanId = "tx.parentSpanId"
-	LogChildSpanId  = "tx.childSpanId"
-	LogTenantId     = "gears.app.id"
 )
 
 // API header expected keys
 const (
-	HeaderTraceId      = "X-B3-TraceId"
-	HeaderSpanId       = "X-B3-SpanId"
-	HeaderParentSpanId = "X-B3-ParentSpanId"
-	HeaderTenantId     = "Application-Id"
+	HeaderTraceId  = "X-B3-TraceId"
+	HeaderTenantId = "Application-Id"
 )
 
 // #######################################################
@@ -63,7 +53,7 @@ type Response struct {
 func (r Response) Respond(ctx context.Context, w http.ResponseWriter) {
 	w.Header().Set("Content-Type", "application/json")
 
-	traceId, ok := ctx.Value(LogTraceId).(string)
+	traceId, ok := ctx.Value(rtsemconv.EarsLogTraceIdKey).(string)
 	if ok && traceId != "" {
 		r.Tracing.TraceId = traceId
 	}

@@ -30,9 +30,6 @@ func (rc *ReceiverConfig) WithDefaults() ReceiverConfig {
 	if cfg.Channel == "" {
 		cfg.Channel = DefaultReceiverConfig.Channel
 	}
-	if cfg.Trace == nil {
-		cfg.Trace = DefaultReceiverConfig.Trace
-	}
 	return cfg
 }
 
@@ -64,11 +61,7 @@ const receiverSchema = `
                 },
                 "channel": {
                     "type": "string"
-                },
-				"trace" : {
-					"type": "boolean",
-					"default": false
-				}
+                }
             },
             "required": [
                 "endpoint", "channel"

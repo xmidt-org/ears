@@ -20,11 +20,13 @@ import (
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"github.com/xmidt-org/ears/internal/pkg/appsecret"
-	"github.com/xmidt-org/ears/internal/pkg/logs"
 	"github.com/xmidt-org/ears/internal/pkg/quota"
+	"github.com/xmidt-org/ears/internal/pkg/rtsemconv"
+	"github.com/xmidt-org/ears/pkg/logs"
 	"github.com/xmidt-org/ears/pkg/panics"
 	"github.com/xmidt-org/ears/pkg/secret"
 	"github.com/xmidt-org/ears/pkg/tenant"
+	"go.opentelemetry.io/otel"
 	"sync"
 	"time"
 
@@ -170,8 +172,10 @@ func (m *manager) RegisterReceiver(
 
 				if m.quotaManager != nil {
 					//ratelimit
-
+					tracer := otel.Tracer(rtsemconv.EARSTracerName)
+					_, span := tracer.Start(e.Context(), "rateLimit")
 					err = m.quotaManager.Wait(e.Context(), tid)
+					span.End()
 					if err != nil {
 						m.logger.Debug().Str("op", "receiverNext").Str("tenantId", tid.ToString()).Msg("Tenant Ratelimited")
 						e.Nack(err)
@@ -254,7 +258,7 @@ func (m *manager) next(receiverKey string, e pkgevent.Event) {
 	nextFns := m.receiversFn[receiverKey]
 
 	for wid, n := range nextFns {
-		subCtx := logs.SubLoggerCtx(e.Context(), m.logger)
+		subCtx := logs.SubCtx(e.Context())
 		logs.StrToLogCtx(subCtx, "wid", wid)
 		logs.StrToLogCtx(subCtx, "receiverKey", receiverKey)
 		childEvt, err := e.Clone(subCtx)
@@ -270,6 +274,8 @@ func (m *manager) next(receiverKey string, e pkgevent.Event) {
 							Str("stackTrace", panicErr.StackTrace()).Msg("A panic has occurred")
 					}
 				}()
+
+				log.Ctx(evt.Context()).Info().Str("op", "nextRoute").Msg("Sending Event to next route")
 				fn(evt)
 			}(n, childEvt)
 		}

@@ -17,12 +17,10 @@ package unwrap
 import (
 	"errors"
 	"fmt"
-	"github.com/xmidt-org/ears/internal/pkg/rtsemconv"
 	"github.com/xmidt-org/ears/pkg/event"
 	"github.com/xmidt-org/ears/pkg/filter"
 	"github.com/xmidt-org/ears/pkg/secret"
 	"github.com/xmidt-org/ears/pkg/tenant"
-	"go.opentelemetry.io/otel"
 )
 
 func NewFilter(tid tenant.Id, plugin string, name string, config interface{}, secrets secret.Vault) (*Filter, error) {
@@ -53,11 +51,6 @@ func (f *Filter) Filter(evt event.Event) []event.Event {
 			Err: fmt.Errorf("<nil> pointer filter"),
 		})
 		return nil
-	}
-	if evt.Trace() {
-		tracer := otel.Tracer(rtsemconv.EARSTracerName)
-		_, span := tracer.Start(evt.Context(), "unwrapFilter")
-		defer span.End()
 	}
 	obj, _, _ := evt.GetPathValue(f.config.Path)
 	if obj == nil {

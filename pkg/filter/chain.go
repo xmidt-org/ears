@@ -17,7 +17,9 @@ package filter
 import (
 	"container/list"
 	"fmt"
+	"github.com/xmidt-org/ears/internal/pkg/rtsemconv"
 	"github.com/xmidt-org/ears/pkg/tenant"
+	"go.opentelemetry.io/otel"
 
 	"github.com/xmidt-org/ears/pkg/event"
 )
@@ -64,13 +66,18 @@ func (c *Chain) Filter(e event.Event) []event.Event {
 	queue.PushBack(work{e: e, f: c.filterers[0], i: 0})
 	events := []event.Event{}
 	ctx := e.Context()
+
+	tracer := otel.Tracer(rtsemconv.EARSTracerName)
 	for elem := queue.Front(); elem != nil; elem = elem.Next() {
 		select {
 		case <-ctx.Done():
 			return nil
 		default:
 			w := elem.Value.(work)
+
+			_, span := tracer.Start(w.e.Context(), w.f.Name())
 			evts := w.f.Filter(w.e)
+			span.End()
 
 			next := w.i + 1
 			if next < len(c.filterers) {

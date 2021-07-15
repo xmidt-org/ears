@@ -52,7 +52,6 @@ type ReceiverConfig struct {
 	Path   string `json:"path"`
 	Method string `json:"method"`
 	Port   *int   `json:"port"`
-	Trace  *bool  `json:"trace,omitempty"`
 }
 
 type Receiver struct {

@@ -21,7 +21,10 @@ import (
 	"github.com/aws/aws-sdk-go/service/dynamodb"
 	"github.com/aws/aws-sdk-go/service/dynamodb/dynamodbattribute"
 	"github.com/xmidt-org/ears/internal/pkg/config"
+	"github.com/xmidt-org/ears/internal/pkg/db"
+	"github.com/xmidt-org/ears/internal/pkg/rtsemconv"
 	"github.com/xmidt-org/ears/pkg/tenant"
+	"go.opentelemetry.io/otel/semconv"
 	"time"
 )
 
@@ -52,6 +55,10 @@ func NewTenantStorer(config config.Config) (*TenantStorer, error) {
 }
 
 func (s *TenantStorer) GetConfig(ctx context.Context, id tenant.Id) (*tenant.Config, error) {
+
+	ctx, span := db.CreateSpan(ctx, "getTenantConfig", semconv.DBSystemDynamoDB, rtsemconv.DBTable.String(s.tableName))
+	defer span.End()
+
 	sess, err := session.NewSession(&aws.Config{
 		Region: aws.String(s.region),
 	})
@@ -87,6 +94,10 @@ func (s *TenantStorer) GetConfig(ctx context.Context, id tenant.Id) (*tenant.Con
 }
 
 func (s *TenantStorer) SetConfig(ctx context.Context, config tenant.Config) error {
+
+	ctx, span := db.CreateSpan(ctx, "setTenantConfig", semconv.DBSystemDynamoDB, rtsemconv.DBTable.String(s.tableName))
+	defer span.End()
+
 	sess, err := session.NewSession(&aws.Config{
 		Region: aws.String(s.region),
 	})
@@ -119,6 +130,10 @@ func (s *TenantStorer) SetConfig(ctx context.Context, config tenant.Config) erro
 }
 
 func (s *TenantStorer) DeleteConfig(ctx context.Context, id tenant.Id) error {
+
+	ctx, span := db.CreateSpan(ctx, "deleteTenantConfig", semconv.DBSystemDynamoDB, rtsemconv.DBTable.String(s.tableName))
+	defer span.End()
+
 	sess, err := session.NewSession(&aws.Config{
 		Region: aws.String(s.region),
 	})

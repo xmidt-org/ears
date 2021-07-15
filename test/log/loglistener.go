@@ -38,6 +38,7 @@ func (l *LogListener) Write(p []byte) (n int, err error) {
 	l.Lock()
 	defer l.Unlock()
 	l.lastLogLine = string(p)
+	fmt.Println(l.lastLogLine)
 	l.listener <- l.lastLogLine
 	return len(p), nil
 }

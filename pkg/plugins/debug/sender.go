@@ -17,7 +17,6 @@ package debug
 import (
 	"context"
 	"fmt"
-	"github.com/xmidt-org/ears/internal/pkg/rtsemconv"
 	"github.com/xmidt-org/ears/pkg/secret"
 	"github.com/xmidt-org/ears/pkg/tenant"
 
@@ -25,7 +24,6 @@ import (
 	"github.com/xmidt-org/ears/pkg/event"
 	pkgplugin "github.com/xmidt-org/ears/pkg/plugin"
 	"github.com/xmidt-org/ears/pkg/sender"
-	"go.opentelemetry.io/otel"
 )
 
 func NewSender(tid tenant.Id, plugin string, name string, config interface{}, secrets secret.Vault) (sender.Sender, error) {
@@ -76,11 +74,6 @@ func NewSender(tid tenant.Id, plugin string, name string, config interface{}, se
 }
 
 func (s *Sender) Send(e event.Event) {
-	if e.Trace() {
-		tracer := otel.Tracer(rtsemconv.EARSTracerName)
-		_, span := tracer.Start(e.Context(), "debugSender")
-		defer span.End()
-	}
 	s.history.Add(e)
 	//fmt.Printf("SEND %p\n", e)
 	if s.destination != nil {
