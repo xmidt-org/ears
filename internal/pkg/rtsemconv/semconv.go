@@ -58,6 +58,7 @@ const (
 
 	EarsLogTraceIdKey  = "tx.traceId"
 	EarsLogTenantIdKey = "tenantId"
+	EarsLogHostnameKey = "hostname"
 )
 
 var (
