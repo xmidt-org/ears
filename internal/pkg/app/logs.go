@@ -18,6 +18,7 @@ import (
 	"fmt"
 	"github.com/rs/zerolog"
 	"github.com/xmidt-org/ears/internal/pkg/config"
+	"github.com/xmidt-org/ears/internal/pkg/rtsemconv"
 	"os"
 )
 
@@ -28,7 +29,10 @@ func ProvideLogger(config config.Config) (*zerolog.Logger, error) {
 			Option: fmt.Sprintf("loglevel %s is not valid", config.GetString("ears.logLevel")),
 		}
 	}
-	logger := zerolog.New(os.Stdout).Level(logLevel).With().Timestamp().Logger()
+	hostname, _ := os.Hostname()
+	logger := zerolog.New(os.Stdout).Level(logLevel).With().
+		Str(rtsemconv.EarsLogHostnameKey, hostname).
+		Timestamp().Logger()
 	zerolog.LevelFieldName = "log.level"
 	return &logger, nil
 }
