@@ -72,6 +72,8 @@ func NewReceiver(tid tenant.Id, plugin string, name string, config interface{}, 
 		logger:  logger,
 		stopped: true,
 	}
+
+	hostname, _ := os.Hostname()
 	// metric recorders
 	meter := global.Meter(rtsemconv.EARSMeterName)
 	commonLabels := []attribute.KeyValue{
@@ -79,6 +81,7 @@ func NewReceiver(tid tenant.Id, plugin string, name string, config interface{}, 
 		attribute.String(rtsemconv.EARSAppIdLabel, r.tid.AppId),
 		attribute.String(rtsemconv.EARSOrgIdLabel, r.tid.OrgId),
 		attribute.String(rtsemconv.SQSQueueUrlLabel, r.config.QueueUrl),
+		attribute.String(rtsemconv.HostnameLabel, hostname),
 	}
 	r.eventSuccessCounter = metric.Must(meter).
 		NewFloat64Counter(
