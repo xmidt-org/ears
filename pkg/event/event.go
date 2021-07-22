@@ -81,13 +81,17 @@ func New(ctx context.Context, payload interface{}, options ...EventOption) (Even
 	span.SetAttributes(rtsemconv.EARSEventTrace)
 	span.SetAttributes(rtsemconv.EARSOrgId.String(e.tid.OrgId), rtsemconv.EARSAppId.String(e.tid.AppId))
 	span.SetAttributes(semconv.NetHostNameKey.String(hostname))
+
+	traceId := span.SpanContext().TraceID().String()
+	span.SetAttributes(rtsemconv.EARSTraceId.String(traceId))
+
 	e.span = span
 
 	//Setting up logger for the event
 	parentLogger, ok := logger.Load().(*zerolog.Logger)
 	if ok {
 		ctx = logs.SubLoggerCtx(ctx, parentLogger)
-		traceId := span.SpanContext().TraceID().String()
+
 		logs.StrToLogCtx(ctx, rtsemconv.EarsLogTraceIdKey, traceId)
 		logs.StrToLogCtx(ctx, rtsemconv.EarsLogTenantIdKey, e.tid.ToString())
 	}

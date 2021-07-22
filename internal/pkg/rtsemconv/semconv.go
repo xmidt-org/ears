@@ -45,6 +45,7 @@ const (
 	EARSOrgId = attribute.Key("ears.orgId")
 
 	EARSInstanceId = attribute.Key("ears.instance")
+	EARSTraceId    = attribute.Key("ears.traceId")
 
 	EARSAppIdLabel = "ears.appId"
 	EARSOrgIdLabel = "ears.orgId"
@@ -55,6 +56,7 @@ const (
 	KafkaGroupIdLabel = "kafka.groupId"
 	RedisChannelLabel = "redis.channel"
 	SQSQueueUrlLabel  = "sqs.QueueUrl"
+	HostnameLabel     = "hostname"
 
 	EarsLogTraceIdKey  = "tx.traceId"
 	EarsLogTenantIdKey = "tenantId"
