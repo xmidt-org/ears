@@ -22,23 +22,21 @@ import (
 	"github.com/aws/aws-sdk-go/aws/endpoints"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/sqs"
-	"github.com/rs/zerolog"
-	"github.com/xmidt-org/ears/internal/pkg/rtsemconv"
-	"github.com/xmidt-org/ears/pkg/secret"
-	"github.com/xmidt-org/ears/pkg/tenant"
-	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/metric"
-	"go.opentelemetry.io/otel/metric/global"
-	"go.opentelemetry.io/otel/trace"
-	"os"
-	"strconv"
-	"time"
-
 	"github.com/goccy/go-yaml"
+	"github.com/rs/zerolog"
+	"github.com/rs/zerolog/log"
+	"github.com/xmidt-org/ears/internal/pkg/rtsemconv"
 	"github.com/xmidt-org/ears/pkg/event"
 	pkgplugin "github.com/xmidt-org/ears/pkg/plugin"
 	"github.com/xmidt-org/ears/pkg/receiver"
+	"github.com/xmidt-org/ears/pkg/secret"
+	"github.com/xmidt-org/ears/pkg/tenant"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/metric"
+	"go.opentelemetry.io/otel/metric/global"
+	"os"
+	"strconv"
+	"time"
 )
 
 func NewReceiver(tid tenant.Id, plugin string, name string, config interface{}, secrets secret.Vault) (receiver.Receiver, error) {
@@ -74,6 +72,8 @@ func NewReceiver(tid tenant.Id, plugin string, name string, config interface{}, 
 		logger:  logger,
 		stopped: true,
 	}
+
+	hostname, _ := os.Hostname()
 	// metric recorders
 	meter := global.Meter(rtsemconv.EARSMeterName)
 	commonLabels := []attribute.KeyValue{
@@ -81,6 +81,7 @@ func NewReceiver(tid tenant.Id, plugin string, name string, config interface{}, 
 		attribute.String(rtsemconv.EARSAppIdLabel, r.tid.AppId),
 		attribute.String(rtsemconv.EARSOrgIdLabel, r.tid.OrgId),
 		attribute.String(rtsemconv.SQSQueueUrlLabel, r.config.QueueUrl),
+		attribute.String(rtsemconv.HostnameLabel, hostname),
 	}
 	r.eventSuccessCounter = metric.Must(meter).
 		NewFloat64Counter(
@@ -147,7 +148,6 @@ func (r *Receiver) startReceiveWorker(svc *sqs.SQS, n int) {
 			}
 		}()
 		// receive messages
-		tracer := otel.Tracer(rtsemconv.EARSTracerName)
 		for {
 			approximateReceiveCount := "ApproximateReceiveCount"
 			sqsParams := &sqs.ReceiveMessageInput{
@@ -202,41 +202,30 @@ func (r *Receiver) startReceiveWorker(svc *sqs.SQS, n int) {
 				}
 				ctx, cancel := context.WithTimeout(context.Background(), time.Duration(*r.config.AcknowledgeTimeout)*time.Second)
 				r.eventBytesCounter.Add(ctx, int64(len(*message.Body)))
-				var span trace.Span
-				if *r.config.Trace {
-					ctx, span = tracer.Start(ctx, "sqsReceiver")
-					span.SetAttributes(rtsemconv.EARSEventTrace)
-				}
+
 				e, err := event.New(ctx, payload, event.WithMetadata(*message), event.WithAck(
 					func(e event.Event) {
 						msg := e.Metadata().(sqs.Message) // get metadata associated with this event
 						//r.logger.Info().Str("op", "SQS.receiveWorker").Int("batchSize", len(sqsResp.Messages)).Int("workerNum", n).Msg("processed message " + (*msg.MessageId))
 						entry := sqs.DeleteMessageBatchRequestEntry{Id: msg.MessageId, ReceiptHandle: msg.ReceiptHandle}
 						entries <- &entry
-						if *r.config.Trace {
-							span.AddEvent("ack")
-							span.End()
-						}
 						r.eventSuccessCounter.Add(ctx, 1.0)
 						cancel()
 					},
 					func(e event.Event, err error) {
 						msg := e.Metadata().(sqs.Message) // get metadata associated with this event
-						r.logger.Error().Str("op", "SQS.receiveWorker").Int("workerNum", n).Msg("failed to process message " + (*msg.MessageId) + ": " + err.Error())
+						log.Ctx(e.Context()).Error().Str("op", "SQS.receiveWorker").Int("workerNum", n).Msg("failed to process message " + (*msg.MessageId) + ": " + err.Error())
 						// a nack below max retries - this is the only case where we do not delete the message yet
-						if *r.config.Trace {
-							span.AddEvent("nack")
-							span.RecordError(err)
-							span.End()
-						}
 						r.eventFailureCounter.Add(ctx, 1.0)
 						cancel()
 					}),
-					event.WithTrace(*r.config.Trace), event.WithTenant(r.Tenant()))
+					event.WithTenant(r.Tenant()),
+					event.WithSpan(r.Name()))
 				if err != nil {
 					r.logger.Error().Str("op", "SQS.receiveWorker").Int("workerNum", n).Msg("cannot create event: " + err.Error())
 					return
 				}
+				log.Ctx(e.Context()).Info().Str("op", "SQS.Trigger").Msg("Triggering message....")
 				r.Trigger(e)
 			}
 		}

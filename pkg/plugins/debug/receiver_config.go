@@ -36,9 +36,6 @@ func (rc *ReceiverConfig) WithDefaults() ReceiverConfig {
 	if cfg.MaxHistory == nil {
 		cfg.MaxHistory = DefaultReceiverConfig.MaxHistory
 	}
-	if cfg.Trace == nil {
-		cfg.Trace = DefaultReceiverConfig.Trace
-	}
 	return cfg
 }
 
@@ -100,11 +97,7 @@ const receiverSchema = `
                 "maxHistory": {
                     "type": "integer",
 					"minimum": 0
-                },
-				"trace" : {
-					"type": "boolean",
-					"default": false
-				}
+                }
             },
             "required": [
                 "intervalMs",

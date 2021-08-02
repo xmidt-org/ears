@@ -19,9 +19,18 @@ package event
 
 import (
 	"context"
+	"github.com/rs/zerolog"
 	"github.com/xmidt-org/ears/internal/pkg/ack"
+	"github.com/xmidt-org/ears/internal/pkg/rtsemconv"
+	"github.com/xmidt-org/ears/pkg/logs"
 	"github.com/xmidt-org/ears/pkg/tenant"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/codes"
+	"go.opentelemetry.io/otel/semconv"
+	"go.opentelemetry.io/otel/trace"
+	"os"
 	"strings"
+	"sync/atomic"
 
 	"github.com/mohae/deepcopy"
 )
@@ -32,17 +41,28 @@ type event struct {
 	ctx      context.Context
 	ack      ack.SubTree
 	tid      tenant.Id
-	trace    bool
+	spanName string
+	span     trace.Span //Only valid in the root event
 }
 
 type EventOption func(*event) error
 
+var logger atomic.Value
+
+var hostname, _ = os.Hostname()
+
+func SetEventLogger(l *zerolog.Logger) {
+	logger.Store(l)
+}
+
 //Create a new event given a context, a payload, and other event options
 func New(ctx context.Context, payload interface{}, options ...EventOption) (Event, error) {
+
 	e := &event{
 		payload: payload,
 		ctx:     ctx,
 		ack:     nil,
+		tid:     tenant.Id{OrgId: "", AppId: ""},
 	}
 	for _, option := range options {
 		err := option(e)
@@ -50,6 +70,33 @@ func New(ctx context.Context, payload interface{}, options ...EventOption) (Even
 			return nil, err
 		}
 	}
+
+	//Creating span for the event
+	if e.spanName == "" {
+		e.spanName = "generic"
+	}
+	tracer := otel.Tracer(rtsemconv.EARSTracerName)
+	var span trace.Span
+	ctx, span = tracer.Start(ctx, e.spanName)
+	span.SetAttributes(rtsemconv.EARSEventTrace)
+	span.SetAttributes(rtsemconv.EARSOrgId.String(e.tid.OrgId), rtsemconv.EARSAppId.String(e.tid.AppId))
+	span.SetAttributes(semconv.NetHostNameKey.String(hostname))
+
+	traceId := span.SpanContext().TraceID().String()
+	span.SetAttributes(rtsemconv.EARSTraceId.String(traceId))
+
+	e.span = span
+
+	//Setting up logger for the event
+	parentLogger, ok := logger.Load().(*zerolog.Logger)
+	if ok {
+		ctx = logs.SubLoggerCtx(ctx, parentLogger)
+
+		logs.StrToLogCtx(ctx, rtsemconv.EarsLogTraceIdKey, traceId)
+		logs.StrToLogCtx(ctx, rtsemconv.EarsLogTenantIdKey, e.tid.ToString())
+	}
+
+	e.SetContext(ctx)
 	return e, nil
 }
 
@@ -70,8 +117,18 @@ func WithAck(handledFn func(Event), errFn func(Event, error)) EventOption {
 		}
 		e.ack = ack.NewAckTree(e.ctx, func() {
 			handledFn(e)
+			if e.span != nil {
+				e.span.AddEvent("ack")
+				e.span.End()
+			}
 		}, func(err error) {
 			errFn(e, err)
+			if e.span != nil {
+				e.span.AddEvent("nack")
+				e.span.RecordError(err)
+				e.span.SetStatus(codes.Error, "event processing error")
+				e.span.End()
+			}
 		})
 		return nil
 	}
@@ -84,30 +141,19 @@ func WithMetadata(metadata interface{}) EventOption {
 	}
 }
 
-func WithTrace(trace bool) EventOption {
-	return func(e *event) error {
-		e.SetTrace(trace)
-		return nil
-	}
-}
-
 func WithTenant(tid tenant.Id) EventOption {
 	return func(e *event) error {
-		e.SetTenant(tid)
+		e.tid = tid
 		return nil
 	}
 }
 
-func (e *event) Trace() bool {
-	return e.trace
-}
-
-func (e *event) SetTrace(trace bool) error {
-	if e.ack != nil && e.ack.IsAcked() {
-		return &ack.AlreadyAckedError{}
+//WithSpan provides a span name for event tracing
+func WithSpan(spanName string) EventOption {
+	return func(e *event) error {
+		e.spanName = spanName
+		return nil
 	}
-	e.trace = trace
-	return nil
 }
 
 func (e *event) Payload() interface{} {
@@ -138,19 +184,10 @@ func (e *event) Tenant() tenant.Id {
 	return e.tid
 }
 
-func (e *event) SetTenant(tid tenant.Id) error {
-	if e.ack != nil && e.ack.IsAcked() {
-		return &ack.AlreadyAckedError{}
-	}
-	e.tid = tid
-	return nil
-}
-
 func (e *event) GetPathValue(path string) (interface{}, interface{}, string) {
-	// in the future we need proper evaluation of tenant and trace paths here
 	if path == TRACE+".id" {
-		//return trace.SpanFromContext(e.ctx).SpanContext().TraceID().String(), nil, ""
-		return "123-456-789-000", nil, ""
+		traceId := trace.SpanFromContext(e.ctx).SpanContext().TraceID().String()
+		return traceId, nil, ""
 	}
 	if path == TENANT+".appId" {
 		return e.Tenant().AppId, nil, ""
@@ -289,7 +326,6 @@ func (e *event) Clone(ctx context.Context) (Event, error) {
 		metadata: newMetadtaCopy,
 		ctx:      ctx,
 		ack:      subTree,
-		trace:    e.trace,
 		tid:      e.tid,
 	}, nil
 }

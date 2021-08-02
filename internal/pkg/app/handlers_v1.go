@@ -18,17 +18,15 @@ import (
 	"context"
 	"errors"
 	"github.com/goccy/go-yaml"
-	"github.com/xmidt-org/ears/internal/pkg/logs"
 	"github.com/xmidt-org/ears/internal/pkg/quota"
 	"github.com/xmidt-org/ears/internal/pkg/rtsemconv"
 	"github.com/xmidt-org/ears/internal/pkg/tablemgr"
 	"github.com/xmidt-org/ears/pkg/app"
+	logs2 "github.com/xmidt-org/ears/pkg/logs"
 	"github.com/xmidt-org/ears/pkg/tenant"
-	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/global"
-	"go.opentelemetry.io/otel/semconv"
 	"go.opentelemetry.io/otel/trace"
 	"io/ioutil"
 	"net/http"
@@ -115,8 +113,8 @@ func (a *APIManager) versionHandler(w http.ResponseWriter, r *http.Request) {
 func getTenant(ctx context.Context, vars map[string]string) (*tenant.Id, ApiError) {
 	orgId := vars["orgId"]
 	appId := vars["appId"]
-	logs.StrToLogCtx(ctx, "orgId", orgId)
-	logs.StrToLogCtx(ctx, "appId", appId)
+	logs2.StrToLogCtx(ctx, "orgId", orgId)
+	logs2.StrToLogCtx(ctx, "appId", appId)
 	if orgId == "" || appId == "" {
 		var err ApiError
 		if orgId == "" {
@@ -126,37 +124,31 @@ func getTenant(ctx context.Context, vars map[string]string) (*tenant.Id, ApiErro
 		}
 		return nil, err
 	}
+	span := trace.SpanFromContext(ctx)
+	span.SetAttributes(rtsemconv.EARSOrgId.String(orgId))
+	span.SetAttributes(rtsemconv.EARSAppId.String(appId))
+
 	return &tenant.Id{OrgId: orgId, AppId: appId}, nil
 }
 
 func (a *APIManager) addRouteHandler(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
-	tracer := otel.Tracer(rtsemconv.EARSTracerName)
-	ctx, span := tracer.Start(ctx, "addRoute")
-	defer span.End()
-	span.SetAttributes(semconv.HTTPMethodKey.String(r.Method))
-	span.SetAttributes(semconv.HTTPTargetKey.String(r.RequestURI))
-	span.SetAttributes(semconv.HTTPHostKey.String(r.Host))
-	span.SetAttributes(semconv.HTTPRequestContentLengthKey.Int(int(r.ContentLength)))
+
 	//
 	vars := mux.Vars(r)
 	tid, apiErr := getTenant(ctx, vars)
 	if apiErr != nil {
 		log.Ctx(ctx).Error().Str("op", "AddRouteHandler").Str("error", apiErr.Error()).Msg("orgId or appId empty")
 		a.addRouteFailureRecorder.Add(ctx, 1.0)
-		span.RecordError(apiErr)
 		resp := ErrorResponse(apiErr)
 		resp.Respond(ctx, w)
 		return
 	}
-	span.SetAttributes(rtsemconv.EARSOrgId.String(tid.OrgId))
-	span.SetAttributes(rtsemconv.EARSAppId.String(tid.AppId))
 	routeId := vars["routeId"]
 	body, err := ioutil.ReadAll(r.Body)
 	if err != nil {
 		log.Ctx(ctx).Error().Str("op", "addRouteHandler").Msg(err.Error())
 		a.addRouteFailureRecorder.Add(ctx, 1.0)
-		span.RecordError(err)
 		resp := ErrorResponse(&InternalServerError{err})
 		resp.Respond(ctx, w)
 		return
@@ -166,7 +158,6 @@ func (a *APIManager) addRouteHandler(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		log.Ctx(ctx).Error().Str("op", "addRouteHandler").Msg(err.Error())
 		a.addRouteFailureRecorder.Add(ctx, 1.0)
-		span.RecordError(err)
 		resp := ErrorResponse(&BadRequestError{"Cannot unmarshal request body", err})
 		resp.Respond(ctx, w)
 		return
@@ -175,7 +166,6 @@ func (a *APIManager) addRouteHandler(w http.ResponseWriter, r *http.Request) {
 		err := &BadRequestError{"route ID mismatch " + routeId + " vs " + route.Id, nil}
 		log.Ctx(ctx).Error().Str("op", "addRouteHandler").Msg(err.Error())
 		a.addRouteFailureRecorder.Add(ctx, 1.0)
-		span.RecordError(err)
 		resp := ErrorResponse(err)
 		resp.Respond(ctx, w)
 		return
@@ -183,251 +173,173 @@ func (a *APIManager) addRouteHandler(w http.ResponseWriter, r *http.Request) {
 	if routeId != "" && route.Id == "" {
 		route.Id = routeId
 	}
-	span.SetAttributes(rtsemconv.EARSRouteId.String(routeId))
+	trace.SpanFromContext(ctx).SetAttributes(rtsemconv.EARSRouteId.String(routeId))
 	route.TenantId.AppId = tid.AppId
 	route.TenantId.OrgId = tid.OrgId
 	err = a.routingTableMgr.AddRoute(ctx, &route)
 	if err != nil {
 		log.Ctx(ctx).Error().Str("op", "addRouteHandler").Msg(err.Error())
 		a.addRouteFailureRecorder.Add(ctx, 1.0)
-		span.RecordError(err)
 		resp := ErrorResponse(convertToApiError(ctx, err))
 		resp.Respond(ctx, w)
 		return
 	} else {
 		a.addRouteSuccessRecorder.Add(ctx, 1.0)
 	}
-	span.SetAttributes(semconv.HTTPStatusCodeKey.Int(200))
 	resp := ItemResponse(route)
 	resp.Respond(ctx, w)
 }
 
 func (a *APIManager) removeRouteHandler(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
-	tracer := otel.Tracer(rtsemconv.EARSTracerName)
-	ctx, span := tracer.Start(ctx, "removeRoute")
-	defer span.End()
-	span.SetAttributes(semconv.HTTPMethodKey.String(r.Method))
-	span.SetAttributes(semconv.HTTPTargetKey.String(r.RequestURI))
-	span.SetAttributes(semconv.HTTPHostKey.String(r.Host))
 	vars := mux.Vars(r)
 	tid, apiErr := getTenant(ctx, vars)
 	if apiErr != nil {
 		log.Ctx(ctx).Error().Str("op", "removeRouteHandler").Str("error", apiErr.Error()).Msg("orgId or appId empty")
 		a.removeRouteFailureRecorder.Add(ctx, 1.0)
-		span.RecordError(apiErr)
 		resp := ErrorResponse(apiErr)
 		resp.Respond(ctx, w)
 		return
 	}
-	span.SetAttributes(rtsemconv.EARSOrgId.String(tid.OrgId))
-	span.SetAttributes(rtsemconv.EARSAppId.String(tid.AppId))
 	routeId := vars["routeId"]
-	span.SetAttributes(rtsemconv.EARSRouteId.String(routeId))
+	trace.SpanFromContext(ctx).SetAttributes(rtsemconv.EARSRouteId.String(routeId))
 	err := a.routingTableMgr.RemoveRoute(ctx, *tid, routeId)
 	if err != nil {
 		log.Ctx(ctx).Error().Str("op", "removeRouteHandler").Msg(err.Error())
 		a.removeRouteFailureRecorder.Add(ctx, 1.0)
-		span.RecordError(err)
 		resp := ErrorResponse(convertToApiError(ctx, err))
 		resp.Respond(ctx, w)
 		return
 	} else {
 		a.removeRouteSuccessRecorder.Add(ctx, 1.0)
 	}
-	span.SetAttributes(semconv.HTTPStatusCodeKey.Int(200))
 	resp := ItemResponse(routeId)
 	resp.Respond(ctx, w)
 }
 
 func (a *APIManager) getRouteHandler(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
-	tracer := otel.Tracer(rtsemconv.EARSTracerName)
-	ctx, span := tracer.Start(ctx, "getRoute")
-	defer span.End()
-	span.SetAttributes(semconv.HTTPMethodKey.String(r.Method))
-	span.SetAttributes(semconv.HTTPTargetKey.String(r.RequestURI))
-	span.SetAttributes(semconv.HTTPHostKey.String(r.Host))
 	vars := mux.Vars(r)
 	tid, apiErr := getTenant(ctx, vars)
 	if apiErr != nil {
 		log.Ctx(ctx).Error().Str("op", "getRouteHandler").Str("error", apiErr.Error()).Msg("orgId or appId empty")
-		span.RecordError(apiErr)
 		resp := ErrorResponse(apiErr)
 		resp.Respond(ctx, w)
 		return
 	}
-	span.SetAttributes(rtsemconv.EARSOrgId.String(tid.OrgId))
-	span.SetAttributes(rtsemconv.EARSAppId.String(tid.AppId))
 	routeId := vars["routeId"]
-	span.SetAttributes(rtsemconv.EARSRouteId.String(routeId))
+	trace.SpanFromContext(ctx).SetAttributes(rtsemconv.EARSRouteId.String(routeId))
 	routeConfig, err := a.routingTableMgr.GetRoute(ctx, *tid, routeId)
 	if err != nil {
 		log.Ctx(ctx).Error().Str("op", "getRouteHandler").Msg(err.Error())
-		span.RecordError(err)
 		resp := ErrorResponse(convertToApiError(ctx, err))
 		resp.Respond(ctx, w)
 		return
 	}
-	span.SetAttributes(semconv.HTTPStatusCodeKey.Int(200))
 	resp := ItemResponse(routeConfig)
 	resp.Respond(ctx, w)
 }
 
 func (a *APIManager) getAllTenantRoutesHandler(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
-	tracer := otel.Tracer(rtsemconv.EARSTracerName)
-	ctx, span := tracer.Start(ctx, "getAllTenantRoutes")
-	defer span.End()
-	span.SetAttributes(semconv.HTTPMethodKey.String(r.Method))
-	span.SetAttributes(semconv.HTTPTargetKey.String(r.RequestURI))
-	span.SetAttributes(semconv.HTTPHostKey.String(r.Host))
 	vars := mux.Vars(r)
 	tid, apiErr := getTenant(ctx, vars)
 	if apiErr != nil {
 		log.Ctx(ctx).Error().Str("op", "GetAllTenantRoutes").Str("error", apiErr.Error()).Msg("orgId or appId empty")
-		span.RecordError(apiErr)
 		resp := ErrorResponse(apiErr)
 		resp.Respond(ctx, w)
 		return
 	}
-	span.SetAttributes(rtsemconv.EARSOrgId.String(tid.OrgId))
-	span.SetAttributes(rtsemconv.EARSAppId.String(tid.AppId))
 	allRouteConfigs, err := a.routingTableMgr.GetAllTenantRoutes(ctx, *tid)
 	if err != nil {
 		log.Ctx(ctx).Error().Str("op", "GetAllTenantRoutes").Msg(err.Error())
-		span.RecordError(err)
 		resp := ErrorResponse(convertToApiError(ctx, err))
 		resp.Respond(ctx, w)
 		return
 	}
-	span.SetAttributes(attribute.Int("routeCount", len(allRouteConfigs)))
-	span.SetAttributes(semconv.HTTPStatusCodeKey.Int(200))
+	trace.SpanFromContext(ctx).SetAttributes(attribute.Int("routeCount", len(allRouteConfigs)))
 	resp := ItemsResponse(allRouteConfigs)
 	resp.Respond(ctx, w)
 }
 
 func (a *APIManager) getAllSendersHandler(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
-	tracer := otel.Tracer(rtsemconv.EARSTracerName)
-	ctx, span := tracer.Start(ctx, "getAllSenders")
-	defer span.End()
-	span.SetAttributes(semconv.HTTPMethodKey.String(r.Method))
-	span.SetAttributes(semconv.HTTPTargetKey.String(r.RequestURI))
-	span.SetAttributes(semconv.HTTPHostKey.String(r.Host))
 	allSenders, err := a.routingTableMgr.GetAllSendersStatus(ctx)
 	if err != nil {
 		log.Ctx(ctx).Error().Str("op", "getAllSendersHandler").Msg(err.Error())
-		span.RecordError(err)
 		resp := ErrorResponse(convertToApiError(ctx, err))
 		resp.Respond(ctx, w)
 		return
 	}
-	span.SetAttributes(attribute.Int("senderCount", len(allSenders)))
-	span.SetAttributes(semconv.HTTPStatusCodeKey.Int(200))
+	trace.SpanFromContext(ctx).SetAttributes(attribute.Int("senderCount", len(allSenders)))
 	resp := ItemsResponse(allSenders)
 	resp.Respond(ctx, w)
 }
 
 func (a *APIManager) getAllReceiversHandler(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
-	tracer := otel.Tracer(rtsemconv.EARSTracerName)
-	ctx, span := tracer.Start(ctx, "getAllReceivers")
-	defer span.End()
-	span.SetAttributes(semconv.HTTPMethodKey.String(r.Method))
-	span.SetAttributes(semconv.HTTPTargetKey.String(r.RequestURI))
-	span.SetAttributes(semconv.HTTPHostKey.String(r.Host))
 	allReceivers, err := a.routingTableMgr.GetAllReceiversStatus(ctx)
 	if err != nil {
 		log.Ctx(ctx).Error().Str("op", "getAllReceiversHandler").Msg(err.Error())
-		span.RecordError(err)
 		resp := ErrorResponse(convertToApiError(ctx, err))
 		resp.Respond(ctx, w)
 		return
 	}
-	span.SetAttributes(attribute.Int("receiverCount", len(allReceivers)))
-	span.SetAttributes(semconv.HTTPStatusCodeKey.Int(200))
+	trace.SpanFromContext(ctx).SetAttributes(attribute.Int("receiverCount", len(allReceivers)))
 	resp := ItemsResponse(allReceivers)
 	resp.Respond(ctx, w)
 }
 
 func (a *APIManager) getAllFiltersHandler(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
-	tracer := otel.Tracer(rtsemconv.EARSTracerName)
-	ctx, span := tracer.Start(ctx, "getAllFilters")
-	defer span.End()
-	span.SetAttributes(semconv.HTTPMethodKey.String(r.Method))
-	span.SetAttributes(semconv.HTTPTargetKey.String(r.RequestURI))
-	span.SetAttributes(semconv.HTTPHostKey.String(r.Host))
 	allFilters, err := a.routingTableMgr.GetAllFiltersStatus(ctx)
 	if err != nil {
 		log.Ctx(ctx).Error().Str("op", "getAllFiltersHandler").Msg(err.Error())
-		span.RecordError(err)
 		resp := ErrorResponse(convertToApiError(ctx, err))
 		resp.Respond(ctx, w)
 		return
 	}
-	span.SetAttributes(attribute.Int("filterCount", len(allFilters)))
-	span.SetAttributes(semconv.HTTPStatusCodeKey.Int(200))
+	trace.SpanFromContext(ctx).SetAttributes(attribute.Int("filterCount", len(allFilters)))
 	resp := ItemsResponse(allFilters)
 	resp.Respond(ctx, w)
 }
 
 func (a *APIManager) getTenantConfigHandler(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
-	tracer := otel.Tracer(rtsemconv.EARSTracerName)
-	ctx, span := tracer.Start(ctx, "getTenant")
-	defer span.End()
-	span.SetAttributes(semconv.HTTPMethodKey.String(r.Method))
-	span.SetAttributes(semconv.HTTPTargetKey.String(r.RequestURI))
-	span.SetAttributes(semconv.HTTPHostKey.String(r.Host))
 	vars := mux.Vars(r)
 	tid, apiErr := getTenant(ctx, vars)
 	if apiErr != nil {
 		log.Ctx(ctx).Error().Str("op", "getTenantConfigHandler").Str("error", apiErr.Error()).Msg("orgId or appId empty")
-		span.RecordError(apiErr)
 		resp := ErrorResponse(apiErr)
 		resp.Respond(ctx, w)
 		return
 	}
-	span.SetAttributes(rtsemconv.EARSOrgId.String(tid.OrgId))
-	span.SetAttributes(rtsemconv.EARSAppId.String(tid.AppId))
 	config, err := a.tenantStorer.GetConfig(ctx, *tid)
 	if err != nil {
 		log.Ctx(ctx).Error().Str("op", "getTenantConfigHandler").Str("error", err.Error()).Msg("error getting tenant config")
-		span.RecordError(err)
 		resp := ErrorResponse(convertToApiError(ctx, err))
 		resp.Respond(ctx, w)
 		return
 	}
-	span.SetAttributes(semconv.HTTPStatusCodeKey.Int(200))
 	resp := ItemResponse(config)
 	resp.Respond(ctx, w)
 }
 
 func (a *APIManager) setTenantConfigHandler(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
-	tracer := otel.Tracer(rtsemconv.EARSTracerName)
-	ctx, span := tracer.Start(ctx, "addTenant")
-	defer span.End()
-	span.SetAttributes(semconv.HTTPMethodKey.String(r.Method))
-	span.SetAttributes(semconv.HTTPTargetKey.String(r.RequestURI))
-	span.SetAttributes(semconv.HTTPHostKey.String(r.Host))
+
 	vars := mux.Vars(r)
 	tid, apiErr := getTenant(ctx, vars)
 	if apiErr != nil {
 		log.Ctx(ctx).Error().Str("op", "setTenantConfigHandler").Str("error", apiErr.Error()).Msg("orgId or appId empty")
-		span.RecordError(apiErr)
 		resp := ErrorResponse(apiErr)
 		resp.Respond(ctx, w)
 		return
 	}
-	span.SetAttributes(rtsemconv.EARSOrgId.String(tid.OrgId))
-	span.SetAttributes(rtsemconv.EARSAppId.String(tid.AppId))
+
 	body, err := ioutil.ReadAll(r.Body)
 	if err != nil {
 		log.Ctx(ctx).Error().Str("op", "setTenantConfigHandler").Str("error", err.Error()).Msg("error reading request body")
-		span.RecordError(err)
 		resp := ErrorResponse(&InternalServerError{err})
 		resp.Respond(ctx, w)
 		return
@@ -437,7 +349,6 @@ func (a *APIManager) setTenantConfigHandler(w http.ResponseWriter, r *http.Reque
 	if err != nil {
 		log.Ctx(ctx).Error().Str("op", "setTenantConfigHandler").Str("error", err.Error()).Msg("error unmarshal request body")
 		err = &BadRequestError{"Cannot unmarshal request body", err}
-		span.RecordError(err)
 		resp := ErrorResponse(&InternalServerError{err})
 		resp.Respond(ctx, w)
 		return
@@ -446,76 +357,58 @@ func (a *APIManager) setTenantConfigHandler(w http.ResponseWriter, r *http.Reque
 	err = a.tenantStorer.SetConfig(ctx, tenantConfig)
 	if err != nil {
 		log.Ctx(ctx).Error().Str("op", "setTenantConfigHandler").Str("error", err.Error()).Msg("error setting tenant config")
-		span.RecordError(err)
 		resp := ErrorResponse(convertToApiError(ctx, err))
 		resp.Respond(ctx, w)
 		return
 	}
 	a.quotaManager.PublishQuota(ctx, *tid)
-	span.SetAttributes(semconv.HTTPStatusCodeKey.Int(200))
 	resp := ItemResponse(tenantConfig)
 	resp.Respond(ctx, w)
 }
 
 func (a *APIManager) deleteTenantConfigHandler(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
-	tracer := otel.Tracer(rtsemconv.EARSTracerName)
-	ctx, span := tracer.Start(ctx, "deleteTenant")
-	defer span.End()
-	span.SetAttributes(semconv.HTTPMethodKey.String(r.Method))
-	span.SetAttributes(semconv.HTTPTargetKey.String(r.RequestURI))
-	span.SetAttributes(semconv.HTTPHostKey.String(r.Host))
 	vars := mux.Vars(r)
 	tid, apiErr := getTenant(ctx, vars)
 	if apiErr != nil {
 		log.Ctx(ctx).Error().Str("op", "deleteTenantConfigHandler").Str("error", apiErr.Error()).Msg("orgId or appId empty")
-		span.RecordError(apiErr)
 		resp := ErrorResponse(apiErr)
 		resp.Respond(ctx, w)
 		return
 	}
-	span.SetAttributes(rtsemconv.EARSOrgId.String(tid.OrgId))
-	span.SetAttributes(rtsemconv.EARSAppId.String(tid.AppId))
 	err := a.tenantStorer.DeleteConfig(ctx, *tid)
 	if err != nil {
 		log.Ctx(ctx).Error().Str("op", "deleteTenantConfigHandler").Str("error", err.Error()).Msg("error deleting tenant config")
-		span.RecordError(err)
 		resp := ErrorResponse(convertToApiError(ctx, err))
 		resp.Respond(ctx, w)
 		return
 	}
-	span.SetAttributes(semconv.HTTPStatusCodeKey.Int(200))
 	resp := ItemResponse(tid)
 	resp.Respond(ctx, w)
 }
 
 func convertToApiError(ctx context.Context, err error) ApiError {
 	span := trace.SpanFromContext(ctx)
+	span.RecordError(err)
+
 	var tenantNotFound *tenant.TenantNotFoundError
 	var badTenantConfig *tenant.BadConfigError
 	var badRouteConfig *tablemgr.BadConfigError
 	var routeValidationError *tablemgr.RouteValidationError
 	var routeRegistrationError *tablemgr.RouteRegistrationError
 	var routeNotFound *route.RouteNotFoundError
-	span.RecordError(err)
 	if errors.As(err, &tenantNotFound) {
-		span.SetAttributes(semconv.HTTPStatusCodeKey.Int(404))
 		return &NotFoundError{"tenant " + tenantNotFound.Tenant.ToString() + " not found"}
 	} else if errors.As(err, &badTenantConfig) {
-		span.SetAttributes(semconv.HTTPStatusCodeKey.Int(400))
 		return &BadRequestError{"bad tenant config", err}
 	} else if errors.As(err, &badRouteConfig) {
 		return &BadRequestError{"bad route config", err}
 	} else if errors.As(err, &routeRegistrationError) {
-		span.SetAttributes(semconv.HTTPStatusCodeKey.Int(400))
 		return &BadRequestError{"bad route config", err}
 	} else if errors.As(err, &routeValidationError) {
-		span.SetAttributes(semconv.HTTPStatusCodeKey.Int(400))
 		return &BadRequestError{"bad route config", err}
 	} else if errors.As(err, &routeNotFound) {
-		span.SetAttributes(semconv.HTTPStatusCodeKey.Int(404))
 		return &NotFoundError{"route " + routeNotFound.RouteId + " not found"}
 	}
-	span.SetAttributes(semconv.HTTPStatusCodeKey.Int(500))
 	return &InternalServerError{err}
 }

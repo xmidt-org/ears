@@ -27,7 +27,12 @@ func SubLoggerCtx(ctx context.Context, parent *zerolog.Logger) context.Context {
 	return logger.WithContext(subCtx)
 }
 
-//Helper function to add zerolog key/value pari to a golang context
+func SubCtx(ctx context.Context) context.Context {
+	parent := log.Ctx(ctx)
+	return SubLoggerCtx(ctx, parent)
+}
+
+//Helper function to add zerolog key/value pair to a golang context
 func StrToLogCtx(ctx context.Context, key string, value string) {
 	l := zerolog.Ctx(ctx)
 	l.UpdateContext(func(c zerolog.Context) zerolog.Context {
