@@ -22,11 +22,9 @@ import (
 	"github.com/xmidt-org/ears/internal/pkg/rtsemconv"
 	"github.com/xmidt-org/ears/pkg/secret"
 	"github.com/xmidt-org/ears/pkg/tenant"
-	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/global"
-	"go.opentelemetry.io/otel/trace"
 	"os"
 	"sync"
 
@@ -116,7 +114,6 @@ func (r *Receiver) Receive(next receiver.NextFn) error {
 	r.done = make(chan struct{})
 	r.stopped = false
 	r.next = next
-	tracer := otel.Tracer(rtsemconv.EARSTracerName)
 	r.Unlock()
 	go func() {
 		defer func() {
@@ -138,33 +135,21 @@ func (r *Receiver) Receive(next receiver.NextFn) error {
 				return
 			case <-time.After(time.Duration(*r.config.IntervalMs) * time.Millisecond):
 				ctx, cancel := context.WithTimeout(context.Background(), debugMaxTO)
-				var span trace.Span
-				if *r.config.Trace {
-					ctx, span = tracer.Start(ctx, "debugReceiver")
-					span.SetAttributes(rtsemconv.EARSEventTrace)
-				}
 				r.eventBytesCounter.Add(ctx, int64(len(buf)))
 				e, err := event.New(ctx, r.config.Payload, event.WithAck(
 					func(evt event.Event) {
 						eventsDone.Done()
-						if *r.config.Trace {
-							span.AddEvent("ack")
-							span.End()
-						}
 						r.eventSuccessCounter.Add(ctx, 1.0)
 						cancel()
 					}, func(evt event.Event, err error) {
 						r.logger.Error().Str("op", "debug.Receive").Msg("failed to process message: " + err.Error())
 						eventsDone.Done()
-						if *r.config.Trace {
-							span.AddEvent("nack")
-							span.RecordError(err)
-							span.End()
-						}
 						r.eventFailureCounter.Add(ctx, 1.0)
 						cancel()
 					}),
-					event.WithTrace(*r.config.Trace), event.WithTenant(r.Tenant()))
+					event.WithSpan(r.Name()),
+					event.WithTenant(r.Tenant()),
+				)
 				if err != nil {
 					return
 				}

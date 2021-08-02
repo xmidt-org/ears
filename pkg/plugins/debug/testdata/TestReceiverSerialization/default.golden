@@ -2,6 +2,5 @@
   "intervalMs": 100,
   "rounds": 4,
   "payload": "debug message",
-  "maxHistory": 100,
-  "trace": false
+  "maxHistory": 100
 }

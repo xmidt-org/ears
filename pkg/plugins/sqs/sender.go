@@ -24,13 +24,11 @@ import (
 	"github.com/goccy/go-yaml"
 	"github.com/google/uuid"
 	"github.com/rs/zerolog"
-	"github.com/xmidt-org/ears/internal/pkg/rtsemconv"
 	"github.com/xmidt-org/ears/pkg/event"
 	pkgplugin "github.com/xmidt-org/ears/pkg/plugin"
 	"github.com/xmidt-org/ears/pkg/secret"
 	"github.com/xmidt-org/ears/pkg/sender"
 	"github.com/xmidt-org/ears/pkg/tenant"
-	"go.opentelemetry.io/otel"
 	"os"
 	"time"
 )
@@ -171,11 +169,6 @@ func (s *Sender) send(events []event.Event) {
 }
 
 func (s *Sender) Send(e event.Event) {
-	if e.Trace() {
-		tracer := otel.Tracer(rtsemconv.EARSTracerName)
-		_, span := tracer.Start(e.Context(), "sqsSender")
-		defer span.End()
-	}
 	s.Lock()
 	if s.eventBatch == nil {
 		s.eventBatch = make([]event.Event, 0)

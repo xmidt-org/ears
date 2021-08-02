@@ -40,8 +40,7 @@ func NewInMemoryRouteStorer(config config.Config) *InMemoryRouteStorer {
 func (s *InMemoryRouteStorer) GetAllRoutes(ctx context.Context) ([]route.Config, error) {
 	s.lock.RLock()
 	defer s.lock.RUnlock()
-	tracer := otel.Tracer(rtsemconv.EARSTracerName)
-	_, span := tracer.Start(ctx, "getRoutes")
+	_, span := CreateSpan(ctx, "getRoutes", rtsemconv.DBSystemInMemory)
 	defer span.End()
 	span.SetAttributes(rtsemconv.DBSystemInMemory)
 	routes := make([]route.Config, 0)
@@ -56,10 +55,8 @@ func (s *InMemoryRouteStorer) GetAllRoutes(ctx context.Context) ([]route.Config,
 func (s *InMemoryRouteStorer) GetRoute(ctx context.Context, tid tenant.Id, id string) (route.Config, error) {
 	s.lock.RLock()
 	defer s.lock.RUnlock()
-	tracer := otel.Tracer(rtsemconv.EARSTracerName)
-	_, span := tracer.Start(ctx, "getRoute")
+	_, span := CreateSpan(ctx, "getRoute", rtsemconv.DBSystemInMemory)
 	defer span.End()
-	span.SetAttributes(rtsemconv.DBSystemInMemory)
 	empty := route.Config{}
 	t, ok := s.tenants[tid.Key()]
 	if !ok {
@@ -76,8 +73,7 @@ func (s *InMemoryRouteStorer) GetRoute(ctx context.Context, tid tenant.Id, id st
 func (s *InMemoryRouteStorer) GetAllTenantRoutes(ctx context.Context, id tenant.Id) ([]route.Config, error) {
 	s.lock.RLock()
 	defer s.lock.RUnlock()
-	tracer := otel.Tracer(rtsemconv.EARSTracerName)
-	_, span := tracer.Start(ctx, "getTenantRoutes")
+	_, span := CreateSpan(ctx, "getTenantRoutes", rtsemconv.DBSystemInMemory)
 	defer span.End()
 	span.SetAttributes(rtsemconv.DBSystemInMemory)
 	routes := make([]route.Config, 0)
@@ -123,8 +119,7 @@ func (s *InMemoryRouteStorer) SetRoute(ctx context.Context, r route.Config) erro
 func (s *InMemoryRouteStorer) SetRoutes(ctx context.Context, routes []route.Config) error {
 	s.lock.Lock()
 	defer s.lock.Unlock()
-	tracer := otel.Tracer(rtsemconv.EARSTracerName)
-	_, span := tracer.Start(ctx, "storeRoutes")
+	_, span := CreateSpan(ctx, "storeRoutes", rtsemconv.DBSystemInMemory)
 	defer span.End()
 	span.SetAttributes(rtsemconv.DBSystemInMemory)
 	for _, r := range routes {
@@ -136,8 +131,7 @@ func (s *InMemoryRouteStorer) SetRoutes(ctx context.Context, routes []route.Conf
 func (s *InMemoryRouteStorer) DeleteRoute(ctx context.Context, tid tenant.Id, id string) error {
 	s.lock.Lock()
 	defer s.lock.Unlock()
-	tracer := otel.Tracer(rtsemconv.EARSTracerName)
-	_, span := tracer.Start(ctx, "deleteRoute")
+	_, span := CreateSpan(ctx, "deleteRoute", rtsemconv.DBSystemInMemory)
 	defer span.End()
 	span.SetAttributes(rtsemconv.DBSystemInMemory)
 	t, ok := s.tenants[tid.Key()]
@@ -151,8 +145,7 @@ func (s *InMemoryRouteStorer) DeleteRoute(ctx context.Context, tid tenant.Id, id
 func (s *InMemoryRouteStorer) DeleteRoutes(ctx context.Context, tid tenant.Id, ids []string) error {
 	s.lock.Lock()
 	defer s.lock.Unlock()
-	tracer := otel.Tracer(rtsemconv.EARSTracerName)
-	_, span := tracer.Start(ctx, "deleteRoutes")
+	_, span := CreateSpan(ctx, "deleteRoutes", rtsemconv.DBSystemInMemory)
 	defer span.End()
 	span.SetAttributes(rtsemconv.DBSystemInMemory)
 	t, ok := s.tenants[tid.Key()]

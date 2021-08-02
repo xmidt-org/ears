@@ -129,6 +129,9 @@ func (m *QuotaManager) TenantLimit(ctx context.Context, tid tenant.Id) int {
 
 func (m *QuotaManager) SyncItem(ctx context.Context, tid tenant.Id, itemId string, add bool) error {
 	limiter, err := m.getLimiter(ctx, tid)
+	if limiter == nil {
+		return nil
+	}
 	if err != nil {
 		return err
 	}

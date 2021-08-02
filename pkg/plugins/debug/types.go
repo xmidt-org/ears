@@ -58,7 +58,6 @@ var DefaultReceiverConfig = ReceiverConfig{
 	Rounds:     pointer.Int(4),
 	Payload:    "debug message",
 	MaxHistory: pointer.Int(100),
-	Trace:      pointer.Bool(false),
 }
 
 // ReceiverConfig determines how the receiver will operate.  To
@@ -73,7 +72,6 @@ type ReceiverConfig struct {
 	Rounds     *int        `json:"rounds,omitempty"` // (-1) signifies infinite routes
 	Payload    interface{} `json:"payload,omitempty"`
 	MaxHistory *int        `json:"maxHistory,omitempty"`
-	Trace      *bool       `json:"trace,omitempty"`
 }
 
 type Receiver struct {

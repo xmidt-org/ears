@@ -28,6 +28,7 @@ import (
 	"github.com/xmidt-org/ears/internal/pkg/aws/s3"
 	"github.com/xmidt-org/ears/internal/pkg/config"
 	"github.com/xmidt-org/ears/internal/pkg/rtsemconv"
+	"github.com/xmidt-org/ears/pkg/event"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/exporters/otlp"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpgrpc"
@@ -127,6 +128,9 @@ func SetupAPIServer(lifecycle fx.Lifecycle, config config.Config, logger *zerolo
 	var traceProvider *sdktrace.TracerProvider
 	var metricsPusher *controller.Controller
 	ctx := context.Background() // long lived context
+
+	//initialize event logger
+	event.SetEventLogger(logger)
 
 	// setup telemetry stuff
 
