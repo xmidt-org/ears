@@ -16,6 +16,7 @@ package match
 
 import (
 	"fmt"
+	"github.com/rs/zerolog/log"
 	"github.com/xmidt-org/ears/pkg/event"
 	"github.com/xmidt-org/ears/pkg/filter"
 	"github.com/xmidt-org/ears/pkg/filter/match/pattern"
@@ -96,6 +97,7 @@ func (f *Filter) Filter(evt event.Event) []event.Event {
 	} else {
 		evt.Ack()
 	}
+	log.Ctx(evt.Context()).Info().Str("op", "filter").Str("filterType", "match").Str("name", f.Name()).Int("eventCount", len(events)).Msg("match")
 	return events
 }
 
