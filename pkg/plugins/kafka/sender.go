@@ -59,7 +59,7 @@ func NewSender(tid tenant.Id, plugin string, name string, config interface{}, se
 	if err != nil {
 		return nil, err
 	}
-	logger := zerolog.New(os.Stdout).Level(zerolog.DebugLevel)
+	logger := zerolog.New(os.Stdout).Level(zerolog.DebugLevel).With().Timestamp().Logger()
 	//zerolog.LevelFieldName = "log.level"
 	s := &Sender{
 		name:    name,
@@ -305,9 +305,9 @@ func (s *Sender) Send(e event.Event) {
 		e.Nack(err)
 		return
 	}
-	//s.logger.Info().Str("op", "kafka.Send").Msg("sent message on kafka topic")
 	s.Lock()
 	s.count++
+	s.logger.Info().Str("op", "kafka.Send").Int("count", s.count).Msg("sent message on kafka topic")
 	s.Unlock()
 	e.Ack()
 }
