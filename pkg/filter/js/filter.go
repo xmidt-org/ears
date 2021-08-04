@@ -58,6 +58,7 @@ func (f *Filter) Filter(evt event.Event) []event.Event {
 		evt.Nack(err)
 		return []event.Event{}
 	}
+	log.Ctx(evt.Context()).Info().Str("op", "filter").Str("filterType", "js").Str("name", f.Name()).Int("eventCount", len(transformedEvts)).Msg("js")
 	if len(transformedEvts) == 0 {
 		evt.Ack()
 		return []event.Event{}
