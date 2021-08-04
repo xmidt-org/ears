@@ -130,8 +130,8 @@ func (r *Receiver) startReceiveWorker(svc *sqs.SQS, n int) {
 					} else {
 						r.Lock()
 						r.deleteCount += len(deleteBatch)
+						r.logger.Info().Str("op", "SQS.receiveWorker").Int("deleteCount", r.deleteCount).Int("batchSize", len(deleteBatch)).Int("workerNum", n).Msg("deleted message batch")
 						r.Unlock()
-						r.logger.Info().Str("op", "SQS.receiveWorker").Int("batchSize", len(deleteBatch)).Int("workerNum", n).Msg("deleted message batch")
 						/*for _, entry := range deleteBatch {
 							r.logger.Info().Str("op", "SQS.receiveWorker").Int("batchSize", len(deleteBatch)).Int("workerNum", n).Msg("deleted message " + (*entry.Id))
 						}*/
@@ -171,7 +171,9 @@ func (r *Receiver) startReceiveWorker(svc *sqs.SQS, n int) {
 				continue
 			}
 			if len(sqsResp.Messages) > 0 {
-				r.logger.Info().Str("op", "SQS.receiveWorker").Int("batchSize", len(sqsResp.Messages)).Int("workerNum", n).Msg("received message batch")
+				r.Lock()
+				r.logger.Info().Str("op", "SQS.receiveWorker").Int("receiveCount", r.receiveCount).Int("batchSize", len(sqsResp.Messages)).Int("workerNum", n).Msg("received message batch")
+				r.Unlock()
 			}
 			for _, message := range sqsResp.Messages {
 				//logger.Debug().Str("op", "SQS.Receive").Msg(*message.Body)
@@ -202,7 +204,6 @@ func (r *Receiver) startReceiveWorker(svc *sqs.SQS, n int) {
 				}
 				ctx, cancel := context.WithTimeout(context.Background(), time.Duration(*r.config.AcknowledgeTimeout)*time.Second)
 				r.eventBytesCounter.Add(ctx, int64(len(*message.Body)))
-
 				e, err := event.New(ctx, payload, event.WithMetadata(*message), event.WithAck(
 					func(e event.Event) {
 						msg := e.Metadata().(sqs.Message) // get metadata associated with this event
@@ -225,7 +226,7 @@ func (r *Receiver) startReceiveWorker(svc *sqs.SQS, n int) {
 					r.logger.Error().Str("op", "SQS.receiveWorker").Int("workerNum", n).Msg("cannot create event: " + err.Error())
 					return
 				}
-				log.Ctx(e.Context()).Info().Str("op", "SQS.Trigger").Msg("Triggering message....")
+				log.Ctx(e.Context()).Info().Str("op", "SQS.Trigger").Msg("triggering sqs event")
 				r.Trigger(e)
 			}
 		}
