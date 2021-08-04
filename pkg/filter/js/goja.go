@@ -56,11 +56,11 @@ var (
 
 // init adds a Interpreter as one of the DefaultInterpreters
 func init() {
-	interpreter, err := NewInterpreter()
+	var err error
+	defaultInterpreter, err = NewInterpreter(WithMaxRuntimes(10))
 	if err != nil {
 		panic(err.Error())
 	}
-	defaultInterpreter = interpreter
 }
 
 // Interpreter implements an interpreter based on Goja, which is a
