@@ -355,11 +355,11 @@ func (r *DefaultRoutingTableManager) SynchronizeAllRoutes() (int, error) {
 		storedRoute, ok := storedRouteMap[liveRoute.Config.TenantId.KeyWithRoute(liveRoute.Config.Id)]
 		if !ok {
 			//TODO: should create metrics for this
-			r.logger.Error().Str("op", "synchronize").Str("routeId", liveRoute.Config.Id).Msg("extra route stopped")
+			r.logger.Error().Str("op", "synchronize").Str("routeId", liveRoute.Config.Id).Str("keyWithRoute", liveRoute.Config.TenantId.KeyWithRoute(liveRoute.Config.Id)).Msg("extra route stopped")
 			r.unregisterAndStopRoute(ctx, liveRoute.Config.TenantId, liveRoute.Config.Id)
 			mutated++
 		} else if liveRoute.Config.Hash(ctx) != storedRoute.Hash(ctx) {
-			r.logger.Error().Str("op", "synchronize").Str("routeId", liveRoute.Config.Id).Msg("inconsistent route stopped")
+			r.logger.Error().Str("op", "synchronize").Str("routeId", liveRoute.Config.Id).Str("keyWithRoute", liveRoute.Config.TenantId.KeyWithRoute(liveRoute.Config.Id)).Msg("inconsistent route stopped")
 			r.unregisterAndStopRoute(ctx, liveRoute.Config.TenantId, liveRoute.Config.Id)
 			mutated++
 		}
@@ -368,7 +368,7 @@ func (r *DefaultRoutingTableManager) SynchronizeAllRoutes() (int, error) {
 	for _, storedRoute := range storedRoutes {
 		_, ok := lrm[storedRoute.TenantId.KeyWithRoute(storedRoute.Id)]
 		if !ok {
-			r.logger.Error().Str("op", "synchronize").Str("routeId", storedRoute.Id).Msg("missing route started")
+			r.logger.Error().Str("op", "synchronize").Str("routeId", storedRoute.Id).Str("keyWithRoute", storedRoute.TenantId.KeyWithRoute(storedRoute.Id)).Msg("missing route started")
 			rc := storedRoute
 			r.registerAndRunRoute(ctx, &rc)
 			mutated++
