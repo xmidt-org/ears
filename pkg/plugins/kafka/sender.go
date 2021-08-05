@@ -280,12 +280,12 @@ func (mp *ManualHashPartitioner) Partition(message *sarama.ProducerMessage, numP
 
 func (s *Sender) Send(e event.Event) {
 	if s.stopped {
-		s.logger.Info().Str("op", "kafka.Send").Msg("drop message due to closed sender")
+		s.logger.Info().Str("op", "kafka.Send").Str("name", s.Name()).Str("tid", s.Tenant().ToString()).Msg("drop message due to closed sender")
 		return
 	}
 	buf, err := json.Marshal(e.Payload())
 	if err != nil {
-		s.logger.Error().Str("op", "kafka.Send").Msg("failed to marshal message: " + err.Error())
+		s.logger.Error().Str("op", "kafka.Send").Str("name", s.Name()).Str("tid", s.Tenant().ToString()).Msg("failed to marshal message: " + err.Error())
 		e.Nack(err)
 		return
 	}
@@ -301,13 +301,13 @@ func (s *Sender) Send(e event.Event) {
 	}
 	err = s.producer.SendMessage(s.config.Topic, partition, nil, buf)
 	if err != nil {
-		s.logger.Error().Str("op", "kafka.Send").Msg("failed to send message: " + err.Error())
+		s.logger.Error().Str("op", "kafka.Send").Str("name", s.Name()).Str("tid", s.Tenant().ToString()).Msg("failed to send message: " + err.Error())
 		e.Nack(err)
 		return
 	}
 	s.Lock()
 	s.count++
-	s.logger.Info().Str("op", "kafka.Send").Int("count", s.count).Msg("sent message on kafka topic")
+	s.logger.Info().Str("op", "kafka.Send").Str("name", s.Name()).Str("tid", s.Tenant().ToString()).Int("count", s.count).Msg("sent message on kafka topic")
 	s.Unlock()
 	e.Ack()
 }
