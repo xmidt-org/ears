@@ -351,7 +351,7 @@ func (r *DefaultRoutingTableManager) SynchronizeAllRoutes() (int, error) {
 	}
 	r.Unlock()
 	// stop all inconsistent or deleted routes
-	for _, liveRoute := range lrm {
+	for key, liveRoute := range lrm {
 		storedRoute, ok := storedRouteMap[liveRoute.Config.TenantId.KeyWithRoute(liveRoute.Config.Id)]
 		if !ok {
 			//TODO: should create metrics for this
@@ -361,6 +361,8 @@ func (r *DefaultRoutingTableManager) SynchronizeAllRoutes() (int, error) {
 		} else if liveRoute.Config.Hash(ctx) != storedRoute.Hash(ctx) {
 			r.logger.Error().Str("op", "synchronize").Str("routeId", liveRoute.Config.Id).Str("keyWithRoute", liveRoute.Config.TenantId.KeyWithRoute(liveRoute.Config.Id)).Msg("inconsistent route stopped")
 			r.unregisterAndStopRoute(ctx, liveRoute.Config.TenantId, liveRoute.Config.Id)
+			// delete from local map so we force immediate restart below
+			delete(lrm, key)
 			mutated++
 		}
 	}
