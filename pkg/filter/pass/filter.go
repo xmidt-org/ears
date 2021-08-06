@@ -15,6 +15,7 @@
 package pass
 
 import (
+	"github.com/rs/zerolog/log"
 	"github.com/xmidt-org/ears/pkg/event"
 	"github.com/xmidt-org/ears/pkg/filter"
 	"github.com/xmidt-org/ears/pkg/secret"
@@ -39,6 +40,7 @@ type Filter struct {
 
 // Filter lets any event pass
 func (f *Filter) Filter(evt event.Event) []event.Event {
+	log.Ctx(evt.Context()).Debug().Str("op", "filter").Str("filterType", "pass").Str("name", f.Name()).Msg("pass")
 	return []event.Event{evt}
 }
 

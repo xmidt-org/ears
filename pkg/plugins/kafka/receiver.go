@@ -269,7 +269,7 @@ func (r *Receiver) Receive(next receiver.NextFn) error {
 				r.logger.Info().Str("op", "kafka.Receive").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Msg("abandoning message due to canceled context")
 				return false
 			}
-			r.logger.Info().Str("op", "kafka.Receive").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Str("topic", msg.Topic).Int("partition", int(msg.Partition)).Int("offset", int(msg.Offset)).Msg("message received")
+			r.logger.Debug().Str("op", "kafka.Receive").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Str("topic", msg.Topic).Int("partition", int(msg.Partition)).Int("offset", int(msg.Offset)).Msg("message received")
 			r.Lock()
 			r.count++
 			r.Unlock()
@@ -283,7 +283,7 @@ func (r *Receiver) Receive(next receiver.NextFn) error {
 			r.eventBytesCounter.Add(ctx, int64(len(msg.Value)))
 			e, err := event.New(ctx, pl, event.WithAck(
 				func(e event.Event) {
-					r.logger.Info().Str("op", "kafka.Receive").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Msg("processed message from kafka topic")
+					r.logger.Debug().Str("op", "kafka.Receive").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Msg("processed message from kafka topic")
 					r.eventSuccessCounter.Add(ctx, 1.0)
 					cancel()
 				},

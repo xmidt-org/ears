@@ -85,7 +85,7 @@ func (f *Filter) Filter(evt event.Event) []event.Event {
 		path = f.config.FromPath
 	}
 	evt.SetPathValue(path, output, true)
-	log.Ctx(evt.Context()).Info().Str("op", "filter").Str("filterType", "decode").Str("name", f.Name()).Msg("decode")
+	log.Ctx(evt.Context()).Debug().Str("op", "filter").Str("filterType", "decode").Str("name", f.Name()).Msg("decode")
 	return []event.Event{evt}
 }
 func (f *Filter) Config() interface{} {

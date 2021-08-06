@@ -17,6 +17,7 @@ package split
 import (
 	"errors"
 	"fmt"
+	"github.com/rs/zerolog/log"
 	"github.com/xmidt-org/ears/pkg/event"
 	"github.com/xmidt-org/ears/pkg/filter"
 	"github.com/xmidt-org/ears/pkg/secret"
@@ -77,6 +78,7 @@ func (f *Filter) Filter(evt event.Event) []event.Event {
 		events = append(events, nevt)
 	}
 	evt.Ack()
+	log.Ctx(evt.Context()).Debug().Str("op", "filter").Str("filterType", "split").Str("name", f.Name()).Int("eventCount", len(events)).Msg("split")
 	return events
 }
 

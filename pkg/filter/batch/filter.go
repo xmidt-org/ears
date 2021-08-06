@@ -16,6 +16,7 @@ package batch
 
 import (
 	"fmt"
+	"github.com/rs/zerolog/log"
 	"github.com/xmidt-org/ears/pkg/event"
 	"github.com/xmidt-org/ears/pkg/filter"
 	"github.com/xmidt-org/ears/pkg/secret"
@@ -71,9 +72,11 @@ func (f *Filter) Filter(evt event.Event) []event.Event {
 		for _, e := range f.batch {
 			e.Ack()
 		}
+		log.Ctx(evt.Context()).Debug().Str("op", "filter").Str("filterType", "match").Str("name", f.Name()).Int("eventCount", len(f.batch)).Msg("match")
 		f.batch = make([]event.Event, 0)
 		return []event.Event{newEvt}
 	}
+	log.Ctx(evt.Context()).Debug().Str("op", "filter").Str("filterType", "batch").Str("name", f.Name()).Int("eventCount", 0).Msg("batch")
 	return []event.Event{}
 }
 

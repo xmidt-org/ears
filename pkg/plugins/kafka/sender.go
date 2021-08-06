@@ -265,7 +265,7 @@ func (p *Producer) SendMessage(topic string, partition int, headers map[string]s
 	}
 	// override log values if any
 	elapsed := time.Since(start)
-	p.logger.Info().Str("op", "kafka.Send").Int("elapsed", int(elapsed.Milliseconds())).Int("partition", int(part)).Int("offset", int(offset)).Msg("sent message on kafka topic")
+	p.logger.Debug().Str("op", "kafka.Send").Int("elapsed", int(elapsed.Milliseconds())).Int("partition", int(part)).Int("offset", int(offset)).Msg("sent message on kafka topic")
 	return nil
 }
 
@@ -307,7 +307,7 @@ func (s *Sender) Send(e event.Event) {
 	}
 	s.Lock()
 	s.count++
-	s.logger.Info().Str("op", "kafka.Send").Str("name", s.Name()).Str("tid", s.Tenant().ToString()).Int("count", s.count).Msg("sent message on kafka topic")
+	s.logger.Debug().Str("op", "kafka.Send").Str("name", s.Name()).Str("tid", s.Tenant().ToString()).Int("count", s.count).Msg("sent message on kafka topic")
 	s.Unlock()
 	e.Ack()
 }

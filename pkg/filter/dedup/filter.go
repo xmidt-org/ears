@@ -20,6 +20,7 @@ import (
 	"errors"
 	"fmt"
 	lru "github.com/hashicorp/golang-lru"
+	"github.com/rs/zerolog/log"
 	"github.com/xmidt-org/ears/pkg/event"
 	"github.com/xmidt-org/ears/pkg/filter"
 	"github.com/xmidt-org/ears/pkg/secret"
@@ -72,9 +73,11 @@ func (f *Filter) Filter(evt event.Event) []event.Event {
 	_, ok := f.lruCache.Get(evtHash)
 	if !ok {
 		f.lruCache.Add(evtHash, struct{}{})
+		log.Ctx(evt.Context()).Debug().Str("op", "filter").Str("filterType", "dedup").Str("name", f.Name()).Int("eventCount", 1).Msg("dedup")
 		return []event.Event{evt}
 	} else {
 		evt.Ack()
+		log.Ctx(evt.Context()).Debug().Str("op", "filter").Str("filterType", "dedup").Str("name", f.Name()).Int("eventCount", 0).Msg("dedup")
 		return []event.Event{}
 	}
 }

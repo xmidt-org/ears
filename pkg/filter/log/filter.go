@@ -55,7 +55,7 @@ func (f *Filter) Filter(evt event.Event) []event.Event {
 	if err != nil {
 		log.Ctx(evt.Context()).Error().Str("op", "log.Filter").Msg(err.Error())
 	}
-	log.Ctx(evt.Context()).Info().Str("op", "filter").Str("filterType", "log").Str("name", f.Name()).RawJSON("event", buf).Msg("log")
+	log.Ctx(evt.Context()).Debug().Str("op", "filter").Str("filterType", "log").Str("name", f.Name()).RawJSON("event", buf).Msg("log")
 	return []event.Event{evt}
 }
 

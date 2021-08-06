@@ -100,7 +100,7 @@ func (s *Sender) Send(e event.Event) {
 		e.Nack(err)
 		return
 	}
-	s.logger.Info().Str("op", "redis.Send").Msg("sent message on redis channel")
+	s.logger.Debug().Str("op", "redis.Send").Str("name", s.Name()).Str("tid", s.Tenant().ToString()).Msg("sent message on redis channel")
 	s.Lock()
 	s.count++
 	s.Unlock()

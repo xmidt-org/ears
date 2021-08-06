@@ -130,8 +130,7 @@ func (s *Sender) StopSending(ctx context.Context) {
 }
 
 func (s *Sender) send(events []event.Event) {
-
-	s.logger.Info().Str("op", "SQS.sendWorker").Str("name", s.Name()).Str("tid", s.Tenant().ToString()).Int("batchSize", len(events)).Int("sendCount", s.count).Msg("send message batch")
+	s.logger.Debug().Str("op", "SQS.sendWorker").Str("name", s.Name()).Str("tid", s.Tenant().ToString()).Int("batchSize", len(events)).Int("sendCount", s.count).Msg("send message batch")
 	entries := make([]*sqs.SendMessageBatchRequestEntry, 0)
 	for _, evt := range events {
 		buf, err := json.Marshal(evt.Payload())

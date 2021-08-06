@@ -56,7 +56,7 @@ func NewReceiver(tid tenant.Id, plugin string, name string, config interface{}, 
 	if err != nil {
 		return nil, err
 	}
-	logger := zerolog.New(os.Stdout).Level(zerolog.InfoLevel)
+	logger := zerolog.New(os.Stdout).Level(zerolog.DebugLevel).With().Timestamp().Logger()
 	r := &Receiver{
 		config: cfg,
 		name:   name,
@@ -96,7 +96,7 @@ func (h *Receiver) GetTraceId(r *http.Request) string {
 func (h *Receiver) Receive(next receiver.NextFn) error {
 	mux := http.NewServeMux()
 	port := *h.config.Port
-	h.logger.Info().Int("port", port).Msg("Starting http receiver")
+	h.logger.Info().Int("port", port).Msg("starting http receiver")
 	h.srv = &http.Server{Addr: fmt.Sprintf(":%d", port), Handler: mux}
 	mux.HandleFunc(h.config.Path, func(w http.ResponseWriter, r *http.Request) {
 		defer fmt.Fprintln(w, "good")
@@ -119,7 +119,7 @@ func (h *Receiver) Receive(next receiver.NextFn) error {
 				func(e event.Event) {
 					h.eventSuccessCounter.Add(ctx, 1.0)
 				}, func(e event.Event, err error) {
-					h.logger.Error().Str("error", err.Error()).Msg("Nack handling events")
+					h.logger.Error().Str("error", err.Error()).Msg("nack handling events")
 					h.eventFailureCounter.Add(ctx, 1.0)
 				},
 			),
@@ -141,7 +141,7 @@ func (h *Receiver) Receive(next receiver.NextFn) error {
 
 func (h *Receiver) StopReceiving(ctx context.Context) error {
 	if h.srv != nil {
-		h.logger.Info().Msg("Shutting down HTTP receiver")
+		h.logger.Info().Msg("shutting down http receiver")
 		return h.srv.Shutdown(ctx)
 	}
 	return nil
