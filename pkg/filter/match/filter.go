@@ -97,7 +97,7 @@ func (f *Filter) Filter(evt event.Event) []event.Event {
 	} else {
 		evt.Ack()
 	}
-	log.Ctx(evt.Context()).Info().Str("op", "filter").Str("filterType", "match").Str("name", f.Name()).Int("eventCount", len(events)).Msg("match")
+	log.Ctx(evt.Context()).Debug().Str("op", "filter").Str("filterType", "match").Str("name", f.Name()).Int("eventCount", len(events)).Msg("match")
 	return events
 }
 

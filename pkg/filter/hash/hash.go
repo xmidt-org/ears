@@ -127,7 +127,7 @@ func (f *Filter) Filter(evt event.Event) []event.Event {
 		path = f.config.FromPath
 	}
 	evt.SetPathValue(path, output, true)
-	log.Ctx(evt.Context()).Info().Str("op", "filter").Str("filterType", "hash").Str("name", f.Name()).Msg("hash")
+	log.Ctx(evt.Context()).Debug().Str("op", "filter").Str("filterType", "hash").Str("name", f.Name()).Msg("hash")
 	return []event.Event{evt}
 }
 

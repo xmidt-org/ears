@@ -17,6 +17,7 @@ package unwrap
 import (
 	"errors"
 	"fmt"
+	"github.com/rs/zerolog/log"
 	"github.com/xmidt-org/ears/pkg/event"
 	"github.com/xmidt-org/ears/pkg/filter"
 	"github.com/xmidt-org/ears/pkg/secret"
@@ -52,6 +53,7 @@ func (f *Filter) Filter(evt event.Event) []event.Event {
 		})
 		return nil
 	}
+	log.Ctx(evt.Context()).Debug().Str("op", "filter").Str("filterType", "unwrap").Str("name", f.Name()).Msg("unwrap")
 	obj, _, _ := evt.GetPathValue(f.config.Path)
 	if obj == nil {
 		evt.Nack(errors.New("nil object at path " + f.config.Path))

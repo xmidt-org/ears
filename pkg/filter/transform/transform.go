@@ -63,7 +63,7 @@ func (f *Filter) Filter(evt event.Event) []event.Event {
 		evt.SetPathValue(f.config.ToPath, thisTransform, true)
 		events = append(events, evt)
 	}
-	log.Ctx(evt.Context()).Info().Str("op", "filter").Str("filterType", "transform").Str("name", f.Name()).Int("eventCount", len(events)).Msg("transform")
+	log.Ctx(evt.Context()).Debug().Str("op", "filter").Str("filterType", "transform").Str("name", f.Name()).Int("eventCount", len(events)).Msg("transform")
 	return events
 }
 

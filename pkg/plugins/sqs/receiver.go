@@ -72,7 +72,6 @@ func NewReceiver(tid tenant.Id, plugin string, name string, config interface{}, 
 		logger:  logger,
 		stopped: true,
 	}
-
 	hostname, _ := os.Hostname()
 	// metric recorders
 	meter := global.Meter(rtsemconv.EARSMeterName)
@@ -130,7 +129,7 @@ func (r *Receiver) startReceiveWorker(svc *sqs.SQS, n int) {
 					} else {
 						r.Lock()
 						r.deleteCount += len(deleteBatch)
-						r.logger.Info().Str("op", "SQS.receiveWorker").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Int("deleteCount", r.deleteCount).Int("batchSize", len(deleteBatch)).Int("workerNum", n).Msg("deleted message batch")
+						r.logger.Debug().Str("op", "SQS.receiveWorker").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Int("deleteCount", r.deleteCount).Int("batchSize", len(deleteBatch)).Int("workerNum", n).Msg("deleted message batch")
 						r.Unlock()
 						/*for _, entry := range deleteBatch {
 							r.logger.Info().Str("op", "SQS.receiveWorker").Int("batchSize", len(deleteBatch)).Int("workerNum", n).Msg("deleted message " + (*entry.Id))
@@ -172,7 +171,7 @@ func (r *Receiver) startReceiveWorker(svc *sqs.SQS, n int) {
 			}
 			if len(sqsResp.Messages) > 0 {
 				r.Lock()
-				r.logger.Info().Str("op", "SQS.receiveWorker").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Int("receiveCount", r.receiveCount).Int("batchSize", len(sqsResp.Messages)).Int("workerNum", n).Msg("received message batch")
+				r.logger.Debug().Str("op", "SQS.receiveWorker").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Int("receiveCount", r.receiveCount).Int("batchSize", len(sqsResp.Messages)).Int("workerNum", n).Msg("received message batch")
 				r.Unlock()
 			}
 			for _, message := range sqsResp.Messages {
@@ -226,7 +225,6 @@ func (r *Receiver) startReceiveWorker(svc *sqs.SQS, n int) {
 					r.logger.Error().Str("op", "SQS.receiveWorker").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Int("workerNum", n).Msg("cannot create event: " + err.Error())
 					return
 				}
-				log.Ctx(e.Context()).Info().Str("op", "SQS.Trigger").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Msg("triggering sqs event")
 				r.Trigger(e)
 			}
 		}

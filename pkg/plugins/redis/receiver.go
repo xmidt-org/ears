@@ -134,7 +134,6 @@ func (r *Receiver) Receive(next receiver.NextFn) error {
 				r.logger.Info().Str("op", "redis.Receive").Msg("stopping receive loop")
 				return
 			}
-			r.logger.Info().Str("op", "redis.Receive").Msg("received message on redis channel")
 			var pl interface{}
 			err := json.Unmarshal([]byte(msg.Payload), &pl)
 			if err != nil {
@@ -145,12 +144,13 @@ func (r *Receiver) Receive(next receiver.NextFn) error {
 			r.eventBytesCounter.Add(ctx, int64(len(msg.Payload)))
 			r.Lock()
 			r.count++
+			r.logger.Debug().Str("op", "redis.Receive").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Int("receiveCount", r.count).Msg("received message on redis channel")
 			r.Unlock()
 			// note: if we just pass msg.Payload into event, redis will blow up with an out of memory error within a
 			// few seconds - possibly a bug in the client library
 			e, err := event.New(ctx, pl, event.WithAck(
 				func(e event.Event) {
-					r.logger.Info().Str("op", "redis.Receive").Msg("processed message from redis channel")
+					r.logger.Debug().Str("op", "redis.Receive").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Msg("processed message from redis channel")
 					r.eventSuccessCounter.Add(ctx, 1.0)
 					cancel()
 				},
