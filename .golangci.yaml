@@ -33,6 +33,12 @@ issues:
         - dupl
         - funlen
         - goconst
+    - path: internal/pkg/db/dynamo/tenant_storer\.go
+      linters:
+        - dupl
+    - path: internal/pkg/db/dynamo/dynamodb_storer\.go
+      linters:
+        - dupl
     - path: internal/pkg/app/handlers_v1\.go
       linters:
         - funlen

@@ -64,6 +64,7 @@ func NewAPIManager(routingMgr tablemgr.RoutingTableManager, tenantStorer tenant.
 	api.muxRouter.HandleFunc("/ears/v1/orgs/{orgId}/applications/{appId}/config", api.getTenantConfigHandler).Methods(http.MethodGet)
 	api.muxRouter.HandleFunc("/ears/v1/orgs/{orgId}/applications/{appId}/config", api.setTenantConfigHandler).Methods(http.MethodPut)
 	api.muxRouter.HandleFunc("/ears/v1/orgs/{orgId}/applications/{appId}/config", api.deleteTenantConfigHandler).Methods(http.MethodDelete)
+	api.muxRouter.HandleFunc("/ears/v1/appconfigs", api.getAllTenantConfigsHandler).Methods(http.MethodGet)
 	api.muxRouter.HandleFunc("/ears/v1/senders", api.getAllSendersHandler).Methods(http.MethodGet)
 	api.muxRouter.HandleFunc("/ears/v1/receivers", api.getAllReceiversHandler).Methods(http.MethodGet)
 	api.muxRouter.HandleFunc("/ears/v1/filters", api.getAllFiltersHandler).Methods(http.MethodGet)
@@ -325,6 +326,19 @@ func (a *APIManager) getTenantConfigHandler(w http.ResponseWriter, r *http.Reque
 	resp.Respond(ctx, w)
 }
 
+func (a *APIManager) getAllTenantConfigsHandler(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	configs, err := a.tenantStorer.GetAllConfigs(ctx)
+	if err != nil {
+		log.Ctx(ctx).Error().Str("op", "getAllTenantConfigsHandler").Str("error", err.Error()).Msg("error getting all tenant configs")
+		resp := ErrorResponse(convertToApiError(ctx, err))
+		resp.Respond(ctx, w)
+		return
+	}
+	resp := ItemsResponse(configs)
+	resp.Respond(ctx, w)
+}
+
 func (a *APIManager) setTenantConfigHandler(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
@@ -390,7 +404,6 @@ func (a *APIManager) deleteTenantConfigHandler(w http.ResponseWriter, r *http.Re
 func convertToApiError(ctx context.Context, err error) ApiError {
 	span := trace.SpanFromContext(ctx)
 	span.RecordError(err)
-
 	var tenantNotFound *tenant.TenantNotFoundError
 	var badTenantConfig *tenant.BadConfigError
 	var badRouteConfig *tablemgr.BadConfigError
