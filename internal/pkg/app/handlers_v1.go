@@ -64,7 +64,8 @@ func NewAPIManager(routingMgr tablemgr.RoutingTableManager, tenantStorer tenant.
 	api.muxRouter.HandleFunc("/ears/v1/orgs/{orgId}/applications/{appId}/config", api.getTenantConfigHandler).Methods(http.MethodGet)
 	api.muxRouter.HandleFunc("/ears/v1/orgs/{orgId}/applications/{appId}/config", api.setTenantConfigHandler).Methods(http.MethodPut)
 	api.muxRouter.HandleFunc("/ears/v1/orgs/{orgId}/applications/{appId}/config", api.deleteTenantConfigHandler).Methods(http.MethodDelete)
-	api.muxRouter.HandleFunc("/ears/v1/appconfigs", api.getAllTenantConfigsHandler).Methods(http.MethodGet)
+	api.muxRouter.HandleFunc("/ears/v1/routes", api.getAllRoutesHandler).Methods(http.MethodGet)
+	api.muxRouter.HandleFunc("/ears/v1/tenants", api.getAllTenantConfigsHandler).Methods(http.MethodGet)
 	api.muxRouter.HandleFunc("/ears/v1/senders", api.getAllSendersHandler).Methods(http.MethodGet)
 	api.muxRouter.HandleFunc("/ears/v1/receivers", api.getAllReceiversHandler).Methods(http.MethodGet)
 	api.muxRouter.HandleFunc("/ears/v1/filters", api.getAllFiltersHandler).Methods(http.MethodGet)
@@ -257,6 +258,31 @@ func (a *APIManager) getAllTenantRoutesHandler(w http.ResponseWriter, r *http.Re
 		resp := ErrorResponse(convertToApiError(ctx, err))
 		resp.Respond(ctx, w)
 		return
+	}
+	trace.SpanFromContext(ctx).SetAttributes(attribute.Int("routeCount", len(allRouteConfigs)))
+	resp := ItemsResponse(allRouteConfigs)
+	resp.Respond(ctx, w)
+}
+
+func (a *APIManager) getAllRoutesHandler(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	allRouteConfigs := make([]route.Config, 0)
+	configs, err := a.tenantStorer.GetAllConfigs(ctx)
+	if err != nil {
+		log.Ctx(ctx).Error().Str("op", "GetAllTenantRoutes").Str("error", err.Error()).Msg("tenant configs read error")
+		resp := ErrorResponse(convertToApiError(ctx, err))
+		resp.Respond(ctx, w)
+		return
+	}
+	for _, config := range configs {
+		tenantRouteConfigs, err := a.routingTableMgr.GetAllTenantRoutes(ctx, config.Tenant)
+		if err != nil {
+			log.Ctx(ctx).Error().Str("op", "GetAllRoutes").Msg(err.Error())
+			resp := ErrorResponse(convertToApiError(ctx, err))
+			resp.Respond(ctx, w)
+			return
+		}
+		allRouteConfigs = append(allRouteConfigs, tenantRouteConfigs...)
 	}
 	trace.SpanFromContext(ctx).SetAttributes(attribute.Int("routeCount", len(allRouteConfigs)))
 	resp := ItemsResponse(allRouteConfigs)
