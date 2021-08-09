@@ -19,6 +19,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/go-redis/redis"
+	"github.com/rs/zerolog/log"
 	"github.com/xmidt-org/ears/internal/pkg/rtsemconv"
 	"github.com/xmidt-org/ears/pkg/secret"
 	"github.com/xmidt-org/ears/pkg/tenant"
@@ -146,12 +147,12 @@ func (r *Receiver) Receive(next receiver.NextFn) error {
 			// few seconds - possibly a bug in the client library
 			e, err := event.New(ctx, pl, event.WithAck(
 				func(e event.Event) {
-					r.logger.Debug().Str("op", "redis.Receive").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Msg("processed message from redis channel")
+					log.Ctx(e.Context()).Debug().Str("op", "redis.Receive").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Msg("processed message from redis channel")
 					r.eventSuccessCounter.Add(ctx, 1.0)
 					cancel()
 				},
 				func(e event.Event, err error) {
-					r.logger.Error().Str("op", "redis.Receive").Msg("failed to process message: " + err.Error())
+					log.Ctx(e.Context()).Error().Str("op", "redis.Receive").Msg("failed to process message: " + err.Error())
 					r.eventFailureCounter.Add(ctx, 1.0)
 					cancel()
 				}),

@@ -24,6 +24,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/Shopify/sarama"
+	"github.com/rs/zerolog/log"
 	"github.com/xmidt-org/ears/internal/pkg/rtsemconv"
 	"github.com/xmidt-org/ears/pkg/secret"
 	"github.com/xmidt-org/ears/pkg/tenant"
@@ -279,12 +280,12 @@ func (r *Receiver) Receive(next receiver.NextFn) error {
 			r.eventBytesCounter.Add(ctx, int64(len(msg.Value)))
 			e, err := event.New(ctx, pl, event.WithAck(
 				func(e event.Event) {
-					r.logger.Debug().Str("op", "kafka.Receive").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Msg("processed message from kafka topic")
+					log.Ctx(e.Context()).Debug().Str("op", "kafka.Receive").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Msg("processed message from kafka topic")
 					r.eventSuccessCounter.Add(ctx, 1.0)
 					cancel()
 				},
 				func(e event.Event, err error) {
-					r.logger.Error().Str("op", "kafka.Receive").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Msg("failed to process message: " + err.Error())
+					log.Ctx(e.Context()).Error().Str("op", "kafka.Receive").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Msg("failed to process message: " + err.Error())
 					r.eventFailureCounter.Add(ctx, 1.0)
 					cancel()
 				}),
