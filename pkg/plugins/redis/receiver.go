@@ -19,14 +19,13 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/go-redis/redis"
-	"github.com/rs/zerolog"
+	"github.com/rs/zerolog/log"
 	"github.com/xmidt-org/ears/internal/pkg/rtsemconv"
 	"github.com/xmidt-org/ears/pkg/secret"
 	"github.com/xmidt-org/ears/pkg/tenant"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/global"
-	"os"
 	"time"
 
 	"github.com/goccy/go-yaml"
@@ -58,14 +57,12 @@ func NewReceiver(tid tenant.Id, plugin string, name string, config interface{}, 
 	if err != nil {
 		return nil, err
 	}
-	logger := zerolog.New(os.Stdout).Level(zerolog.DebugLevel)
-	//zerolog.LevelFieldName = "log.level"
 	r := &Receiver{
 		config:  cfg,
 		name:    name,
 		plugin:  plugin,
 		tid:     tid,
-		logger:  logger,
+		logger:  event.GetEventLogger(),
 		stopped: true,
 	}
 	// metric recorders
@@ -134,7 +131,6 @@ func (r *Receiver) Receive(next receiver.NextFn) error {
 				r.logger.Info().Str("op", "redis.Receive").Msg("stopping receive loop")
 				return
 			}
-			r.logger.Info().Str("op", "redis.Receive").Msg("received message on redis channel")
 			var pl interface{}
 			err := json.Unmarshal([]byte(msg.Payload), &pl)
 			if err != nil {
@@ -145,17 +141,18 @@ func (r *Receiver) Receive(next receiver.NextFn) error {
 			r.eventBytesCounter.Add(ctx, int64(len(msg.Payload)))
 			r.Lock()
 			r.count++
+			r.logger.Debug().Str("op", "redis.Receive").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Int("receiveCount", r.count).Msg("received message on redis channel")
 			r.Unlock()
 			// note: if we just pass msg.Payload into event, redis will blow up with an out of memory error within a
 			// few seconds - possibly a bug in the client library
 			e, err := event.New(ctx, pl, event.WithAck(
 				func(e event.Event) {
-					r.logger.Info().Str("op", "redis.Receive").Msg("processed message from redis channel")
+					log.Ctx(e.Context()).Debug().Str("op", "redis.Receive").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Msg("processed message from redis channel")
 					r.eventSuccessCounter.Add(ctx, 1.0)
 					cancel()
 				},
 				func(e event.Event, err error) {
-					r.logger.Error().Str("op", "redis.Receive").Msg("failed to process message: " + err.Error())
+					log.Ctx(e.Context()).Error().Str("op", "redis.Receive").Msg("failed to process message: " + err.Error())
 					r.eventFailureCounter.Add(ctx, 1.0)
 					cancel()
 				}),

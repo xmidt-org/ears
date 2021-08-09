@@ -72,7 +72,7 @@ type Receiver struct {
 	plugin              string
 	tid                 tenant.Id
 	next                receiver.NextFn
-	logger              zerolog.Logger
+	logger              *zerolog.Logger
 	count               int
 	startTime           time.Time
 	eventSuccessCounter metric.BoundFloat64Counter
@@ -99,6 +99,6 @@ type Sender struct {
 	tid    tenant.Id
 	config SenderConfig
 	count  int
-	logger zerolog.Logger
+	logger *zerolog.Logger
 	client *redis.Client
 }

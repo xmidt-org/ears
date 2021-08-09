@@ -31,6 +31,18 @@ func NewTenantInmemoryStorer() *InMemoryStorer {
 	}
 }
 
+func (s *InMemoryStorer) GetAllConfigs(ctx context.Context) ([]tenant.Config, error) {
+	_, span := CreateSpan(ctx, "getAllTenantConfigs", rtsemconv.DBSystemInMemory)
+	defer span.End()
+	configs := make([]tenant.Config, 0)
+	for _, org := range s.orgs {
+		for _, appConfig := range org {
+			configs = append(configs, appConfig)
+		}
+	}
+	return configs, nil
+}
+
 func (s *InMemoryStorer) GetConfig(ctx context.Context, id tenant.Id) (*tenant.Config, error) {
 
 	_, span := CreateSpan(ctx, "getTenantConfig", rtsemconv.DBSystemInMemory)

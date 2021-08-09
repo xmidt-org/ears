@@ -172,12 +172,17 @@ func (d *DynamoDbStorer) setRoute(ctx context.Context, r route.Config, svc *dyna
 		KeyId:  r.TenantId.KeyWithRoute(r.Id),
 		Config: r,
 	}
-	item, err := dynamodbattribute.MarshalMap(route)
+	//item, err := dynamodbattribute.MarshalMap(route)
+	av, err := dynamodbattribute.NewEncoder(func(e *dynamodbattribute.Encoder) {
+		e.NullEmptyString = false
+		e.NullEmptyByteSlice = false
+		e.EnableEmptyCollections = true
+	}).Encode(route)
 	if err != nil {
 		return &DynamoDbMarshalError{err}
 	}
 	input := &dynamodb.PutItemInput{
-		Item:      item,
+		Item:      av.M,
 		TableName: aws.String(d.tableName),
 	}
 	_, err = svc.PutItemWithContext(ctx, input)

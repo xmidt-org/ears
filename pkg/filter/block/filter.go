@@ -15,6 +15,7 @@
 package block
 
 import (
+	"github.com/rs/zerolog/log"
 	"github.com/xmidt-org/ears/pkg/event"
 	"github.com/xmidt-org/ears/pkg/filter"
 	"github.com/xmidt-org/ears/pkg/secret"
@@ -40,6 +41,7 @@ type Filter struct {
 // Filter lets no event pass
 func (f *Filter) Filter(evt event.Event) []event.Event {
 	evt.Ack()
+	log.Ctx(evt.Context()).Debug().Str("op", "filter").Str("filterType", "block").Str("name", f.Name()).Int("eventCount", 0).Msg("block")
 	return []event.Event{}
 }
 

@@ -64,6 +64,8 @@ func NewAPIManager(routingMgr tablemgr.RoutingTableManager, tenantStorer tenant.
 	api.muxRouter.HandleFunc("/ears/v1/orgs/{orgId}/applications/{appId}/config", api.getTenantConfigHandler).Methods(http.MethodGet)
 	api.muxRouter.HandleFunc("/ears/v1/orgs/{orgId}/applications/{appId}/config", api.setTenantConfigHandler).Methods(http.MethodPut)
 	api.muxRouter.HandleFunc("/ears/v1/orgs/{orgId}/applications/{appId}/config", api.deleteTenantConfigHandler).Methods(http.MethodDelete)
+	api.muxRouter.HandleFunc("/ears/v1/routes", api.getAllRoutesHandler).Methods(http.MethodGet)
+	api.muxRouter.HandleFunc("/ears/v1/tenants", api.getAllTenantConfigsHandler).Methods(http.MethodGet)
 	api.muxRouter.HandleFunc("/ears/v1/senders", api.getAllSendersHandler).Methods(http.MethodGet)
 	api.muxRouter.HandleFunc("/ears/v1/receivers", api.getAllReceiversHandler).Methods(http.MethodGet)
 	api.muxRouter.HandleFunc("/ears/v1/filters", api.getAllFiltersHandler).Methods(http.MethodGet)
@@ -262,6 +264,31 @@ func (a *APIManager) getAllTenantRoutesHandler(w http.ResponseWriter, r *http.Re
 	resp.Respond(ctx, w)
 }
 
+func (a *APIManager) getAllRoutesHandler(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	allRouteConfigs := make([]route.Config, 0)
+	configs, err := a.tenantStorer.GetAllConfigs(ctx)
+	if err != nil {
+		log.Ctx(ctx).Error().Str("op", "GetAllTenantRoutes").Str("error", err.Error()).Msg("tenant configs read error")
+		resp := ErrorResponse(convertToApiError(ctx, err))
+		resp.Respond(ctx, w)
+		return
+	}
+	for _, config := range configs {
+		tenantRouteConfigs, err := a.routingTableMgr.GetAllTenantRoutes(ctx, config.Tenant)
+		if err != nil {
+			log.Ctx(ctx).Error().Str("op", "GetAllRoutes").Msg(err.Error())
+			resp := ErrorResponse(convertToApiError(ctx, err))
+			resp.Respond(ctx, w)
+			return
+		}
+		allRouteConfigs = append(allRouteConfigs, tenantRouteConfigs...)
+	}
+	trace.SpanFromContext(ctx).SetAttributes(attribute.Int("routeCount", len(allRouteConfigs)))
+	resp := ItemsResponse(allRouteConfigs)
+	resp.Respond(ctx, w)
+}
+
 func (a *APIManager) getAllSendersHandler(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	allSenders, err := a.routingTableMgr.GetAllSendersStatus(ctx)
@@ -322,6 +349,19 @@ func (a *APIManager) getTenantConfigHandler(w http.ResponseWriter, r *http.Reque
 		return
 	}
 	resp := ItemResponse(config)
+	resp.Respond(ctx, w)
+}
+
+func (a *APIManager) getAllTenantConfigsHandler(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	configs, err := a.tenantStorer.GetAllConfigs(ctx)
+	if err != nil {
+		log.Ctx(ctx).Error().Str("op", "getAllTenantConfigsHandler").Str("error", err.Error()).Msg("error getting all tenant configs")
+		resp := ErrorResponse(convertToApiError(ctx, err))
+		resp.Respond(ctx, w)
+		return
+	}
+	resp := ItemsResponse(configs)
 	resp.Respond(ctx, w)
 }
 
@@ -390,7 +430,6 @@ func (a *APIManager) deleteTenantConfigHandler(w http.ResponseWriter, r *http.Re
 func convertToApiError(ctx context.Context, err error) ApiError {
 	span := trace.SpanFromContext(ctx)
 	span.RecordError(err)
-
 	var tenantNotFound *tenant.TenantNotFoundError
 	var badTenantConfig *tenant.BadConfigError
 	var badRouteConfig *tablemgr.BadConfigError

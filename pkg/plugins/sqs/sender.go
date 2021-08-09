@@ -23,13 +23,12 @@ import (
 	"github.com/aws/aws-sdk-go/service/sqs"
 	"github.com/goccy/go-yaml"
 	"github.com/google/uuid"
-	"github.com/rs/zerolog"
+	"github.com/rs/zerolog/log"
 	"github.com/xmidt-org/ears/pkg/event"
 	pkgplugin "github.com/xmidt-org/ears/pkg/plugin"
 	"github.com/xmidt-org/ears/pkg/secret"
 	"github.com/xmidt-org/ears/pkg/sender"
 	"github.com/xmidt-org/ears/pkg/tenant"
-	"os"
 	"time"
 )
 
@@ -59,14 +58,12 @@ func NewSender(tid tenant.Id, plugin string, name string, config interface{}, se
 	if err != nil {
 		return nil, err
 	}
-	logger := zerolog.New(os.Stdout).Level(zerolog.DebugLevel).With().Timestamp().Logger()
-	//zerolog.LevelFieldName = "log.level"
 	s := &Sender{
 		name:   name,
 		plugin: plugin,
 		tid:    tid,
 		config: cfg,
-		logger: logger,
+		logger: event.GetEventLogger(),
 	}
 	s.initPlugin()
 	return s, nil
@@ -96,7 +93,7 @@ func (s *Sender) startTimedSender() {
 		for {
 			select {
 			case <-s.done:
-				s.logger.Info().Str("op", "SQS.timedSender").Int("sendCount", s.count).Msg("stopping sqs sender")
+				s.logger.Info().Str("op", "SQS.timedSender").Str("name", s.Name()).Str("tid", s.Tenant().ToString()).Int("sendCount", s.count).Msg("stopping sqs sender")
 				return
 			case <-time.After(time.Duration(*s.config.SendTimeout) * time.Second):
 			}
@@ -130,10 +127,11 @@ func (s *Sender) StopSending(ctx context.Context) {
 }
 
 func (s *Sender) send(events []event.Event) {
-
-	s.logger.Info().Str("op", "SQS.sendWorker").Int("batchSize", len(events)).Int("sendCount", s.count).Msg("send message batch")
 	entries := make([]*sqs.SendMessageBatchRequestEntry, 0)
-	for _, evt := range events {
+	for idx, evt := range events {
+		if idx == 0 {
+			log.Ctx(evt.Context()).Debug().Str("op", "SQS.sendWorker").Str("name", s.Name()).Str("tid", s.Tenant().ToString()).Int("eventIdx", idx).Int("batchSize", len(events)).Int("sendCount", s.count).Msg("send message batch")
+		}
 		buf, err := json.Marshal(evt.Payload())
 		if err != nil {
 			continue
@@ -153,7 +151,11 @@ func (s *Sender) send(events []event.Event) {
 	}
 	_, err := s.sqsService.SendMessageBatch(sqsSendBatchParams)
 	if err != nil {
-		s.logger.Error().Str("op", "SQS.sendWorker").Int("batchSize", len(events)).Msg("batch send error: " + err.Error())
+		for idx, evt := range events {
+			if idx == 0 {
+				log.Ctx(evt.Context()).Error().Str("op", "SQS.sendWorker").Str("name", s.Name()).Str("tid", s.Tenant().ToString()).Int("eventIdx", idx).Int("batchSize", len(events)).Msg("batch send error: " + err.Error())
+			}
+		}
 	} else {
 		s.Lock()
 		s.count += len(events)

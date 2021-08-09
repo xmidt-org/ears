@@ -287,7 +287,7 @@ func (r *DefaultRoutingTableManager) StartGlobalSyncChecker() {
 				r.logger.Error().Str("op", "StartGlobalSyncChecker").Msg(err.Error())
 			}
 			if cnt > 0 {
-				r.logger.Error().Str("op", "StartGlobalSyncChecker").Msg(fmt.Sprintf("inconsistency detecting, %d entries in routing table repaired", cnt))
+				r.logger.Error().Str("op", "StartGlobalSyncChecker").Msg(fmt.Sprintf("inconsistency detected, %d entries in routing table repaired", cnt))
 			} else {
 				r.logger.Info().Str("op", "StartGlobalSyncChecker").Msg("routing table is synchronized")
 			}
@@ -351,15 +351,18 @@ func (r *DefaultRoutingTableManager) SynchronizeAllRoutes() (int, error) {
 	}
 	r.Unlock()
 	// stop all inconsistent or deleted routes
-	for _, liveRoute := range lrm {
+	for key, liveRoute := range lrm {
 		storedRoute, ok := storedRouteMap[liveRoute.Config.TenantId.KeyWithRoute(liveRoute.Config.Id)]
 		if !ok {
-			r.logger.Info().Str("op", "Synchronize").Str("routeId", liveRoute.Config.Id).Msg("route stopped")
+			//TODO: should create metrics for this
+			r.logger.Error().Str("op", "synchronize").Str("routeId", liveRoute.Config.Id).Str("keyWithRoute", liveRoute.Config.TenantId.KeyWithRoute(liveRoute.Config.Id)).Msg("extra route stopped")
 			r.unregisterAndStopRoute(ctx, liveRoute.Config.TenantId, liveRoute.Config.Id)
 			mutated++
 		} else if liveRoute.Config.Hash(ctx) != storedRoute.Hash(ctx) {
-			r.logger.Info().Str("op", "Synchronize").Str("routeId", liveRoute.Config.Id).Msg("route stopped")
+			r.logger.Error().Str("op", "synchronize").Str("routeId", liveRoute.Config.Id).Str("keyWithRoute", liveRoute.Config.TenantId.KeyWithRoute(liveRoute.Config.Id)).Msg("inconsistent route stopped")
 			r.unregisterAndStopRoute(ctx, liveRoute.Config.TenantId, liveRoute.Config.Id)
+			// delete from local map so we force immediate restart below
+			delete(lrm, key)
 			mutated++
 		}
 	}
@@ -367,7 +370,7 @@ func (r *DefaultRoutingTableManager) SynchronizeAllRoutes() (int, error) {
 	for _, storedRoute := range storedRoutes {
 		_, ok := lrm[storedRoute.TenantId.KeyWithRoute(storedRoute.Id)]
 		if !ok {
-			r.logger.Info().Str("op", "Synchronize").Str("routeId", storedRoute.Id).Msg("route started")
+			r.logger.Error().Str("op", "synchronize").Str("routeId", storedRoute.Id).Str("keyWithRoute", storedRoute.TenantId.KeyWithRoute(storedRoute.Id)).Msg("missing route started")
 			rc := storedRoute
 			r.registerAndRunRoute(ctx, &rc)
 			mutated++

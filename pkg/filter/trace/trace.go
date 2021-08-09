@@ -16,6 +16,7 @@ package trace
 
 import (
 	"fmt"
+	"github.com/rs/zerolog/log"
 	"github.com/xmidt-org/ears/pkg/event"
 	"github.com/xmidt-org/ears/pkg/filter"
 	"github.com/xmidt-org/ears/pkg/secret"
@@ -51,9 +52,9 @@ func (f *Filter) Filter(evt event.Event) []event.Event {
 		})
 		return nil
 	}
-
 	traceId := trace.SpanFromContext(evt.Context()).SpanContext().TraceID().String()
 	evt.SetPathValue(f.config.Path, traceId, true)
+	log.Ctx(evt.Context()).Debug().Str("op", "filter").Str("filterType", "trace").Str("name", f.Name()).Msg("trace")
 	return []event.Event{evt}
 }
 func (f *Filter) Config() interface{} {

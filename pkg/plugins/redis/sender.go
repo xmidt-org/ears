@@ -19,13 +19,12 @@ import (
 	"encoding/json"
 	"github.com/go-redis/redis"
 	"github.com/goccy/go-yaml"
-	"github.com/rs/zerolog"
+	"github.com/rs/zerolog/log"
 	"github.com/xmidt-org/ears/pkg/event"
 	pkgplugin "github.com/xmidt-org/ears/pkg/plugin"
 	"github.com/xmidt-org/ears/pkg/secret"
 	"github.com/xmidt-org/ears/pkg/sender"
 	"github.com/xmidt-org/ears/pkg/tenant"
-	"os"
 )
 
 func NewSender(tid tenant.Id, plugin string, name string, config interface{}, secrets secret.Vault) (sender.Sender, error) {
@@ -51,14 +50,12 @@ func NewSender(tid tenant.Id, plugin string, name string, config interface{}, se
 	if err != nil {
 		return nil, err
 	}
-	logger := zerolog.New(os.Stdout).Level(zerolog.DebugLevel)
-	//zerolog.LevelFieldName = "log.level"
 	s := &Sender{
 		name:   name,
 		plugin: plugin,
 		tid:    tid,
 		config: cfg,
-		logger: logger,
+		logger: event.GetEventLogger(),
 	}
 	s.initPlugin()
 	return s, nil
@@ -90,17 +87,17 @@ func (s *Sender) StopSending(ctx context.Context) {
 func (s *Sender) Send(e event.Event) {
 	buf, err := json.Marshal(e.Payload())
 	if err != nil {
-		s.logger.Error().Str("op", "redis.Send").Msg("failed to marshal message: " + err.Error())
+		log.Ctx(e.Context()).Error().Str("op", "redis.Send").Msg("failed to marshal message: " + err.Error())
 		e.Nack(err)
 		return
 	}
 	err = s.client.Publish(s.config.Channel, string(buf)).Err()
 	if err != nil {
-		s.logger.Error().Str("op", "redis.Send").Msg("failed to send message on redis channel: " + err.Error())
+		log.Ctx(e.Context()).Error().Str("op", "redis.Send").Msg("failed to send message on redis channel: " + err.Error())
 		e.Nack(err)
 		return
 	}
-	s.logger.Info().Str("op", "redis.Send").Msg("sent message on redis channel")
+	log.Ctx(e.Context()).Debug().Str("op", "redis.Send").Str("name", s.Name()).Str("tid", s.Tenant().ToString()).Msg("sent message on redis channel")
 	s.Lock()
 	s.count++
 	s.Unlock()
