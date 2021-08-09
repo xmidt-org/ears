@@ -24,14 +24,12 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/Shopify/sarama"
-	"github.com/rs/zerolog"
 	"github.com/xmidt-org/ears/internal/pkg/rtsemconv"
 	"github.com/xmidt-org/ears/pkg/secret"
 	"github.com/xmidt-org/ears/pkg/tenant"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/global"
-	"os"
 	"strings"
 	"time"
 
@@ -64,8 +62,6 @@ func NewReceiver(tid tenant.Id, plugin string, name string, config interface{}, 
 	if err != nil {
 		return nil, err
 	}
-	logger := zerolog.New(os.Stdout).Level(zerolog.DebugLevel).With().Timestamp().Logger()
-	//zerolog.LevelFieldName = "log.level"
 	ctx := context.Background()
 	cctx, cancel := context.WithCancel(ctx)
 	r := &Receiver{
@@ -73,7 +69,7 @@ func NewReceiver(tid tenant.Id, plugin string, name string, config interface{}, 
 		name:    name,
 		plugin:  plugin,
 		tid:     tid,
-		logger:  logger,
+		logger:  event.GetEventLogger(),
 		cancel:  cancel,
 		ctx:     cctx,
 		ready:   make(chan bool),

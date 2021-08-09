@@ -23,7 +23,6 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/sqs"
 	"github.com/goccy/go-yaml"
-	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"github.com/xmidt-org/ears/internal/pkg/rtsemconv"
 	"github.com/xmidt-org/ears/pkg/event"
@@ -62,14 +61,12 @@ func NewReceiver(tid tenant.Id, plugin string, name string, config interface{}, 
 	if err != nil {
 		return nil, err
 	}
-	logger := zerolog.New(os.Stdout).Level(zerolog.DebugLevel).With().Timestamp().Logger()
-	//zerolog.LevelFieldName = "log.level"
 	r := &Receiver{
 		config:  cfg,
 		name:    name,
 		plugin:  plugin,
 		tid:     tid,
-		logger:  logger,
+		logger:  event.GetEventLogger(),
 		stopped: true,
 	}
 	hostname, _ := os.Hostname()

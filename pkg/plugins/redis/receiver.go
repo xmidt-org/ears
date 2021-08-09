@@ -19,14 +19,12 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/go-redis/redis"
-	"github.com/rs/zerolog"
 	"github.com/xmidt-org/ears/internal/pkg/rtsemconv"
 	"github.com/xmidt-org/ears/pkg/secret"
 	"github.com/xmidt-org/ears/pkg/tenant"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/global"
-	"os"
 	"time"
 
 	"github.com/goccy/go-yaml"
@@ -58,14 +56,12 @@ func NewReceiver(tid tenant.Id, plugin string, name string, config interface{}, 
 	if err != nil {
 		return nil, err
 	}
-	logger := zerolog.New(os.Stdout).Level(zerolog.DebugLevel).With().Timestamp().Logger()
-	//zerolog.LevelFieldName = "log.level"
 	r := &Receiver{
 		config:  cfg,
 		name:    name,
 		plugin:  plugin,
 		tid:     tid,
-		logger:  logger,
+		logger:  event.GetEventLogger(),
 		stopped: true,
 	}
 	// metric recorders
