@@ -90,7 +90,7 @@ func (m *QuotaManager) Start() {
 
 	go func() {
 		for {
-			m.logger.Info().Str("op", "PeriodicQuotaSync").Msg("Periodically sync tenant quotas")
+			m.logger.Info().Str("op", "PeriodicQuotaSync").Msg("sync tenant quotas")
 			select {
 			case <-m.ctx.Done():
 				return

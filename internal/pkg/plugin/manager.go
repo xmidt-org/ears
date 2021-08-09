@@ -275,7 +275,7 @@ func (m *manager) next(receiverKey string, e pkgevent.Event) {
 					}
 				}()
 
-				log.Ctx(evt.Context()).Info().Str("op", "nextRoute").Msg("sending event to next route")
+				log.Ctx(evt.Context()).Debug().Str("op", "nextRoute").Msg("sending event to next route")
 				fn(evt)
 			}(n, childEvt)
 		}

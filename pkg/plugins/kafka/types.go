@@ -93,7 +93,7 @@ type Receiver struct {
 	plugin    string
 	tid       tenant.Id
 	next      receiver.NextFn
-	logger    zerolog.Logger
+	logger    *zerolog.Logger
 	count     int
 	startTime time.Time
 	sarama.ConsumerGroupSession
@@ -150,7 +150,7 @@ type Sender struct {
 	tid      tenant.Id
 	config   SenderConfig
 	count    int
-	logger   zerolog.Logger
+	logger   *zerolog.Logger
 	producer *Producer
 	stopped  bool
 	secrets  secret.Vault
@@ -164,5 +164,5 @@ type Producer struct {
 	pool   chan sarama.SyncProducer
 	done   chan bool
 	client sarama.Client
-	logger zerolog.Logger
+	logger *zerolog.Logger
 }

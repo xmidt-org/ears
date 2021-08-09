@@ -19,7 +19,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/goccy/go-yaml"
-	"github.com/rs/zerolog"
 	"github.com/xmidt-org/ears/internal/pkg/rtsemconv"
 	"github.com/xmidt-org/ears/pkg/event"
 	pkgplugin "github.com/xmidt-org/ears/pkg/plugin"
@@ -31,7 +30,6 @@ import (
 	"go.opentelemetry.io/otel/metric/global"
 	"io/ioutil"
 	"net/http"
-	"os"
 )
 
 func NewReceiver(tid tenant.Id, plugin string, name string, config interface{}, secrets secret.Vault) (receiver.Receiver, error) {
@@ -56,13 +54,12 @@ func NewReceiver(tid tenant.Id, plugin string, name string, config interface{}, 
 	if err != nil {
 		return nil, err
 	}
-	logger := zerolog.New(os.Stdout).Level(zerolog.DebugLevel).With().Timestamp().Logger()
 	r := &Receiver{
 		config: cfg,
 		name:   name,
 		plugin: plugin,
 		tid:    tid,
-		logger: &logger,
+		logger: event.GetEventLogger(),
 	}
 	// metric recorders
 	meter := global.Meter(rtsemconv.EARSMeterName)

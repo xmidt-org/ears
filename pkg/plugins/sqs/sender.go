@@ -23,13 +23,11 @@ import (
 	"github.com/aws/aws-sdk-go/service/sqs"
 	"github.com/goccy/go-yaml"
 	"github.com/google/uuid"
-	"github.com/rs/zerolog"
 	"github.com/xmidt-org/ears/pkg/event"
 	pkgplugin "github.com/xmidt-org/ears/pkg/plugin"
 	"github.com/xmidt-org/ears/pkg/secret"
 	"github.com/xmidt-org/ears/pkg/sender"
 	"github.com/xmidt-org/ears/pkg/tenant"
-	"os"
 	"time"
 )
 
@@ -59,14 +57,12 @@ func NewSender(tid tenant.Id, plugin string, name string, config interface{}, se
 	if err != nil {
 		return nil, err
 	}
-	logger := zerolog.New(os.Stdout).Level(zerolog.DebugLevel).With().Timestamp().Logger()
-	//zerolog.LevelFieldName = "log.level"
 	s := &Sender{
 		name:   name,
 		plugin: plugin,
 		tid:    tid,
 		config: cfg,
-		logger: logger,
+		logger: event.GetEventLogger(),
 	}
 	s.initPlugin()
 	return s, nil
