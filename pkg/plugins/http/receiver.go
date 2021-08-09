@@ -19,6 +19,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/goccy/go-yaml"
+	"github.com/rs/zerolog/log"
 	"github.com/xmidt-org/ears/internal/pkg/rtsemconv"
 	"github.com/xmidt-org/ears/pkg/event"
 	pkgplugin "github.com/xmidt-org/ears/pkg/plugin"
@@ -116,7 +117,7 @@ func (h *Receiver) Receive(next receiver.NextFn) error {
 				func(e event.Event) {
 					h.eventSuccessCounter.Add(ctx, 1.0)
 				}, func(e event.Event, err error) {
-					h.logger.Error().Str("error", err.Error()).Msg("nack handling events")
+					log.Ctx(e.Context()).Error().Str("error", err.Error()).Msg("nack handling events")
 					h.eventFailureCounter.Add(ctx, 1.0)
 				},
 			),
