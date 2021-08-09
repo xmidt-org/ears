@@ -23,6 +23,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/sqs"
 	"github.com/goccy/go-yaml"
 	"github.com/google/uuid"
+	"github.com/rs/zerolog/log"
 	"github.com/xmidt-org/ears/pkg/event"
 	pkgplugin "github.com/xmidt-org/ears/pkg/plugin"
 	"github.com/xmidt-org/ears/pkg/secret"
@@ -126,9 +127,11 @@ func (s *Sender) StopSending(ctx context.Context) {
 }
 
 func (s *Sender) send(events []event.Event) {
-	s.logger.Debug().Str("op", "SQS.sendWorker").Str("name", s.Name()).Str("tid", s.Tenant().ToString()).Int("batchSize", len(events)).Int("sendCount", s.count).Msg("send message batch")
 	entries := make([]*sqs.SendMessageBatchRequestEntry, 0)
-	for _, evt := range events {
+	for idx, evt := range events {
+		if idx == 0 {
+			log.Ctx(evt.Context()).Debug().Str("op", "SQS.sendWorker").Str("name", s.Name()).Str("tid", s.Tenant().ToString()).Int("eventIdx", idx).Int("batchSize", len(events)).Int("sendCount", s.count).Msg("send message batch")
+		}
 		buf, err := json.Marshal(evt.Payload())
 		if err != nil {
 			continue
@@ -148,7 +151,11 @@ func (s *Sender) send(events []event.Event) {
 	}
 	_, err := s.sqsService.SendMessageBatch(sqsSendBatchParams)
 	if err != nil {
-		s.logger.Error().Str("op", "SQS.sendWorker").Str("name", s.Name()).Str("tid", s.Tenant().ToString()).Int("batchSize", len(events)).Msg("batch send error: " + err.Error())
+		for idx, evt := range events {
+			if idx == 0 {
+				log.Ctx(evt.Context()).Error().Str("op", "SQS.sendWorker").Str("name", s.Name()).Str("tid", s.Tenant().ToString()).Int("eventIdx", idx).Int("batchSize", len(events)).Msg("batch send error: " + err.Error())
+			}
+		}
 	} else {
 		s.Lock()
 		s.count += len(events)
