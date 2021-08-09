@@ -58,6 +58,7 @@ type Quota struct {
 }
 
 type TenantStorer interface {
+	GetAllConfigs(ctx context.Context) ([]Config, error)
 	GetConfig(ctx context.Context, id Id) (*Config, error)
 	SetConfig(ctx context.Context, config Config) error
 	DeleteConfig(ctx context.Context, id Id) error

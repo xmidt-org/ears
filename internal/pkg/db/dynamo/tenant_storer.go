@@ -54,6 +54,43 @@ func NewTenantStorer(config config.Config) (*TenantStorer, error) {
 	}, nil
 }
 
+func (s *TenantStorer) GetAllConfigs(ctx context.Context) ([]tenant.Config, error) {
+
+	ctx, span := db.CreateSpan(ctx, "getAllTenantConfigs", semconv.DBSystemDynamoDB, rtsemconv.DBTable.String(s.tableName))
+	defer span.End()
+
+	sess, err := session.NewSession(&aws.Config{
+		Region: aws.String(s.region),
+	})
+	if err != nil {
+		return nil, &DynamoDbNewSessionError{err}
+	}
+	svc := dynamodb.New(sess)
+	input := &dynamodb.ScanInput{
+		TableName: aws.String(s.tableName),
+	}
+	tenants := make([]tenant.Config, 0)
+	for {
+		result, err := svc.ScanWithContext(ctx, input)
+		if err != nil {
+			return nil, &DynamoDbGetItemError{err}
+		}
+		for _, item := range result.Items {
+			var t tenantItem
+			err = dynamodbattribute.UnmarshalMap(item, &t)
+			if err != nil {
+				return nil, &DynamoDbMarshalError{err}
+			}
+			tenants = append(tenants, t.Config)
+		}
+		if result.LastEvaluatedKey == nil {
+			break
+		}
+		input.ExclusiveStartKey = result.LastEvaluatedKey
+	}
+	return tenants, nil
+}
+
 func (s *TenantStorer) GetConfig(ctx context.Context, id tenant.Id) (*tenant.Config, error) {
 
 	ctx, span := db.CreateSpan(ctx, "getTenantConfig", semconv.DBSystemDynamoDB, rtsemconv.DBTable.String(s.tableName))

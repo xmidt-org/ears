@@ -86,7 +86,7 @@ type Receiver struct {
 	plugin              string
 	tid                 tenant.Id
 	next                receiver.NextFn
-	logger              zerolog.Logger
+	logger              *zerolog.Logger
 	receiveCount        int
 	deleteCount         int
 	startTime           time.Time
@@ -119,7 +119,7 @@ type Sender struct {
 	tid        tenant.Id
 	config     SenderConfig
 	count      int
-	logger     zerolog.Logger
+	logger     *zerolog.Logger
 	eventBatch []event.Event
 	done       chan struct{}
 }

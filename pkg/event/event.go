@@ -55,6 +55,14 @@ func SetEventLogger(l *zerolog.Logger) {
 	logger.Store(l)
 }
 
+func GetEventLogger() *zerolog.Logger {
+	parentLogger, ok := logger.Load().(*zerolog.Logger)
+	if ok {
+		return parentLogger
+	}
+	return nil
+}
+
 //Create a new event given a context, a payload, and other event options
 func New(ctx context.Context, payload interface{}, options ...EventOption) (Event, error) {
 

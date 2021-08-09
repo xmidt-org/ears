@@ -22,13 +22,12 @@ import (
 	"fmt"
 	"github.com/Shopify/sarama"
 	"github.com/goccy/go-yaml"
-	"github.com/rs/zerolog"
+	"github.com/rs/zerolog/log"
 	"github.com/xmidt-org/ears/pkg/event"
 	pkgplugin "github.com/xmidt-org/ears/pkg/plugin"
 	"github.com/xmidt-org/ears/pkg/secret"
 	"github.com/xmidt-org/ears/pkg/sender"
 	"github.com/xmidt-org/ears/pkg/tenant"
-	"os"
 	"strings"
 	"time"
 )
@@ -59,17 +58,14 @@ func NewSender(tid tenant.Id, plugin string, name string, config interface{}, se
 	if err != nil {
 		return nil, err
 	}
-	logger := zerolog.New(os.Stdout).Level(zerolog.DebugLevel)
-	//zerolog.LevelFieldName = "log.level"
 	s := &Sender{
 		name:    name,
 		plugin:  plugin,
 		tid:     tid,
 		config:  cfg,
-		logger:  logger,
+		logger:  event.GetEventLogger(),
 		secrets: secrets,
 	}
-
 	err = s.initPlugin()
 	if err != nil {
 		return nil, err
@@ -223,7 +219,7 @@ func (p *Producer) Close(ctx context.Context) {
 	}
 }
 
-func (p *Producer) SendMessage(topic string, partition int, headers map[string]string, bs []byte) error {
+func (p *Producer) SendMessage(ctx context.Context, topic string, partition int, headers map[string]string, bs []byte) error {
 	hs := make([]sarama.RecordHeader, len(headers))
 	idx := 0
 	for k, v := range headers {
@@ -265,7 +261,7 @@ func (p *Producer) SendMessage(topic string, partition int, headers map[string]s
 	}
 	// override log values if any
 	elapsed := time.Since(start)
-	p.logger.Info().Str("op", "kafka.Send").Int("elapsed", int(elapsed.Milliseconds())).Int("partition", int(part)).Int("offset", int(offset)).Msg("sent message on kafka topic")
+	log.Ctx(ctx).Debug().Str("op", "kafka.Send").Int("elapsed", int(elapsed.Milliseconds())).Int("partition", int(part)).Int("offset", int(offset)).Msg("sent message on kafka topic")
 	return nil
 }
 
@@ -280,12 +276,12 @@ func (mp *ManualHashPartitioner) Partition(message *sarama.ProducerMessage, numP
 
 func (s *Sender) Send(e event.Event) {
 	if s.stopped {
-		s.logger.Info().Str("op", "kafka.Send").Msg("drop message due to closed sender")
+		log.Ctx(e.Context()).Error().Str("op", "kafka.Send").Str("name", s.Name()).Str("tid", s.Tenant().ToString()).Msg("drop message due to closed sender")
 		return
 	}
 	buf, err := json.Marshal(e.Payload())
 	if err != nil {
-		s.logger.Error().Str("op", "kafka.Send").Msg("failed to marshal message: " + err.Error())
+		log.Ctx(e.Context()).Error().Str("op", "kafka.Send").Str("name", s.Name()).Str("tid", s.Tenant().ToString()).Msg("failed to marshal message: " + err.Error())
 		e.Nack(err)
 		return
 	}
@@ -299,15 +295,15 @@ func (s *Sender) Send(e event.Event) {
 	} else {
 		partition = *s.config.Partition
 	}
-	err = s.producer.SendMessage(s.config.Topic, partition, nil, buf)
+	err = s.producer.SendMessage(e.Context(), s.config.Topic, partition, nil, buf)
 	if err != nil {
-		s.logger.Error().Str("op", "kafka.Send").Msg("failed to send message: " + err.Error())
+		log.Ctx(e.Context()).Error().Str("op", "kafka.Send").Str("name", s.Name()).Str("tid", s.Tenant().ToString()).Msg("failed to send message: " + err.Error())
 		e.Nack(err)
 		return
 	}
-	//s.logger.Info().Str("op", "kafka.Send").Msg("sent message on kafka topic")
 	s.Lock()
 	s.count++
+	log.Ctx(e.Context()).Debug().Str("op", "kafka.Send").Str("name", s.Name()).Str("tid", s.Tenant().ToString()).Int("count", s.count).Msg("sent message on kafka topic")
 	s.Unlock()
 	e.Ack()
 }

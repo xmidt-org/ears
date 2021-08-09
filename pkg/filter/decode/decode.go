@@ -19,6 +19,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/rs/zerolog/log"
 	"github.com/xmidt-org/ears/pkg/event"
 	"github.com/xmidt-org/ears/pkg/filter"
 	"github.com/xmidt-org/ears/pkg/secret"
@@ -84,6 +85,7 @@ func (f *Filter) Filter(evt event.Event) []event.Event {
 		path = f.config.FromPath
 	}
 	evt.SetPathValue(path, output, true)
+	log.Ctx(evt.Context()).Debug().Str("op", "filter").Str("filterType", "decode").Str("name", f.Name()).Msg("decode")
 	return []event.Event{evt}
 }
 func (f *Filter) Config() interface{} {
