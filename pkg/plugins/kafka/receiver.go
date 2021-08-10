@@ -26,6 +26,7 @@ import (
 	"github.com/Shopify/sarama"
 	"github.com/rs/zerolog/log"
 	"github.com/xmidt-org/ears/internal/pkg/rtsemconv"
+	"github.com/xmidt-org/ears/pkg/panics"
 	"github.com/xmidt-org/ears/pkg/secret"
 	"github.com/xmidt-org/ears/pkg/tenant"
 	"go.opentelemetry.io/otel/attribute"
@@ -262,7 +263,25 @@ func (r *Receiver) Receive(next receiver.NextFn) error {
 	r.stopped = false
 	r.Unlock()
 	go func() {
+		defer func() {
+			p := recover()
+			if p != nil {
+				panicErr := panics.ToError(p)
+				r.logger.Error().Str("op", "kafka.Receive").Str("error", panicErr.Error()).
+					Str("stackTrace", panicErr.StackTrace()).Msg("A panic has occurred")
+				r.Close()
+			}
+		}()
 		r.Start(func(msg *sarama.ConsumerMessage) bool {
+			defer func() {
+				p := recover()
+				if p != nil {
+					panicErr := panics.ToError(p)
+					r.logger.Error().Str("op", "kafka.Receive").Str("error", panicErr.Error()).
+						Str("stackTrace", panicErr.StackTrace()).Msg("A panic has occurred while handling a message")
+				}
+			}()
+
 			// bail if context has been canceled
 			if r.ctx.Err() != nil {
 				r.logger.Info().Str("op", "kafka.Receive").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Msg("abandoning message due to canceled context")
