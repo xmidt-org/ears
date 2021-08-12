@@ -37,6 +37,7 @@ require (
 	github.com/xeipuuv/gojsonpointer v0.0.0-20190905194746-02993c407bfb // indirect
 	github.com/xeipuuv/gojsonschema v1.2.0
 	github.com/xorcare/pointer v1.1.0
+	github.comcast.com/Gears/ears-build v0.0.0-20210727213508-6e6da06034fd // indirect
 	go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux v0.20.0
 	go.opentelemetry.io/contrib/propagators v0.20.0
 	go.opentelemetry.io/otel v0.20.0
