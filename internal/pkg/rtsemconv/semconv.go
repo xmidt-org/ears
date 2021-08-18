@@ -47,8 +47,9 @@ const (
 	EARSInstanceId = attribute.Key("ears.instance")
 	EARSTraceId    = attribute.Key("tx.traceId")
 
-	EARSAppIdLabel = "ears.appId"
-	EARSOrgIdLabel = "ears.orgId"
+	EARSAppIdLabel   = "ears.appId"
+	EARSOrgIdLabel   = "ears.orgId"
+	EARSReceiverName = "ears.receiver"
 
 	DBTable = attribute.Key("db.table")
 
