@@ -154,7 +154,7 @@ func (s *Sender) send(events []event.Event) {
 	successCount := 0
 	if err != nil {
 		log.Ctx(events[0].Context()).Error().Str("op", "Kinesis.sendWorker").Str("name", s.Name()).Str("tid", s.Tenant().ToString()).Int("batchSize", len(events)).Msg("batch send error: " + err.Error())
-		for idx := range putResults.Records {
+		for idx := range events {
 			events[idx].Nack(err)
 		}
 	} else {
