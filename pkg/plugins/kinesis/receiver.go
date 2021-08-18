@@ -199,7 +199,6 @@ func (r *Receiver) Receive(next receiver.NextFn) error {
 	r.done = make(chan struct{})
 	r.next = next
 	r.Unlock()
-	// create sqs session
 	sess, err := session.NewSession(&aws.Config{
 		Region: aws.String(endpoints.UsWest2RegionID),
 	})

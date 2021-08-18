@@ -4,14 +4,14 @@
   "name": "kinesisReceiverRoute",
   "receiver": {
     "plugin": "kinesis",
-    "name": "myKinesisReceiver",
+    "name": "kinesisReceiverRouteReceiver",
     "config": {
       "streamName": "bw-ears-demo"
     }
   },
   "sender": {
     "plugin": "debug",
-    "name": "myDebugSender",
+    "name": "kinesisReceiverRouteSender",
     "config": {
       "destination": "stdout",
       "maxHistory": 100
