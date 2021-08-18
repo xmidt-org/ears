@@ -64,7 +64,7 @@ func TestKinesisSenderReceiver(t *testing.T) {
 			tc.senderConfig = tc.senderConfig.WithDefaults()
 			tc.receiverConfig.StreamName = "bw-ears-demo"
 			tc.receiverConfig = tc.receiverConfig.WithDefaults()
-			tid := tenant.Id{}
+			tid := tenant.Id{"myorg", "myapp"}
 			kinesisReceiver, err := kinesisPlugin.NewReceiver(tid, "kinesis", "kinesis", tc.receiverConfig, nil)
 			a.Expect(err).To(BeNil())
 			events := []event.Event{}
