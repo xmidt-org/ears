@@ -66,7 +66,7 @@ const senderSchema = `
                     "type": "integer", 
 					"minimum": 1,
 					"maximum": 60
-				},
+				}
             },
             "required": [
                 "streamName"
