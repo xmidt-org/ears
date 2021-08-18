@@ -1,0 +1,21 @@
+{
+  "id": "kinesis101",
+  "userId": "boris",
+  "name": "kinesisReceiverRoute",
+  "receiver": {
+    "plugin": "kinesis",
+    "name": "myKinesisReceiver",
+    "config": {
+      "streamName": "bw-ears-demo"
+    }
+  },
+  "sender": {
+    "plugin": "debug",
+    "name": "myDebugSender",
+    "config": {
+      "destination": "stdout",
+      "maxHistory": 100
+    }
+  },
+  "deliveryMode": "whoCares"
+}
