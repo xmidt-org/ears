@@ -18,6 +18,9 @@ package kafka_test
 
 import (
 	"context"
+	"github.com/rs/zerolog"
+	"github.com/xmidt-org/ears/pkg/tenant"
+	"os"
 	"testing"
 	"time"
 
@@ -26,7 +29,9 @@ import (
 	"github.com/xmidt-org/ears/pkg/plugins/kafka"
 )
 
-func TestRedisSenderReceiver(t *testing.T) {
+func TestKafkaSenderReceiver(t *testing.T) {
+	logger := zerolog.New(os.Stdout).With().Timestamp().Logger()
+	event.SetEventLogger(&logger)
 	totalTimeout := 10 * time.Second
 	caseTimeout := 5 * time.Second
 	testCases := []struct {
@@ -59,7 +64,8 @@ func TestRedisSenderReceiver(t *testing.T) {
 			// set tc.receiverConfig props
 			tc.receiverConfig.GroupId = "myGroup"
 			tc.receiverConfig = tc.receiverConfig.WithDefaults()
-			kafkaReceiver, err := kafkaPlugin.NewReceiver(tc.receiverConfig)
+			tid := tenant.Id{"myorg", "myapp"}
+			kafkaReceiver, err := kafkaPlugin.NewReceiver(tid, "kafka", "kafka", tc.receiverConfig, nil)
 			a.Expect(err).To(BeNil())
 			events := []event.Event{}
 			go func() {
@@ -71,7 +77,7 @@ func TestRedisSenderReceiver(t *testing.T) {
 				time.Sleep(500 * time.Millisecond)
 				a.Expect(events).To(HaveLen(tc.numMessages))
 			}()
-			sender, err := kafkaPlugin.NewSender(tc.senderConfig)
+			sender, err := kafkaPlugin.NewSender(tid, "kafka", "kafka", tc.senderConfig, nil)
 			a.Expect(err).To(BeNil())
 			for i := 0; i < tc.numMessages; i++ {
 				e, err := event.New(ctx, tc.name, event.FailOnNack(t))

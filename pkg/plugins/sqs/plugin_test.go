@@ -18,6 +18,9 @@ package sqs_test
 
 import (
 	"context"
+	"github.com/rs/zerolog"
+	"github.com/xmidt-org/ears/pkg/tenant"
+	"os"
 	"sync"
 	"testing"
 	"time"
@@ -28,6 +31,8 @@ import (
 )
 
 func TestSQSSenderReceiver(t *testing.T) {
+	logger := zerolog.New(os.Stdout).With().Timestamp().Logger()
+	event.SetEventLogger(&logger)
 	totalTimeout := 10 * time.Second
 	caseTimeout := 5 * time.Second
 	testCases := []struct {
@@ -66,7 +71,8 @@ func TestSQSSenderReceiver(t *testing.T) {
 			tc.receiverConfig.AcknowledgeTimeout = &one
 			tc.receiverConfig.NumRetries = &zero
 			tc.receiverConfig = tc.receiverConfig.WithDefaults()
-			sender, err := sqsPlugin.NewSender(tc.senderConfig)
+			tid := tenant.Id{"myorg", "myapp"}
+			sender, err := sqsPlugin.NewSender(tid, "sqs", "sqs", tc.senderConfig, nil)
 			a.Expect(err).To(BeNil())
 			for i := 0; i < tc.numMessages; i++ {
 				e, err := event.New(ctx, tc.name, event.FailOnNack(t))
@@ -77,7 +83,7 @@ func TestSQSSenderReceiver(t *testing.T) {
 			sqsSender, ok := sender.(*sqs.Sender)
 			a.Expect(ok).To(BeTrue())
 			a.Expect(sqsSender.Count()).To(BeIdenticalTo(tc.numMessages))
-			sqsReceiver, err := sqsPlugin.NewReceiver(tc.receiverConfig)
+			sqsReceiver, err := sqsPlugin.NewReceiver(tid, "sqs", "sqs", tc.receiverConfig, nil)
 			a.Expect(err).To(BeNil())
 			events := []event.Event{}
 			var mutex = &sync.Mutex{}

@@ -18,7 +18,10 @@ package redis_test
 
 import (
 	"context"
+	"github.com/rs/zerolog"
 	"github.com/xmidt-org/ears/pkg/plugins/redis"
+	"github.com/xmidt-org/ears/pkg/tenant"
+	"os"
 	"testing"
 	"time"
 
@@ -27,6 +30,8 @@ import (
 )
 
 func TestRedisSenderReceiver(t *testing.T) {
+	logger := zerolog.New(os.Stdout).With().Timestamp().Logger()
+	event.SetEventLogger(&logger)
 	totalTimeout := 10 * time.Second
 	caseTimeout := 5 * time.Second
 	testCases := []struct {
@@ -62,7 +67,8 @@ func TestRedisSenderReceiver(t *testing.T) {
 			//tc.receiverConfig.Endpoint = "gears-redis-qa-001.6bteey.0001.usw2.cache.amazonaws.com:6379"
 			tc.receiverConfig.Channel = "ears_plugin_test"
 			tc.receiverConfig = tc.receiverConfig.WithDefaults()
-			redisReceiver, err := redisPlugin.NewReceiver(tc.receiverConfig)
+			tid := tenant.Id{"myorg", "myapp"}
+			redisReceiver, err := redisPlugin.NewReceiver(tid, "redis", "redis", tc.receiverConfig, nil)
 			a.Expect(err).To(BeNil())
 			events := []event.Event{}
 			go func() {
@@ -74,7 +80,7 @@ func TestRedisSenderReceiver(t *testing.T) {
 				time.Sleep(200 * time.Millisecond)
 				a.Expect(events).To(HaveLen(tc.numMessages))
 			}()
-			sender, err := redisPlugin.NewSender(tc.senderConfig)
+			sender, err := redisPlugin.NewSender(tid, "redis", "redis", tc.senderConfig, nil)
 			a.Expect(err).To(BeNil())
 			for i := 0; i < tc.numMessages; i++ {
 				e, err := event.New(ctx, tc.name, event.FailOnNack(t))
