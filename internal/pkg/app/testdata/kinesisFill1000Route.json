@@ -4,7 +4,7 @@
   "name": "kinesisFill1000Route",
   "receiver": {
     "plugin": "debug",
-    "name": "mydebug",
+    "name": "kinesisFill1000RouteReceiver",
     "config": {
       "intervalMs": 1,
       "maxHistory": 100,
@@ -16,7 +16,7 @@
   },
   "sender": {
     "plugin": "kinesis",
-    "name": "myKinesisSender",
+    "name": "kinesisFill1000RouteSender",
     "config": {
       "streamName": "bw-ears-demo"
     }

@@ -34,7 +34,7 @@ var _ sender.Sender = (*Sender)(nil)
 var _ receiver.Receiver = (*Receiver)(nil)
 
 var (
-	Name     = "sqs"
+	Name     = "kinesis"
 	Version  = "v0.0.0"
 	CommitID = ""
 )
