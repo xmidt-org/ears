@@ -420,7 +420,20 @@ func (a *APIManager) deleteTenantConfigHandler(w http.ResponseWriter, r *http.Re
 		resp.Respond(ctx, w)
 		return
 	}
-	err := a.tenantStorer.DeleteConfig(ctx, *tid)
+	allRouteConfigs, err := a.routingTableMgr.GetAllTenantRoutes(ctx, *tid)
+	if err != nil {
+		log.Ctx(ctx).Error().Str("op", "deleteTenantConfigHandler").Msg(err.Error())
+		resp := ErrorResponse(convertToApiError(ctx, err))
+		resp.Respond(ctx, w)
+		return
+	}
+	if len(allRouteConfigs) > 0 {
+		log.Ctx(ctx).Error().Str("op", "deleteTenantConfigHandler").Msg("tenant has routes")
+		resp := ErrorResponse(convertToApiError(ctx, &BadRequestError{"tenant has routes", nil}))
+		resp.Respond(ctx, w)
+		return
+	}
+	err = a.tenantStorer.DeleteConfig(ctx, *tid)
 	if err != nil {
 		log.Ctx(ctx).Error().Str("op", "deleteTenantConfigHandler").Str("error", err.Error()).Msg("error deleting tenant config")
 		resp := ErrorResponse(convertToApiError(ctx, err))
