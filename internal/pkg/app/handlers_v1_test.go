@@ -162,7 +162,7 @@ func TestRouteTable(t *testing.T) {
 	if err != nil {
 		t.Fatalf("cannot get stroage manager: %s", err.Error())
 	}
-	runtime, err := setupRestApi(config, storageMgr, false)
+	runtime, err := setupRestApi(config, storageMgr, true)
 	if err != nil {
 		t.Fatalf("cannot create ears runtime: %s\n", err.Error())
 	}
@@ -173,7 +173,7 @@ func TestRouteTable(t *testing.T) {
 		t.Logf("no passive ears runtime configured")
 	}
 	for i := 1; i < table.NumInstances; i++ {
-		rt, err := setupRestApi(config, storageMgr, false)
+		rt, err := setupRestApi(config, storageMgr, true)
 		if err != nil {
 			t.Fatalf("cannot create passive ears runtime: %s\n", err.Error())
 		}
@@ -386,7 +386,7 @@ func setupSimpleApi(t *testing.T, storageType string) *EarsRuntime {
 	if err != nil {
 		t.Fatalf("cannot get stroage manager: %s", err.Error())
 	}
-	runtime, err := setupRestApi(config, storageMgr, false)
+	runtime, err := setupRestApi(config, storageMgr, true)
 	if err != nil {
 		t.Fatalf("cannot create api manager: %s\n", err.Error())
 	}
@@ -571,9 +571,18 @@ func setupRestApi(config config.Config, storageMgr route.RouteStorer, setupQuota
 		return &EarsRuntime{config, nil, nil, storageMgr, nil, nil}, err
 	}
 	routingMgr := tablemgr.NewRoutingTableManager(pluginMgr, storageMgr, tableSyncer, &log.Logger, config)
-
 	tenantStorer := db.NewTenantInmemoryStorer()
-
+	ctx := context.Background()
+	ctx = log.Logger.WithContext(ctx)
+	tid1 := tenant.Id{OrgId: "myorg", AppId: "myapp"}
+	tid2 := tenant.Id{OrgId: "myorg", AppId: "myapp2"}
+	tid3 := tenant.Id{OrgId: "myorg2", AppId: "myapp"}
+	tid4 := tenant.Id{OrgId: "myorg2", AppId: "myapp2"}
+	tq := tenant.Quota{EventsPerSec: 100}
+	tenantStorer.SetConfig(ctx, tenant.Config{Tenant: tid1, Quota: tq})
+	tenantStorer.SetConfig(ctx, tenant.Config{Tenant: tid2, Quota: tq})
+	tenantStorer.SetConfig(ctx, tenant.Config{Tenant: tid3, Quota: tq})
+	tenantStorer.SetConfig(ctx, tenant.Config{Tenant: tid4, Quota: tq})
 	var quotaMgr *quota.QuotaManager = nil
 	if setupQuotaMgr {
 		quotaMgr, err = quota.NewQuotaManager(&log.Logger, tenantStorer, tableSyncer, config)
@@ -581,11 +590,11 @@ func setupRestApi(config config.Config, storageMgr route.RouteStorer, setupQuota
 			return &EarsRuntime{config, nil, nil, storageMgr, nil, nil}, err
 		}
 	}
-
 	apiMgr, err := NewAPIManager(routingMgr, tenantStorer, quotaMgr)
 	if err != nil {
 		return &EarsRuntime{config, nil, nil, storageMgr, nil, nil}, err
 	}
+
 	return &EarsRuntime{
 		config,
 		apiMgr,
