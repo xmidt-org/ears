@@ -6,6 +6,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 - refactoring tracing for events and APIs
+- basic kinesis plugin
+- addRoute api to return error if tenant does not exist
+- deleteTenant api to return error if tenant has routes
+- various fixes for unit tests
 
 ## [v0.3.0]
 - Added basic metrics and tracing
