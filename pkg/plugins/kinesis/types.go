@@ -80,8 +80,8 @@ type Receiver struct {
 	receiveCount        int
 	deleteCount         int
 	startTime           time.Time
-	eventSuccessCounter metric.BoundFloat64Counter
-	eventFailureCounter metric.BoundFloat64Counter
+	eventSuccessCounter metric.BoundInt64Counter
+	eventFailureCounter metric.BoundInt64Counter
 	eventBytesCounter   metric.BoundInt64Counter
 }
 
