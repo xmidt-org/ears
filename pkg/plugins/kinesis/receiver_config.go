@@ -30,6 +30,9 @@ func (rc *ReceiverConfig) WithDefaults() ReceiverConfig {
 	if cfg.AcknowledgeTimeout == nil {
 		cfg.AcknowledgeTimeout = DefaultReceiverConfig.AcknowledgeTimeout
 	}
+	if cfg.ShardIteratorType == "" {
+		cfg.ShardIteratorType = DefaultReceiverConfig.ShardIteratorType
+	}
 	return cfg
 }
 
@@ -57,6 +60,9 @@ const receiverSchema = `
             "additionalProperties": false,
             "properties": {
                 "streamName": {
+                    "type": "string"
+                },
+                "shardIteratorType": {
                     "type": "string"
                 },
 				"receiverPoolSize": {

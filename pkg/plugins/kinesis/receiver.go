@@ -108,11 +108,13 @@ func (r *Receiver) startReceiveWorker(svc *kinesis.Kinesis, n int) {
 			}
 			iteratorOutput, err := svc.GetShardIterator(&kinesis.GetShardIteratorInput{
 				ShardId:           aws.String(*streams.StreamDescription.Shards[0].ShardId),
-				ShardIteratorType: aws.String("LATEST"),
+				ShardIteratorType: aws.String(r.config.ShardIteratorType),
+				// ShardIteratorType: aws.String("LATEST"),
 				// ShardIteratorType: aws.String("AT_TIMESTAMP"),
 				// ShardIteratorType: aws.String("TRIM_HORIZON"),
 				// ShardIteratorType: aws.String("AT_SEQUENCE_NUMBER"),
 				// Timestamp:         &startingTimestamp,
+				// StartingSequenceNumber: aws.String("10"),
 				StreamName: aws.String(r.config.StreamName),
 			})
 			if err != nil {
