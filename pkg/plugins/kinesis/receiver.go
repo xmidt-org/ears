@@ -78,12 +78,12 @@ func NewReceiver(tid tenant.Id, plugin string, name string, config interface{}, 
 		attribute.String(rtsemconv.HostnameLabel, hostname),
 	}
 	r.eventSuccessCounter = metric.Must(meter).
-		NewFloat64Counter(
+		NewInt64Counter(
 			rtsemconv.EARSMetricEventSuccess,
 			metric.WithDescription("measures the number of successful events"),
 		).Bind(commonLabels...)
 	r.eventFailureCounter = metric.Must(meter).
-		NewFloat64Counter(
+		NewInt64Counter(
 			rtsemconv.EARSMetricEventFailure,
 			metric.WithDescription("measures the number of unsuccessful events"),
 		).Bind(commonLabels...)
@@ -162,11 +162,11 @@ func (r *Receiver) startReceiveWorker(svc *kinesis.Kinesis, n int) {
 						r.eventBytesCounter.Add(ctx, int64(len(msg.Data)))
 						e, err := event.New(ctx, payload, event.WithMetadata(*msg), event.WithAck(
 							func(e event.Event) {
-								r.eventSuccessCounter.Add(ctx, 1.0)
+								r.eventSuccessCounter.Add(ctx, 1)
 								cancel()
 							},
 							func(e event.Event, err error) {
-								r.eventFailureCounter.Add(ctx, 1.0)
+								r.eventFailureCounter.Add(ctx, 1)
 								cancel()
 							}),
 							event.WithTenant(r.Tenant()),
