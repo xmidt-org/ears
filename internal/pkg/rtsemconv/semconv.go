@@ -45,7 +45,7 @@ const (
 	EARSOrgId = attribute.Key("ears.orgId")
 
 	EARSInstanceId = attribute.Key("ears.instance")
-	EARSTraceId    = attribute.Key("tx.traceId")
+	EARSTraceId    = attribute.Key("trace.id")
 
 	EARSAppIdLabel   = "ears.appId"
 	EARSOrgIdLabel   = "ears.orgId"
