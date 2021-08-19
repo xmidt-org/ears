@@ -1330,23 +1330,19 @@ func TestRestPostRouteHandlerNoUser(t *testing.T) {
 
 func TestRestMultipleTenants(t *testing.T) {
 	routeFileName := "testdata/simpleRoute.json"
-
 	tenantPaths := []string{
 		"/orgs/myorg/applications/myapp",
 		"/orgs/myorg/applications/myapp2",
 		"/orgs/myorg2/applications/myapp",
 		"/orgs/myorg2/applications/myapp2",
 	}
-
 	runtime := setupSimpleApi(t, "inmemory")
-
-	//set routes
+	// set routes
 	for _, path := range tenantPaths {
 		simpleRouteReader, err := os.Open(routeFileName)
 		if err != nil {
 			t.Fatalf("cannot read file: %s", err.Error())
 		}
-
 		w := httptest.NewRecorder()
 		r := httptest.NewRequest(http.MethodPost, "/ears/v1"+path+"/routes", simpleRouteReader)
 		runtime.apiManager.muxRouter.ServeHTTP(w, r)
@@ -1355,7 +1351,6 @@ func TestRestMultipleTenants(t *testing.T) {
 			return
 		}
 	}
-
 	//get routes
 	for _, path := range tenantPaths {
 		w := httptest.NewRecorder()
@@ -1372,7 +1367,6 @@ func TestRestMultipleTenants(t *testing.T) {
 		delete(item, "modified")
 		g.AssertJson(t, "getroute"+strings.Replace(path, "/", "_", -1), data)
 	}
-
 	// delete routes
 	rtId := "r100"
 	for _, path := range tenantPaths {
@@ -1391,7 +1385,7 @@ type TenantConfigTestCase struct {
 func TestTenantConfig(t *testing.T) {
 	testCases := []TenantConfigTestCase{
 		{
-			Path: "/orgs/myorg/applications/myapp",
+			Path: "/orgs/yourorg/applications/yourapp",
 			Config: `
 				{
 					"quota": {
@@ -1401,7 +1395,7 @@ func TestTenantConfig(t *testing.T) {
 				`,
 		},
 		{
-			Path: "/orgs/myorg/applications/myapp2",
+			Path: "/orgs/yourorg/applications/yourapp2",
 			Config: `
 				{
 					"quota": {
@@ -1411,7 +1405,7 @@ func TestTenantConfig(t *testing.T) {
 				`,
 		},
 		{
-			Path: "/orgs/myorg2/applications/myapp",
+			Path: "/orgs/yourorg2/applications/yourapp",
 			Config: `
 				{
 					"quota": {
@@ -1421,7 +1415,7 @@ func TestTenantConfig(t *testing.T) {
 				`,
 		},
 		{
-			Path: "/orgs/myorg2/applications/myapp2",
+			Path: "/orgs/yourorg2/applications/yourapp2",
 			Config: `
 				{
 					"quota": {
@@ -1431,7 +1425,6 @@ func TestTenantConfig(t *testing.T) {
 				`,
 		},
 	}
-
 	config, err := getConfig()
 	if err != nil {
 		t.Fatalf("cannot get config: %s", err.Error())
@@ -1444,11 +1437,9 @@ func TestTenantConfig(t *testing.T) {
 	if err != nil {
 		t.Fatalf("cannot create api manager: %s\n", err.Error())
 	}
-
-	//set configs
+	// set configs
 	for _, tc := range testCases {
 		configReader := strings.NewReader(tc.Config)
-
 		w := httptest.NewRecorder()
 		r := httptest.NewRequest(http.MethodPut, "/ears/v1"+tc.Path+"/config", configReader)
 		runtime.apiManager.muxRouter.ServeHTTP(w, r)
@@ -1457,8 +1448,7 @@ func TestTenantConfig(t *testing.T) {
 			return
 		}
 	}
-
-	//get configs
+	// get configs
 	for _, tc := range testCases {
 		w := httptest.NewRecorder()
 		r := httptest.NewRequest(http.MethodGet, "/ears/v1"+tc.Path+"/config", nil)
@@ -1467,7 +1457,6 @@ func TestTenantConfig(t *testing.T) {
 			t.Fatalf("Getting route does not return 200. Instead, returns %d\n", w.Code)
 			return
 		}
-
 		g := goldie.New(t)
 		var data map[string]interface{}
 		err := json.Unmarshal(w.Body.Bytes(), &data)
@@ -1478,25 +1467,23 @@ func TestTenantConfig(t *testing.T) {
 		delete(item, "modified")
 		g.AssertJson(t, "getTenantConfig"+strings.Replace(tc.Path, "/", "_", -1), data)
 	}
-
-	//delete configs
+	// delete configs
 	for _, tc := range testCases {
 		w := httptest.NewRecorder()
 		r := httptest.NewRequest(http.MethodDelete, "/ears/v1"+tc.Path+"/config", nil)
 		runtime.apiManager.muxRouter.ServeHTTP(w, r)
 		if w.Code != http.StatusOK {
-			t.Fatalf("Deleting route does not return 200. Instead, returns %d\n", w.Code)
+			t.Fatalf("Deleting tenant does not return 200. Instead, returns %d\n", w.Code)
 			return
 		}
 	}
-
-	//get configs again
+	// get configs again
 	for _, tc := range testCases {
 		w := httptest.NewRecorder()
 		r := httptest.NewRequest(http.MethodGet, "/ears/v1"+tc.Path+"/config", nil)
 		runtime.apiManager.muxRouter.ServeHTTP(w, r)
 		if w.Code != http.StatusNotFound {
-			t.Fatalf("Getting route does not return 404. Instead, returns %d\n", w.Code)
+			t.Fatalf("Getting tenant does not return 404. Instead, returns %d\n", w.Code)
 			return
 		}
 	}
