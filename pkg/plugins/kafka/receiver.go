@@ -157,7 +157,7 @@ func (r *Receiver) Start(handler func(*sarama.ConsumerMessage) bool) {
 		if err != nil { // the receiver itself is the group handler
 			r.logger.Error().Str("op", "kafka.Start").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Msg(err.Error())
 			//Sleep for a little bit to prevent busy loop
-			time.Sleep(100 * time.Second)
+			time.Sleep(time.Second)
 		} else {
 			r.logger.Info().Str("op", "kafka.Start").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Msg("kafka consumer finished without error")
 		}
