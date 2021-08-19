@@ -1,0 +1,15 @@
+{
+  "item": {
+    "quota": {
+      "eventsPerSec": 20
+    },
+    "tenant": {
+      "appId": "yourapp2",
+      "orgId": "yourorg"
+    }
+  },
+  "status": {
+    "code": 200,
+    "message": "OK"
+  }
+}
