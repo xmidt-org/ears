@@ -179,6 +179,9 @@ func (r *Receiver) startReceiveWorker(svc *kinesis.Kinesis, n int) {
 					}
 				}
 				shardIterator = getRecordsOutput.NextShardIterator
+				if shardIterator == nil {
+					break
+				}
 			}
 		}
 	}()
