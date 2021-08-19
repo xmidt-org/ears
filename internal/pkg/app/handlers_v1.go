@@ -129,20 +129,24 @@ func getTenant(ctx context.Context, vars map[string]string) (*tenant.Id, ApiErro
 	span := trace.SpanFromContext(ctx)
 	span.SetAttributes(rtsemconv.EARSOrgId.String(orgId))
 	span.SetAttributes(rtsemconv.EARSAppId.String(appId))
-
 	return &tenant.Id{OrgId: orgId, AppId: appId}, nil
 }
 
 func (a *APIManager) addRouteHandler(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
-
-	//
 	vars := mux.Vars(r)
 	tid, apiErr := getTenant(ctx, vars)
 	if apiErr != nil {
 		log.Ctx(ctx).Error().Str("op", "AddRouteHandler").Str("error", apiErr.Error()).Msg("orgId or appId empty")
 		a.addRouteFailureRecorder.Add(ctx, 1.0)
 		resp := ErrorResponse(apiErr)
+		resp.Respond(ctx, w)
+		return
+	}
+	_, err := a.tenantStorer.GetConfig(ctx, *tid)
+	if err != nil {
+		log.Ctx(ctx).Error().Str("op", "getTenantConfigHandler").Str("error", err.Error()).Msg("error getting tenant config")
+		resp := ErrorResponse(convertToApiError(ctx, err))
 		resp.Respond(ctx, w)
 		return
 	}
