@@ -1,0 +1,26 @@
+{
+  "id": "kinesis102",
+  "userId": "boris",
+  "name": "kinesisFill1000Route",
+  "receiver": {
+    "plugin": "debug",
+    "name": "kinesisFill1000RouteReceiver",
+    "config": {
+      "intervalMs": 1,
+      "maxHistory": 100,
+      "payload": {
+        "foo": "bar"
+      },
+      "rounds": 1000
+    }
+  },
+  "sender": {
+    "plugin": "kinesis",
+    "name": "kinesisFill1000RouteSender",
+    "config": {
+      "streamName": "bw-ears-demo"
+    }
+  },
+  "deliveryMode": "atLeastOnce"
+}
+
