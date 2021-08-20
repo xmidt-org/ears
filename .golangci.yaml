@@ -74,6 +74,9 @@ issues:
     - path: pkg/plugins/kafka/receiver\.go
       linters:
         - funlen
+    - path: pkg/plugins/kinesis/receiver\.go
+      linters:
+        - funlen
     - path: pkg/plugins/redis/receiver\.go
       linters:
         - funlen

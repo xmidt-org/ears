@@ -24,12 +24,13 @@ const (
 	EARSTracerName  = "ears"
 	EARSMeterName   = "ears"
 
-	EARSPluginTypeLabel = "pluginType"
-	EARSPluginTypeDebug = "debug"
-	EARSPluginTypeSQS   = "sqs"
-	EARSPluginTypeKafka = "kafka"
-	EARSPluginTypeHttp  = "http"
-	EARSPluginTypeRedis = "redis"
+	EARSPluginTypeLabel   = "pluginType"
+	EARSPluginTypeDebug   = "debug"
+	EARSPluginTypeSQS     = "sqs"
+	EARSPluginTypeKinesis = "kinesis"
+	EARSPluginTypeKafka   = "kafka"
+	EARSPluginTypeHttp    = "http"
+	EARSPluginTypeRedis   = "redis"
 
 	EARSMetricEventSuccess       = "ears.eventSuccess"
 	EARSMetricEventFailure       = "ears.eventFailure"
@@ -52,11 +53,12 @@ const (
 
 	DBTable = attribute.Key("db.table")
 
-	KafkaTopicLabel   = "kafka.topic"
-	KafkaGroupIdLabel = "kafka.groupId"
-	RedisChannelLabel = "redis.channel"
-	SQSQueueUrlLabel  = "sqs.QueueUrl"
-	HostnameLabel     = "hostname"
+	KafkaTopicLabel        = "kafka.topic"
+	KafkaGroupIdLabel      = "kafka.groupId"
+	RedisChannelLabel      = "redis.channel"
+	SQSQueueUrlLabel       = "sqs.QueueUrl"
+	KinesisStreamNameLabel = "kinesis.StreamName"
+	HostnameLabel          = "hostname"
 
 	EarsLogTraceIdKey  = "tx.traceId"
 	EarsLogTenantIdKey = "tenantId"
