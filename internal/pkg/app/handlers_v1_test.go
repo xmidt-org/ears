@@ -104,9 +104,9 @@ const tenantPath = "/orgs/myorg/applications/myapp"
 
 var myTid = tenant.Id{OrgId: "myorg", AppId: "myapp"}
 
-// should in memory storer also be implemented as singleton?
+// can a shared global variable cause problems with concurrent unit tests?
 
-var cachedInMemoryStorageLayer route.RouteStorer
+var cachedInMemoryStorageLayer map[string]route.RouteStorer
 
 func stringify(data interface{}) string {
 	if data == nil {
@@ -158,7 +158,7 @@ func TestRouteTable(t *testing.T) {
 	if err != nil {
 		t.Fatalf("cannot get config: %s", err.Error())
 	}
-	storageMgr, err := getStorageLayer(config, table.StorageType)
+	storageMgr, err := getStorageLayer(t, config, table.StorageType)
 	if err != nil {
 		t.Fatalf("cannot get stroage manager: %s", err.Error())
 	}
@@ -382,7 +382,7 @@ func setupSimpleApi(t *testing.T, storageType string) *EarsRuntime {
 	if err != nil {
 		t.Fatalf("cannot get config: %s", err.Error())
 	}
-	storageMgr, err := getStorageLayer(config, storageType)
+	storageMgr, err := getStorageLayer(t, config, storageType)
 	if err != nil {
 		t.Fatalf("cannot get stroage manager: %s", err.Error())
 	}
@@ -407,7 +407,7 @@ func getConfig() (config.Config, error) {
 }
 
 // if storageType is blank choose storag elayer specified in ears.yaml
-func getStorageLayer(config config.Config, storageType string) (route.RouteStorer, error) {
+func getStorageLayer(t *testing.T, config config.Config, storageType string) (route.RouteStorer, error) {
 	if storageType == "" {
 		storageType = config.GetString("ears.storage.route.type")
 	}
@@ -415,11 +415,14 @@ func getStorageLayer(config config.Config, storageType string) (route.RouteStore
 	var err error
 	switch storageType {
 	case "inmemory":
-		if cachedInMemoryStorageLayer != nil {
-			storageMgr = cachedInMemoryStorageLayer
+		if cachedInMemoryStorageLayer == nil {
+			cachedInMemoryStorageLayer = make(map[string]route.RouteStorer)
+		}
+		if cachedInMemoryStorageLayer[t.Name()] != nil {
+			storageMgr = cachedInMemoryStorageLayer[t.Name()]
 		} else {
 			storageMgr = db.NewInMemoryRouteStorer(config)
-			cachedInMemoryStorageLayer = storageMgr
+			cachedInMemoryStorageLayer[t.Name()] = storageMgr
 		}
 	case "dynamodb":
 		storageMgr, err = dynamo.NewDynamoDbStorer(config)
@@ -437,7 +440,7 @@ func getStorageLayer(config config.Config, storageType string) (route.RouteStore
 	return storageMgr, nil
 }
 
-// if storageType is blank choose storag elayer specified in ears.yaml
+// if storageType is blank choose storage layer specified in ears.yaml
 func getTableSyncer(config config.Config, syncType string) (syncer.DeltaSyncer, error) {
 	if syncType == "" {
 		syncType = config.GetString("ears.synchronization.type")
@@ -594,7 +597,6 @@ func setupRestApi(config config.Config, storageMgr route.RouteStorer, setupQuota
 	if err != nil {
 		return &EarsRuntime{config, nil, nil, storageMgr, nil, nil}, err
 	}
-
 	return &EarsRuntime{
 		config,
 		apiMgr,
@@ -1429,7 +1431,7 @@ func TestTenantConfig(t *testing.T) {
 	if err != nil {
 		t.Fatalf("cannot get config: %s", err.Error())
 	}
-	storageMgr, err := getStorageLayer(config, "inmemory")
+	storageMgr, err := getStorageLayer(t, config, "inmemory")
 	if err != nil {
 		t.Fatalf("cannot get stroage manager: %s", err.Error())
 	}
