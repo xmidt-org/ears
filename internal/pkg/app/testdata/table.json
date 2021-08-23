@@ -133,7 +133,7 @@
     },
     "multiRouteAABBAB": {
       "seq": 8,
-      "disabled": true,
+      "disabled": false,
       "routeFiles": [
         "simpleRouteAA",
         "simpleRouteAB",
