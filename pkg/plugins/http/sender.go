@@ -93,6 +93,11 @@ func NewSender(tid tenant.Id, plugin string, name string, config interface{}, se
 			rtsemconv.EARSMetricEventBytes,
 			metric.WithDescription("measures the number of event bytes processed"),
 		).Bind(commonLabels...)
+	s.eventProcessingTime = metric.Must(meter).
+		NewInt64ValueRecorder(
+			rtsemconv.EARSMetricEventProcessingTime,
+			metric.WithDescription("measures the number of event bytes processed"),
+		).Bind(commonLabels...)
 	return s, nil
 }
 
@@ -108,6 +113,7 @@ func (s *Sender) Send(event event.Event) {
 		event.Nack(err)
 		return
 	}
+	s.eventProcessingTime.Record(event.Context(), time.Since(event.Created()).Milliseconds())
 	req, err := http.NewRequest(s.config.Method, s.config.Url, bytes.NewReader(body))
 	if err != nil {
 		s.eventFailureCounter.Add(event.Context(), 1)

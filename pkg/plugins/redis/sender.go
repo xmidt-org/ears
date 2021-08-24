@@ -29,6 +29,7 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/global"
+	"time"
 )
 
 func NewSender(tid tenant.Id, plugin string, name string, config interface{}, secrets secret.Vault) (sender.Sender, error) {
@@ -86,6 +87,11 @@ func NewSender(tid tenant.Id, plugin string, name string, config interface{}, se
 			rtsemconv.EARSMetricEventBytes,
 			metric.WithDescription("measures the number of event bytes processed"),
 		).Bind(commonLabels...)
+	s.eventProcessingTime = metric.Must(meter).
+		NewInt64ValueRecorder(
+			rtsemconv.EARSMetricEventProcessingTime,
+			metric.WithDescription("measures the number of event bytes processed"),
+		).Bind(commonLabels...)
 	return s, nil
 }
 
@@ -120,6 +126,7 @@ func (s *Sender) Send(e event.Event) {
 		e.Nack(err)
 		return
 	}
+	s.eventProcessingTime.Record(e.Context(), time.Since(e.Created()).Milliseconds())
 	err = s.client.Publish(s.config.Channel, string(buf)).Err()
 	if err != nil {
 		log.Ctx(e.Context()).Error().Str("op", "redis.Send").Msg("failed to send message on redis channel: " + err.Error())

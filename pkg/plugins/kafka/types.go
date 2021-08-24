@@ -156,6 +156,7 @@ type Sender struct {
 	eventSuccessCounter metric.BoundInt64Counter
 	eventFailureCounter metric.BoundInt64Counter
 	eventBytesCounter   metric.BoundInt64Counter
+	eventProcessingTime metric.BoundInt64ValueRecorder
 	secrets             secret.Vault
 }
 

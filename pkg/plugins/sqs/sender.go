@@ -94,6 +94,11 @@ func NewSender(tid tenant.Id, plugin string, name string, config interface{}, se
 			rtsemconv.EARSMetricEventBytes,
 			metric.WithDescription("measures the number of event bytes processed"),
 		).Bind(commonLabels...)
+	s.eventProcessingTime = metric.Must(meter).
+		NewInt64ValueRecorder(
+			rtsemconv.EARSMetricEventProcessingTime,
+			metric.WithDescription("measures the number of event bytes processed"),
+		).Bind(commonLabels...)
 	return s, nil
 }
 
@@ -172,6 +177,7 @@ func (s *Sender) send(events []event.Event) {
 			entry.DelaySeconds = aws.Int64(int64(*s.config.DelaySeconds))
 		}
 		entries = append(entries, entry)
+		s.eventProcessingTime.Record(evt.Context(), time.Since(evt.Created()).Milliseconds())
 	}
 	sqsSendBatchParams := &sqs.SendMessageBatchInput{
 		Entries:  entries,

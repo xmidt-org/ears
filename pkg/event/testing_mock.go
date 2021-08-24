@@ -7,6 +7,7 @@ import (
 	"context"
 	"github.com/xmidt-org/ears/pkg/tenant"
 	"sync"
+	"time"
 )
 
 // Ensure, that EventMock does implement Event.
@@ -27,6 +28,9 @@ var _ Event = &EventMock{}
 // 			},
 // 			ContextFunc: func() context.Context {
 // 				panic("mock out the Context method")
+// 			},
+// 			CreatedFunc: func() time.Time {
+// 				panic("mock out the Created method")
 // 			},
 // 			GetPathValueFunc: func(path string) (interface{}, interface{}, string) {
 // 				panic("mock out the GetPathValue method")
@@ -71,6 +75,9 @@ type EventMock struct {
 	// ContextFunc mocks the Context method.
 	ContextFunc func() context.Context
 
+	// CreatedFunc mocks the Created method.
+	CreatedFunc func() time.Time
+
 	// GetPathValueFunc mocks the GetPathValue method.
 	GetPathValueFunc func(path string) (interface{}, interface{}, string)
 
@@ -110,6 +117,9 @@ type EventMock struct {
 		}
 		// Context holds details about calls to the Context method.
 		Context []struct {
+		}
+		// Created holds details about calls to the Created method.
+		Created []struct {
 		}
 		// GetPathValue holds details about calls to the GetPathValue method.
 		GetPathValue []struct {
@@ -158,6 +168,7 @@ type EventMock struct {
 	lockAck          sync.RWMutex
 	lockClone        sync.RWMutex
 	lockContext      sync.RWMutex
+	lockCreated      sync.RWMutex
 	lockGetPathValue sync.RWMutex
 	lockMetadata     sync.RWMutex
 	lockNack         sync.RWMutex
@@ -249,6 +260,32 @@ func (mock *EventMock) ContextCalls() []struct {
 	mock.lockContext.RLock()
 	calls = mock.calls.Context
 	mock.lockContext.RUnlock()
+	return calls
+}
+
+// Created calls CreatedFunc.
+func (mock *EventMock) Created() time.Time {
+	if mock.CreatedFunc == nil {
+		panic("EventMock.CreatedFunc: method is nil but Event.Created was just called")
+	}
+	callInfo := struct {
+	}{}
+	mock.lockCreated.Lock()
+	mock.calls.Created = append(mock.calls.Created, callInfo)
+	mock.lockCreated.Unlock()
+	return mock.CreatedFunc()
+}
+
+// CreatedCalls gets all the calls that were made to Created.
+// Check the length with:
+//     len(mockedEvent.CreatedCalls())
+func (mock *EventMock) CreatedCalls() []struct {
+} {
+	var calls []struct {
+	}
+	mock.lockCreated.RLock()
+	calls = mock.calls.Created
+	mock.lockCreated.RUnlock()
 	return calls
 }
 

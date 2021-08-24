@@ -98,6 +98,11 @@ func NewSender(tid tenant.Id, plugin string, name string, config interface{}, se
 			rtsemconv.EARSMetricEventBytes,
 			metric.WithDescription("measures the number of event bytes processed"),
 		).Bind(commonLabels...)
+	s.eventProcessingTime = metric.Must(meter).
+		NewInt64ValueRecorder(
+			rtsemconv.EARSMetricEventProcessingTime,
+			metric.WithDescription("measures the number of event bytes processed"),
+		).Bind(commonLabels...)
 	return s, nil
 }
 
@@ -315,6 +320,7 @@ func (s *Sender) Send(e event.Event) {
 		e.Nack(err)
 		return
 	}
+	s.eventProcessingTime.Record(e.Context(), time.Since(e.Created()).Milliseconds())
 	s.eventBytesCounter.Add(e.Context(), int64(len(buf)))
 	partition := -1
 	if s.config.PartitionPath != "" {
