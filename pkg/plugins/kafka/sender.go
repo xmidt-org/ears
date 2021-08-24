@@ -128,6 +128,10 @@ func (s *Sender) StopSending(ctx context.Context) {
 	defer s.Unlock()
 	if !s.stopped {
 		s.stopped = true
+		s.eventSuccessCounter.Unbind()
+		s.eventFailureCounter.Unbind()
+		s.eventBytesCounter.Unbind()
+		s.eventProcessingTime.Unbind()
 		s.producer.Close(ctx)
 	}
 }
