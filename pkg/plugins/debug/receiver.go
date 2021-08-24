@@ -77,7 +77,8 @@ func NewReceiver(tid tenant.Id, plugin string, name string, config interface{}, 
 	// metric recorders
 	meter := global.Meter(rtsemconv.EARSMeterName)
 	commonLabels := []attribute.KeyValue{
-		attribute.String(rtsemconv.EARSPluginTypeLabel, rtsemconv.EARSPluginTypeDebug),
+		attribute.String(rtsemconv.EARSPluginTypeLabel, rtsemconv.EARSPluginTypeDebugReceiver),
+		attribute.String(rtsemconv.EARSPluginNameLabel, r.Name()),
 		attribute.String(rtsemconv.EARSAppIdLabel, r.tid.AppId),
 		attribute.String(rtsemconv.EARSOrgIdLabel, r.tid.OrgId),
 	}
