@@ -126,4 +126,5 @@ type Sender struct {
 	eventFailureCounter metric.BoundInt64Counter
 	eventBytesCounter   metric.BoundInt64Counter
 	eventProcessingTime metric.BoundInt64ValueRecorder
+	eventSendOutTime    metric.BoundInt64ValueRecorder
 }

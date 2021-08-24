@@ -94,7 +94,12 @@ func NewSender(tid tenant.Id, plugin string, name string, config interface{}, se
 	s.eventProcessingTime = metric.Must(meter).
 		NewInt64ValueRecorder(
 			rtsemconv.EARSMetricEventProcessingTime,
-			metric.WithDescription("measures the number of event bytes processed"),
+			metric.WithDescription("measures the time an event spends in ears"),
+		).Bind(commonLabels...)
+	s.eventSendOutTime = metric.Must(meter).
+		NewInt64ValueRecorder(
+			rtsemconv.EARSMetricEventSendOutTime,
+			metric.WithDescription("measures the time ears spends to send an event to a downstream data sink"),
 		).Bind(commonLabels...)
 	return s, nil
 }
@@ -158,6 +163,7 @@ func (s *Sender) StopSending(ctx context.Context) {
 		s.eventFailureCounter.Unbind()
 		s.eventBytesCounter.Unbind()
 		s.eventProcessingTime.Unbind()
+		s.eventSendOutTime.Unbind()
 		s.done <- struct{}{}
 		s.done = nil
 	}
@@ -189,7 +195,9 @@ func (s *Sender) send(events []event.Event) {
 		Records:    batchReqs,
 		StreamName: aws.String(s.config.StreamName),
 	}
+	start := time.Now()
 	putResults, err := s.kinesisService.PutRecordsWithContext(events[0].Context(), &batchPut)
+	s.eventSendOutTime.Record(events[0].Context(), time.Since(start).Milliseconds())
 	successCount := 0
 	if err != nil {
 		log.Ctx(events[0].Context()).Error().Str("op", "Kinesis.sendWorker").Str("name", s.Name()).Str("tid", s.Tenant().ToString()).Int("batchSize", len(events)).Msg("batch send error: " + err.Error())

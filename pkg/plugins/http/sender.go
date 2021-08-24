@@ -96,7 +96,12 @@ func NewSender(tid tenant.Id, plugin string, name string, config interface{}, se
 	s.eventProcessingTime = metric.Must(meter).
 		NewInt64ValueRecorder(
 			rtsemconv.EARSMetricEventProcessingTime,
-			metric.WithDescription("measures the number of event bytes processed"),
+			metric.WithDescription("measures the time an event spends in ears"),
+		).Bind(commonLabels...)
+	s.eventSendOutTime = metric.Must(meter).
+		NewInt64ValueRecorder(
+			rtsemconv.EARSMetricEventSendOutTime,
+			metric.WithDescription("measures the time ears spends to send an event to a downstream data sink"),
 		).Bind(commonLabels...)
 	return s, nil
 }
@@ -126,7 +131,9 @@ func (s *Sender) Send(event event.Event) {
 	if traceId != nil {
 		s.SetTraceId(req, traceId.(string))
 	}
+	start := time.Now()
 	resp, err := s.client.Do(req)
+	s.eventSendOutTime.Record(event.Context(), time.Since(start).Milliseconds())
 	if err != nil {
 		s.eventFailureCounter.Add(event.Context(), 1)
 		event.Nack(err)
@@ -152,6 +159,7 @@ func (s *Sender) StopSending(ctx context.Context) {
 	s.eventFailureCounter.Unbind()
 	s.eventBytesCounter.Unbind()
 	s.eventProcessingTime.Unbind()
+	s.eventSendOutTime.Unbind()
 }
 
 func (r *Sender) Config() interface{} {
