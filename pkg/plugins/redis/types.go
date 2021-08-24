@@ -75,8 +75,8 @@ type Receiver struct {
 	logger              *zerolog.Logger
 	count               int
 	startTime           time.Time
-	eventSuccessCounter metric.BoundFloat64Counter
-	eventFailureCounter metric.BoundFloat64Counter
+	eventSuccessCounter metric.BoundInt64Counter
+	eventFailureCounter metric.BoundInt64Counter
 	eventBytesCounter   metric.BoundInt64Counter
 }
 

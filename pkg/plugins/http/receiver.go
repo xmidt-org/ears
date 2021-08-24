@@ -71,12 +71,12 @@ func NewReceiver(tid tenant.Id, plugin string, name string, config interface{}, 
 		attribute.String(rtsemconv.EARSOrgIdLabel, r.tid.OrgId),
 	}
 	r.eventSuccessCounter = metric.Must(meter).
-		NewFloat64Counter(
+		NewInt64Counter(
 			rtsemconv.EARSMetricEventSuccess,
 			metric.WithDescription("measures the number of successful events"),
 		).Bind(commonLabels...)
 	r.eventFailureCounter = metric.Must(meter).
-		NewFloat64Counter(
+		NewInt64Counter(
 			rtsemconv.EARSMetricEventFailure,
 			metric.WithDescription("measures the number of unsuccessful events"),
 		).Bind(commonLabels...)
@@ -116,10 +116,10 @@ func (h *Receiver) Receive(next receiver.NextFn) error {
 		event, err := event.New(ctx, body,
 			event.WithAck(
 				func(e event.Event) {
-					h.eventSuccessCounter.Add(ctx, 1.0)
+					h.eventSuccessCounter.Add(ctx, 1)
 				}, func(e event.Event, err error) {
 					log.Ctx(e.Context()).Error().Str("error", err.Error()).Msg("nack handling events")
-					h.eventFailureCounter.Add(ctx, 1.0)
+					h.eventFailureCounter.Add(ctx, 1)
 				},
 			),
 			event.WithTenant(h.Tenant()),

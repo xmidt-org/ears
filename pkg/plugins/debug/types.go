@@ -85,8 +85,8 @@ type Receiver struct {
 	history             *history
 	next                receiver.NextFn
 	logger              zerolog.Logger
-	eventSuccessCounter metric.BoundFloat64Counter
-	eventFailureCounter metric.BoundFloat64Counter
+	eventSuccessCounter metric.BoundInt64Counter
+	eventFailureCounter metric.BoundInt64Counter
 	eventBytesCounter   metric.BoundInt64Counter
 }
 
