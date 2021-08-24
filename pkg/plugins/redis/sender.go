@@ -130,6 +130,7 @@ func (s *Sender) Send(e event.Event) {
 		e.Nack(err)
 		return
 	}
+	s.eventBytesCounter.Add(e.Context(), int64(len(buf)))
 	s.eventProcessingTime.Record(e.Context(), time.Since(e.Created()).Milliseconds())
 	err = s.client.Publish(s.config.Channel, string(buf)).Err()
 	if err != nil {

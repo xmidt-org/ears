@@ -181,6 +181,7 @@ func (s *Sender) send(events []event.Event) {
 			entry.DelaySeconds = aws.Int64(int64(*s.config.DelaySeconds))
 		}
 		entries = append(entries, entry)
+		s.eventBytesCounter.Add(evt.Context(), int64(len(buf)))
 		s.eventProcessingTime.Record(evt.Context(), time.Since(evt.Created()).Milliseconds())
 	}
 	sqsSendBatchParams := &sqs.SendMessageBatchInput{

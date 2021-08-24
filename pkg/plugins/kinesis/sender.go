@@ -182,6 +182,7 @@ func (s *Sender) send(events []event.Event) {
 			PartitionKey: aws.String(uuid.New().String()),
 		}
 		batchReqs = append(batchReqs, &putReq)
+		s.eventBytesCounter.Add(evt.Context(), int64(len(buf)))
 		s.eventProcessingTime.Record(evt.Context(), time.Since(evt.Created()).Milliseconds())
 	}
 	batchPut := kinesis.PutRecordsInput{

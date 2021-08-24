@@ -113,6 +113,7 @@ func (s *Sender) Send(event event.Event) {
 		event.Nack(err)
 		return
 	}
+	s.eventBytesCounter.Add(event.Context(), int64(len(body)))
 	s.eventProcessingTime.Record(event.Context(), time.Since(event.Created()).Milliseconds())
 	req, err := http.NewRequest(s.config.Method, s.config.Url, bytes.NewReader(body))
 	if err != nil {
