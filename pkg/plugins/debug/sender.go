@@ -16,6 +16,7 @@ package debug
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"github.com/xmidt-org/ears/internal/pkg/rtsemconv"
 	"github.com/xmidt-org/ears/pkg/secret"
@@ -108,6 +109,13 @@ func NewSender(tid tenant.Id, plugin string, name string, config interface{}, se
 
 func (s *Sender) Send(e event.Event) {
 	s.history.Add(e)
+	buf, err := json.Marshal(e.Payload())
+	if err != nil {
+		s.eventFailureCounter.Add(e.Context(), 1)
+		e.Nack(err)
+		return
+	}
+	s.eventBytesCounter.Add(e.Context(), int64(len(buf)))
 	s.eventProcessingTime.Record(e.Context(), time.Since(e.Created()).Milliseconds())
 	//fmt.Printf("SEND %p\n", e)
 	if s.destination != nil {
