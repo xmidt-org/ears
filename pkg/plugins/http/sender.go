@@ -19,11 +19,15 @@ import (
 	"context"
 	"encoding/json"
 	"github.com/goccy/go-yaml"
+	"github.com/xmidt-org/ears/internal/pkg/rtsemconv"
 	"github.com/xmidt-org/ears/pkg/event"
 	pkgplugin "github.com/xmidt-org/ears/pkg/plugin"
 	"github.com/xmidt-org/ears/pkg/secret"
 	"github.com/xmidt-org/ears/pkg/sender"
 	"github.com/xmidt-org/ears/pkg/tenant"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/metric"
+	"go.opentelemetry.io/otel/metric/global"
 	"io"
 	"io/ioutil"
 	"net/http"
@@ -57,7 +61,7 @@ func NewSender(tid tenant.Id, plugin string, name string, config interface{}, se
 	//TODO Does this live here?
 	//TODO Make this a configuration?
 	http.DefaultTransport.(*http.Transport).MaxIdleConnsPerHost = 100
-	return &Sender{
+	s := &Sender{
 		client: &http.Client{
 			Timeout: DEFAULT_TIMEOUT * time.Second,
 		},
@@ -65,7 +69,31 @@ func NewSender(tid tenant.Id, plugin string, name string, config interface{}, se
 		name:   name,
 		plugin: plugin,
 		tid:    tid,
-	}, nil
+	}
+	// metric recorders
+	meter := global.Meter(rtsemconv.EARSMeterName)
+	commonLabels := []attribute.KeyValue{
+		attribute.String(rtsemconv.EARSPluginTypeLabel, rtsemconv.EARSPluginTypeHttpSender),
+		attribute.String(rtsemconv.EARSPluginNameLabel, s.Name()),
+		attribute.String(rtsemconv.EARSAppIdLabel, s.tid.AppId),
+		attribute.String(rtsemconv.EARSOrgIdLabel, s.tid.OrgId),
+	}
+	s.eventSuccessCounter = metric.Must(meter).
+		NewInt64Counter(
+			rtsemconv.EARSMetricEventSuccess,
+			metric.WithDescription("measures the number of successful events"),
+		).Bind(commonLabels...)
+	s.eventFailureCounter = metric.Must(meter).
+		NewInt64Counter(
+			rtsemconv.EARSMetricEventFailure,
+			metric.WithDescription("measures the number of unsuccessful events"),
+		).Bind(commonLabels...)
+	s.eventBytesCounter = metric.Must(meter).
+		NewInt64Counter(
+			rtsemconv.EARSMetricEventBytes,
+			metric.WithDescription("measures the number of event bytes processed"),
+		).Bind(commonLabels...)
+	return s, nil
 }
 
 func (s *Sender) SetTraceId(r *http.Request, traceId string) {
@@ -76,11 +104,13 @@ func (s *Sender) Send(event event.Event) {
 	payload := event.Payload()
 	body, err := json.Marshal(payload)
 	if err != nil {
+		s.eventFailureCounter.Add(event.Context(), 1)
 		event.Nack(err)
 		return
 	}
 	req, err := http.NewRequest(s.config.Method, s.config.Url, bytes.NewReader(body))
 	if err != nil {
+		s.eventFailureCounter.Add(event.Context(), 1)
 		event.Nack(err)
 		return
 	}
@@ -91,15 +121,18 @@ func (s *Sender) Send(event event.Event) {
 	}
 	resp, err := s.client.Do(req)
 	if err != nil {
+		s.eventFailureCounter.Add(event.Context(), 1)
 		event.Nack(err)
 		return
 	}
 	io.Copy(ioutil.Discard, resp.Body)
 	defer resp.Body.Close()
 	if resp.StatusCode < http.StatusOK || resp.StatusCode >= http.StatusBadRequest {
+		s.eventFailureCounter.Add(event.Context(), 1)
 		event.Nack(&BadHttpStatusError{resp.StatusCode})
 		return
 	}
+	s.eventSuccessCounter.Add(event.Context(), 1)
 	event.Ack()
 }
 

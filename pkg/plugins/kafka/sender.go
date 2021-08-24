@@ -329,11 +329,11 @@ func (s *Sender) Send(e event.Event) {
 	err = s.producer.SendMessage(e.Context(), s.config.Topic, partition, nil, buf)
 	if err != nil {
 		log.Ctx(e.Context()).Error().Str("op", "kafka.Send").Str("name", s.Name()).Str("tid", s.Tenant().ToString()).Msg("failed to send message: " + err.Error())
-		s.eventFailureCounter.Add(e.Context(), 1.0)
+		s.eventFailureCounter.Add(e.Context(), 1)
 		e.Nack(err)
 		return
 	}
-	s.eventSuccessCounter.Add(e.Context(), 1.0)
+	s.eventSuccessCounter.Add(e.Context(), 1)
 	s.Lock()
 	s.count++
 	log.Ctx(e.Context()).Debug().Str("op", "kafka.Send").Str("name", s.Name()).Str("tid", s.Tenant().ToString()).Int("count", s.count).Msg("sent message on kafka topic")

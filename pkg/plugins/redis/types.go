@@ -94,11 +94,14 @@ type SenderConfig struct {
 
 type Sender struct {
 	sync.Mutex
-	name   string
-	plugin string
-	tid    tenant.Id
-	config SenderConfig
-	count  int
-	logger *zerolog.Logger
-	client *redis.Client
+	name                string
+	plugin              string
+	tid                 tenant.Id
+	config              SenderConfig
+	count               int
+	logger              *zerolog.Logger
+	client              *redis.Client
+	eventSuccessCounter metric.BoundInt64Counter
+	eventFailureCounter metric.BoundInt64Counter
+	eventBytesCounter   metric.BoundInt64Counter
 }

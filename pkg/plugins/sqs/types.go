@@ -113,13 +113,16 @@ type SenderConfig struct {
 
 type Sender struct {
 	sync.Mutex
-	sqsService *sqs.SQS
-	name       string
-	plugin     string
-	tid        tenant.Id
-	config     SenderConfig
-	count      int
-	logger     *zerolog.Logger
-	eventBatch []event.Event
-	done       chan struct{}
+	sqsService          *sqs.SQS
+	name                string
+	plugin              string
+	tid                 tenant.Id
+	config              SenderConfig
+	count               int
+	logger              *zerolog.Logger
+	eventBatch          []event.Event
+	done                chan struct{}
+	eventSuccessCounter metric.BoundInt64Counter
+	eventFailureCounter metric.BoundInt64Counter
+	eventBytesCounter   metric.BoundInt64Counter
 }
