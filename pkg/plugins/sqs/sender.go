@@ -153,6 +153,10 @@ func (s *Sender) Count() int {
 func (s *Sender) StopSending(ctx context.Context) {
 	s.Lock()
 	if s.done != nil {
+		s.eventSuccessCounter.Unbind()
+		s.eventFailureCounter.Unbind()
+		s.eventBytesCounter.Unbind()
+		s.eventProcessingTime.Unbind()
 		s.done <- struct{}{}
 		s.done = nil
 	}

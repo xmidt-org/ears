@@ -146,6 +146,10 @@ func (s *Sender) History() []event.Event {
 }
 
 func (s *Sender) StopSending(ctx context.Context) {
+	s.eventSuccessCounter.Unbind()
+	s.eventFailureCounter.Unbind()
+	s.eventBytesCounter.Unbind()
+	s.eventProcessingTime.Unbind()
 }
 
 func (s *Sender) Config() interface{} {

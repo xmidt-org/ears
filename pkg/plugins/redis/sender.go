@@ -113,6 +113,10 @@ func (s *Sender) Count() int {
 }
 
 func (s *Sender) StopSending(ctx context.Context) {
+	s.eventSuccessCounter.Unbind()
+	s.eventFailureCounter.Unbind()
+	s.eventBytesCounter.Unbind()
+	s.eventProcessingTime.Unbind()
 	s.Lock()
 	s.client.Close()
 	s.Unlock()
