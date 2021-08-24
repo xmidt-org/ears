@@ -97,7 +97,12 @@ func NewSender(tid tenant.Id, plugin string, name string, config interface{}, se
 	s.eventProcessingTime = metric.Must(meter).
 		NewInt64ValueRecorder(
 			rtsemconv.EARSMetricEventProcessingTime,
-			metric.WithDescription("measures the number of event bytes processed"),
+			metric.WithDescription("measures the time an event spends in ears"),
+		).Bind(commonLabels...)
+	s.eventSendOutTime = metric.Must(meter).
+		NewInt64ValueRecorder(
+			rtsemconv.EARSMetricEventSendOutTime,
+			metric.WithDescription("measures the time ears spends to send an event to a downstream data sink"),
 		).Bind(commonLabels...)
 	return s, nil
 }
@@ -157,6 +162,7 @@ func (s *Sender) StopSending(ctx context.Context) {
 		s.eventFailureCounter.Unbind()
 		s.eventBytesCounter.Unbind()
 		s.eventProcessingTime.Unbind()
+		s.eventSendOutTime.Unbind()
 		s.done <- struct{}{}
 		s.done = nil
 	}
@@ -164,6 +170,9 @@ func (s *Sender) StopSending(ctx context.Context) {
 }
 
 func (s *Sender) send(events []event.Event) {
+	if len(events) == 0 {
+		return
+	}
 	entries := make([]*sqs.SendMessageBatchRequestEntry, 0)
 	for idx, evt := range events {
 		if idx == 0 {
@@ -188,7 +197,9 @@ func (s *Sender) send(events []event.Event) {
 		Entries:  entries,
 		QueueUrl: aws.String(s.config.QueueUrl),
 	}
+	start := time.Now()
 	_, err := s.sqsService.SendMessageBatch(sqsSendBatchParams)
+	s.eventSendOutTime.Record(events[0].Context(), time.Since(start).Milliseconds())
 	if err != nil {
 		for idx, evt := range events {
 			if idx == 0 {
