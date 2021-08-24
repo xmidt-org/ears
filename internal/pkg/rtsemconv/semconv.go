@@ -41,13 +41,14 @@ const (
 	EARSPluginTypeHttpReceiver    = "httpReceiver"
 	EARSPluginTypeRedisReceiver   = "redisReceiver"
 
-	EARSMetricEventSuccess       = "ears.eventSuccess"
-	EARSMetricEventFailure       = "ears.eventFailure"
-	EARSMetricEventBytes         = "ears.eventBytes"
-	EARSMetricAddRouteSuccess    = "ears.addRouteSuccess"
-	EARSMetricAddRouteFailure    = "ears.addRouteFailure"
-	EARSMetricRemoveRouteSuccess = "ears.removeRouteSuccess"
-	EARSMetricRemoveRouteFailure = "ears.removeRouteFailure"
+	EARSMetricEventSuccess        = "ears.eventSuccess"
+	EARSMetricEventFailure        = "ears.eventFailure"
+	EARSMetricEventBytes          = "ears.eventBytes"
+	EARSMetricEventProcessingTime = "ears.eventProcessingTime"
+	EARSMetricAddRouteSuccess     = "ears.addRouteSuccess"
+	EARSMetricAddRouteFailure     = "ears.addRouteFailure"
+	EARSMetricRemoveRouteSuccess  = "ears.removeRouteSuccess"
+	EARSMetricRemoveRouteFailure  = "ears.removeRouteFailure"
 
 	EARSRouteId = attribute.Key("ears.routeId")
 

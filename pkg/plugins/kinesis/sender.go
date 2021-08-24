@@ -91,6 +91,11 @@ func NewSender(tid tenant.Id, plugin string, name string, config interface{}, se
 			rtsemconv.EARSMetricEventBytes,
 			metric.WithDescription("measures the number of event bytes processed"),
 		).Bind(commonLabels...)
+	s.eventProcessingTime = metric.Must(meter).
+		NewInt64ValueRecorder(
+			rtsemconv.EARSMetricEventProcessingTime,
+			metric.WithDescription("measures the number of event bytes processed"),
+		).Bind(commonLabels...)
 	return s, nil
 }
 
@@ -173,6 +178,7 @@ func (s *Sender) send(events []event.Event) {
 			PartitionKey: aws.String(uuid.New().String()),
 		}
 		batchReqs = append(batchReqs, &putReq)
+		s.eventProcessingTime.Record(evt.Context(), time.Since(evt.Created()).Milliseconds())
 	}
 	batchPut := kinesis.PutRecordsInput{
 		Records:    batchReqs,
