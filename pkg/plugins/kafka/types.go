@@ -104,8 +104,8 @@ type Receiver struct {
 	client              sarama.ConsumerGroup
 	topics              []string
 	handler             func(message *sarama.ConsumerMessage) bool
-	eventSuccessCounter metric.BoundFloat64Counter
-	eventFailureCounter metric.BoundFloat64Counter
+	eventSuccessCounter metric.BoundInt64Counter
+	eventFailureCounter metric.BoundInt64Counter
 	eventBytesCounter   metric.BoundInt64Counter
 	secrets             secret.Vault
 }
@@ -145,15 +145,18 @@ type SenderConfig struct {
 
 type Sender struct {
 	sync.Mutex
-	name     string
-	plugin   string
-	tid      tenant.Id
-	config   SenderConfig
-	count    int
-	logger   *zerolog.Logger
-	producer *Producer
-	stopped  bool
-	secrets  secret.Vault
+	name                string
+	plugin              string
+	tid                 tenant.Id
+	config              SenderConfig
+	count               int
+	logger              *zerolog.Logger
+	producer            *Producer
+	stopped             bool
+	eventSuccessCounter metric.BoundInt64Counter
+	eventFailureCounter metric.BoundInt64Counter
+	eventBytesCounter   metric.BoundInt64Counter
+	secrets             secret.Vault
 }
 
 type ManualHashPartitioner struct {
