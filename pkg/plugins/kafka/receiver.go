@@ -26,6 +26,7 @@ import (
 	"github.com/Shopify/sarama"
 	"github.com/rs/zerolog/log"
 	"github.com/xmidt-org/ears/internal/pkg/rtsemconv"
+	"github.com/xmidt-org/ears/pkg/panics"
 	"github.com/xmidt-org/ears/pkg/secret"
 	"github.com/xmidt-org/ears/pkg/tenant"
 	"go.opentelemetry.io/otel/attribute"
@@ -96,6 +97,7 @@ func NewReceiver(tid tenant.Id, plugin string, name string, config interface{}, 
 		attribute.String(rtsemconv.EARSOrgIdLabel, r.tid.OrgId),
 		attribute.String(rtsemconv.KafkaTopicLabel, r.config.Topic),
 		attribute.String(rtsemconv.KafkaGroupIdLabel, r.config.GroupId),
+		attribute.String(rtsemconv.EARSReceiverName, r.name),
 	}
 	r.eventSuccessCounter = metric.Must(meter).
 		NewInt64Counter(
@@ -155,6 +157,8 @@ func (r *Receiver) Start(handler func(*sarama.ConsumerMessage) bool) {
 		err := r.client.Consume(r.ctx, r.topics, r)
 		if err != nil { // the receiver itself is the group handler
 			r.logger.Error().Str("op", "kafka.Start").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Msg(err.Error())
+			//Sleep for a little bit to prevent busy loop
+			time.Sleep(time.Second)
 		} else {
 			r.logger.Info().Str("op", "kafka.Start").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Msg("kafka consumer finished without error")
 		}
@@ -261,7 +265,25 @@ func (r *Receiver) Receive(next receiver.NextFn) error {
 	r.stopped = false
 	r.Unlock()
 	go func() {
+		defer func() {
+			p := recover()
+			if p != nil {
+				panicErr := panics.ToError(p)
+				r.logger.Error().Str("op", "kafka.Receive").Str("error", panicErr.Error()).
+					Str("stackTrace", panicErr.StackTrace()).Msg("A panic has occurred")
+				r.Close()
+			}
+		}()
 		r.Start(func(msg *sarama.ConsumerMessage) bool {
+			defer func() {
+				p := recover()
+				if p != nil {
+					panicErr := panics.ToError(p)
+					r.logger.Error().Str("op", "kafka.Receive").Str("error", panicErr.Error()).
+						Str("stackTrace", panicErr.StackTrace()).Msg("A panic has occurred while handling a message")
+				}
+			}()
+
 			// bail if context has been canceled
 			if r.ctx.Err() != nil {
 				r.logger.Info().Str("op", "kafka.Receive").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Msg("abandoning message due to canceled context")
