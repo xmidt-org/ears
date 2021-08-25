@@ -29,6 +29,7 @@ import (
 	"go.opentelemetry.io/otel/trace"
 	"strings"
 	"sync/atomic"
+	"time"
 
 	"github.com/mohae/deepcopy"
 )
@@ -41,6 +42,7 @@ type event struct {
 	tid      tenant.Id
 	spanName string
 	span     trace.Span //Only valid in the root event
+	created  time.Time
 }
 
 type EventOption func(*event) error
@@ -61,12 +63,12 @@ func GetEventLogger() *zerolog.Logger {
 
 //Create a new event given a context, a payload, and other event options
 func New(ctx context.Context, payload interface{}, options ...EventOption) (Event, error) {
-
 	e := &event{
 		payload: payload,
 		ctx:     ctx,
 		ack:     nil,
 		tid:     tenant.Id{OrgId: "", AppId: ""},
+		created: time.Now(),
 	}
 	for _, option := range options {
 		err := option(e)
@@ -74,8 +76,7 @@ func New(ctx context.Context, payload interface{}, options ...EventOption) (Even
 			return nil, err
 		}
 	}
-
-	//Creating span for the event
+	// creating span for the event
 	if e.spanName == "" {
 		e.spanName = "generic"
 	}
@@ -84,21 +85,16 @@ func New(ctx context.Context, payload interface{}, options ...EventOption) (Even
 	ctx, span = tracer.Start(ctx, e.spanName)
 	span.SetAttributes(rtsemconv.EARSEventTrace)
 	span.SetAttributes(rtsemconv.EARSOrgId.String(e.tid.OrgId), rtsemconv.EARSAppId.String(e.tid.AppId))
-
 	traceId := span.SpanContext().TraceID().String()
 	span.SetAttributes(rtsemconv.EARSTraceId.String(traceId))
-
 	e.span = span
-
-	//Setting up logger for the event
+	// setting up logger for the event
 	parentLogger, ok := logger.Load().(*zerolog.Logger)
 	if ok {
 		ctx = logs.SubLoggerCtx(ctx, parentLogger)
-
 		logs.StrToLogCtx(ctx, rtsemconv.EarsLogTraceIdKey, traceId)
 		logs.StrToLogCtx(ctx, rtsemconv.EarsLogTenantIdKey, e.tid.ToString())
 	}
-
 	e.SetContext(ctx)
 	return e, nil
 }
@@ -157,6 +153,10 @@ func WithSpan(spanName string) EventOption {
 		e.spanName = spanName
 		return nil
 	}
+}
+
+func (e *event) Created() time.Time {
+	return e.created
 }
 
 func (e *event) Payload() interface{} {

@@ -72,11 +72,16 @@ type SenderConfig struct {
 }
 
 type Sender struct {
-	client *http.Client
-	config SenderConfig
-	name   string
-	plugin string
-	tid    tenant.Id
+	client              *http.Client
+	config              SenderConfig
+	name                string
+	plugin              string
+	tid                 tenant.Id
+	eventSuccessCounter metric.BoundInt64Counter
+	eventFailureCounter metric.BoundInt64Counter
+	eventBytesCounter   metric.BoundInt64Counter
+	eventProcessingTime metric.BoundInt64ValueRecorder
+	eventSendOutTime    metric.BoundInt64ValueRecorder
 }
 
 type BadHttpStatusError struct {

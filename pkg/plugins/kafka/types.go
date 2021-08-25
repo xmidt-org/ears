@@ -145,15 +145,20 @@ type SenderConfig struct {
 
 type Sender struct {
 	sync.Mutex
-	name     string
-	plugin   string
-	tid      tenant.Id
-	config   SenderConfig
-	count    int
-	logger   *zerolog.Logger
-	producer *Producer
-	stopped  bool
-	secrets  secret.Vault
+	name                string
+	plugin              string
+	tid                 tenant.Id
+	config              SenderConfig
+	count               int
+	logger              *zerolog.Logger
+	producer            *Producer
+	stopped             bool
+	eventSuccessCounter metric.BoundInt64Counter
+	eventFailureCounter metric.BoundInt64Counter
+	eventBytesCounter   metric.BoundInt64Counter
+	eventProcessingTime metric.BoundInt64ValueRecorder
+	eventSendOutTime    metric.BoundInt64ValueRecorder
+	secrets             secret.Vault
 }
 
 type ManualHashPartitioner struct {
@@ -164,5 +169,6 @@ type Producer struct {
 	pool   chan sarama.SyncProducer
 	done   chan bool
 	client sarama.Client
+	sender *Sender
 	logger *zerolog.Logger
 }
