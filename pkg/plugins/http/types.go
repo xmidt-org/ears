@@ -61,8 +61,8 @@ type Receiver struct {
 	name                string
 	plugin              string
 	tid                 tenant.Id
-	eventSuccessCounter metric.BoundFloat64Counter
-	eventFailureCounter metric.BoundFloat64Counter
+	eventSuccessCounter metric.BoundInt64Counter
+	eventFailureCounter metric.BoundInt64Counter
 	eventBytesCounter   metric.BoundInt64Counter
 }
 

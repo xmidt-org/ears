@@ -26,6 +26,7 @@ import (
 	"github.com/rs/zerolog/log"
 	"github.com/xmidt-org/ears/internal/pkg/rtsemconv"
 	"github.com/xmidt-org/ears/pkg/event"
+	"github.com/xmidt-org/ears/pkg/panics"
 	pkgplugin "github.com/xmidt-org/ears/pkg/plugin"
 	"github.com/xmidt-org/ears/pkg/receiver"
 	"github.com/xmidt-org/ears/pkg/secret"
@@ -78,14 +79,15 @@ func NewReceiver(tid tenant.Id, plugin string, name string, config interface{}, 
 		attribute.String(rtsemconv.EARSOrgIdLabel, r.tid.OrgId),
 		attribute.String(rtsemconv.SQSQueueUrlLabel, r.config.QueueUrl),
 		attribute.String(rtsemconv.HostnameLabel, hostname),
+		attribute.String(rtsemconv.EARSReceiverName, r.name),
 	}
 	r.eventSuccessCounter = metric.Must(meter).
-		NewFloat64Counter(
+		NewInt64Counter(
 			rtsemconv.EARSMetricEventSuccess,
 			metric.WithDescription("measures the number of successful events"),
 		).Bind(commonLabels...)
 	r.eventFailureCounter = metric.Must(meter).
-		NewFloat64Counter(
+		NewInt64Counter(
 			rtsemconv.EARSMetricEventFailure,
 			metric.WithDescription("measures the number of unsuccessful events"),
 		).Bind(commonLabels...)
@@ -99,10 +101,29 @@ func NewReceiver(tid tenant.Id, plugin string, name string, config interface{}, 
 
 func (r *Receiver) startReceiveWorker(svc *sqs.SQS, n int) {
 	go func() {
+		defer func() {
+			p := recover()
+			if p != nil {
+				panicErr := panics.ToError(p)
+				r.logger.Error().Str("op", "sqs.Receive").Str("error", panicErr.Error()).
+					Str("stackTrace", panicErr.StackTrace()).Msg("A panic has occurred")
+				r.StopReceiving(context.Background())
+			}
+		}()
+
 		//messageRetries := make(map[string]int)
 		entries := make(chan *sqs.DeleteMessageBatchRequestEntry, *r.config.ReceiverQueueDepth)
 		// delete messages
 		go func() {
+			defer func() {
+				p := recover()
+				if p != nil {
+					panicErr := panics.ToError(p)
+					r.logger.Error().Str("op", "kafka.Receive").Str("error", panicErr.Error()).
+						Str("stackTrace", panicErr.StackTrace()).Msg("A panic has occurred while batch deleting messages")
+				}
+			}()
+
 			deleteBatch := make([]*sqs.DeleteMessageBatchRequestEntry, 0)
 			for {
 				var delEntry *sqs.DeleteMessageBatchRequestEntry
@@ -206,14 +227,14 @@ func (r *Receiver) startReceiveWorker(svc *sqs.SQS, n int) {
 						//log.Ctx(e.Context()).Debug().Str("op", "SQS.receiveWorker").Int("batchSize", len(sqsResp.Messages)).Int("workerNum", n).Msg("processed message " + (*msg.MessageId))
 						entry := sqs.DeleteMessageBatchRequestEntry{Id: msg.MessageId, ReceiptHandle: msg.ReceiptHandle}
 						entries <- &entry
-						r.eventSuccessCounter.Add(ctx, 1.0)
+						r.eventSuccessCounter.Add(ctx, 1)
 						cancel()
 					},
 					func(e event.Event, err error) {
 						msg := e.Metadata().(sqs.Message) // get metadata associated with this event
 						log.Ctx(e.Context()).Error().Str("op", "SQS.receiveWorker").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Int("workerNum", n).Msg("failed to process message " + (*msg.MessageId) + ": " + err.Error())
 						// a nack below max retries - this is the only case where we do not delete the message yet
-						r.eventFailureCounter.Add(ctx, 1.0)
+						r.eventFailureCounter.Add(ctx, 1)
 						cancel()
 					}),
 					event.WithTenant(r.Tenant()),

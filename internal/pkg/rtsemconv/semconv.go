@@ -46,10 +46,11 @@ const (
 	EARSOrgId = attribute.Key("ears.orgId")
 
 	EARSInstanceId = attribute.Key("ears.instance")
-	EARSTraceId    = attribute.Key("ears.traceId")
+	EARSTraceId    = attribute.Key("trace.id")
 
-	EARSAppIdLabel = "ears.appId"
-	EARSOrgIdLabel = "ears.orgId"
+	EARSAppIdLabel   = "ears.appId"
+	EARSOrgIdLabel   = "ears.orgId"
+	EARSReceiverName = "ears.receiver"
 
 	DBTable = attribute.Key("db.table")
 
