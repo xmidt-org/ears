@@ -26,9 +26,7 @@ import (
 	"github.com/xmidt-org/ears/pkg/tenant"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/codes"
-	"go.opentelemetry.io/otel/semconv"
 	"go.opentelemetry.io/otel/trace"
-	"os"
 	"strings"
 	"sync/atomic"
 
@@ -48,8 +46,6 @@ type event struct {
 type EventOption func(*event) error
 
 var logger atomic.Value
-
-var hostname, _ = os.Hostname()
 
 func SetEventLogger(l *zerolog.Logger) {
 	logger.Store(l)
@@ -88,7 +84,6 @@ func New(ctx context.Context, payload interface{}, options ...EventOption) (Even
 	ctx, span = tracer.Start(ctx, e.spanName)
 	span.SetAttributes(rtsemconv.EARSEventTrace)
 	span.SetAttributes(rtsemconv.EARSOrgId.String(e.tid.OrgId), rtsemconv.EARSAppId.String(e.tid.AppId))
-	span.SetAttributes(semconv.NetHostNameKey.String(hostname))
 
 	traceId := span.SpanContext().TraceID().String()
 	span.SetAttributes(rtsemconv.EARSTraceId.String(traceId))
