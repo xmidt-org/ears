@@ -24,11 +24,15 @@ import (
 	"github.com/goccy/go-yaml"
 	"github.com/google/uuid"
 	"github.com/rs/zerolog/log"
+	"github.com/xmidt-org/ears/internal/pkg/rtsemconv"
 	"github.com/xmidt-org/ears/pkg/event"
 	pkgplugin "github.com/xmidt-org/ears/pkg/plugin"
 	"github.com/xmidt-org/ears/pkg/secret"
 	"github.com/xmidt-org/ears/pkg/sender"
 	"github.com/xmidt-org/ears/pkg/tenant"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/metric"
+	"go.opentelemetry.io/otel/metric/global"
 	"time"
 )
 
@@ -66,6 +70,40 @@ func NewSender(tid tenant.Id, plugin string, name string, config interface{}, se
 		logger: event.GetEventLogger(),
 	}
 	s.initPlugin()
+	// metric recorders
+	meter := global.Meter(rtsemconv.EARSMeterName)
+	commonLabels := []attribute.KeyValue{
+		attribute.String(rtsemconv.EARSPluginTypeLabel, rtsemconv.EARSPluginTypeSQSSender),
+		attribute.String(rtsemconv.EARSPluginNameLabel, s.Name()),
+		attribute.String(rtsemconv.EARSAppIdLabel, s.tid.AppId),
+		attribute.String(rtsemconv.EARSOrgIdLabel, s.tid.OrgId),
+		attribute.String(rtsemconv.SQSQueueUrlLabel, s.config.QueueUrl),
+	}
+	s.eventSuccessCounter = metric.Must(meter).
+		NewInt64Counter(
+			rtsemconv.EARSMetricEventSuccess,
+			metric.WithDescription("measures the number of successful events"),
+		).Bind(commonLabels...)
+	s.eventFailureCounter = metric.Must(meter).
+		NewInt64Counter(
+			rtsemconv.EARSMetricEventFailure,
+			metric.WithDescription("measures the number of unsuccessful events"),
+		).Bind(commonLabels...)
+	s.eventBytesCounter = metric.Must(meter).
+		NewInt64Counter(
+			rtsemconv.EARSMetricEventBytes,
+			metric.WithDescription("measures the number of event bytes processed"),
+		).Bind(commonLabels...)
+	s.eventProcessingTime = metric.Must(meter).
+		NewInt64ValueRecorder(
+			rtsemconv.EARSMetricEventProcessingTime,
+			metric.WithDescription("measures the time an event spends in ears"),
+		).Bind(commonLabels...)
+	s.eventSendOutTime = metric.Must(meter).
+		NewInt64ValueRecorder(
+			rtsemconv.EARSMetricEventSendOutTime,
+			metric.WithDescription("measures the time ears spends to send an event to a downstream data sink"),
+		).Bind(commonLabels...)
 	return s, nil
 }
 
@@ -120,6 +158,11 @@ func (s *Sender) Count() int {
 func (s *Sender) StopSending(ctx context.Context) {
 	s.Lock()
 	if s.done != nil {
+		s.eventSuccessCounter.Unbind()
+		s.eventFailureCounter.Unbind()
+		s.eventBytesCounter.Unbind()
+		s.eventProcessingTime.Unbind()
+		s.eventSendOutTime.Unbind()
 		s.done <- struct{}{}
 		s.done = nil
 	}
@@ -127,6 +170,9 @@ func (s *Sender) StopSending(ctx context.Context) {
 }
 
 func (s *Sender) send(events []event.Event) {
+	if len(events) == 0 {
+		return
+	}
 	entries := make([]*sqs.SendMessageBatchRequestEntry, 0)
 	for idx, evt := range events {
 		if idx == 0 {
@@ -144,12 +190,16 @@ func (s *Sender) send(events []event.Event) {
 			entry.DelaySeconds = aws.Int64(int64(*s.config.DelaySeconds))
 		}
 		entries = append(entries, entry)
+		s.eventBytesCounter.Add(evt.Context(), int64(len(buf)))
+		s.eventProcessingTime.Record(evt.Context(), time.Since(evt.Created()).Milliseconds())
 	}
 	sqsSendBatchParams := &sqs.SendMessageBatchInput{
 		Entries:  entries,
 		QueueUrl: aws.String(s.config.QueueUrl),
 	}
+	start := time.Now()
 	_, err := s.sqsService.SendMessageBatch(sqsSendBatchParams)
+	s.eventSendOutTime.Record(events[0].Context(), time.Since(start).Milliseconds())
 	if err != nil {
 		for idx, evt := range events {
 			if idx == 0 {
@@ -163,8 +213,10 @@ func (s *Sender) send(events []event.Event) {
 	}
 	for _, evt := range events {
 		if err != nil {
+			s.eventFailureCounter.Add(evt.Context(), 1)
 			evt.Nack(err)
 		} else {
+			s.eventSuccessCounter.Add(evt.Context(), 1)
 			evt.Ack()
 		}
 	}

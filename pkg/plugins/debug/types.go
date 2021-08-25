@@ -85,8 +85,8 @@ type Receiver struct {
 	history             *history
 	next                receiver.NextFn
 	logger              zerolog.Logger
-	eventSuccessCounter metric.BoundFloat64Counter
-	eventFailureCounter metric.BoundFloat64Counter
+	eventSuccessCounter metric.BoundInt64Counter
+	eventFailureCounter metric.BoundInt64Counter
 	eventBytesCounter   metric.BoundInt64Counter
 }
 
@@ -153,12 +153,17 @@ type SenderConfig struct {
 
 type Sender struct {
 	sync.Mutex
-	name        string
-	plugin      string
-	tid         tenant.Id
-	config      SenderConfig
-	history     *history
-	destination EventWriter
+	name                string
+	plugin              string
+	tid                 tenant.Id
+	config              SenderConfig
+	history             *history
+	destination         EventWriter
+	eventSuccessCounter metric.BoundInt64Counter
+	eventFailureCounter metric.BoundInt64Counter
+	eventBytesCounter   metric.BoundInt64Counter
+	eventProcessingTime metric.BoundInt64ValueRecorder
+	eventSendOutTime    metric.BoundInt64ValueRecorder
 }
 
 type history struct {

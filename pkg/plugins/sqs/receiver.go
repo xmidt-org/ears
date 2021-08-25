@@ -74,7 +74,8 @@ func NewReceiver(tid tenant.Id, plugin string, name string, config interface{}, 
 	// metric recorders
 	meter := global.Meter(rtsemconv.EARSMeterName)
 	commonLabels := []attribute.KeyValue{
-		attribute.String(rtsemconv.EARSPluginTypeLabel, rtsemconv.EARSPluginTypeSQS),
+		attribute.String(rtsemconv.EARSPluginTypeLabel, rtsemconv.EARSPluginTypeSQSReceiver),
+		attribute.String(rtsemconv.EARSPluginNameLabel, r.Name()),
 		attribute.String(rtsemconv.EARSAppIdLabel, r.tid.AppId),
 		attribute.String(rtsemconv.EARSOrgIdLabel, r.tid.OrgId),
 		attribute.String(rtsemconv.SQSQueueUrlLabel, r.config.QueueUrl),
@@ -95,6 +96,11 @@ func NewReceiver(tid tenant.Id, plugin string, name string, config interface{}, 
 		NewInt64Counter(
 			rtsemconv.EARSMetricEventBytes,
 			metric.WithDescription("measures the number of event bytes processed"),
+		).Bind(commonLabels...)
+	r.eventQueueDepth = metric.Must(meter).
+		NewInt64ValueRecorder(
+			rtsemconv.EARSMetricEventQueueDepth,
+			metric.WithDescription("measures the time ears spends to send an event to a downstream data sink"),
 		).Bind(commonLabels...)
 	return r, nil
 }
@@ -167,12 +173,13 @@ func (r *Receiver) startReceiveWorker(svc *sqs.SQS, n int) {
 		// receive messages
 		for {
 			approximateReceiveCount := "ApproximateReceiveCount"
+			approximateNumberOfMessages := "ApproximateNumberOfMessages"
 			sqsParams := &sqs.ReceiveMessageInput{
 				QueueUrl:            aws.String(r.config.QueueUrl),
 				MaxNumberOfMessages: aws.Int64(int64(*r.config.MaxNumberOfMessages)),
 				VisibilityTimeout:   aws.Int64(int64(*r.config.VisibilityTimeout)),
 				WaitTimeSeconds:     aws.Int64(int64(*r.config.WaitTimeSeconds)),
-				AttributeNames:      []*string{&approximateReceiveCount},
+				AttributeNames:      []*string{&approximateReceiveCount, &approximateNumberOfMessages},
 			}
 			sqsResp, err := svc.ReceiveMessage(sqsParams)
 			r.Lock()
@@ -192,7 +199,7 @@ func (r *Receiver) startReceiveWorker(svc *sqs.SQS, n int) {
 				r.logger.Debug().Str("op", "SQS.receiveWorker").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Int("receiveCount", r.receiveCount).Int("batchSize", len(sqsResp.Messages)).Int("workerNum", n).Msg("received message batch")
 				r.Unlock()
 			}
-			for _, message := range sqsResp.Messages {
+			for idx, message := range sqsResp.Messages {
 				//logger.Debug().Str("op", "SQS.Receive").Msg(*message.Body)
 				r.Lock()
 				r.receiveCount++
@@ -221,6 +228,15 @@ func (r *Receiver) startReceiveWorker(svc *sqs.SQS, n int) {
 				}
 				ctx, cancel := context.WithTimeout(context.Background(), time.Duration(*r.config.AcknowledgeTimeout)*time.Second)
 				r.eventBytesCounter.Add(ctx, int64(len(*message.Body)))
+				if idx == 0 {
+					if message.Attributes[approximateNumberOfMessages] != nil {
+						numMsgs, err := strconv.Atoi(*message.Attributes[approximateNumberOfMessages])
+						if err != nil {
+							r.logger.Error().Str("op", "SQS.receiveWorker").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Int("workerNum", n).Msg("error parsing message count: " + err.Error())
+						}
+						r.eventQueueDepth.Record(ctx, int64(numMsgs))
+					}
+				}
 				e, err := event.New(ctx, payload, event.WithMetadata(*message), event.WithAck(
 					func(e event.Event) {
 						msg := e.Metadata().(sqs.Message) // get metadata associated with this event
@@ -307,6 +323,7 @@ func (r *Receiver) StopReceiving(ctx context.Context) error {
 		r.eventSuccessCounter.Unbind()
 		r.eventFailureCounter.Unbind()
 		r.eventBytesCounter.Unbind()
+		r.eventQueueDepth.Unbind()
 		close(r.done)
 	}
 	r.Unlock()

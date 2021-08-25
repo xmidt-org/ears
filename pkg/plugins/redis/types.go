@@ -75,8 +75,8 @@ type Receiver struct {
 	logger              *zerolog.Logger
 	count               int
 	startTime           time.Time
-	eventSuccessCounter metric.BoundFloat64Counter
-	eventFailureCounter metric.BoundFloat64Counter
+	eventSuccessCounter metric.BoundInt64Counter
+	eventFailureCounter metric.BoundInt64Counter
 	eventBytesCounter   metric.BoundInt64Counter
 }
 
@@ -94,11 +94,16 @@ type SenderConfig struct {
 
 type Sender struct {
 	sync.Mutex
-	name   string
-	plugin string
-	tid    tenant.Id
-	config SenderConfig
-	count  int
-	logger *zerolog.Logger
-	client *redis.Client
+	name                string
+	plugin              string
+	tid                 tenant.Id
+	config              SenderConfig
+	count               int
+	logger              *zerolog.Logger
+	client              *redis.Client
+	eventSuccessCounter metric.BoundInt64Counter
+	eventFailureCounter metric.BoundInt64Counter
+	eventBytesCounter   metric.BoundInt64Counter
+	eventProcessingTime metric.BoundInt64ValueRecorder
+	eventSendOutTime    metric.BoundInt64ValueRecorder
 }

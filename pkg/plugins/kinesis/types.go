@@ -99,13 +99,18 @@ type SenderConfig struct {
 
 type Sender struct {
 	sync.Mutex
-	kinesisService *kinesis.Kinesis
-	name           string
-	plugin         string
-	tid            tenant.Id
-	config         SenderConfig
-	count          int
-	logger         *zerolog.Logger
-	eventBatch     []event.Event
-	done           chan struct{}
+	kinesisService      *kinesis.Kinesis
+	name                string
+	plugin              string
+	tid                 tenant.Id
+	config              SenderConfig
+	count               int
+	logger              *zerolog.Logger
+	eventBatch          []event.Event
+	done                chan struct{}
+	eventSuccessCounter metric.BoundInt64Counter
+	eventFailureCounter metric.BoundInt64Counter
+	eventBytesCounter   metric.BoundInt64Counter
+	eventProcessingTime metric.BoundInt64ValueRecorder
+	eventSendOutTime    metric.BoundInt64ValueRecorder
 }

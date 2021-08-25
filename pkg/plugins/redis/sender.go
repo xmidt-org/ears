@@ -20,11 +20,16 @@ import (
 	"github.com/go-redis/redis"
 	"github.com/goccy/go-yaml"
 	"github.com/rs/zerolog/log"
+	"github.com/xmidt-org/ears/internal/pkg/rtsemconv"
 	"github.com/xmidt-org/ears/pkg/event"
 	pkgplugin "github.com/xmidt-org/ears/pkg/plugin"
 	"github.com/xmidt-org/ears/pkg/secret"
 	"github.com/xmidt-org/ears/pkg/sender"
 	"github.com/xmidt-org/ears/pkg/tenant"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/metric"
+	"go.opentelemetry.io/otel/metric/global"
+	"time"
 )
 
 func NewSender(tid tenant.Id, plugin string, name string, config interface{}, secrets secret.Vault) (sender.Sender, error) {
@@ -58,6 +63,40 @@ func NewSender(tid tenant.Id, plugin string, name string, config interface{}, se
 		logger: event.GetEventLogger(),
 	}
 	s.initPlugin()
+	// metric recorders
+	meter := global.Meter(rtsemconv.EARSMeterName)
+	commonLabels := []attribute.KeyValue{
+		attribute.String(rtsemconv.EARSPluginTypeLabel, rtsemconv.EARSPluginTypeRedisSender),
+		attribute.String(rtsemconv.EARSPluginNameLabel, s.Name()),
+		attribute.String(rtsemconv.EARSAppIdLabel, s.tid.AppId),
+		attribute.String(rtsemconv.EARSOrgIdLabel, s.tid.OrgId),
+		attribute.String(rtsemconv.RedisChannelLabel, s.config.Channel),
+	}
+	s.eventSuccessCounter = metric.Must(meter).
+		NewInt64Counter(
+			rtsemconv.EARSMetricEventSuccess,
+			metric.WithDescription("measures the number of successful events"),
+		).Bind(commonLabels...)
+	s.eventFailureCounter = metric.Must(meter).
+		NewInt64Counter(
+			rtsemconv.EARSMetricEventFailure,
+			metric.WithDescription("measures the number of unsuccessful events"),
+		).Bind(commonLabels...)
+	s.eventBytesCounter = metric.Must(meter).
+		NewInt64Counter(
+			rtsemconv.EARSMetricEventBytes,
+			metric.WithDescription("measures the number of event bytes processed"),
+		).Bind(commonLabels...)
+	s.eventProcessingTime = metric.Must(meter).
+		NewInt64ValueRecorder(
+			rtsemconv.EARSMetricEventProcessingTime,
+			metric.WithDescription("measures the time an event spends in ears"),
+		).Bind(commonLabels...)
+	s.eventSendOutTime = metric.Must(meter).
+		NewInt64ValueRecorder(
+			rtsemconv.EARSMetricEventSendOutTime,
+			metric.WithDescription("measures the time ears spends to send an event to a downstream data sink"),
+		).Bind(commonLabels...)
 	return s, nil
 }
 
@@ -79,6 +118,11 @@ func (s *Sender) Count() int {
 }
 
 func (s *Sender) StopSending(ctx context.Context) {
+	s.eventSuccessCounter.Unbind()
+	s.eventFailureCounter.Unbind()
+	s.eventBytesCounter.Unbind()
+	s.eventProcessingTime.Unbind()
+	s.eventSendOutTime.Unbind()
 	s.Lock()
 	s.client.Close()
 	s.Unlock()
@@ -88,16 +132,23 @@ func (s *Sender) Send(e event.Event) {
 	buf, err := json.Marshal(e.Payload())
 	if err != nil {
 		log.Ctx(e.Context()).Error().Str("op", "redis.Send").Msg("failed to marshal message: " + err.Error())
+		s.eventFailureCounter.Add(e.Context(), 1)
 		e.Nack(err)
 		return
 	}
+	s.eventBytesCounter.Add(e.Context(), int64(len(buf)))
+	s.eventProcessingTime.Record(e.Context(), time.Since(e.Created()).Milliseconds())
+	start := time.Now()
 	err = s.client.Publish(s.config.Channel, string(buf)).Err()
+	s.eventSendOutTime.Record(e.Context(), time.Since(start).Milliseconds())
 	if err != nil {
 		log.Ctx(e.Context()).Error().Str("op", "redis.Send").Msg("failed to send message on redis channel: " + err.Error())
+		s.eventFailureCounter.Add(e.Context(), 1)
 		e.Nack(err)
 		return
 	}
 	log.Ctx(e.Context()).Debug().Str("op", "redis.Send").Str("name", s.Name()).Str("tid", s.Tenant().ToString()).Msg("sent message on redis channel")
+	s.eventSuccessCounter.Add(e.Context(), 1)
 	s.Lock()
 	s.count++
 	s.Unlock()
