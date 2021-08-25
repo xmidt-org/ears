@@ -93,6 +93,7 @@ type Receiver struct {
 	eventSuccessCounter metric.BoundInt64Counter
 	eventFailureCounter metric.BoundInt64Counter
 	eventBytesCounter   metric.BoundInt64Counter
+	eventQueueDepth     metric.BoundInt64ValueRecorder
 }
 
 var DefaultSenderConfig = SenderConfig{
