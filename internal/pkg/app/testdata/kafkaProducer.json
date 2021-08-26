@@ -20,6 +20,12 @@
     "plugin": "kafka",
     "name": "myKafkaSender",
     "config": {
+      "dynamicMetricLabel" : [
+        {
+          "label" : "mylabel",
+          "path" : ".foo"
+        }
+      ]
     }
   },
   "deliveryMode": "whoCares"
