@@ -69,6 +69,7 @@ func NewReceiver(tid tenant.Id, plugin string, name string, config interface{}, 
 		attribute.String(rtsemconv.EARSPluginNameLabel, r.Name()),
 		attribute.String(rtsemconv.EARSAppIdLabel, r.tid.AppId),
 		attribute.String(rtsemconv.EARSOrgIdLabel, r.tid.OrgId),
+		attribute.String(rtsemconv.EARSReceiverName, r.name),
 	}
 	r.eventSuccessCounter = metric.Must(meter).
 		NewInt64Counter(
