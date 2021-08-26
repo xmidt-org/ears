@@ -19,15 +19,12 @@ package app
 
 import (
 	"context"
-	"errors"
 	"fmt"
-	"github.com/goccy/go-yaml"
 	"github.com/lightstep/otel-launcher-go/launcher"
 	"github.com/rs/zerolog"
-	"github.com/spf13/viper"
-	"github.com/xmidt-org/ears/internal/pkg/aws/s3"
 	"github.com/xmidt-org/ears/internal/pkg/config"
 	"github.com/xmidt-org/ears/internal/pkg/rtsemconv"
+	"github.com/xmidt-org/ears/pkg/app"
 	"github.com/xmidt-org/ears/pkg/event"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/exporters/otlp"
@@ -42,11 +39,8 @@ import (
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/semconv"
 	"go.uber.org/fx"
-	"io/ioutil"
 	"net/http"
 	"os"
-	"os/exec"
-	"strings"
 	"time"
 )
 
@@ -55,60 +49,6 @@ func NewMux(a *APIManager, middleware []func(next http.Handler) http.Handler) (h
 		a.muxRouter.Use(m)
 	}
 	return a.muxRouter, nil
-}
-
-func startOtelSidecar(config config.Config) error {
-	configPath := viper.GetString("config")
-	if configPath == "" {
-		return errors.New("no sidecar config path present")
-	}
-	svc, err := s3.New()
-	if err != nil {
-		return err
-	}
-	configData, err := svc.GetObject(configPath)
-	if err != nil {
-		return err
-	}
-	var fullConfig map[string]interface{}
-	err = yaml.Unmarshal([]byte(configData), &fullConfig)
-	if err != nil {
-		return err
-	}
-	configKey := config.GetString("ears.opentelemetry.otel-collector.sidecar.configKey")
-	var otelConfig interface{}
-	if configKey != "" {
-		var ok bool
-		otelConfig, ok = fullConfig[configKey]
-		if !ok {
-			return errors.New("no sidecar config present")
-		}
-	} else {
-		otelConfig = fullConfig
-	}
-	buf, err := yaml.Marshal(otelConfig)
-	if err != nil {
-		return err
-	}
-	configFilePath := config.GetString("ears.opentelemetry.otel-collector.sidecar.configFilePath")
-	err = ioutil.WriteFile(configFilePath, buf, 0644)
-	if err != nil {
-		return err
-	}
-	// launch sidecar
-	commandLine := config.GetString("ears.opentelemetry.otel-collector.sidecar.commandLine")
-	if commandLine == "" {
-		return errors.New("no sidecar command line")
-	}
-	cmdElems := strings.Split(commandLine, " ")
-	cmd := exec.Command(cmdElems[0], cmdElems[1:]...)
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stdout
-	err = cmd.Start()
-	if err != nil {
-		return err
-	}
-	return nil
 }
 
 func SetupAPIServer(lifecycle fx.Lifecycle, config config.Config, logger *zerolog.Logger, mux http.Handler) error {
@@ -163,11 +103,15 @@ func SetupAPIServer(lifecycle fx.Lifecycle, config config.Config, logger *zerolo
 		if err != nil {
 			return err
 		}
+		var hostname, _ = os.Hostname()
+
 		traceProvider = sdktrace.NewTracerProvider(
 			sdktrace.WithBatcher(exporter),
 			sdktrace.WithResource(
 				resource.NewWithAttributes(
 					semconv.ServiceNameKey.String(rtsemconv.EARSServiceName),
+					semconv.ServiceVersionKey.String(app.Version),
+					semconv.NetHostNameKey.String(hostname),
 				),
 			),
 		)
@@ -223,17 +167,6 @@ func SetupAPIServer(lifecycle fx.Lifecycle, config config.Config, logger *zerolo
 		propagator := propagation.NewCompositeTextMapPropagator(propagation.Baggage{}, propagation.TraceContext{})
 		otel.SetTextMapPropagator(propagator)
 		logger.Info().Str("telemetryexporter", "stdout").Msg("started")
-	}
-
-	// launch side car
-
-	if config.GetBool("ears.opentelemetry.otel-collector.sidecar.active") {
-		err := startOtelSidecar(config)
-		if err != nil {
-			logger.Error().Str("sidecar", "otel").Msg(err.Error())
-		} else {
-			logger.Info().Str("sidecar", "otel").Msg("started")
-		}
 	}
 
 	lifecycle.Append(
