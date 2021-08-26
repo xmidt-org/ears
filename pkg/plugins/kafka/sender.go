@@ -113,7 +113,7 @@ func (s *Sender) getMetrics(labels []DynamicMetricValue) *SenderMetrics {
 			attribute.String(rtsemconv.KafkaTopicLabel, s.config.Topic),
 		}
 		for _, label := range labels {
-			attribute.String(label.Label, label.Value)
+			commonLabels = append(commonLabels, attribute.String(label.Label, label.Value))
 		}
 		newMetric.eventSuccessCounter = metric.Must(meter).
 			NewInt64Counter(
