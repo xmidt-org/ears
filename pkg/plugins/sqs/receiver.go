@@ -116,7 +116,38 @@ func (r *Receiver) startReceiveWorker(svc *sqs.SQS, n int) {
 				r.StopReceiving(context.Background())
 			}
 		}()
-
+		// periodically check queue depth
+		go func() {
+			defer func() {
+				p := recover()
+				if p != nil {
+					panicErr := panics.ToError(p)
+					r.logger.Error().Str("op", "sqs.Receive").Str("error", panicErr.Error()).
+						Str("stackTrace", panicErr.StackTrace()).Msg("A panic has occurred while checking queue attributes")
+				}
+			}()
+			ctx := context.Background()
+			for {
+				approximateNumberOfMessages := "ApproximateNumberOfMessages"
+				queueAttributesParams := &sqs.GetQueueAttributesInput{
+					QueueUrl:       aws.String(r.config.QueueUrl),
+					AttributeNames: []*string{&approximateNumberOfMessages},
+				}
+				queueAttributesResp, err := svc.GetQueueAttributes(queueAttributesParams)
+				if err != nil {
+					r.logger.Error().Str("op", "SQS.receiveWorker").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Int("workerNum", n).Msg(err.Error())
+				} else {
+					if queueAttributesResp.Attributes[approximateNumberOfMessages] != nil {
+						numMsgs, err := strconv.Atoi(*queueAttributesResp.Attributes[approximateNumberOfMessages])
+						if err != nil {
+							r.logger.Error().Str("op", "SQS.receiveWorker").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Int("workerNum", n).Msg("error parsing message count: " + err.Error())
+						}
+						r.eventQueueDepth.Record(ctx, int64(numMsgs))
+					}
+				}
+				time.Sleep(30 * time.Second)
+			}
+		}()
 		//messageRetries := make(map[string]int)
 		entries := make(chan *sqs.DeleteMessageBatchRequestEntry, *r.config.ReceiverQueueDepth)
 		// delete messages
@@ -125,11 +156,10 @@ func (r *Receiver) startReceiveWorker(svc *sqs.SQS, n int) {
 				p := recover()
 				if p != nil {
 					panicErr := panics.ToError(p)
-					r.logger.Error().Str("op", "kafka.Receive").Str("error", panicErr.Error()).
+					r.logger.Error().Str("op", "sqs.Receive").Str("error", panicErr.Error()).
 						Str("stackTrace", panicErr.StackTrace()).Msg("A panic has occurred while batch deleting messages")
 				}
 			}()
-
 			deleteBatch := make([]*sqs.DeleteMessageBatchRequestEntry, 0)
 			for {
 				var delEntry *sqs.DeleteMessageBatchRequestEntry
@@ -173,13 +203,12 @@ func (r *Receiver) startReceiveWorker(svc *sqs.SQS, n int) {
 		// receive messages
 		for {
 			approximateReceiveCount := "ApproximateReceiveCount"
-			approximateNumberOfMessages := "ApproximateNumberOfMessages"
 			sqsParams := &sqs.ReceiveMessageInput{
 				QueueUrl:            aws.String(r.config.QueueUrl),
 				MaxNumberOfMessages: aws.Int64(int64(*r.config.MaxNumberOfMessages)),
 				VisibilityTimeout:   aws.Int64(int64(*r.config.VisibilityTimeout)),
 				WaitTimeSeconds:     aws.Int64(int64(*r.config.WaitTimeSeconds)),
-				AttributeNames:      []*string{&approximateReceiveCount, &approximateNumberOfMessages},
+				AttributeNames:      []*string{&approximateReceiveCount},
 			}
 			sqsResp, err := svc.ReceiveMessage(sqsParams)
 			r.Lock()
@@ -199,7 +228,7 @@ func (r *Receiver) startReceiveWorker(svc *sqs.SQS, n int) {
 				r.logger.Debug().Str("op", "SQS.receiveWorker").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Int("receiveCount", r.receiveCount).Int("batchSize", len(sqsResp.Messages)).Int("workerNum", n).Msg("received message batch")
 				r.Unlock()
 			}
-			for idx, message := range sqsResp.Messages {
+			for _, message := range sqsResp.Messages {
 				//logger.Debug().Str("op", "SQS.Receive").Msg(*message.Body)
 				r.Lock()
 				r.receiveCount++
@@ -228,15 +257,6 @@ func (r *Receiver) startReceiveWorker(svc *sqs.SQS, n int) {
 				}
 				ctx, cancel := context.WithTimeout(context.Background(), time.Duration(*r.config.AcknowledgeTimeout)*time.Second)
 				r.eventBytesCounter.Add(ctx, int64(len(*message.Body)))
-				if idx == 0 {
-					if message.Attributes[approximateNumberOfMessages] != nil {
-						numMsgs, err := strconv.Atoi(*message.Attributes[approximateNumberOfMessages])
-						if err != nil {
-							r.logger.Error().Str("op", "SQS.receiveWorker").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Int("workerNum", n).Msg("error parsing message count: " + err.Error())
-						}
-						r.eventQueueDepth.Record(ctx, int64(numMsgs))
-					}
-				}
 				e, err := event.New(ctx, payload, event.WithMetadata(*message), event.WithAck(
 					func(e event.Event) {
 						msg := e.Metadata().(sqs.Message) // get metadata associated with this event
