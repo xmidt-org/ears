@@ -43,6 +43,9 @@ func (sc SenderConfig) WithDefaults() SenderConfig {
 	if cfg.SenderPoolSize == nil {
 		cfg.SenderPoolSize = DefaultSenderConfig.SenderPoolSize
 	}
+	if cfg.DynamicMetricLabels == nil {
+		cfg.DynamicMetricLabels = DefaultSenderConfig.DynamicMetricLabels
+	}
 	return cfg
 }
 
@@ -109,6 +112,9 @@ const senderSchema = `
                     "type": "integer", 
 					"minimum": 1,
 					"maximum": 100
+				},
+				"dynamicMetricLabel": {
+                    "type": "object"
 				}
             },
             "required": [

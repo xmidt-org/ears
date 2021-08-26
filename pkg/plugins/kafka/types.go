@@ -111,54 +111,70 @@ type Receiver struct {
 }
 
 var DefaultSenderConfig = SenderConfig{
-	Brokers:           "localhost:9092",
-	Topic:             "quickstart-events",
-	Partition:         pointer.Int(-1),
-	ChannelBufferSize: pointer.Int(0),
-	Username:          "",
-	Password:          "",
-	CACert:            "",
-	AccessCert:        "",
-	AccessKey:         "",
-	Version:           "",
-	SenderPoolSize:    pointer.Int(1),
-	PartitionPath:     "",
+	Brokers:             "localhost:9092",
+	Topic:               "quickstart-events",
+	Partition:           pointer.Int(-1),
+	ChannelBufferSize:   pointer.Int(0),
+	Username:            "",
+	Password:            "",
+	CACert:              "",
+	AccessCert:          "",
+	AccessKey:           "",
+	Version:             "",
+	SenderPoolSize:      pointer.Int(1),
+	PartitionPath:       "",
+	DynamicMetricLabels: make([]DynamicMetricLabel, 0),
 }
 
 // SenderConfig can be passed into NewSender() in order to configure
 // the behavior of the sender.
 type SenderConfig struct {
-	Brokers           string `json:"brokers,omitempty"`
-	Topic             string `json:"topic,omitempty"`
-	Partition         *int   `json:"partition,omitempty"`
-	PartitionPath     string `json:"partitionPath,omitempty"` // if path is set look up partition from event rather than using the hard coded partition id
-	Username          string `json:"username,omitempty"`
-	Password          string `json:"password,omitempty"`
-	CACert            string `json:"caCert,omitempty"`
-	AccessCert        string `json:"accessCert,omitempty"`
-	AccessKey         string `json:"accessKey,omitempty"`
-	Version           string `json:"version,omitempty"`
-	ChannelBufferSize *int   `json:"channelBufferSize,omitempty"`
-	TLSEnable         bool   `json:"tlsEnable,omitempty"`
-	SenderPoolSize    *int   `json:"senderPoolSize,omitempty"`
+	Brokers             string               `json:"brokers,omitempty"`
+	Topic               string               `json:"topic,omitempty"`
+	Partition           *int                 `json:"partition,omitempty"`
+	PartitionPath       string               `json:"partitionPath,omitempty"` // if path is set look up partition from event rather than using the hard coded partition id
+	Username            string               `json:"username,omitempty"`
+	Password            string               `json:"password,omitempty"`
+	CACert              string               `json:"caCert,omitempty"`
+	AccessCert          string               `json:"accessCert,omitempty"`
+	AccessKey           string               `json:"accessKey,omitempty"`
+	Version             string               `json:"version,omitempty"`
+	ChannelBufferSize   *int                 `json:"channelBufferSize,omitempty"`
+	TLSEnable           bool                 `json:"tlsEnable,omitempty"`
+	SenderPoolSize      *int                 `json:"senderPoolSize,omitempty"`
+	DynamicMetricLabels []DynamicMetricLabel `json:"dynamicMetricLabel,omitempty"`
 }
 
-type Sender struct {
-	sync.Mutex
-	name                string
-	plugin              string
-	tid                 tenant.Id
-	config              SenderConfig
-	count               int
-	logger              *zerolog.Logger
-	producer            *Producer
-	stopped             bool
+type DynamicMetricLabel struct {
+	Label string `json:"label,omitempty"`
+	Path  string `json:"path,omitempty"`
+}
+
+type DynamicMetricValue struct {
+	Label string `json:"label,omitempty"`
+	Value string `json:"value,omitempty"`
+}
+
+type SenderMetrics struct {
 	eventSuccessCounter metric.BoundInt64Counter
 	eventFailureCounter metric.BoundInt64Counter
 	eventBytesCounter   metric.BoundInt64Counter
 	eventProcessingTime metric.BoundInt64ValueRecorder
 	eventSendOutTime    metric.BoundInt64ValueRecorder
-	secrets             secret.Vault
+}
+
+type Sender struct {
+	sync.Mutex
+	name     string
+	plugin   string
+	tid      tenant.Id
+	config   SenderConfig
+	count    int
+	logger   *zerolog.Logger
+	producer *Producer
+	stopped  bool
+	secrets  secret.Vault
+	metrics  map[string]*SenderMetrics
 }
 
 type ManualHashPartitioner struct {
