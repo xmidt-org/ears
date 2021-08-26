@@ -121,12 +121,14 @@ func (s *Sender) Send(e event.Event) {
 		return
 	}
 	s.eventBytesCounter.Add(e.Context(), int64(len(buf)))
-	s.eventProcessingTime.Record(e.Context(), time.Since(e.Created()).Milliseconds())
+	ept := time.Since(e.Created()).Milliseconds()
+	s.eventProcessingTime.Record(e.Context(), ept)
 	//fmt.Printf("SEND %p\n", e)
 	if s.destination != nil {
 		start := time.Now()
 		err := s.destination.Write(e)
-		s.eventSendOutTime.Record(e.Context(), time.Since(start).Milliseconds())
+		est := time.Since(start).Milliseconds()
+		s.eventSendOutTime.Record(e.Context(), est)
 		if err != nil {
 			s.eventFailureCounter.Add(e.Context(), 1)
 			e.Nack(err)
