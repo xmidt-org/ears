@@ -114,7 +114,7 @@ const senderSchema = `
 					"maximum": 100
 				},
 				"dynamicMetricLabel": {
-                    "type": "object"
+                    "type": "array"
 				}
             },
             "required": [
