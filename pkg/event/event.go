@@ -335,5 +335,6 @@ func (e *event) Clone(ctx context.Context) (Event, error) {
 		ctx:      ctx,
 		ack:      subTree,
 		tid:      e.tid,
+		created:  e.created,
 	}, nil
 }
