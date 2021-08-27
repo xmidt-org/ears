@@ -91,16 +91,16 @@ func (s *Sender) getLabelValues(e event.Event, labels []DynamicMetricLabel) []Dy
 }
 
 func (s *Sender) getMetrics(labels []DynamicMetricValue) *SenderMetrics {
+	s.Lock()
+	defer s.Unlock()
 	key := ""
 	for _, label := range labels {
 		key += label.Label + "-" + label.Value + "-"
 	}
-	s.Lock()
 	if s.metrics == nil {
 		s.metrics = make(map[string]*SenderMetrics)
 	}
 	m, ok := s.metrics[key]
-	s.Unlock()
 	if !ok {
 		newMetric := new(SenderMetrics)
 		// metric recorders
@@ -140,9 +140,7 @@ func (s *Sender) getMetrics(labels []DynamicMetricValue) *SenderMetrics {
 				rtsemconv.EARSMetricEventSendOutTime,
 				metric.WithDescription("measures the time ears spends to send an event to a downstream data sink"),
 			).Bind(commonLabels...)
-		s.Lock()
 		s.metrics[key] = newMetric
-		s.Unlock()
 		return newMetric
 	} else {
 		return m
