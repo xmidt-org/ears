@@ -83,7 +83,7 @@ func New(ctx context.Context, payload interface{}, options ...EventOption) (Even
 	tracer := otel.Tracer(rtsemconv.EARSTracerName)
 	var span trace.Span
 	ctx, span = tracer.Start(ctx, e.spanName)
-	GetEventLogger().Debug().Str("op", "startEventSpan").Msg("start span")
+	//GetEventLogger().Debug().Str("op", "startEventSpan").Msg("start span")
 	span.SetAttributes(rtsemconv.EARSEventTrace)
 	span.SetAttributes(rtsemconv.EARSOrgId.String(e.tid.OrgId), rtsemconv.EARSAppId.String(e.tid.AppId))
 	traceId := span.SpanContext().TraceID().String()
@@ -118,14 +118,14 @@ func WithAck(handledFn func(Event), errFn func(Event, error)) EventOption {
 		e.ack = ack.NewAckTree(e.ctx, func() {
 			handledFn(e)
 			if e.span != nil {
-				GetEventLogger().Debug().Str("op", "endEventSpan").Msg("end span")
+				//GetEventLogger().Debug().Str("op", "endEventSpan").Msg("end span")
 				e.span.AddEvent("ack")
 				e.span.End()
 			}
 		}, func(err error) {
 			errFn(e, err)
 			if e.span != nil {
-				GetEventLogger().Debug().Str("op", "endEventSpan").Msg("end span")
+				//GetEventLogger().Debug().Str("op", "endEventSpan").Msg("end span")
 				e.span.AddEvent("nack")
 				e.span.RecordError(err)
 				e.span.SetStatus(codes.Error, "event processing error")
