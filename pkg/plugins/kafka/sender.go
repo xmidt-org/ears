@@ -114,6 +114,7 @@ func (s *Sender) getMetrics(labels []DynamicMetricValue) *SenderMetrics {
 		}
 		for _, label := range labels {
 			commonLabels = append(commonLabels, attribute.String(label.Label, label.Value))
+			s.logger.Info().Str("op", "getMetrics").Str("label", label.Label).Str("labelValue", label.Value).Msg("create new metric set")
 		}
 		newMetric.eventSuccessCounter = metric.Must(meter).
 			NewInt64Counter(
