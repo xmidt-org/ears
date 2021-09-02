@@ -118,7 +118,8 @@ func SetupAPIServer(lifecycle fx.Lifecycle, config config.Config, logger *zerolo
 		// setup metrics
 		metricsPusher = controller.New(
 			processor.New(
-				simple.NewWithExactDistribution(),
+				//simple.NewWithExactDistribution(),
+				simple.NewWithHistogramDistribution(),
 				exporter,
 			),
 			controller.WithExporter(exporter),
