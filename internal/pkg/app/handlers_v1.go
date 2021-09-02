@@ -18,11 +18,14 @@ import (
 	"context"
 	"errors"
 	"github.com/goccy/go-yaml"
+	"github.com/gorilla/mux"
+	"github.com/rs/zerolog/log"
 	"github.com/xmidt-org/ears/internal/pkg/quota"
 	"github.com/xmidt-org/ears/internal/pkg/rtsemconv"
 	"github.com/xmidt-org/ears/internal/pkg/tablemgr"
 	"github.com/xmidt-org/ears/pkg/app"
 	logs2 "github.com/xmidt-org/ears/pkg/logs"
+	"github.com/xmidt-org/ears/pkg/route"
 	"github.com/xmidt-org/ears/pkg/tenant"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
@@ -31,10 +34,7 @@ import (
 	"io/ioutil"
 	"net/http"
 
-	"github.com/gorilla/mux"
-	"github.com/rs/zerolog/log"
-
-	"github.com/xmidt-org/ears/pkg/route"
+	_ "net/http/pprof"
 )
 
 type APIManager struct {
@@ -55,6 +55,7 @@ func NewAPIManager(routingMgr tablemgr.RoutingTableManager, tenantStorer tenant.
 		tenantStorer:    tenantStorer,
 		quotaManager:    quotaManager,
 	}
+	api.muxRouter.PathPrefix("/debug/pprof/").Handler(http.DefaultServeMux)
 	api.muxRouter.HandleFunc("/ears/version", api.versionHandler).Methods(http.MethodGet)
 	api.muxRouter.HandleFunc("/ears/v1/orgs/{orgId}/applications/{appId}/routes/{routeId}", api.addRouteHandler).Methods(http.MethodPut)
 	api.muxRouter.HandleFunc("/ears/v1/orgs/{orgId}/applications/{appId}/routes", api.addRouteHandler).Methods(http.MethodPost)
