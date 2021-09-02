@@ -43,6 +43,7 @@ issues:
       linters:
         - funlen
         - dupl
+        - gosec
     - path: internal/pkg/app/app\.go
       linters:
         - funlen
