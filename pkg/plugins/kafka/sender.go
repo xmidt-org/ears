@@ -97,8 +97,6 @@ func (s *Sender) getMetrics(labels []DynamicMetricValue) *SenderMetrics {
 	for _, label := range labels {
 		key += label.Label + "-" + label.Value + "-"
 	}
-	s.Lock()
-	defer s.Unlock()
 	if s.metrics == nil {
 		s.metrics = make(map[string]*SenderMetrics)
 	}
