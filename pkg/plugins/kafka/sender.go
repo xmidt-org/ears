@@ -91,6 +91,8 @@ func (s *Sender) getLabelValues(e event.Event, labels []DynamicMetricLabel) []Dy
 }
 
 func (s *Sender) getMetrics(labels []DynamicMetricValue) *SenderMetrics {
+	s.Lock()
+	defer s.Unlock()
 	key := ""
 	for _, label := range labels {
 		key += label.Label + "-" + label.Value + "-"

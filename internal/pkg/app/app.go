@@ -32,6 +32,7 @@ import (
 	"go.opentelemetry.io/otel/exporters/stdout"
 	"go.opentelemetry.io/otel/metric/global"
 	"go.opentelemetry.io/otel/propagation"
+	sdkmetric "go.opentelemetry.io/otel/sdk/export/metric"
 	controller "go.opentelemetry.io/otel/sdk/metric/controller/basic"
 	processor "go.opentelemetry.io/otel/sdk/metric/processor/basic"
 	"go.opentelemetry.io/otel/sdk/metric/selector/simple"
@@ -89,6 +90,7 @@ func SetupAPIServer(lifecycle fx.Lifecycle, config config.Config, logger *zerolo
 				otlpgrpc.WithEndpoint(config.GetString("ears.opentelemetry.otel-collector.endpoint")),
 				otlpgrpc.WithInsecure(),
 			),
+			otlp.WithMetricExportKindSelector(sdkmetric.DeltaExportKindSelector()),
 		)
 		// http allows uri path but unfortunately http is not fully implemented yet
 		/*exporter, err := otlp.NewExporter(ctx,
