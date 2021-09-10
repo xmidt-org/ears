@@ -183,7 +183,12 @@ func (ack *ackTree) markComplete() {
 
 func (ack *ackTree) startContextListener(ctx context.Context) {
 	go func() {
-		<-ctx.Done()
+		done := ctx.Done()
+		if done == nil {
+			//this context can never be cancelled. No need to listen
+			return
+		}
+		<-done
 		ack.lock.Lock()
 		defer ack.lock.Unlock()
 		if ack.completed {
