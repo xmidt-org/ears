@@ -95,7 +95,6 @@ func SetupAPIServer(lifecycle fx.Lifecycle, config config.Config, logger *zerolo
 			otlptracegrpc.WithEndpoint(config.GetString("ears.opentelemetry.otel-collector.endpoint")),
 			otlptracegrpc.WithInsecure(),
 		)
-			//otlp.WithMetricExportKindSelector(sdkmetric.DeltaExportKindSelector()),
 		if err != nil {
 			return err
 		}
