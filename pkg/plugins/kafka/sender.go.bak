@@ -29,8 +29,6 @@ import (
 	"github.com/xmidt-org/ears/pkg/secret"
 	"github.com/xmidt-org/ears/pkg/sender"
 	"github.com/xmidt-org/ears/pkg/tenant"
-	"go.opentelemetry.io/contrib/instrumentation/github.com/Shopify/sarama/otelsarama"
-	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/global"
@@ -64,13 +62,29 @@ func NewSender(tid tenant.Id, plugin string, name string, config interface{}, se
 	if err != nil {
 		return nil, err
 	}
+
+	meter := global.Meter(rtsemconv.EARSMeterName)
+
+	eventProcessingTime := metric.Must(meter).
+		NewInt64ValueRecorder(
+			rtsemconv.EARSMetricEventProcessingTime,
+			metric.WithDescription("measures the time an event spends in ears"),
+		)
+	eventSendOutTime := metric.Must(meter).
+		NewInt64ValueRecorder(
+			rtsemconv.EARSMetricEventSendOutTime,
+			metric.WithDescription("measures the time ears spends to send an event to a downstream data sink"),
+		)
+
 	s := &Sender{
-		name:    name,
-		plugin:  plugin,
-		tid:     tid,
-		config:  cfg,
-		logger:  event.GetEventLogger(),
-		secrets: secrets,
+		name:                name,
+		plugin:              plugin,
+		tid:                 tid,
+		config:              cfg,
+		logger:              event.GetEventLogger(),
+		secrets:             secrets,
+		eventProcessingTime: eventProcessingTime,
+		eventSendOutTime:    eventSendOutTime,
 	}
 	err = s.initPlugin()
 	if err != nil {
@@ -93,12 +107,12 @@ func (s *Sender) getLabelValues(e event.Event, labels []DynamicMetricLabel) []Dy
 }
 
 func (s *Sender) getMetrics(labels []DynamicMetricValue) *SenderMetrics {
-	s.Lock()
-	defer s.Unlock()
 	key := ""
 	for _, label := range labels {
 		key += label.Label + "-" + label.Value + "-"
 	}
+	s.Lock()
+	defer s.Unlock()
 	if s.metrics == nil {
 		s.metrics = make(map[string]*SenderMetrics)
 	}
@@ -131,16 +145,6 @@ func (s *Sender) getMetrics(labels []DynamicMetricValue) *SenderMetrics {
 			NewInt64Counter(
 				rtsemconv.EARSMetricEventBytes,
 				metric.WithDescription("measures the number of event bytes processed"),
-			).Bind(commonLabels...)
-		newMetric.eventProcessingTime = metric.Must(meter).
-			NewInt64Histogram(
-				rtsemconv.EARSMetricEventProcessingTime,
-				metric.WithDescription("measures the time an event spends in ears"),
-			).Bind(commonLabels...)
-		newMetric.eventSendOutTime = metric.Must(meter).
-			NewInt64Histogram(
-				rtsemconv.EARSMetricEventSendOutTime,
-				metric.WithDescription("measures the time ears spends to send an event to a downstream data sink"),
 			).Bind(commonLabels...)
 		s.metrics[key] = newMetric
 		return newMetric
@@ -175,8 +179,6 @@ func (s *Sender) StopSending(ctx context.Context) {
 			m.eventSuccessCounter.Unbind()
 			m.eventFailureCounter.Unbind()
 			m.eventBytesCounter.Unbind()
-			m.eventProcessingTime.Unbind()
-			m.eventSendOutTime.Unbind()
 		}
 		s.producer.Close(ctx)
 	}
@@ -280,8 +282,7 @@ func (s *Sender) NewSyncProducers(count int) ([]sarama.SyncProducer, sarama.Clie
 			c.Close()
 			return nil, nil, err
 		}
-
-		producers[i] = otelsarama.WrapSyncProducer(config, p)
+		producers[i] = p
 		client = c
 	}
 	return producers, client, nil
@@ -324,7 +325,6 @@ func (p *Producer) SendMessage(ctx context.Context, topic string, partition int,
 	defer func() {
 		p.pool <- producer
 	}()
-	start := time.Now()
 	if partition != -1 {
 		p.client.Partitions(topic)
 		ps, err := p.client.Partitions(topic)
@@ -340,16 +340,12 @@ func (p *Producer) SendMessage(ctx context.Context, topic string, partition int,
 		Headers:   hs,
 		Timestamp: time.Now(),
 	}
-	otel.GetTextMapPropagator().Inject(ctx, otelsarama.NewProducerMessageCarrier(message))
-
 	part, offset, err := producer.SendMessage(message)
 	if nil != err {
 		return err
 	}
-	// override log values if any
-	elapsed := time.Since(start).Milliseconds()
-	p.sender.getMetrics(p.sender.getLabelValues(e, p.sender.config.DynamicMetricLabels)).eventSendOutTime.Record(ctx, elapsed)
-	log.Ctx(ctx).Debug().Str("op", "kafka.Send").Int("elapsed", int(elapsed)).Int("partition", int(part)).Int("offset", int(offset)).Msg("sent message on kafka topic")
+
+	log.Ctx(ctx).Debug().Str("op", "kafka.Send").Int("partition", int(part)).Int("offset", int(offset)).Msg("sent message on kafka topic")
 	return nil
 }
 
@@ -375,7 +371,15 @@ func (s *Sender) Send(e event.Event) {
 		e.Nack(err)
 		return
 	}
-	s.getMetrics(s.getLabelValues(e, s.config.DynamicMetricLabels)).eventProcessingTime.Record(e.Context(), time.Since(e.Created()).Milliseconds())
+	commonLabels := []attribute.KeyValue{
+		attribute.String(rtsemconv.EARSPluginTypeLabel, rtsemconv.EARSPluginTypeKafkaSender),
+		attribute.String(rtsemconv.EARSPluginNameLabel, s.Name()),
+		attribute.String(rtsemconv.EARSAppIdLabel, s.tid.AppId),
+		attribute.String(rtsemconv.EARSOrgIdLabel, s.tid.OrgId),
+		attribute.String(rtsemconv.KafkaTopicLabel, s.config.Topic),
+	}
+	s.eventProcessingTime.Record(e.Context(), time.Since(e.Created()).Milliseconds(), commonLabels...)
+
 	s.getMetrics(s.getLabelValues(e, s.config.DynamicMetricLabels)).eventBytesCounter.Add(e.Context(), int64(len(buf)))
 	partition := -1
 	if s.config.PartitionPath != "" {
@@ -387,6 +391,9 @@ func (s *Sender) Send(e event.Event) {
 	} else {
 		partition = *s.config.Partition
 	}
+
+	start := time.Now()
+
 	err = s.producer.SendMessage(e.Context(), s.config.Topic, partition, nil, buf, e)
 	if err != nil {
 		log.Ctx(e.Context()).Error().Str("op", "kafka.Send").Str("name", s.Name()).Str("tid", s.Tenant().ToString()).Msg("failed to send message: " + err.Error())
@@ -394,6 +401,11 @@ func (s *Sender) Send(e event.Event) {
 		e.Nack(err)
 		return
 	}
+
+	// override log values if any
+	elapsed := time.Since(start).Milliseconds()
+	s.eventSendOutTime.Record(e.Context(), elapsed, commonLabels...)
+
 	s.getMetrics(s.getLabelValues(e, s.config.DynamicMetricLabels)).eventSuccessCounter.Add(e.Context(), 1)
 	s.Lock()
 	s.count++
