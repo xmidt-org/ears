@@ -98,7 +98,7 @@ func NewReceiver(tid tenant.Id, plugin string, name string, config interface{}, 
 			metric.WithDescription("measures the number of event bytes processed"),
 		).Bind(commonLabels...)
 	r.eventQueueDepth = metric.Must(meter).
-		NewInt64ValueRecorder(
+		NewInt64Histogram(
 			rtsemconv.EARSMetricEventQueueDepth,
 			metric.WithDescription("measures the time ears spends to send an event to a downstream data sink"),
 		).Bind(commonLabels...)

@@ -29,6 +29,8 @@ import (
 	"github.com/xmidt-org/ears/pkg/secret"
 	"github.com/xmidt-org/ears/pkg/sender"
 	"github.com/xmidt-org/ears/pkg/tenant"
+	"go.opentelemetry.io/contrib/instrumentation/github.com/Shopify/sarama/otelsarama"
+	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/global"
@@ -131,12 +133,12 @@ func (s *Sender) getMetrics(labels []DynamicMetricValue) *SenderMetrics {
 				metric.WithDescription("measures the number of event bytes processed"),
 			).Bind(commonLabels...)
 		newMetric.eventProcessingTime = metric.Must(meter).
-			NewInt64ValueRecorder(
+			NewInt64Histogram(
 				rtsemconv.EARSMetricEventProcessingTime,
 				metric.WithDescription("measures the time an event spends in ears"),
 			).Bind(commonLabels...)
 		newMetric.eventSendOutTime = metric.Must(meter).
-			NewInt64ValueRecorder(
+			NewInt64Histogram(
 				rtsemconv.EARSMetricEventSendOutTime,
 				metric.WithDescription("measures the time ears spends to send an event to a downstream data sink"),
 			).Bind(commonLabels...)
@@ -278,7 +280,8 @@ func (s *Sender) NewSyncProducers(count int) ([]sarama.SyncProducer, sarama.Clie
 			c.Close()
 			return nil, nil, err
 		}
-		producers[i] = p
+
+		producers[i] = otelsarama.WrapSyncProducer(config, p)
 		client = c
 	}
 	return producers, client, nil
@@ -337,6 +340,8 @@ func (p *Producer) SendMessage(ctx context.Context, topic string, partition int,
 		Headers:   hs,
 		Timestamp: time.Now(),
 	}
+	otel.GetTextMapPropagator().Inject(ctx, otelsarama.NewProducerMessageCarrier(message))
+
 	part, offset, err := producer.SendMessage(message)
 	if nil != err {
 		return err

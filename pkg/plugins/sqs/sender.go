@@ -95,12 +95,12 @@ func NewSender(tid tenant.Id, plugin string, name string, config interface{}, se
 			metric.WithDescription("measures the number of event bytes processed"),
 		).Bind(commonLabels...)
 	s.eventProcessingTime = metric.Must(meter).
-		NewInt64ValueRecorder(
+		NewInt64Histogram(
 			rtsemconv.EARSMetricEventProcessingTime,
 			metric.WithDescription("measures the time an event spends in ears"),
 		).Bind(commonLabels...)
 	s.eventSendOutTime = metric.Must(meter).
-		NewInt64ValueRecorder(
+		NewInt64Histogram(
 			rtsemconv.EARSMetricEventSendOutTime,
 			metric.WithDescription("measures the time ears spends to send an event to a downstream data sink"),
 		).Bind(commonLabels...)
