@@ -185,7 +185,7 @@ func (ack *ackTree) startContextListener(ctx context.Context) {
 	go func() {
 		done := ctx.Done()
 		if done == nil {
-			//this context can never be cancelled. No need to listen
+			//this context can never be canceled. No need to listen
 			return
 		}
 		<-done
