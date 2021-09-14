@@ -159,8 +159,6 @@ type SenderMetrics struct {
 	eventSuccessCounter metric.BoundInt64Counter
 	eventFailureCounter metric.BoundInt64Counter
 	eventBytesCounter   metric.BoundInt64Counter
-	eventProcessingTime metric.BoundInt64Histogram
-	eventSendOutTime    metric.BoundInt64Histogram
 }
 
 type Sender struct {
@@ -175,6 +173,9 @@ type Sender struct {
 	stopped  bool
 	secrets  secret.Vault
 	metrics  map[string]*SenderMetrics
+
+	eventProcessingTime metric.Int64ValueRecorder
+	eventSendOutTime    metric.Int64ValueRecorder
 }
 
 type ManualHashPartitioner struct {
