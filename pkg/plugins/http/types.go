@@ -80,8 +80,8 @@ type Sender struct {
 	eventSuccessCounter metric.BoundInt64Counter
 	eventFailureCounter metric.BoundInt64Counter
 	eventBytesCounter   metric.BoundInt64Counter
-	eventProcessingTime metric.BoundInt64ValueRecorder
-	eventSendOutTime    metric.BoundInt64ValueRecorder
+	eventProcessingTime metric.BoundInt64Histogram
+	eventSendOutTime    metric.BoundInt64Histogram
 }
 
 type BadHttpStatusError struct {
