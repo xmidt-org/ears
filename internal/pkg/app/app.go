@@ -20,34 +20,30 @@ package app
 import (
 	"context"
 	"fmt"
-	"github.com/xmidt-org/ears/internal/pkg/rtsemconv"
-	"github.com/xmidt-org/ears/pkg/app"
-	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/metric/global"
-	"go.opentelemetry.io/otel/propagation"
-	"go.opentelemetry.io/otel/sdk/resource"
-	semconv "go.opentelemetry.io/otel/semconv/v1.4.0"
-	"os"
-	"time"
-
-	//"github.com/lightstep/otel-launcher-go/launcher"
 	"github.com/rs/zerolog"
 	"github.com/xmidt-org/ears/internal/pkg/config"
-	//"github.com/xmidt-org/ears/internal/pkg/rtsemconv"
-	//"github.com/xmidt-org/ears/pkg/app"
+	"github.com/xmidt-org/ears/internal/pkg/rtsemconv"
+	"github.com/xmidt-org/ears/pkg/app"
 	"github.com/xmidt-org/ears/pkg/event"
+	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc"
 	"go.opentelemetry.io/otel/exporters/stdout/stdoutmetric"
 	"go.opentelemetry.io/otel/exporters/stdout/stdouttrace"
+	"go.opentelemetry.io/otel/metric/global"
+	"go.opentelemetry.io/otel/propagation"
 	sdkmetric "go.opentelemetry.io/otel/sdk/export/metric"
 	controller "go.opentelemetry.io/otel/sdk/metric/controller/basic"
 	processor "go.opentelemetry.io/otel/sdk/metric/processor/basic"
 	"go.opentelemetry.io/otel/sdk/metric/selector/simple"
+	"go.opentelemetry.io/otel/sdk/resource"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
+	semconv "go.opentelemetry.io/otel/semconv/v1.4.0"
 	"go.uber.org/fx"
 	"net/http"
+	"os"
+	"time"
 )
 
 func NewMux(a *APIManager, middleware []func(next http.Handler) http.Handler) (http.Handler, error) {
@@ -119,7 +115,9 @@ func SetupAPIServer(lifecycle fx.Lifecycle, config config.Config, logger *zerolo
 			),
 			otlpmetric.WithMetricExportKindSelector(sdkmetric.DeltaExportKindSelector()),
 		)
-
+		if err != nil {
+			return err
+		}
 		metricsPusher = controller.New(
 			processor.New(
 				simple.NewWithExactDistribution(),
@@ -195,8 +193,14 @@ func SetupAPIServer(lifecycle fx.Lifecycle, config config.Config, logger *zerolo
 				//	logger.Info().Msg("lightstep exporter stopped")
 				//}
 				if config.GetBool("ears.opentelemetry.otel-collector.active") || config.GetBool("ears.opentelemetry.stdout.active") {
-					traceProvider.Shutdown(ctx)
-					metricsPusher.Stop(ctx)
+					err := traceProvider.Shutdown(ctx)
+					if err != nil {
+						logger.Error().Str("error", err.Error()).Msg("fail to stop traceProvider")
+					}
+					err = metricsPusher.Stop(ctx)
+					if err != nil {
+						logger.Error().Str("error", err.Error()).Msg("fail to stop metricsPusher")
+					}
 					logger.Info().Msg("otel exporter stopped")
 				}
 				return nil
