@@ -157,7 +157,7 @@ func (r *Receiver) Receive(next receiver.NextFn) error {
 					r.eventFailureCounter.Add(ctx, 1)
 					cancel()
 				}),
-				event.WithSpan(r.Name()),
+				event.WithOtelTracing(r.Name()),
 				event.WithTenant(r.Tenant()),
 			)
 			if err != nil {

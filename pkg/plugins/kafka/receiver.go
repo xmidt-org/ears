@@ -29,6 +29,8 @@ import (
 	"github.com/xmidt-org/ears/pkg/panics"
 	"github.com/xmidt-org/ears/pkg/secret"
 	"github.com/xmidt-org/ears/pkg/tenant"
+	"go.opentelemetry.io/contrib/instrumentation/github.com/Shopify/sarama/otelsarama"
+	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/global"
@@ -154,6 +156,7 @@ func (r *Receiver) Start(handler func(*sarama.ConsumerMessage) bool) {
 		// `Consume` should be called inside an infinite loop, when a
 		// server-side rebalance happens, the consumer session will need to be
 		// recreated to get the new claims
+		//err := r.client.Consume(r.ctx, r.topics, otelsarama.WrapConsumerGroupHandler(r))
 		err := r.client.Consume(r.ctx, r.topics, r)
 		if err != nil { // the receiver itself is the group handler
 			r.logger.Error().Str("op", "kafka.Start").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Msg(err.Error())
@@ -300,6 +303,10 @@ func (r *Receiver) Receive(next receiver.NextFn) error {
 				return false
 			}
 			ctx, cancel := context.WithTimeout(context.Background(), time.Duration(5)*time.Second)
+
+			//extract otel tracing info
+			ctx = otel.GetTextMapPropagator().Extract(ctx, otelsarama.NewConsumerMessageCarrier(msg))
+
 			r.eventBytesCounter.Add(ctx, int64(len(msg.Value)))
 			e, err := event.New(ctx, pl, event.WithAck(
 				func(e event.Event) {
@@ -312,7 +319,7 @@ func (r *Receiver) Receive(next receiver.NextFn) error {
 					r.eventFailureCounter.Add(ctx, 1)
 					cancel()
 				}),
-				event.WithSpan(r.Name()),
+				event.WithOtelTracing(r.Name()),
 				event.WithTenant(r.Tenant()))
 			if err != nil {
 				r.logger.Error().Str("op", "kafka.Receive").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Msg("cannot create event: " + err.Error())

@@ -171,7 +171,7 @@ func (r *Receiver) startReceiveWorker(svc *kinesis.Kinesis, n int) {
 								cancel()
 							}),
 							event.WithTenant(r.Tenant()),
-							event.WithSpan(r.Name()))
+							event.WithOtelTracing(r.Name()))
 						if err != nil {
 							r.logger.Error().Str("op", "Kinesis.receiveWorker").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Int("workerNum", n).Msg("cannot create event: " + err.Error())
 							return
