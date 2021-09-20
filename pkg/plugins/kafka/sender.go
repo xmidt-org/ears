@@ -281,7 +281,8 @@ func (s *Sender) NewSyncProducers(count int) ([]sarama.SyncProducer, sarama.Clie
 			return nil, nil, err
 		}
 
-		producers[i] = otelsarama.WrapSyncProducer(config, p)
+		//producers[i] = otelsarama.WrapSyncProducer(config, p)
+		producers[i] = p
 		client = c
 	}
 	return producers, client, nil

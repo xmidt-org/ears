@@ -124,7 +124,7 @@ func (h *Receiver) Receive(next receiver.NextFn) error {
 				},
 			),
 			event.WithTenant(h.Tenant()),
-			event.WithSpan(h.Name()),
+			event.WithOtelTracing(h.Name()),
 		)
 		if err != nil {
 			h.logger.Error().Str("error", err.Error()).Msg("error creating event")

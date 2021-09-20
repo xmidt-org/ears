@@ -30,6 +30,7 @@ import (
 	"github.com/xmidt-org/ears/pkg/secret"
 	"github.com/xmidt-org/ears/pkg/sender"
 	"github.com/xmidt-org/ears/pkg/tenant"
+	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/global"
@@ -183,9 +184,12 @@ func (s *Sender) send(events []event.Event) {
 			continue
 		}
 		entry := &sqs.SendMessageBatchRequestEntry{
-			Id:          aws.String(uuid.New().String()),
-			MessageBody: aws.String(string(buf)),
+			Id:                aws.String(uuid.New().String()),
+			MessageBody:       aws.String(string(buf)),
+			MessageAttributes: make(map[string]*sqs.MessageAttributeValue),
 		}
+		otel.GetTextMapPropagator().Inject(evt.Context(), NewSqsMessageAttributeCarrier(entry.MessageAttributes))
+
 		if *s.config.DelaySeconds > 0 {
 			entry.DelaySeconds = aws.Int64(int64(*s.config.DelaySeconds))
 		}

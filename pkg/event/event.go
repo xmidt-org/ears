@@ -19,6 +19,7 @@ package event
 
 import (
 	"context"
+	"github.com/google/uuid"
 	"github.com/rs/zerolog"
 	"github.com/xmidt-org/ears/internal/pkg/ack"
 	"github.com/xmidt-org/ears/internal/pkg/rtsemconv"
@@ -76,18 +77,20 @@ func New(ctx context.Context, payload interface{}, options ...EventOption) (Even
 			return nil, err
 		}
 	}
-	// creating span for the event
-	if e.spanName == "" {
-		e.spanName = "generic"
+	traceId := uuid.New().String()
+
+	// enable otel tracing
+	if e.spanName != "" {
+		tracer := otel.Tracer(rtsemconv.EARSTracerName)
+		var span trace.Span
+		ctx, span = tracer.Start(ctx, e.spanName)
+		span.SetAttributes(rtsemconv.EARSEventTrace)
+		span.SetAttributes(rtsemconv.EARSOrgId.String(e.tid.OrgId), rtsemconv.EARSAppId.String(e.tid.AppId))
+		traceId = span.SpanContext().TraceID().String()
+		span.SetAttributes(rtsemconv.EARSTraceId.String(traceId))
+		e.span = span
 	}
-	tracer := otel.Tracer(rtsemconv.EARSTracerName)
-	var span trace.Span
-	ctx, span = tracer.Start(ctx, e.spanName)
-	span.SetAttributes(rtsemconv.EARSEventTrace)
-	span.SetAttributes(rtsemconv.EARSOrgId.String(e.tid.OrgId), rtsemconv.EARSAppId.String(e.tid.AppId))
-	traceId := span.SpanContext().TraceID().String()
-	span.SetAttributes(rtsemconv.EARSTraceId.String(traceId))
-	e.span = span
+
 	// setting up logger for the event
 	parentLogger, ok := logger.Load().(*zerolog.Logger)
 	if ok {
@@ -147,8 +150,8 @@ func WithTenant(tid tenant.Id) EventOption {
 	}
 }
 
-//WithSpan provides a span name for event tracing
-func WithSpan(spanName string) EventOption {
+//WithOtelTracing enables opentelemtry tracing for the event
+func WithOtelTracing(spanName string) EventOption {
 	return func(e *event) error {
 		e.spanName = spanName
 		return nil
