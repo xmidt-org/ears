@@ -259,7 +259,7 @@ func (r *Receiver) startReceiveWorker(svc *sqs.SQS, n int) {
 				r.eventBytesCounter.Add(ctx, int64(len(*message.Body)))
 				e, err := event.New(ctx, payload, event.WithMetadata(map[string]interface{}{"sqsMessage": *message}), event.WithAck(
 					func(e event.Event) {
-						msg, ok := e.Metadata().(map[string]interface{})["sqsMessage"].(sqs.Message) // get metadata associated with this event
+						msg, ok := e.Metadata()["sqsMessage"].(sqs.Message) // get metadata associated with this event
 						//log.Ctx(e.Context()).Debug().Str("op", "SQS.receiveWorker").Int("batchSize", len(sqsResp.Messages)).Int("workerNum", n).Msg("processed message " + (*msg.MessageId))
 						if ok {
 							entry := sqs.DeleteMessageBatchRequestEntry{Id: msg.MessageId, ReceiptHandle: msg.ReceiptHandle}
@@ -271,7 +271,7 @@ func (r *Receiver) startReceiveWorker(svc *sqs.SQS, n int) {
 						cancel()
 					},
 					func(e event.Event, err error) {
-						msg, ok := e.Metadata().(map[string]interface{})["sqsMessage"].(sqs.Message) // get metadata associated with this event
+						msg, ok := e.Metadata()["sqsMessage"].(sqs.Message) // get metadata associated with this event
 						if ok {
 							log.Ctx(e.Context()).Error().Str("op", "SQS.receiveWorker").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Int("workerNum", n).Msg("failed to process message " + (*msg.MessageId) + ": " + err.Error())
 						} else {
