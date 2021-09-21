@@ -161,7 +161,7 @@ func (r *Receiver) startReceiveWorker(svc *kinesis.Kinesis, n int) {
 						}
 						ctx, cancel := context.WithTimeout(context.Background(), time.Duration(*r.config.AcknowledgeTimeout)*time.Second)
 						r.eventBytesCounter.Add(ctx, int64(len(msg.Data)))
-						e, err := event.New(ctx, payload, event.WithMetadata(map[string]interface{}{"kinesisMessage": *msg}), event.WithAck(
+						e, err := event.New(ctx, payload, event.WithMetadataKeyValue("kinesisMessage", *msg), event.WithAck(
 							func(e event.Event) {
 								r.eventSuccessCounter.Add(ctx, 1)
 								cancel()

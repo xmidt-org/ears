@@ -140,6 +140,17 @@ func WithMetadata(metadata map[string]interface{}) EventOption {
 	}
 }
 
+func WithMetadataKeyValue(key string, val interface{}) EventOption {
+	return func(e *event) error {
+		path := key
+		if !strings.HasPrefix(path, METADATA+".") {
+			path = METADATA + "." + path
+		}
+		e.SetPathValue(path, val, true)
+		return nil
+	}
+}
+
 func WithTenant(tid tenant.Id) EventOption {
 	return func(e *event) error {
 		e.tid = tid
