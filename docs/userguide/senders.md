@@ -34,7 +34,7 @@ Example Configuration:
 {
   "sender": {
     "plugin": "kafka",
-    "name": "accountRouteSender",
+    "name": "myKafkaSender",
     "config": {
       "brokers": "kafkabroker:16383",
       "topic": "kafkatopic",
@@ -53,7 +53,7 @@ type SenderConfig struct {
 	Brokers             string               `json:"brokers,omitempty"`
 	Topic               string               `json:"topic,omitempty"`
 	Partition           *int                 `json:"partition,omitempty"`
-	PartitionPath       string               `json:"partitionPath,omitempty"` // if path is set look up partition from event rather than using the hard coded partition id
+	PartitionPath       string               `json:"partitionPath,omitempty"` 
 	Username            string               `json:"username,omitempty"`
 	Password            string               `json:"password,omitempty"`
 	CACert              string               `json:"caCert,omitempty"`
@@ -87,14 +87,82 @@ Default Values:
 }
 ```
 
+If _PartitionPath_ is set, it is used to look up partition information from the event (payload or metadata), rather than using
+a hard coded _Partition_. Default value is -1 for random partition.
+
 ### Kinesis Sender Plugin
+
+Example Configuration:
+
+```
+{
+    "sender": {
+        "plugin": "kinesis",
+        "name": "myKinesisSender",
+        "config": {
+            "streamName": "ears-demo"
+        }
+    }
+}
+```
+
+Parameters:
+
+```
+type SenderConfig struct {
+    StreamName          string `json:"streamName,omitempty"`
+    MaxNumberOfMessages *int   `json:"maxNumberOfMessages,omitempty"`
+    SendTimeout         *int   `json:"sendTimeout,omitempty"`
+}
+```
+
+Default Values:
+
+```
+{
+    StreamName:          "",
+    MaxNumberOfMessages: 1
+    SendTimeout:         1
+}
+```
 
 ### SQS Sender Plugin
 
-### Kafka Sender Plugin
+Example Configuration:
+
+Parameters:
+
+Default Values:
 
 ### Kafka Sender Plugin
 
-### Kafka Sender Plugin
+Example Configuration:
+
+Parameters:
+
+Default Values:
 
 ### Kafka Sender Plugin
+
+Example Configuration:
+
+Parameters:
+
+Default Values:
+
+### Kafka Sender Plugin
+
+Example Configuration:
+
+Parameters:
+
+Default Values:
+
+### Kafka Sender Plugin
+
+Example Configuration:
+
+Parameters:
+
+Default Values:
+
