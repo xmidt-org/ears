@@ -452,7 +452,7 @@ func (interpreter *Interpreter) Exec(evt event.Event, code string) ([]event.Even
 			if err != nil {
 				return nil, err
 			}
-			err = nevt.SetMetadata(m["metadata"])
+			err = nevt.SetMetadata(m["metadata"].(map[string]interface{}))
 			if err != nil {
 				return nil, err
 			}
@@ -465,7 +465,7 @@ func (interpreter *Interpreter) Exec(evt event.Event, code string) ([]event.Even
 		if err != nil {
 			return nil, err
 		}
-		err = evt.SetMetadata(x["metadata"])
+		err = evt.SetMetadata(x["metadata"].(map[string]interface{}))
 		if err != nil {
 			return nil, err
 		}

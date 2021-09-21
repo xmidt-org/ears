@@ -41,7 +41,7 @@ type Event interface {
 	Payload() interface{}
 
 	//Get the event metadata
-	Metadata() interface{}
+	Metadata() map[string]interface{}
 
 	//Get the event tenant
 	Tenant() tenant.Id
@@ -58,7 +58,7 @@ type Event interface {
 
 	//Set the event metadata
 	//Will return an error if the event is done
-	SetMetadata(metadata interface{}) error
+	SetMetadata(metadata map[string]interface{}) error
 
 	// SetPathValue sets object value at path in either payload or metadata and returns its parent
 	// object and parent key if those exist
