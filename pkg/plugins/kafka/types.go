@@ -132,7 +132,7 @@ type SenderConfig struct {
 	Brokers             string               `json:"brokers,omitempty"`
 	Topic               string               `json:"topic,omitempty"`
 	Partition           *int                 `json:"partition,omitempty"`
-	PartitionPath       string               `json:"partitionPath,omitempty"` // if path is set look up partition from event rather than using the hard coded partition id
+	PartitionPath       string               `json:"partitionPath,omitempty"` // if path is set, look up partition from event rather than using the hard coded partition id
 	Username            string               `json:"username,omitempty"`
 	Password            string               `json:"password,omitempty"`
 	CACert              string               `json:"caCert,omitempty"`
