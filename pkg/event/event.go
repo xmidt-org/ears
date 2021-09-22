@@ -142,11 +142,10 @@ func WithMetadata(metadata map[string]interface{}) EventOption {
 
 func WithMetadataKeyValue(key string, val interface{}) EventOption {
 	return func(e *event) error {
-		path := key
-		if !strings.HasPrefix(path, METADATA+".") {
-			path = METADATA + "." + path
+		if e.metadata == nil {
+			e.metadata = make(map[string]interface{})
 		}
-		e.SetPathValue(path, val, true)
+		e.metadata[key] = val
 		return nil
 	}
 }
