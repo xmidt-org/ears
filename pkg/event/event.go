@@ -35,7 +35,7 @@ import (
 )
 
 type event struct {
-	metadata interface{}
+	metadata map[string]interface{}
 	payload  interface{}
 	ctx      context.Context
 	ack      ack.SubTree
@@ -133,9 +133,19 @@ func WithAck(handledFn func(Event), errFn func(Event, error)) EventOption {
 	}
 }
 
-func WithMetadata(metadata interface{}) EventOption {
+func WithMetadata(metadata map[string]interface{}) EventOption {
 	return func(e *event) error {
 		e.SetMetadata(metadata)
+		return nil
+	}
+}
+
+func WithMetadataKeyValue(key string, val interface{}) EventOption {
+	return func(e *event) error {
+		if e.metadata == nil {
+			e.metadata = make(map[string]interface{})
+		}
+		e.metadata[key] = val
 		return nil
 	}
 }
@@ -171,11 +181,11 @@ func (e *event) SetPayload(payload interface{}) error {
 	return nil
 }
 
-func (e *event) Metadata() interface{} {
+func (e *event) Metadata() map[string]interface{} {
 	return e.metadata
 }
 
-func (e *event) SetMetadata(metadata interface{}) error {
+func (e *event) SetMetadata(metadata map[string]interface{}) error {
 	if e.ack != nil && e.ack.IsAcked() {
 		return &ack.AlreadyAckedError{}
 	}
@@ -236,12 +246,16 @@ func (e *event) GetPathValue(path string) (interface{}, interface{}, string) {
 func (e *event) SetPathValue(path string, val interface{}, createPath bool) (interface{}, string) {
 	obj := e.Payload()
 	if strings.HasPrefix(path, METADATA+".") || path == METADATA {
-		obj = e.Metadata()
-		if obj == nil && createPath {
-			e.SetMetadata(make(map[string]interface{}))
-			obj = e.Metadata()
+		metaObj := e.Metadata()
+		if metaObj == nil {
+			if createPath {
+				e.SetMetadata(make(map[string]interface{}))
+				obj = e.Metadata()
+			} else {
+				return nil, ""
+			}
 		} else {
-			return nil, ""
+			obj = metaObj
 		}
 	}
 	if strings.HasPrefix(path, ".") {
@@ -254,7 +268,10 @@ func (e *event) SetPathValue(path string, val interface{}, createPath bool) (int
 		e.SetPayload(val)
 		return nil, ""
 	} else if path == METADATA {
-		e.SetMetadata(val)
+		valMap, ok := val.(map[string]interface{})
+		if ok {
+			e.SetMetadata(valMap)
+		}
 		return nil, ""
 	}
 	if !strings.HasPrefix(path, PAYLOAD+".") && !strings.HasPrefix(path, METADATA+".") {
@@ -323,7 +340,7 @@ func (e *event) Clone(ctx context.Context) (Event, error) {
 	//Unclear if all types are supported:
 	//https://github.com/mohae/deepcopy/blob/master/deepcopy.go#L45-L46
 	newPayloadCopy := deepcopy.Copy(e.payload)
-	newMetadtaCopy := deepcopy.Copy(e.metadata)
+	newMetadtaCopy := deepcopy.Copy(e.metadata).(map[string]interface{})
 	return &event{
 		payload:  newPayloadCopy,
 		metadata: newMetadtaCopy,
