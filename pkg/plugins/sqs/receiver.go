@@ -257,18 +257,26 @@ func (r *Receiver) startReceiveWorker(svc *sqs.SQS, n int) {
 				}
 				ctx, cancel := context.WithTimeout(context.Background(), time.Duration(*r.config.AcknowledgeTimeout)*time.Second)
 				r.eventBytesCounter.Add(ctx, int64(len(*message.Body)))
-				e, err := event.New(ctx, payload, event.WithMetadata(*message), event.WithAck(
+				e, err := event.New(ctx, payload, event.WithMetadataKeyValue("sqsMessage", *message), event.WithAck(
 					func(e event.Event) {
-						msg := e.Metadata().(sqs.Message) // get metadata associated with this event
+						msg, ok := e.Metadata()["sqsMessage"].(sqs.Message) // get metadata associated with this event
 						//log.Ctx(e.Context()).Debug().Str("op", "SQS.receiveWorker").Int("batchSize", len(sqsResp.Messages)).Int("workerNum", n).Msg("processed message " + (*msg.MessageId))
-						entry := sqs.DeleteMessageBatchRequestEntry{Id: msg.MessageId, ReceiptHandle: msg.ReceiptHandle}
-						entries <- &entry
-						r.eventSuccessCounter.Add(ctx, 1)
+						if ok {
+							entry := sqs.DeleteMessageBatchRequestEntry{Id: msg.MessageId, ReceiptHandle: msg.ReceiptHandle}
+							entries <- &entry
+							r.eventSuccessCounter.Add(ctx, 1)
+						} else {
+							log.Ctx(e.Context()).Error().Str("op", "SQS.receiveWorker").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Int("workerNum", n).Msg("failed to process message with missing sqs metadata")
+						}
 						cancel()
 					},
 					func(e event.Event, err error) {
-						msg := e.Metadata().(sqs.Message) // get metadata associated with this event
-						log.Ctx(e.Context()).Error().Str("op", "SQS.receiveWorker").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Int("workerNum", n).Msg("failed to process message " + (*msg.MessageId) + ": " + err.Error())
+						msg, ok := e.Metadata()["sqsMessage"].(sqs.Message) // get metadata associated with this event
+						if ok {
+							log.Ctx(e.Context()).Error().Str("op", "SQS.receiveWorker").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Int("workerNum", n).Msg("failed to process message " + (*msg.MessageId) + ": " + err.Error())
+						} else {
+							log.Ctx(e.Context()).Error().Str("op", "SQS.receiveWorker").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Int("workerNum", n).Msg("failed to process message with missing sqs metadata: " + err.Error())
+						}
 						// a nack below max retries - this is the only case where we do not delete the message yet
 						r.eventFailureCounter.Add(ctx, 1)
 						cancel()
