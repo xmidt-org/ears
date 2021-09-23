@@ -32,6 +32,31 @@ pluginHash = md5(pluginType, pluginName, pluginConfigurationJson)
 By choosing unique plugin names it is possible to force EARS to use two distinct sender plugin instances
 for two routes with otherwise identical sender plugin configurations.
 
+## Secrets Management
+
+Some senders require authentication information in the for of access token s etc. There are several reasons
+why you would not want such tokens to be part of the route configuration itself: (1) Large access tokens make the
+route less readable, (2) every key rotation will require redployment of the route and change the plugin hash
+and (3) there are security concerns about secrets then being visible in the response of the GetRoutes() APIs.
+Therefore, EARS supports a simple layer of indirection where you can refer to a secret by a short name instead
+palcing the secret itself directly into the route. For this purpose EARS supports the following syntax for
+selected plugin configurations: `secret://kafka.accessCert`. Currently EARS only supports using the service
+configuration file ears.yaml as a data store for secrets. Your ears.yaml must contain the following section:
+
+```
+ears:
+    secrets:
+        myorg:
+            myapp:
+                kafka:
+                    accessCert: |-
+                        ...
+                    accessKey: |-
+                        ...
+```
+
+Note that secrets are isolated by org ID and app ID for multi tenancy.
+
 ## Available Sender Plugins
 
 * kafka
