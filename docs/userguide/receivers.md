@@ -339,6 +339,19 @@ number of hardcoded JSON events defined directly in the receiver configuration.
 Example Configuration:
 
 ```
+{
+  "receiver" : {
+    "plugin" : "debug",
+    "config" :
+    {
+      "rounds" : 5,
+      "intervalMs" : 10,
+      "payload" : {
+        "foo" : "bar"
+      }
+    }
+  }
+}
 ```
 
 Parameters:
