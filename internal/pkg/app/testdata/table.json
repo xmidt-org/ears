@@ -412,6 +412,22 @@
           "expectedEventPayloadFile": "event15"
         }
       ]
+    },
+    "simpleFilterRegexRoute": {
+      "seq": 25,
+      "disabled": false,
+      "routeFiles": [
+        "simpleFilterRegexRoute"
+      ],
+      "waitMs": 1000,
+      "events": [
+        {
+          "senderRouteFiles": "simpleFilterRegexRoute",
+          "expectedEventCount": 5,
+          "expectedEventIndex": 0,
+          "expectedEventPayloadFile": "event16"
+        }
+      ]
     }
   }
 }
