@@ -15,7 +15,7 @@
 package main
 
 import (
-	"github.com/xmidt-org/ears/pkg/plugins/decode"
+	"github.com/xmidt-org/ears/pkg/plugins/encode"
 )
 
 func main() {
@@ -25,12 +25,12 @@ func main() {
 //go:generate ../../../../script/build-plugin.sh
 
 var (
-	Name       = "decode"
+	Name       = "encode"
 	GitVersion = "v0.0.0"
 	GitCommit  = ""
 )
 
-var Plugin, PluginErr = decode.NewPluginVersion(Name, GitVersion, GitCommit)
+var Plugin, PluginErr = encode.NewPluginVersion(Name, GitVersion, GitCommit)
 
 // for golangci-lint
 var _ = Plugin
