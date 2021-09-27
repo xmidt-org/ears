@@ -24,6 +24,7 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/global"
+	"go.opentelemetry.io/otel/metric/unit"
 	"time"
 
 	"github.com/goccy/go-yaml"
@@ -98,16 +99,19 @@ func NewSender(tid tenant.Id, plugin string, name string, config interface{}, se
 		NewInt64Counter(
 			rtsemconv.EARSMetricEventBytes,
 			metric.WithDescription("measures the number of event bytes processed"),
+			metric.WithUnit(unit.Bytes),
 		).Bind(commonLabels...)
 	s.eventProcessingTime = metric.Must(meter).
 		NewInt64Histogram(
 			rtsemconv.EARSMetricEventProcessingTime,
 			metric.WithDescription("measures the time an event spends in ears"),
+			metric.WithUnit(unit.Milliseconds),
 		).Bind(commonLabels...)
 	s.eventSendOutTime = metric.Must(meter).
 		NewInt64Histogram(
 			rtsemconv.EARSMetricEventSendOutTime,
 			metric.WithDescription("measures the time ears spends to send an event to a downstream data sink"),
+			metric.WithUnit(unit.Milliseconds),
 		).Bind(commonLabels...)
 	return s, nil
 }
