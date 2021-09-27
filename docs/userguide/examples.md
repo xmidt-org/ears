@@ -9,8 +9,8 @@ go build
 ./ears run
 ```
 
-You may want to edit the ears configuration file _ears.yaml_ located in the same folder before starting 
-the ears service. After starting the EARS service you should be able to reach the service endpoint here:
+You may want to edit the EARS configuration file _ears.yaml_ located in the same folder before starting 
+the EARS service. After starting the service you should be able to reach the service endpoint here:
 
 ```
 curl http://localhost:3000/ears/version
@@ -38,7 +38,8 @@ curl -X PUT http://localhost:3000/ears/v1/orgs/myorg/applications/myapp/config -
 
 Send five foo-bar-events 10 milliseconds apart to stdout. The filter chain contains a regex matcher which
 will let any event payload pass. Note that we choose _demo1_ as route ID. If you leave the _id_ field blank,
-EARS will choose a random route ID for you. The route ID will be included in the API response.
+EARS will choose a random route ID for you. The route ID will be included in the API response. Check the EARS
+logs for the foo-bar events hitting the debug sender. 
 
 ![image route](img/demo1.png)
 
@@ -86,7 +87,7 @@ curl -X POST http://localhost:3000/ears/v1/orgs/myorg/applications/myapp/routes 
 
 ## Demo 2
 
-Send five foo-bar events to stdout. The filter chain uses a split filter to break up the array into individual
+Send five foo-bar array events. The filter chain uses a split filter to break up the arrays into individual
 events so that we will receive a total of 10 events.
 
 ![image route](img/demo2.png)
@@ -140,8 +141,8 @@ curl -X POST http://localhost:3000/ears/v1/orgs/myorg/applications/myapp/routes 
 
 Here we are looking at two routes: One sends events from a SQS queue to a Kafka topic. The other sends events
 from the same Kafka topic to the same SQS queue. Finally, you can use a third route to inject a handful of events
-into either the SQS queue or the Kakfa topic and from then on these events will oscillate between Kafka and SQS
-forever.
+into either the SQS queue or the Kakfa topic to get things started. From then on these events will oscillate between 
+Kafka and SQS forever.
 
 ![image route](img/demo3.png)
 

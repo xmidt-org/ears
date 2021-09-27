@@ -1,11 +1,11 @@
 # Routes
 
-Routes are the core concept of EARS. As a user of EARS your business is adding new routes, updating existing 
+Routes are a key concept of EARS. As a user of EARS your business is adding new routes, updating existing 
 routes and deleting routes. To make the most of EARS, it is crucial to gain an in-depth understanding of how 
 routes work in EARS.
 
 Routes connect data sources to data destinations, for example you can connect an SQS queue to a Kafka topic. 
-Events travelling through such a route can be transformed or filtered according to the configuration details of 
+Events travelling through such a route can optionally be transformed or filtered according to the configuration details of 
 the route.
  
 A route consists of a linear sequence of a receiver plugin, followed by zero, one or more filter plugins (the filter chain) 
@@ -20,22 +20,23 @@ A real life example may look like this:
 
 The receiver plugin of a route receives events from an event source. The receiver plugin encapsulates all protocol 
 specific implementation and configuration details. EARS currently offers receiver plugins for Kafka, Kinesis, SQS, Redis
-Pub/Sub and HTTP. The receiver plugin passes each event it receives from its event source to the filter chain
+Pub/Sub and HTTP. The receiver plugin passes each event it receives from its event source to the filter chain.
 Each filter plugin in the filter chain is configured to perform a specific task. EARS offers a small library of highly 
-generic and configurable filters to perform various types of payload transformations and filtering of events that do 
+generic and configurable filters to perform various types of payload transformations and filtering. For example, a match
+filter will drop events that do 
 not meet predefined criteria such as presence or absence of a certain key value pair in the payload etc. After
 traveling through the filter chain, events finally arrive at the sender plugin which will then deliver the events to
 a data destination. Again EARS offers a set of configurable sender plugins for Kafka, Kinesis, SQS, Redis
-Pub/Sub and HTTP.
+Pub/Sub and HTTP that encapsulate all destination protocol specific implementation details.
 
-Conceptually You may think of a route as a linear flow where a receiver plugin is followed by some filter plugins 
-which are followed by a sender plugin. There are no forks or loops allowed in the filter chain of the route. 
+Conceptually you may think of a route as a linear flow where a receiver plugin is followed by some filter plugins 
+which are followed by a sender plugin. There are no forks or loops allowed in the structure of the route. 
 
 ## JSON or YAML
 
 When manipulating routes using the EARS API you may submit route configurations either using JSON or YAML
 encoding. Often JSON route configurations suffice but whenever a route contains multi-line strings such as 
-lengthy JavaScript in a _js_ filter then using YAM encoding may result in more readable route configurations.
+lengthy JavaScript in a _js_ filter then using YAML encoding may result in more readable route configurations.
 
 ## Routing Table Synchronization
 
@@ -48,10 +49,11 @@ and you can provide your own implementation to support other types of storage la
 
 ![image route](img/routing_table_sync.png)
 
-When an EARS instance is started, it will load the entire routing table from DynamoDB and keep a local copy of it in 
+When an EARS instance is started, it will load the entire routing table from storage (usually DynamoDB) and 
+keep a local copy of it in 
 an in-memory cache. When adding or updating a route, the AddRoute() API will be executed on one of the 
 EARS instances behind a load balancer. This EARS instance will then orchestrate the update of the routing table
-across the entire EARS cluster. First it updates the routing in DynamoDB. It then sends an update notification
+across the entire EARS cluster. First it updates the routing table in DynamoDB. It then sends an update notification
 to all other EARS instances which will update their local copies of the routing table. This way all EARS instances
 should be in sync with the latest version of the routing table very rapidly. In addition, each EARS instance will
 periodically scan its routing table for differences with the reference routing table in DynamoDB by comparing 
@@ -60,7 +62,7 @@ with the correct configurations from DynamoDB.
 
 ## Stream Sharing
 
-Imagine you have to different routes that read from the same data source, for example an SQS queue, using the exact
+Imagine you have two different routes that read from the same data source, for example an SQS queue, using the exact
 same parameters in their receiver configuration.  
 
 ![image route](img/stream_sharing_1.png)
@@ -77,11 +79,11 @@ tenant boundaries.
 
 ![image route](img/stream_sharing_2.png)
 
-Also note, that this stream sharing is done by EARS automatically in the background. As a user of EARS you do not have to 
+Also note, that stream sharing is done by EARS automatically in the background. As a user of EARS you do not have to 
 do anything for this to happen and when creating or removing routes you still treat every route individually as if
-no sharing was occuring. Internally EARS will maintain a reference counter to keep track of how many routes are
+no sharing occurred. Internally EARS will maintain a reference counter to keep track of how many routes are
 receiving events from a particular receiver instance, and whenever that reference count drops to zero, due to deletion
-of routes, EARS will automatically shut down a receiver plugin that is not needed any more.
+of routes, EARS will automatically shut down a receiver plugin that is not needed any loger.
 
 In some situations, however, you may not want string sharing. You can force EARS to not do stream sharing by
 choosing unique receiver plugin names. Each receiver plugin configuration has an optional name field. By choosing
