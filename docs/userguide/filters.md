@@ -1,7 +1,7 @@
 # Filter Plugins
 
 Filter plugins receive a single event from either a receiver plugin or another filter plugin.
-After applying arbitrary filtering logic and or transformations a filter plugin then forwards
+After applying arbitrary filtering logic and / or transformations a filter plugin then forwards
 zero, one or more events to a sender plugin or another filter plugin. 
 
 The Filter interface:
@@ -36,7 +36,7 @@ filter or transformation logic expressed as JavaScript.
 
 ## EARS Event Payload and Metadata
 
-Filters operate on events. Therefore, it is important to understand the EARS event model. Each event comes with 
+Filters operate on events. Therefore, it is important to understand the EARS event model. Each event comes with a 
 payload. Payloads are either byte arrays or strings. If a payload is a string it will be parsed as JSON into an `interface{}`.
 Thus, the payload will be one of `map[string]interface{}`, `[]interface{}`, `string`, `bool` or `float`. 
 
@@ -68,6 +68,7 @@ array elements is currently not supported.
 * encode
 * transform
 * hash
+* regex  
 * js
 * split
 * log
@@ -317,6 +318,30 @@ or equivalent
     "fromPath": ".to.location",
     "toPath": "metadata.kafka.partition",
     "hashAlgorithm": "fnv"
+  }
+}
+```
+
+## regex
+
+### Description
+
+Perform arbitrary regular expression transformations.
+
+### Example
+
+Select all digits from _content_ (leftmost match only) and place them into 
+_regexedContent_.
+
+### Filter Config
+
+```
+{
+  "plugin": "regex",
+  "config": {
+    "fromPath": ".conent",
+    "toPath": ".regexedContent",
+    "regex": "[0-9]+"
   }
 }
 ```

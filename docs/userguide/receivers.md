@@ -57,7 +57,7 @@ confidence that there is no chance of message loss as a result of the event pass
 
 ![image route](img/ack_nack_1.png)
 
-This example is similar to the first example, but here the event gets dropped by the match filter. Event
+This example is similar to the first example, but here the event gets dropped by the match filter. Even
 though the event never makes it to Kafka, the event was processed successfully (according to the criteria 
 defined in the route) and therefore the match filter will call Ack() on the event and the SQS receiver 
 will delete the event from SQS. Note that all that matters to the receiver is the fact that the event was

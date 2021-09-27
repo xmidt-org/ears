@@ -3,7 +3,7 @@
 ## Tenant CRUD Operations
 
 EARS supports multi-tenancy and is therefore suitable to be offered as a service.
-This means, before you can create a route for a tenant, you must create a tenant
+This means, before you can create a route for a tenant, you must create that tenant
 with a valid tenant configuration. A tenant is a two-dimensional structure consisting
 of an org ID and an application ID. Currently, the only required configuration for
 a tenant is its event throughput quota in events per second. EARS will then enforce
@@ -66,7 +66,7 @@ Example route configuration:
 }
 ```
 
-The above example directly connects a Kafka topic called _ears-kafka-test_ to a SQS queue called
+The above example directly connects a Kafka topic called _ears-kafka-test_ to an SQS queue called
 _ears-sqs-test_. Notice that no filter chain is configured in this example so all events received from 
 Kafka will be routed to SQS unmodified and unfiltered. Notice that the route has an ID and an optional 
 name field. The ID must match the ID given in a PUT call or be blank. When no ID is given in a POST 
