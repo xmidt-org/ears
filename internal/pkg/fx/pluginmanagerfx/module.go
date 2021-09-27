@@ -35,6 +35,7 @@ import (
 	"github.com/xmidt-org/ears/pkg/plugins/match"
 	"github.com/xmidt-org/ears/pkg/plugins/pass"
 	"github.com/xmidt-org/ears/pkg/plugins/redis"
+	"github.com/xmidt-org/ears/pkg/plugins/regex"
 	"github.com/xmidt-org/ears/pkg/plugins/split"
 	"github.com/xmidt-org/ears/pkg/plugins/sqs"
 	"github.com/xmidt-org/ears/pkg/plugins/trace"
@@ -141,6 +142,10 @@ func ProvidePluginManager(in PluginIn) (PluginOut, error) {
 		{
 			name:   "encode",
 			plugin: toArr(encode.NewPluginVersion("encode", "", ""))[0].(pkgplugin.Pluginer),
+		},
+		{
+			name:   "regex",
+			plugin: toArr(regex.NewPluginVersion("regex", "", ""))[0].(pkgplugin.Pluginer),
 		},
 		{
 			name:   "hash",
