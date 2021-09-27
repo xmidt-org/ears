@@ -34,6 +34,7 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/global"
+	"go.opentelemetry.io/otel/metric/unit"
 	"strings"
 	"time"
 )
@@ -131,16 +132,19 @@ func (s *Sender) getMetrics(labels []DynamicMetricValue) *SenderMetrics {
 			NewInt64Counter(
 				rtsemconv.EARSMetricEventBytes,
 				metric.WithDescription("measures the number of event bytes processed"),
+				metric.WithUnit(unit.Bytes),
 			).Bind(commonLabels...)
 		newMetric.eventProcessingTime = metric.Must(meter).
 			NewInt64Histogram(
 				rtsemconv.EARSMetricEventProcessingTime,
 				metric.WithDescription("measures the time an event spends in ears"),
+				metric.WithUnit(unit.Milliseconds),
 			).Bind(commonLabels...)
 		newMetric.eventSendOutTime = metric.Must(meter).
 			NewInt64Histogram(
 				rtsemconv.EARSMetricEventSendOutTime,
 				metric.WithDescription("measures the time ears spends to send an event to a downstream data sink"),
+				metric.WithUnit(unit.Milliseconds),
 			).Bind(commonLabels...)
 		s.metrics[key] = newMetric
 		return newMetric
@@ -281,7 +285,8 @@ func (s *Sender) NewSyncProducers(count int) ([]sarama.SyncProducer, sarama.Clie
 			return nil, nil, err
 		}
 
-		producers[i] = otelsarama.WrapSyncProducer(config, p)
+		//producers[i] = otelsarama.WrapSyncProducer(config, p)
+		producers[i] = p
 		client = c
 	}
 	return producers, client, nil

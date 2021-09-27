@@ -31,9 +31,11 @@ import (
 	"github.com/xmidt-org/ears/pkg/receiver"
 	"github.com/xmidt-org/ears/pkg/secret"
 	"github.com/xmidt-org/ears/pkg/tenant"
+	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/global"
+	"go.opentelemetry.io/otel/metric/unit"
 	"os"
 	"strconv"
 	"time"
@@ -96,6 +98,7 @@ func NewReceiver(tid tenant.Id, plugin string, name string, config interface{}, 
 		NewInt64Counter(
 			rtsemconv.EARSMetricEventBytes,
 			metric.WithDescription("measures the number of event bytes processed"),
+			metric.WithUnit(unit.Bytes),
 		).Bind(commonLabels...)
 	r.eventQueueDepth = metric.Must(meter).
 		NewInt64Histogram(
@@ -104,6 +107,12 @@ func NewReceiver(tid tenant.Id, plugin string, name string, config interface{}, 
 		).Bind(commonLabels...)
 	return r, nil
 }
+
+const (
+	approximateReceiveCount     = "ApproximateReceiveCount"
+	approximateNumberOfMessages = "ApproximateNumberOfMessages"
+	attributeNames              = "All"
+)
 
 func (r *Receiver) startReceiveWorker(svc *sqs.SQS, n int) {
 	go func() {
@@ -128,10 +137,9 @@ func (r *Receiver) startReceiveWorker(svc *sqs.SQS, n int) {
 			}()
 			ctx := context.Background()
 			for {
-				approximateNumberOfMessages := "ApproximateNumberOfMessages"
 				queueAttributesParams := &sqs.GetQueueAttributesInput{
 					QueueUrl:       aws.String(r.config.QueueUrl),
-					AttributeNames: []*string{&approximateNumberOfMessages},
+					AttributeNames: []*string{aws.String(approximateNumberOfMessages)},
 				}
 				queueAttributesResp, err := svc.GetQueueAttributes(queueAttributesParams)
 				if err != nil {
@@ -202,13 +210,13 @@ func (r *Receiver) startReceiveWorker(svc *sqs.SQS, n int) {
 		}()
 		// receive messages
 		for {
-			approximateReceiveCount := "ApproximateReceiveCount"
 			sqsParams := &sqs.ReceiveMessageInput{
-				QueueUrl:            aws.String(r.config.QueueUrl),
-				MaxNumberOfMessages: aws.Int64(int64(*r.config.MaxNumberOfMessages)),
-				VisibilityTimeout:   aws.Int64(int64(*r.config.VisibilityTimeout)),
-				WaitTimeSeconds:     aws.Int64(int64(*r.config.WaitTimeSeconds)),
-				AttributeNames:      []*string{&approximateReceiveCount},
+				QueueUrl:              aws.String(r.config.QueueUrl),
+				MaxNumberOfMessages:   aws.Int64(int64(*r.config.MaxNumberOfMessages)),
+				VisibilityTimeout:     aws.Int64(int64(*r.config.VisibilityTimeout)),
+				WaitTimeSeconds:       aws.Int64(int64(*r.config.WaitTimeSeconds)),
+				AttributeNames:        []*string{aws.String(approximateReceiveCount)},
+				MessageAttributeNames: []*string{aws.String(attributeNames)},
 			}
 			sqsResp, err := svc.ReceiveMessage(sqsParams)
 			r.Lock()
@@ -256,6 +264,12 @@ func (r *Receiver) startReceiveWorker(svc *sqs.SQS, n int) {
 					continue
 				}
 				ctx, cancel := context.WithTimeout(context.Background(), time.Duration(*r.config.AcknowledgeTimeout)*time.Second)
+
+				//extract otel tracing info
+				if message.MessageAttributes != nil {
+					ctx = otel.GetTextMapPropagator().Extract(ctx, NewSqsMessageAttributeCarrier(message.MessageAttributes))
+				}
+
 				r.eventBytesCounter.Add(ctx, int64(len(*message.Body)))
 				e, err := event.New(ctx, payload, event.WithMetadataKeyValue("sqsMessage", *message), event.WithAck(
 					func(e event.Event) {
@@ -282,7 +296,7 @@ func (r *Receiver) startReceiveWorker(svc *sqs.SQS, n int) {
 						cancel()
 					}),
 					event.WithTenant(r.Tenant()),
-					event.WithSpan(r.Name()))
+					event.WithOtelTracing(r.Name()))
 				if err != nil {
 					r.logger.Error().Str("op", "SQS.receiveWorker").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Int("workerNum", n).Msg("cannot create event: " + err.Error())
 					return

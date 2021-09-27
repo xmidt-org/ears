@@ -29,6 +29,7 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/global"
+	"go.opentelemetry.io/otel/metric/unit"
 	"io/ioutil"
 	"net/http"
 )
@@ -85,6 +86,7 @@ func NewReceiver(tid tenant.Id, plugin string, name string, config interface{}, 
 		NewInt64Counter(
 			rtsemconv.EARSMetricEventBytes,
 			metric.WithDescription("measures the number of event bytes processed"),
+			metric.WithUnit(unit.Bytes),
 		).Bind(commonLabels...)
 	return r, nil
 }
@@ -124,7 +126,7 @@ func (h *Receiver) Receive(next receiver.NextFn) error {
 				},
 			),
 			event.WithTenant(h.Tenant()),
-			event.WithSpan(h.Name()),
+			event.WithOtelTracing(h.Name()),
 		)
 		if err != nil {
 			h.logger.Error().Str("error", err.Error()).Msg("error creating event")

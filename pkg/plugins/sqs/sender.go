@@ -30,9 +30,11 @@ import (
 	"github.com/xmidt-org/ears/pkg/secret"
 	"github.com/xmidt-org/ears/pkg/sender"
 	"github.com/xmidt-org/ears/pkg/tenant"
+	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/global"
+	"go.opentelemetry.io/otel/metric/unit"
 	"time"
 )
 
@@ -93,16 +95,19 @@ func NewSender(tid tenant.Id, plugin string, name string, config interface{}, se
 		NewInt64Counter(
 			rtsemconv.EARSMetricEventBytes,
 			metric.WithDescription("measures the number of event bytes processed"),
+			metric.WithUnit(unit.Bytes),
 		).Bind(commonLabels...)
 	s.eventProcessingTime = metric.Must(meter).
 		NewInt64Histogram(
 			rtsemconv.EARSMetricEventProcessingTime,
 			metric.WithDescription("measures the time an event spends in ears"),
+			metric.WithUnit(unit.Milliseconds),
 		).Bind(commonLabels...)
 	s.eventSendOutTime = metric.Must(meter).
 		NewInt64Histogram(
 			rtsemconv.EARSMetricEventSendOutTime,
 			metric.WithDescription("measures the time ears spends to send an event to a downstream data sink"),
+			metric.WithUnit(unit.Milliseconds),
 		).Bind(commonLabels...)
 	return s, nil
 }
@@ -183,9 +188,12 @@ func (s *Sender) send(events []event.Event) {
 			continue
 		}
 		entry := &sqs.SendMessageBatchRequestEntry{
-			Id:          aws.String(uuid.New().String()),
-			MessageBody: aws.String(string(buf)),
+			Id:                aws.String(uuid.New().String()),
+			MessageBody:       aws.String(string(buf)),
+			MessageAttributes: make(map[string]*sqs.MessageAttributeValue),
 		}
+		otel.GetTextMapPropagator().Inject(evt.Context(), NewSqsMessageAttributeCarrier(entry.MessageAttributes))
+
 		if *s.config.DelaySeconds > 0 {
 			entry.DelaySeconds = aws.Int64(int64(*s.config.DelaySeconds))
 		}
