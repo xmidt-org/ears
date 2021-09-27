@@ -12,10 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package decode
+package regex
 
 import (
-	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -24,6 +23,7 @@ import (
 	"github.com/xmidt-org/ears/pkg/filter"
 	"github.com/xmidt-org/ears/pkg/secret"
 	"github.com/xmidt-org/ears/pkg/tenant"
+	"regexp"
 )
 
 func NewFilter(tid tenant.Id, plugin string, name string, config interface{}, secrets secret.Vault) (*Filter, error) {
@@ -59,35 +59,26 @@ func (f *Filter) Filter(evt event.Event) []event.Event {
 		evt.Nack(errors.New("nil object at path " + f.config.FromPath))
 		return []event.Event{}
 	}
-	var input string
-	switch obj := obj.(type) {
-	case string:
-		input = obj
-	case []byte:
-		input = string(obj)
-	default:
-		evt.Nack(errors.New("unsupported field type at path " + f.config.FromPath))
-		return []event.Event{}
-	}
-	buf, err := base64.StdEncoding.DecodeString(input)
+	buf, err := json.Marshal(obj)
 	if err != nil {
 		evt.Nack(err)
 		return []event.Event{}
 	}
-	var output interface{}
-	err = json.Unmarshal(buf, &output)
+	r, err := regexp.Compile(f.config.Regex)
 	if err != nil {
 		evt.Nack(err)
 		return []event.Event{}
 	}
+	output := r.FindString(string(buf))
 	path := f.config.FromPath
 	if f.config.ToPath != "" {
 		path = f.config.ToPath
 	}
 	evt.SetPathValue(path, output, true)
-	log.Ctx(evt.Context()).Debug().Str("op", "filter").Str("filterType", "decode").Str("name", f.Name()).Msg("decode")
+	log.Ctx(evt.Context()).Debug().Str("op", "filter").Str("filterType", "regex").Str("name", f.Name()).Msg("regex")
 	return []event.Event{evt}
 }
+
 func (f *Filter) Config() interface{} {
 	if f == nil {
 		return Config{}
