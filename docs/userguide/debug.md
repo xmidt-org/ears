@@ -68,6 +68,7 @@ If your route has high event throughput, you may generate too much log data usin
 it may be better to create a seconds route, similar to the route you are testing but with an added match filter
 and all the log filters you need. The match filter should then be configured to select only a small sample of
 incoming events, for example by matching for one or a few different identifiers in your payload.
+Note: Be sure to use a debug sender or instead of the actual destination sender to avoid event duplication.
 
 ![image route](img/debug2.png)
 
