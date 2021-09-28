@@ -9,7 +9,7 @@ go build
 ./ears run
 ```
 
-You may want to edit the EARS configuration file _ears.yaml_ located in the same folder before starting 
+You may want to edit the EARS configuration file [_ears.yaml_](config.md) located in the same folder before starting 
 the EARS service. After starting the service you should be able to reach the service endpoint here:
 
 ```
