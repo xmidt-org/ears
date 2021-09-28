@@ -15,6 +15,7 @@ immediately.
 * [EARS API](api.md)
 * [EARS vs. EEL](eel.md)  
 * [Simple Examples](examples.md)
+* [Config File ears.yaml](config.md)
 * [Debug Strategies](debug.md)
 * [Filter Plugin Reference](filters.md)
 * [Receiver Plugins Reference](receivers.md)
