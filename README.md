@@ -29,6 +29,7 @@ Our Kanban Board can be found [here](https://github.com/orgs/xmidt-org/projects/
 * [EARS API](userguide/api.md)
 * [EARS vs. EEL](userguide/eel.md)
 * [Simple Examples](userguide/examples.md)
+* [Config File ears.yaml](userguide/config.md)
 * [Debug Strategies](userguide/debug.md)
 * [Filter Plugin Reference](userguide/filters.md)
 * [Receiver Plugins Reference](userguide/receivers.md)
