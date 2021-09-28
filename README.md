@@ -11,7 +11,7 @@
 ## Summary
 
 A simple scalable routing service to usher events from an input plugin (for example, Kafka) to an output plugin (for example, AWS SQS).
-As an event passes through EARS, it may be filtered or transformed depending on the configuration details of the route and the 
+As an event passes through EARS, it may be filtered or transformed depending on the configuration details of a route and the 
 event payload. Routes can be dynamically added and removed using a simple REST API and modifications to the routing table are 
 quickly synchronized across an EARS cluster.
 
@@ -23,25 +23,23 @@ Kinesis etc. but also makes the development of third party plugins easy.
 
 Our Kanban Board can be found [here](https://github.com/orgs/xmidt-org/projects/3).
 
-## Table of Contents
+## User Guide
 
-- [Code of Conduct](#code-of-conduct)
-- [Details](#details)
-- [Install](#install)
-- [Contributing](#contributing)
+* [Routes](userguide/routes.md)
+* [EARS API](userguide/api.md)
+* [EARS vs. EEL](userguide/eel.md)
+* [Simple Examples](userguide/examples.md)
+* [Config File ears.yaml](userguide/config.md)
+* [Debug Strategies](userguide/debug.md)
+* [Filter Plugin Reference](userguide/filters.md)
+* [Receiver Plugins Reference](userguide/receivers.md)
+* [Sender Plugins Reference](userguide/senders.md)
+* [Plugin Developer Guide](userguide/plugindev.md)
 
 ## Code of Conduct
 
 This project and everyone participating in it are governed by the [XMiDT Code Of Conduct](https://xmidt.io/code_of_conduct/). 
 By participating, you agree to this Code.
-
-## Details
-
-Add details here.
-
-## Install
-
-Add details here.
 
 ## Contributing
 
