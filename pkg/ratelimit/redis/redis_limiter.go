@@ -31,6 +31,8 @@ type RedisRateLimiter struct {
 	tid    tenant.Id
 }
 
+const NUM_REDIS_RETRY = 3
+
 func NewRedisRateLimiter(tid tenant.Id, addr string, rqs int) *RedisRateLimiter {
 	return &RedisRateLimiter{
 		client: redis.NewClient(&redis.Options{
@@ -61,13 +63,17 @@ func (r *RedisRateLimiter) Take(ctx context.Context, unit int) error {
 		return nil
 	}
 
+	retry := NUM_REDIS_RETRY
 	for {
 		err := r.take(ctx, unit)
 		if err == nil {
 			return nil
 		}
 		if errors.Is(err, redis.TxFailedErr) {
-			return err
+			if retry == 0 {
+				return err
+			}
+			retry--
 		}
 		r := rand.Float32()
 		time.Sleep(time.Millisecond * time.Duration(r*100))

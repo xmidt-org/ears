@@ -36,6 +36,7 @@ import (
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/global"
 	"go.opentelemetry.io/otel/metric/unit"
+	"go.opentelemetry.io/otel/trace"
 	"os"
 	"strconv"
 	"time"
@@ -241,16 +242,28 @@ func (r *Receiver) startReceiveWorker(svc *sqs.SQS, n int) {
 				r.Lock()
 				r.receiveCount++
 				r.Unlock()
+
+				ctx, cancel := context.WithTimeout(context.Background(), time.Duration(*r.config.AcknowledgeTimeout)*time.Second)
+
+				//extract otel tracing info
+				if message.MessageAttributes != nil {
+					ctx = otel.GetTextMapPropagator().Extract(ctx, NewSqsMessageAttributeCarrier(message.MessageAttributes))
+				}
+				span := trace.SpanFromContext(ctx)
+				traceId := ""
+				if span != nil {
+					traceId = span.SpanContext().TraceID().String()
+				}
 				retryAttempt := 0
 				if message.Attributes[approximateReceiveCount] != nil {
 					retryAttempt, err = strconv.Atoi(*message.Attributes[approximateReceiveCount])
 					if err != nil {
-						r.logger.Error().Str("op", "SQS.receiveWorker").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Int("workerNum", n).Msg("error parsing receive count: " + err.Error())
+						r.logger.Error().Str("op", "SQS.receiveWorker").Str(rtsemconv.EarsLogTraceIdKey, traceId).Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Int("workerNum", n).Msg("error parsing receive count: " + err.Error())
 					}
 					retryAttempt--
 				}
 				if retryAttempt > *(r.config.NumRetries) {
-					r.logger.Error().Str("op", "SQS.receiveWorker").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Int("workerNum", n).Msg("max retries reached for " + (*message.MessageId))
+					r.logger.Error().Str("op", "SQS.receiveWorker").Str(rtsemconv.EarsLogTraceIdKey, traceId).Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Int("workerNum", n).Msg("max retries reached for " + (*message.MessageId))
 					entry := sqs.DeleteMessageBatchRequestEntry{Id: message.MessageId, ReceiptHandle: message.ReceiptHandle}
 					entries <- &entry
 					continue
@@ -258,16 +271,10 @@ func (r *Receiver) startReceiveWorker(svc *sqs.SQS, n int) {
 				var payload interface{}
 				err = json.Unmarshal([]byte(*message.Body), &payload)
 				if err != nil {
-					r.logger.Error().Str("op", "SQS.receiveWorker").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Int("workerNum", n).Msg("cannot parse message " + (*message.MessageId) + ": " + err.Error())
+					r.logger.Error().Str("op", "SQS.receiveWorker").Str(rtsemconv.EarsLogTraceIdKey, traceId).Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Int("workerNum", n).Msg("cannot parse message " + (*message.MessageId) + ": " + err.Error())
 					entry := sqs.DeleteMessageBatchRequestEntry{Id: message.MessageId, ReceiptHandle: message.ReceiptHandle}
 					entries <- &entry
 					continue
-				}
-				ctx, cancel := context.WithTimeout(context.Background(), time.Duration(*r.config.AcknowledgeTimeout)*time.Second)
-
-				//extract otel tracing info
-				if message.MessageAttributes != nil {
-					ctx = otel.GetTextMapPropagator().Extract(ctx, NewSqsMessageAttributeCarrier(message.MessageAttributes))
 				}
 
 				r.eventBytesCounter.Add(ctx, int64(len(*message.Body)))
@@ -298,6 +305,7 @@ func (r *Receiver) startReceiveWorker(svc *sqs.SQS, n int) {
 					event.WithTenant(r.Tenant()),
 					event.WithOtelTracing(r.Name()))
 				if err != nil {
+					cancel()
 					r.logger.Error().Str("op", "SQS.receiveWorker").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Int("workerNum", n).Msg("cannot create event: " + err.Error())
 					return
 				}
