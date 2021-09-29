@@ -14,6 +14,39 @@ definitions:
         $ref: '#/definitions/Id'
     type: object
     x-go-package: github.com/xmidt-org/ears/pkg/tenant
+  FilterStatus:
+    properties:
+      Config:
+        type: object
+      Name:
+        type: string
+      Plugin:
+        type: string
+      ReferenceCount:
+        format: int64
+        type: integer
+    type: object
+    x-go-package: github.com/xmidt-org/ears/internal/pkg/plugin
+  FiltersErrorResponse:
+    properties:
+      item:
+        type: string
+        x-go-name: Item
+      status:
+        $ref: '#/definitions/responseStatus'
+    type: object
+    x-go-package: github.com/xmidt-org/ears/internal/pkg/app/docs
+  FiltersResponse:
+    properties:
+      items:
+        additionalProperties:
+          $ref: '#/definitions/FilterStatus'
+        type: object
+        x-go-name: Items
+      status:
+        $ref: '#/definitions/responseStatus'
+    type: object
+    x-go-package: github.com/xmidt-org/ears/internal/pkg/app/docs
   Id:
     properties:
       appId:
@@ -45,6 +78,39 @@ definitions:
         x-go-name: EventsPerSec
     type: object
     x-go-package: github.com/xmidt-org/ears/pkg/tenant
+  ReceiverStatus:
+    properties:
+      Config:
+        type: object
+      Name:
+        type: string
+      Plugin:
+        type: string
+      ReferenceCount:
+        format: int64
+        type: integer
+    type: object
+    x-go-package: github.com/xmidt-org/ears/internal/pkg/plugin
+  ReceiversErrorResponse:
+    properties:
+      item:
+        type: string
+        x-go-name: Item
+      status:
+        $ref: '#/definitions/responseStatus'
+    type: object
+    x-go-package: github.com/xmidt-org/ears/internal/pkg/app/docs
+  ReceiversResponse:
+    properties:
+      items:
+        additionalProperties:
+          $ref: '#/definitions/ReceiverStatus'
+        type: object
+        x-go-name: Items
+      status:
+        $ref: '#/definitions/responseStatus'
+    type: object
+    x-go-package: github.com/xmidt-org/ears/internal/pkg/app/docs
   RouteDeleteResponse:
     properties:
       item:
@@ -77,6 +143,39 @@ definitions:
         items:
           $ref: '#/definitions/Config'
         type: array
+        x-go-name: Items
+      status:
+        $ref: '#/definitions/responseStatus'
+    type: object
+    x-go-package: github.com/xmidt-org/ears/internal/pkg/app/docs
+  SenderStatus:
+    properties:
+      Config:
+        type: object
+      Name:
+        type: string
+      Plugin:
+        type: string
+      ReferenceCount:
+        format: int64
+        type: integer
+    type: object
+    x-go-package: github.com/xmidt-org/ears/internal/pkg/plugin
+  SendersErrorResponse:
+    properties:
+      item:
+        type: string
+        x-go-name: Item
+      status:
+        $ref: '#/definitions/responseStatus'
+    type: object
+    x-go-package: github.com/xmidt-org/ears/internal/pkg/app/docs
+  SendersResponse:
+    properties:
+      items:
+        additionalProperties:
+          $ref: '#/definitions/SenderStatus'
+        type: object
         x-go-name: Items
       status:
         $ref: '#/definitions/responseStatus'
@@ -134,6 +233,22 @@ info:
   title: EARS
   version: 1.0.0
 paths:
+  /v1/filters:
+    get:
+      operationId: getFilters
+      responses:
+        "200":
+          description: FiltersResponse
+          schema:
+            $ref: '#/definitions/FiltersResponse'
+        "500":
+          description: FiltersErrorResponse
+          schema:
+            $ref: '#/definitions/FiltersErrorResponse'
+      summary: Gets list of all filter plugin instances currently present along with
+        their reference count.
+      tags:
+      - admin
   /v1/orgs/{orgId}/applications/{appId}/config:
     delete:
       operationId: deleteTenant
@@ -390,6 +505,38 @@ paths:
         and used instead.
       tags:
       - routes
+  /v1/receivers:
+    get:
+      operationId: getReceivers
+      responses:
+        "200":
+          description: ReceiversResponse
+          schema:
+            $ref: '#/definitions/ReceiversResponse'
+        "500":
+          description: ReceiversErrorResponse
+          schema:
+            $ref: '#/definitions/ReceiversErrorResponse'
+      summary: Gets list of all receiver plugin instances currently present along
+        with their reference count.
+      tags:
+      - admin
+  /v1/senders:
+    get:
+      operationId: getSenders
+      responses:
+        "200":
+          description: SendersResponse
+          schema:
+            $ref: '#/definitions/SendersResponse'
+        "500":
+          description: SendersErrorResponse
+          schema:
+            $ref: '#/definitions/SendersErrorResponse'
+      summary: Gets list of all sender plugin instances currently present along with
+        their reference count.
+      tags:
+      - admin
   /version:
     get:
       operationId: version
@@ -404,6 +551,18 @@ paths:
 produces:
 - application/json
 responses:
+  filtersErrorResponse:
+    description: Item response containing a filters error.
+    schema:
+      $ref: '#/definitions/FiltersErrorResponse'
+  receiversErrorResponse:
+    description: Item response containing a receivers error.
+    schema:
+      $ref: '#/definitions/ReceiversErrorResponse'
+  receiversResponse:
+    description: Items response containing a list of receiver plugin instances.
+    schema:
+      $ref: '#/definitions/ReceiversResponse'
   routeDeleteResponse:
     description: Item response containing the ID of the deleted route.
     schema:
@@ -421,6 +580,14 @@ responses:
     description: Items response containing a list of routes.
     schema:
       $ref: '#/definitions/RoutesResponse'
+  sendersErrorResponse:
+    description: Item response containing a senders error.
+    schema:
+      $ref: '#/definitions/SendersErrorResponse'
+  sendersResponse:
+    description: Items response containing a list of sender plugin instances.
+    schema:
+      $ref: '#/definitions/SendersResponse'
   tenantDeleteResponse:
     description: Item response.
     schema:
