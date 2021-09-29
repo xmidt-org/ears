@@ -14,7 +14,7 @@
 
 package docs
 
-// swagger:route GET /v1/receivers admin getReceivers
+// swagger:route GET /v1/receivers admin getAllReceivers
 // Gets list of all receiver plugin instances currently present along with their reference count.
 // responses:
 //   200: ReceiversResponse

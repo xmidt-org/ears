@@ -207,6 +207,17 @@ definitions:
         $ref: '#/definitions/responseStatus'
     type: object
     x-go-package: github.com/xmidt-org/ears/internal/pkg/app/docs
+  TenantsResponse:
+    properties:
+      item:
+        items:
+          $ref: '#/definitions/Config'
+        type: array
+        x-go-name: Item
+      status:
+        $ref: '#/definitions/responseStatus'
+    type: object
+    x-go-package: github.com/xmidt-org/ears/internal/pkg/app/docs
   VersionResponse:
     properties:
       item:
@@ -235,7 +246,7 @@ info:
 paths:
   /v1/filters:
     get:
-      operationId: getFilters
+      operationId: getAllFilters
       responses:
         "200":
           description: FiltersResponse
@@ -350,7 +361,8 @@ paths:
           description: RouteErrorResponse
           schema:
             $ref: '#/definitions/RouteErrorResponse'
-      summary: Gets list of all routes currently present in the routing table.
+      summary: Gets list of all routes currently present in the routing table for
+        a single tenant.
       tags:
       - routes
   /v1/orgs/{orgId}/applications/{appId}/routes/{routeId}:
@@ -507,7 +519,7 @@ paths:
       - routes
   /v1/receivers:
     get:
-      operationId: getReceivers
+      operationId: getAllReceivers
       responses:
         "200":
           description: ReceiversResponse
@@ -521,9 +533,25 @@ paths:
         with their reference count.
       tags:
       - admin
+  /v1/routes:
+    get:
+      operationId: getAllRoutes
+      responses:
+        "200":
+          description: RoutesResponse
+          schema:
+            $ref: '#/definitions/RoutesResponse'
+        "500":
+          description: RouteErrorResponse
+          schema:
+            $ref: '#/definitions/RouteErrorResponse'
+      summary: Gets list of all routes currently present in the routing table for
+        all tenants.
+      tags:
+      - admin
   /v1/senders:
     get:
-      operationId: getSenders
+      operationId: getAllSenders
       responses:
         "200":
           description: SendersResponse
@@ -535,6 +563,21 @@ paths:
             $ref: '#/definitions/SendersErrorResponse'
       summary: Gets list of all sender plugin instances currently present along with
         their reference count.
+      tags:
+      - admin
+  /v1/tenants:
+    get:
+      operationId: getAllTenants
+      responses:
+        "200":
+          description: TenantsResponse
+          schema:
+            $ref: '#/definitions/TenantsResponse'
+        "500":
+          description: TenantErrorResponse
+          schema:
+            $ref: '#/definitions/TenantErrorResponse'
+      summary: Gets list of all tenant configs including their event quota.
       tags:
       - admin
   /version:
@@ -600,6 +643,10 @@ responses:
     description: Item response containing tenant.
     schema:
       $ref: '#/definitions/TenantResponse'
+  tenantsResponse:
+    description: Item response containing list of tenants.
+    schema:
+      $ref: '#/definitions/TenantsResponse'
   versionResponse:
     description: This text will appear as description of your response body.
     schema:
