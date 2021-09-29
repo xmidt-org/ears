@@ -14,7 +14,7 @@
 
 package docs
 
-// swagger:route GET /v1/orgs/{orgid}/applications/{appid}/routes/{routeId} routes getRoute
+// swagger:route GET /v1/orgs/{orgId}/applications/{appId}/routes/{routeId} routes getRoute
 // Gets a route for a given ID. If no route by that ID exists and error is returned instead.
 // responses:
 //   200: RouteResponse

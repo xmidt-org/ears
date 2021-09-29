@@ -14,22 +14,20 @@
 
 package docs
 
-// swagger:route GET /v1/orgs/{orgId}/applications/{appId}/routes routes getRoutes
-// Gets list of all routes currently present in the routing table.
+// swagger:route DELETE /v1/orgs/{orgId}/applications/{appId}/config tenants deleteTenant
+// Removes an existing tenant from the system provided tenant has no routes.
 // responses:
-//   200: RoutesResponse
-//   500: RouteErrorResponse
+//   200: TenantDeleteResponse
+//   500: TenantErrorResponse
 
-import "github.com/xmidt-org/ears/pkg/route"
-
-// Items response containing a list of routes.
-// swagger:response routesResponse
-type routesResponseWrapper struct {
+// Item response.
+// swagger:response tenantDeleteResponse
+type tenantDeleteResponseWrapper struct {
 	// in: body
-	Body RoutesResponse
+	Body TenantDeleteResponse
 }
 
-type RoutesResponse struct {
+type TenantDeleteResponse struct {
 	Status responseStatus `json:"status"`
-	Items  []route.Config `json:"items"`
+	Item   string         `json:"item"`
 }

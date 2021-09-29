@@ -14,22 +14,24 @@
 
 package docs
 
-// swagger:route GET /v1/orgs/{orgId}/applications/{appId}/routes routes getRoutes
-// Gets list of all routes currently present in the routing table.
+// swagger:route GET /v1/orgs/{orgId}/applications/{appId}/config tenants getTenant
+// Gets config including event quota of existing tenant.
 // responses:
-//   200: RoutesResponse
-//   500: RouteErrorResponse
+//   200: TenantResponse
+//   500: TenantErrorResponse
 
-import "github.com/xmidt-org/ears/pkg/route"
+import (
+	"github.com/xmidt-org/ears/pkg/tenant"
+)
 
-// Items response containing a list of routes.
-// swagger:response routesResponse
-type routesResponseWrapper struct {
+// Item response containing tenant.
+// swagger:response tenantResponse
+type tenantResponseWrapper struct {
 	// in: body
-	Body RoutesResponse
+	Body TenantResponse
 }
 
-type RoutesResponse struct {
+type TenantResponse struct {
 	Status responseStatus `json:"status"`
-	Items  []route.Config `json:"items"`
+	Item   tenant.Config  `json:"item"`
 }
