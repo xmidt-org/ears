@@ -14,9 +14,8 @@
 
 package docs
 
-// swagger:route GET /v1/orgs/{orgId}/applications/{appId}/routes/{routeId} routes getRoute
-// Gets a route for a given ID. If no route by that ID exists and error is returned instead.
+// swagger:route GET /v1/routes admin getAllRoutes
+// Gets list of all routes currently present in the routing table for all tenants.
 // responses:
-//   200: RouteResponse
-//   404: RouteErrorResponse
+//   200: RoutesResponse
 //   500: RouteErrorResponse
