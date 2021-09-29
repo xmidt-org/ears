@@ -4,9 +4,6 @@ consumes:
 definitions:
   Config:
     properties:
-      appId:
-        type: string
-        x-go-name: AppId
       created:
         format: int64
         type: integer
@@ -32,18 +29,30 @@ definitions:
       name:
         type: string
         x-go-name: Name
-      orgId:
+      origin:
         type: string
-        x-go-name: OrgId
+        x-go-name: Origin
       receiver:
         $ref: '#/definitions/PluginConfig'
       sender:
         $ref: '#/definitions/PluginConfig'
+      tenant:
+        $ref: '#/definitions/Id'
       userId:
         type: string
         x-go-name: UserId
     type: object
     x-go-package: github.com/xmidt-org/ears/pkg/route
+  Id:
+    properties:
+      appId:
+        type: string
+        x-go-name: AppId
+      orgId:
+        type: string
+        x-go-name: OrgId
+    type: object
+    x-go-package: github.com/xmidt-org/ears/pkg/tenant
   PluginConfig:
     properties:
       config:
@@ -120,7 +129,7 @@ info:
   title: EARS
   version: 1.0.0
 paths:
-  /v1/routes:
+  /v1/orgs/{orgid}/applications/{appid}/routes:
     get:
       operationId: getRoutes
       responses:
@@ -159,7 +168,7 @@ paths:
         and used instead.
       tags:
       - routes
-  /v1/routes/{routeId}:
+  /v1/orgs/{orgid}/applications/{appid}/routes/{routeId}:
     delete:
       operationId: deleteRoute
       parameters:
