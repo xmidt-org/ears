@@ -4,45 +4,16 @@ consumes:
 definitions:
   Config:
     properties:
-      created:
-        format: int64
-        type: integer
-        x-go-name: Created
-      debug:
-        type: boolean
-        x-go-name: Debug
-      deliveryMode:
-        type: string
-        x-go-name: DeliveryMode
-      filterChain:
-        items:
-          $ref: '#/definitions/PluginConfig'
-        type: array
-        x-go-name: FilterChain
-      id:
-        type: string
-        x-go-name: Id
       modified:
         format: int64
         type: integer
         x-go-name: Modified
-      name:
-        type: string
-        x-go-name: Name
-      origin:
-        type: string
-        x-go-name: Origin
-      receiver:
-        $ref: '#/definitions/PluginConfig'
-      sender:
-        $ref: '#/definitions/PluginConfig'
+      quota:
+        $ref: '#/definitions/Quota'
       tenant:
         $ref: '#/definitions/Id'
-      userId:
-        type: string
-        x-go-name: UserId
     type: object
-    x-go-package: github.com/xmidt-org/ears/pkg/route
+    x-go-package: github.com/xmidt-org/ears/pkg/tenant
   Id:
     properties:
       appId:
@@ -66,6 +37,14 @@ definitions:
         x-go-name: Plugin
     type: object
     x-go-package: github.com/xmidt-org/ears/pkg/route
+  Quota:
+    properties:
+      eventsPerSec:
+        format: int64
+        type: integer
+        x-go-name: EventsPerSec
+    type: object
+    x-go-package: github.com/xmidt-org/ears/pkg/tenant
   RouteDeleteResponse:
     properties:
       item:
@@ -103,6 +82,32 @@ definitions:
         $ref: '#/definitions/responseStatus'
     type: object
     x-go-package: github.com/xmidt-org/ears/internal/pkg/app/docs
+  TenantDeleteResponse:
+    properties:
+      item:
+        type: string
+        x-go-name: Item
+      status:
+        $ref: '#/definitions/responseStatus'
+    type: object
+    x-go-package: github.com/xmidt-org/ears/internal/pkg/app/docs
+  TenantErrorResponse:
+    properties:
+      item:
+        type: string
+        x-go-name: Item
+      status:
+        $ref: '#/definitions/responseStatus'
+    type: object
+    x-go-package: github.com/xmidt-org/ears/internal/pkg/app/docs
+  TenantResponse:
+    properties:
+      item:
+        $ref: '#/definitions/Config'
+      status:
+        $ref: '#/definitions/responseStatus'
+    type: object
+    x-go-package: github.com/xmidt-org/ears/internal/pkg/app/docs
   VersionResponse:
     properties:
       item:
@@ -129,7 +134,96 @@ info:
   title: EARS
   version: 1.0.0
 paths:
-  /v1/orgs/{orgid}/applications/{appid}/routes:
+  /v1/orgs/{orgId}/applications/{appId}/config:
+    delete:
+      operationId: deleteTenant
+      parameters:
+      - description: App ID
+        in: path
+        name: appId
+        required: true
+        type: string
+        x-go-name: AppId
+      - description: Org ID
+        in: path
+        name: orgId
+        required: true
+        type: string
+        x-go-name: OrgId
+      responses:
+        "200":
+          description: TenantDeleteResponse
+          schema:
+            $ref: '#/definitions/TenantDeleteResponse'
+        "500":
+          description: TenantErrorResponse
+          schema:
+            $ref: '#/definitions/TenantErrorResponse'
+      summary: Removes an existing tenant from the system provided tenant has no routes.
+      tags:
+      - tenants
+    get:
+      operationId: getTenant
+      parameters:
+      - description: App ID
+        in: path
+        name: appId
+        required: true
+        type: string
+        x-go-name: AppId
+      - description: Org ID
+        in: path
+        name: orgId
+        required: true
+        type: string
+        x-go-name: OrgId
+      responses:
+        "200":
+          description: TenantResponse
+          schema:
+            $ref: '#/definitions/TenantResponse'
+        "500":
+          description: TenantErrorResponse
+          schema:
+            $ref: '#/definitions/TenantErrorResponse'
+      summary: Gets config including event quota of existing tenant.
+      tags:
+      - tenants
+    put:
+      operationId: putTenant
+      parameters:
+      - description: Tenant configuration including event quota.
+        in: body
+        name: Body
+        required: true
+        schema:
+          $ref: '#/definitions/Config'
+      - description: App ID
+        in: path
+        name: appId
+        required: true
+        type: string
+        x-go-name: AppId
+      - description: Org ID
+        in: path
+        name: orgId
+        required: true
+        type: string
+        x-go-name: OrgId
+      responses:
+        "200":
+          description: TenantResponse
+          schema:
+            $ref: '#/definitions/TenantResponse'
+        "500":
+          description: TenantErrorResponse
+          schema:
+            $ref: '#/definitions/TenantErrorResponse'
+      summary: Adds a new tenant with org ID, app ID and event quota given in the
+        put body.
+      tags:
+      - tenants
+  /v1/orgs/{orgId}/applications/{appId}/routes:
     get:
       operationId: getRoutes
       responses:
@@ -144,31 +238,7 @@ paths:
       summary: Gets list of all routes currently present in the routing table.
       tags:
       - routes
-    post:
-      operationId: postRoute
-      parameters:
-      - description: Route configuration including sender, receiver and optional filter
-          chain.
-        in: body
-        name: Body
-        required: true
-        schema:
-          $ref: '#/definitions/Config'
-      responses:
-        "200":
-          description: RouteResponse
-          schema:
-            $ref: '#/definitions/RouteResponse'
-        "500":
-          description: RouteErrorResponse
-          schema:
-            $ref: '#/definitions/RouteErrorResponse'
-      summary: Adds a new route to the routing table or updates an existing route.
-        Route ID can be given in the body. If it is omitted a hash will be calculates
-        and used instead.
-      tags:
-      - routes
-  /v1/orgs/{orgid}/applications/{appid}/routes/{routeId}:
+  /v1/orgs/{orgId}/applications/{appId}/routes/{routeId}:
     delete:
       operationId: deleteRoute
       parameters:
@@ -178,6 +248,18 @@ paths:
         required: true
         type: string
         x-go-name: RouteId
+      - description: App ID
+        in: path
+        name: appId
+        required: true
+        type: string
+        x-go-name: AppId
+      - description: Org ID
+        in: path
+        name: orgId
+        required: true
+        type: string
+        x-go-name: OrgId
       responses:
         "200":
           description: RouteDeleteResponse
@@ -200,6 +282,18 @@ paths:
         required: true
         type: string
         x-go-name: RouteId
+      - description: App ID
+        in: path
+        name: appId
+        required: true
+        type: string
+        x-go-name: AppId
+      - description: Org ID
+        in: path
+        name: orgId
+        required: true
+        type: string
+        x-go-name: OrgId
       responses:
         "200":
           description: RouteResponse
@@ -233,6 +327,55 @@ paths:
         required: true
         type: string
         x-go-name: RouteId
+      - description: App ID
+        in: path
+        name: appId
+        required: true
+        type: string
+        x-go-name: AppId
+      - description: Org ID
+        in: path
+        name: orgId
+        required: true
+        type: string
+        x-go-name: OrgId
+      responses:
+        "200":
+          description: RouteResponse
+          schema:
+            $ref: '#/definitions/RouteResponse'
+        "500":
+          description: RouteErrorResponse
+          schema:
+            $ref: '#/definitions/RouteErrorResponse'
+      summary: Adds a new route to the routing table or updates an existing route.
+        Route ID can be given in the body. If it is omitted a hash will be calculates
+        and used instead.
+      tags:
+      - routes
+  /v1/orgs/{orgid}/applications/{appid}/routes:
+    post:
+      operationId: postRoute
+      parameters:
+      - description: Route configuration including sender, receiver and optional filter
+          chain.
+        in: body
+        name: Body
+        required: true
+        schema:
+          $ref: '#/definitions/Config'
+      - description: App ID
+        in: path
+        name: appId
+        required: true
+        type: string
+        x-go-name: AppId
+      - description: Org ID
+        in: path
+        name: orgId
+        required: true
+        type: string
+        x-go-name: OrgId
       responses:
         "200":
           description: RouteResponse
@@ -278,6 +421,18 @@ responses:
     description: Items response containing a list of routes.
     schema:
       $ref: '#/definitions/RoutesResponse'
+  tenantDeleteResponse:
+    description: Item response.
+    schema:
+      $ref: '#/definitions/TenantDeleteResponse'
+  tenantErrorResponse:
+    description: Item response containing a route error.
+    schema:
+      $ref: '#/definitions/TenantErrorResponse'
+  tenantResponse:
+    description: Item response containing tenant.
+    schema:
+      $ref: '#/definitions/TenantResponse'
   versionResponse:
     description: This text will appear as description of your response body.
     schema:
