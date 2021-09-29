@@ -14,9 +14,20 @@
 
 package docs
 
-// swagger:route GET /v1/orgs/{orgId}/applications/{appId}/routes/{routeId} routes getRoute
-// Gets a route for a given ID. If no route by that ID exists and error is returned instead.
+// swagger:route DELETE /v1/orgs/{orgId}/applications/{appId}/config tenants deleteTenant
+// Removes an existing tenant from the system provided tenant has no routes.
 // responses:
-//   200: RouteResponse
-//   404: RouteErrorResponse
-//   500: RouteErrorResponse
+//   200: TenantDeleteResponse
+//   500: TenantErrorResponse
+
+// Item response.
+// swagger:response tenantDeleteResponse
+type tenantDeleteResponseWrapper struct {
+	// in: body
+	Body TenantDeleteResponse
+}
+
+type TenantDeleteResponse struct {
+	Status responseStatus `json:"status"`
+	Item   string         `json:"item"`
+}

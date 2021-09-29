@@ -1,5 +1,12 @@
 # EARS REST API
 
+Find the full Open API spec [here](../../internal/pkg/app/swagger.yaml). Use go-swagger to 
+view as HTML:
+
+```
+swagger serve -F=swagger swagger.yaml
+```
+
 ## Tenant CRUD Operations
 
 EARS supports multi-tenancy and is therefore suitable to be offered as a service.

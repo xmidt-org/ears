@@ -14,8 +14,8 @@
 
 package docs
 
-// swagger:route GET /v1/routes routes getRoutes
-// Gets list of all routes currently present in the routing table.
+// swagger:route GET /v1/orgs/{orgId}/applications/{appId}/routes routes getRoutes
+// Gets list of all routes currently present in the routing table for a single tenant.
 // responses:
 //   200: RoutesResponse
 //   500: RouteErrorResponse

@@ -14,9 +14,24 @@
 
 package docs
 
-// swagger:route GET /v1/orgs/{orgId}/applications/{appId}/routes/{routeId} routes getRoute
-// Gets a route for a given ID. If no route by that ID exists and error is returned instead.
+// swagger:route GET /v1/tenants admin getAllTenants
+// Gets list of all tenant configs including their event quota.
 // responses:
-//   200: RouteResponse
-//   404: RouteErrorResponse
-//   500: RouteErrorResponse
+//   200: TenantsResponse
+//   500: TenantErrorResponse
+
+import (
+	"github.com/xmidt-org/ears/pkg/tenant"
+)
+
+// Item response containing list of tenants.
+// swagger:response tenantsResponse
+type tenantsResponseWrapper struct {
+	// in: body
+	Body TenantsResponse
+}
+
+type TenantsResponse struct {
+	Status responseStatus  `json:"status"`
+	Item   []tenant.Config `json:"item"`
+}
