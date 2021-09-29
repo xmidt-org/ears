@@ -14,36 +14,36 @@
 
 package docs
 
-// swagger:route GET /v1/filters admin getFilters
-// Gets list of all filter plugin instances currently present along with their reference count.
+// swagger:route GET /v1/senders admin getAllSenders
+// Gets list of all sender plugin instances currently present along with their reference count.
 // responses:
-//   200: FiltersResponse
-//   500: FiltersErrorResponse
+//   200: SendersResponse
+//   500: SendersErrorResponse
 
 import (
 	"github.com/xmidt-org/ears/internal/pkg/plugin"
 )
 
-// Items response containing a list of filter plugin instances.
-// swagger:response receiversResponse
-type filtersResponseWrapper struct {
+// Items response containing a list of sender plugin instances.
+// swagger:response sendersResponse
+type sendersResponseWrapper struct {
 	// in: body
-	Body FiltersResponse
+	Body SendersResponse
 }
 
-// Item response containing a filters error.
-// swagger:response filtersErrorResponse
-type filtersErrorResponseWrapper struct {
+// Item response containing a senders error.
+// swagger:response sendersErrorResponse
+type sendersErrorResponseWrapper struct {
 	// in: body
-	Body FiltersErrorResponse
+	Body SendersErrorResponse
 }
 
-type FiltersResponse struct {
+type SendersResponse struct {
 	Status responseStatus                 `json:"status"`
-	Items  map[string]plugin.FilterStatus `json:"items"`
+	Items  map[string]plugin.SenderStatus `json:"items"`
 }
 
-type FiltersErrorResponse struct {
+type SendersErrorResponse struct {
 	Status responseStatus `json:"status"`
 	Item   string         `json:"item"`
 }
