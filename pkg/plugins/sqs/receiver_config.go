@@ -48,6 +48,9 @@ func (rc *ReceiverConfig) WithDefaults() ReceiverConfig {
 	if cfg.NeverDelete == nil {
 		cfg.NeverDelete = DefaultReceiverConfig.NeverDelete
 	}
+	if cfg.TracePayloadOnNack == nil {
+		cfg.TracePayloadOnNack = DefaultReceiverConfig.TracePayloadOnNack
+	}
 	return cfg
 }
 
@@ -111,6 +114,10 @@ const receiverSchema = `
 					"maximum": 100
 				},
 				"neverDelete" : {
+					"type": "boolean",
+					"default": false
+				},
+				"tracePayloadOnNack" : {
 					"type": "boolean",
 					"default": false
 				}

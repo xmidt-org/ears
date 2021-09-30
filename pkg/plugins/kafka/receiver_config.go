@@ -42,6 +42,9 @@ func (rc *ReceiverConfig) WithDefaults() ReceiverConfig {
 	if cfg.ChannelBufferSize == nil {
 		cfg.ChannelBufferSize = DefaultSenderConfig.ChannelBufferSize
 	}
+	if cfg.TracePayloadOnNack == nil {
+		cfg.TracePayloadOnNack = DefaultReceiverConfig.TracePayloadOnNack
+	}
 	return cfg
 }
 
@@ -100,7 +103,11 @@ const receiverSchema = `
                 },
                 "channelBufferSize": {
                     "type": "integer"
-                }
+                },
+				"tracePayloadOnNack" : {
+					"type": "boolean",
+					"default": false
+				}
             },
             "required": [
                 "brokers", "topic", "groupId"

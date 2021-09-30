@@ -58,6 +58,7 @@ var DefaultReceiverConfig = ReceiverConfig{
 	ReceiverPoolSize:   pointer.Int(1),
 	AcknowledgeTimeout: pointer.Int(5),
 	ShardIteratorType:  "LATEST",
+	TracePayloadOnNack: pointer.Bool(false),
 }
 
 type ReceiverConfig struct {
@@ -65,6 +66,7 @@ type ReceiverConfig struct {
 	ReceiverPoolSize   *int   `json:"receiverPoolSize,omitempty"`
 	AcknowledgeTimeout *int   `json:"acknowledgeTimeout,omitempty"`
 	ShardIteratorType  string `json:"shardIteratorType,omitempty"`
+	TracePayloadOnNack *bool  `json:"tracePayloadOnNack,omitempty"`
 }
 
 type Receiver struct {

@@ -322,7 +322,8 @@ func (r *Receiver) Receive(next receiver.NextFn) error {
 					cancel()
 				}),
 				event.WithOtelTracing(r.Name()),
-				event.WithTenant(r.Tenant()))
+				event.WithTenant(r.Tenant()),
+				event.WithTracePayloadOnNack(*r.config.TracePayloadOnNack))
 			if err != nil {
 				r.logger.Error().Str("op", "kafka.Receive").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Msg("cannot create event: " + err.Error())
 				return false

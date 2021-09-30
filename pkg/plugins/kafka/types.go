@@ -55,17 +55,18 @@ func NewPluginVersion(name string, version string, commitID string) (*pkgplugin.
 }
 
 var DefaultReceiverConfig = ReceiverConfig{
-	Brokers:           "localhost:9092",
-	Topic:             "quickstart-events",
-	GroupId:           "",
-	Username:          "",
-	Password:          "",
-	CACert:            "",
-	AccessCert:        "",
-	AccessKey:         "",
-	Version:           "",
-	CommitInterval:    pointer.Int(1),
-	ChannelBufferSize: pointer.Int(0),
+	Brokers:            "localhost:9092",
+	Topic:              "quickstart-events",
+	GroupId:            "",
+	Username:           "",
+	Password:           "",
+	CACert:             "",
+	AccessCert:         "",
+	AccessKey:          "",
+	Version:            "",
+	CommitInterval:     pointer.Int(1),
+	ChannelBufferSize:  pointer.Int(0),
+	TracePayloadOnNack: pointer.Bool(false),
 }
 
 type ReceiverConfig struct {
@@ -82,6 +83,7 @@ type ReceiverConfig struct {
 	ChannelBufferSize   *int   `json:"channelBufferSize,omitempty"`
 	ConsumeByPartitions bool   `json:"consumeByPartitions,omitempty"`
 	TLSEnable           bool   `json:"tlsEnable,omitempty"`
+	TracePayloadOnNack  *bool  `json:"tracePayloadOnNack,omitempty"`
 }
 
 type Receiver struct {

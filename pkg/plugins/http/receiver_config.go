@@ -52,6 +52,10 @@ const receiverSchema = `
                     "type": "integer", 
 					"minimum": 1024,
 					"maximum": 65535
+				},
+				"tracePayloadOnNack" : {
+					"type": "boolean",
+					"default": false
 				}
             },
             "required": [

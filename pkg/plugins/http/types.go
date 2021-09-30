@@ -49,9 +49,10 @@ func NewPluginVersion(name string, version string, commitID string) (*pkgplugin.
 }
 
 type ReceiverConfig struct {
-	Path   string `json:"path"`
-	Method string `json:"method"`
-	Port   *int   `json:"port"`
+	Path               string `json:"path"`
+	Method             string `json:"method"`
+	Port               *int   `json:"port"`
+	TracePayloadOnNack *bool  `json:"tracePayloadOnNack,omitempty"`
 }
 
 type Receiver struct {

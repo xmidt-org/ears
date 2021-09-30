@@ -127,6 +127,7 @@ func (h *Receiver) Receive(next receiver.NextFn) error {
 			),
 			event.WithTenant(h.Tenant()),
 			event.WithOtelTracing(h.Name()),
+			event.WithTracePayloadOnNack(*h.config.TracePayloadOnNack),
 		)
 		if err != nil {
 			h.logger.Error().Str("error", err.Error()).Msg("error creating event")
