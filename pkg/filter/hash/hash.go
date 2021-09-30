@@ -62,7 +62,7 @@ func (f *Filter) Filter(evt event.Event) []event.Event {
 	}
 	obj, _, _ := evt.GetPathValue(f.config.FromPath)
 	if obj == nil {
-		evt.Nack(errors.New("nil object at path " + f.config.FromPath))
+		evt.Nack(errors.New("cannot hash nil object at path " + f.config.FromPath))
 		return []event.Event{}
 	}
 	buf, err := json.Marshal(obj)
