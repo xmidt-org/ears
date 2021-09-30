@@ -21,3 +21,8 @@ immediately.
 * [Receiver Plugins Reference](receivers.md)
 * [Sender Plugins Reference](senders.md)
 * [Plugin Developer Guide](plugindev.md)
+
+## References
+
+* [swagger.yaml](../../internal/pkg/app/swagger.yaml)
+* [ears.yaml](config.md)

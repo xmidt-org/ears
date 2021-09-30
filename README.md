@@ -25,16 +25,21 @@ Our Kanban Board can be found [here](https://github.com/orgs/xmidt-org/projects/
 
 ## User Guide
 
-* [Routes](userguide/routes.md)
-* [EARS API](userguide/api.md)
-* [EARS vs. EEL](userguide/eel.md)
-* [Simple Examples](userguide/examples.md)
-* [Config File ears.yaml](userguide/config.md)
-* [Debug Strategies](userguide/debug.md)
-* [Filter Plugin Reference](userguide/filters.md)
-* [Receiver Plugins Reference](userguide/receivers.md)
-* [Sender Plugins Reference](userguide/senders.md)
-* [Plugin Developer Guide](userguide/plugindev.md)
+* [Routes](docs/userguide/routes.md)
+* [EARS API](docs/userguide/api.md)
+* [EARS vs. EEL](docs/userguide/eel.md)
+* [Simple Examples](docs/userguide/examples.md)
+* [Config File ears.yaml](docs/userguide/config.md)
+* [Debug Strategies](docs/userguide/debug.md)
+* [Filter Plugin Reference](docs/userguide/filters.md)
+* [Receiver Plugins Reference](docs/userguide/receivers.md)
+* [Sender Plugins Reference](docs/userguide/senders.md)
+* [Plugin Developer Guide](docs/userguide/plugindev.md)
+
+## References
+
+* [swagger.yaml](internal/pkg/app/swagger.yaml)
+* [ears.yaml](docs/userguide/config.md)
 
 ## Code of Conduct
 
