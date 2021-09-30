@@ -267,10 +267,10 @@ func (e *event) SetPathValue(path string, val interface{}, createPath bool) (int
 	if path == "" {
 		path = PAYLOAD
 	}
-	if path == PAYLOAD {
+	if path == PAYLOAD || path == PAYLOAD+"." {
 		e.SetPayload(val)
 		return nil, ""
-	} else if path == METADATA {
+	} else if path == METADATA || path == METADATA+"." {
 		valMap, ok := val.(map[string]interface{})
 		if ok {
 			e.SetMetadata(valMap)
@@ -286,6 +286,9 @@ func (e *event) SetPathValue(path string, val interface{}, createPath bool) (int
 	segments := strings.Split(path, ".")
 	for i := 1; i < len(segments); i++ {
 		s := segments[i]
+		if s == "" {
+			continue
+		}
 		parent = obj
 		key = s
 		if i == len(segments)-1 {
