@@ -428,6 +428,38 @@
           "expectedEventPayloadFile": "event16"
         }
       ]
+    },
+    "simpleFilterRegexReplaceAllRoute": {
+      "seq": 26,
+      "disabled": false,
+      "routeFiles": [
+        "simpleFilterRegexReplaceAllRoute"
+      ],
+      "waitMs": 1000,
+      "events": [
+        {
+          "senderRouteFiles": "simpleFilterRegexReplaceAllRoute",
+          "expectedEventCount": 5,
+          "expectedEventIndex": 0,
+          "expectedEventPayloadFile": "event18"
+        }
+      ]
+    },
+    "simpleFilterTransformMissingFieldRoute": {
+      "seq": 26,
+      "disabled": false,
+      "routeFiles": [
+        "simpleFilterTransformMissingFieldRoute"
+      ],
+      "waitMs": 1000,
+      "events": [
+        {
+          "senderRouteFiles": "simpleFilterTransformMissingFieldRoute",
+          "expectedEventCount": 5,
+          "expectedEventIndex": 0,
+          "expectedEventPayloadFile": "event17"
+        }
+      ]
     }
   }
 }

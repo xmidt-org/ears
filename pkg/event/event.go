@@ -19,6 +19,7 @@ package event
 
 import (
 	"context"
+	"encoding/json"
 	"github.com/google/uuid"
 	"github.com/rs/zerolog"
 	"github.com/xmidt-org/ears/internal/pkg/ack"
@@ -26,6 +27,7 @@ import (
 	"github.com/xmidt-org/ears/pkg/logs"
 	"github.com/xmidt-org/ears/pkg/tenant"
 	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/trace"
 	"strings"
@@ -36,14 +38,16 @@ import (
 )
 
 type event struct {
-	metadata map[string]interface{}
-	payload  interface{}
-	ctx      context.Context
-	ack      ack.SubTree
-	tid      tenant.Id
-	spanName string
-	span     trace.Span //Only valid in the root event
-	created  time.Time
+	metadata           map[string]interface{}
+	payload            interface{}
+	ctx                context.Context
+	ack                ack.SubTree
+	tid                tenant.Id
+	spanName           string
+	span               trace.Span //Only valid in the root event
+	tracePayloadOnNack bool
+	tracePayload       interface{}
+	created            time.Time
 }
 
 type EventOption func(*event) error
@@ -128,10 +132,27 @@ func WithAck(handledFn func(Event), errFn func(Event, error)) EventOption {
 			if e.span != nil {
 				e.span.AddEvent("nack")
 				e.span.RecordError(err)
+				// log original payload here if desired
+				if e.tracePayloadOnNack && e.tracePayload != nil {
+					buf, err2 := json.Marshal(e.tracePayload)
+					if err2 == nil {
+						e.span.SetAttributes(attribute.String("payload", string(buf)))
+					}
+				}
 				e.span.SetStatus(codes.Error, "event processing error")
 				e.span.End()
 			}
 		})
+		return nil
+	}
+}
+
+func WithTracePayloadOnNack(tracePayloadOnNack bool) EventOption {
+	return func(e *event) error {
+		e.tracePayloadOnNack = tracePayloadOnNack
+		if tracePayloadOnNack {
+			e.tracePayload = deepcopy.Copy(e.payload)
+		}
 		return nil
 	}
 }
@@ -267,10 +288,10 @@ func (e *event) SetPathValue(path string, val interface{}, createPath bool) (int
 	if path == "" {
 		path = PAYLOAD
 	}
-	if path == PAYLOAD {
+	if path == PAYLOAD || path == PAYLOAD+"." {
 		e.SetPayload(val)
 		return nil, ""
-	} else if path == METADATA {
+	} else if path == METADATA || path == METADATA+"." {
 		valMap, ok := val.(map[string]interface{})
 		if ok {
 			e.SetMetadata(valMap)
@@ -286,6 +307,9 @@ func (e *event) SetPathValue(path string, val interface{}, createPath bool) (int
 	segments := strings.Split(path, ".")
 	for i := 1; i < len(segments); i++ {
 		s := segments[i]
+		if s == "" {
+			continue
+		}
 		parent = obj
 		key = s
 		if i == len(segments)-1 {

@@ -63,6 +63,7 @@ var DefaultReceiverConfig = ReceiverConfig{
 	ReceiverQueueDepth:  pointer.Int(100),
 	ReceiverPoolSize:    pointer.Int(1),
 	NeverDelete:         pointer.Bool(false),
+	TracePayloadOnNack:  pointer.Bool(false),
 }
 
 type ReceiverConfig struct {
@@ -75,6 +76,7 @@ type ReceiverConfig struct {
 	ReceiverQueueDepth  *int   `json:"receiverQueueDepth,omitempty"`
 	ReceiverPoolSize    *int   `json:"receiverPoolSize,omitempty"`
 	NeverDelete         *bool  `json:"neverDelete,omitempty"`
+	TracePayloadOnNack  *bool  `json:"tracePayloadOnNack,omitempty"`
 }
 
 type Receiver struct {

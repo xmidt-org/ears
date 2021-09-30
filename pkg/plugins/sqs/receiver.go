@@ -296,7 +296,8 @@ func (r *Receiver) startReceiveWorker(svc *sqs.SQS, n int) {
 						cancel()
 					}),
 					event.WithTenant(r.Tenant()),
-					event.WithOtelTracing(r.Name()))
+					event.WithOtelTracing(r.Name()),
+					event.WithTracePayloadOnNack(*r.config.TracePayloadOnNack))
 				if err != nil {
 					r.logger.Error().Str("op", "SQS.receiveWorker").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Int("workerNum", n).Msg("cannot create event: " + err.Error())
 					return
