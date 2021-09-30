@@ -161,6 +161,7 @@ func (r *Receiver) Receive(next receiver.NextFn) error {
 				}),
 				event.WithOtelTracing(r.Name()),
 				event.WithTenant(r.Tenant()),
+				event.WithTracePayloadOnNack(*r.config.TracePayloadOnNack),
 			)
 			if err != nil {
 				r.logger.Error().Str("op", "redis.Receive").Msg("cannot create event: " + err.Error())

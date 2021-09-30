@@ -62,6 +62,10 @@ func (f *Filter) Filter(evt event.Event) []event.Event {
 	}
 	obj, _, _ := evt.GetPathValue(f.config.FromPath)
 	if obj == nil {
+		//span := trace.SpanFromContext(evt.Context())
+		//if span != nil {
+		// add stuff to span here
+		//}
 		evt.Nack(errors.New("cannot hash nil object at path " + f.config.FromPath))
 		return []event.Event{}
 	}

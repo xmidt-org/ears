@@ -54,10 +54,11 @@ func NewPluginVersion(name string, version string, commitID string) (*pkgplugin.
 }
 
 var DefaultReceiverConfig = ReceiverConfig{
-	IntervalMs: pointer.Int(100),
-	Rounds:     pointer.Int(4),
-	Payload:    "debug message",
-	MaxHistory: pointer.Int(100),
+	IntervalMs:         pointer.Int(100),
+	Rounds:             pointer.Int(4),
+	Payload:            "debug message",
+	MaxHistory:         pointer.Int(100),
+	TracePayloadOnNack: pointer.Bool(false),
 }
 
 // ReceiverConfig determines how the receiver will operate.  To
@@ -68,10 +69,11 @@ var DefaultReceiverConfig = ReceiverConfig{
 var InfiniteRounds = pointer.Int(-1)
 
 type ReceiverConfig struct {
-	IntervalMs *int        `json:"intervalMs,omitempty"`
-	Rounds     *int        `json:"rounds,omitempty"` // (-1) signifies infinite routes
-	Payload    interface{} `json:"payload,omitempty"`
-	MaxHistory *int        `json:"maxHistory,omitempty"`
+	IntervalMs         *int        `json:"intervalMs,omitempty"`
+	Rounds             *int        `json:"rounds,omitempty"` // (-1) signifies infinite routes
+	Payload            interface{} `json:"payload,omitempty"`
+	MaxHistory         *int        `json:"maxHistory,omitempty"`
+	TracePayloadOnNack *bool       `json:"tracePayloadOnNack,omitempty"`
 }
 
 type Receiver struct {
