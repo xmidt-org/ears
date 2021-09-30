@@ -33,6 +33,9 @@ func (rc *ReceiverConfig) WithDefaults() ReceiverConfig {
 	if cfg.ShardIteratorType == "" {
 		cfg.ShardIteratorType = DefaultReceiverConfig.ShardIteratorType
 	}
+	if cfg.TracePayloadOnNack == nil {
+		cfg.TracePayloadOnNack = DefaultReceiverConfig.TracePayloadOnNack
+	}
 	return cfg
 }
 
@@ -74,6 +77,10 @@ const receiverSchema = `
                     "type": "integer", 
 					"minimum": 1,
 					"maximum": 60
+				},
+				"tracePayloadOnNack" : {
+					"type": "boolean",
+					"default": false
 				}
             },
             "required": [

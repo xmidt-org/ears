@@ -36,6 +36,9 @@ func (rc *ReceiverConfig) WithDefaults() ReceiverConfig {
 	if cfg.MaxHistory == nil {
 		cfg.MaxHistory = DefaultReceiverConfig.MaxHistory
 	}
+	if cfg.TracePayloadOnNack == nil {
+		cfg.TracePayloadOnNack = DefaultReceiverConfig.TracePayloadOnNack
+	}
 	return cfg
 }
 
@@ -97,7 +100,11 @@ const receiverSchema = `
                 "maxHistory": {
                     "type": "integer",
 					"minimum": 0
-                }
+                },
+				"tracePayloadOnNack" : {
+					"type": "boolean",
+					"default": false
+				}
             },
             "required": [
                 "intervalMs",

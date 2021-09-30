@@ -30,6 +30,9 @@ func (rc *ReceiverConfig) WithDefaults() ReceiverConfig {
 	if cfg.Channel == "" {
 		cfg.Channel = DefaultReceiverConfig.Channel
 	}
+	if cfg.TracePayloadOnNack == nil {
+		cfg.TracePayloadOnNack = DefaultReceiverConfig.TracePayloadOnNack
+	}
 	return cfg
 }
 
@@ -61,7 +64,11 @@ const receiverSchema = `
                 },
                 "channel": {
                     "type": "string"
-                }
+                },
+				"tracePayloadOnNack" : {
+					"type": "boolean",
+					"default": false
+				}
             },
             "required": [
                 "endpoint", "channel"
