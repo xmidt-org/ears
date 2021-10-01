@@ -2,47 +2,6 @@ basePath: /
 consumes:
 - application/json
 definitions:
-  Config:
-    properties:
-      created:
-        format: int64
-        type: integer
-        x-go-name: Created
-      debug:
-        type: boolean
-        x-go-name: Debug
-      deliveryMode:
-        type: string
-        x-go-name: DeliveryMode
-      filterChain:
-        items:
-          $ref: '#/definitions/PluginConfig'
-        type: array
-        x-go-name: FilterChain
-      id:
-        type: string
-        x-go-name: Id
-      modified:
-        format: int64
-        type: integer
-        x-go-name: Modified
-      name:
-        type: string
-        x-go-name: Name
-      origin:
-        type: string
-        x-go-name: Origin
-      receiver:
-        $ref: '#/definitions/PluginConfig'
-      sender:
-        $ref: '#/definitions/PluginConfig'
-      tenant:
-        $ref: '#/definitions/Id'
-      userId:
-        type: string
-        x-go-name: UserId
-    type: object
-    x-go-package: github.com/xmidt-org/ears/pkg/route
   FilterStatus:
     properties:
       Config:
@@ -141,7 +100,46 @@ definitions:
     type: object
     x-go-package: github.com/xmidt-org/ears/internal/pkg/app/docs
   RouteConfig:
-    $ref: '#/definitions/Config'
+    properties:
+      created:
+        format: int64
+        type: integer
+        x-go-name: Created
+      debug:
+        type: boolean
+        x-go-name: Debug
+      deliveryMode:
+        type: string
+        x-go-name: DeliveryMode
+      filterChain:
+        items:
+          $ref: '#/definitions/PluginConfig'
+        type: array
+        x-go-name: FilterChain
+      id:
+        type: string
+        x-go-name: Id
+      modified:
+        format: int64
+        type: integer
+        x-go-name: Modified
+      name:
+        type: string
+        x-go-name: Name
+      origin:
+        type: string
+        x-go-name: Origin
+      receiver:
+        $ref: '#/definitions/PluginConfig'
+      sender:
+        $ref: '#/definitions/PluginConfig'
+      tenant:
+        $ref: '#/definitions/Id'
+      userId:
+        type: string
+        x-go-name: UserId
+    type: object
+    x-go-package: github.com/xmidt-org/ears/internal/pkg/app/docs
   RouteDeleteResponse:
     properties:
       item:
@@ -213,7 +211,17 @@ definitions:
     type: object
     x-go-package: github.com/xmidt-org/ears/internal/pkg/app/docs
   TenantConfig:
-    $ref: '#/definitions/Config'
+    properties:
+      modified:
+        format: int64
+        type: integer
+        x-go-name: Modified
+      quota:
+        $ref: '#/definitions/Quota'
+      tenant:
+        $ref: '#/definitions/Id'
+    type: object
+    x-go-package: github.com/xmidt-org/ears/internal/pkg/app/docs
   TenantDeleteResponse:
     properties:
       item:
