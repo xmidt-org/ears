@@ -18,6 +18,7 @@ import (
 	"context"
 	"github.com/go-redis/redis/v8"
 	"github.com/pkg/errors"
+	"github.com/rs/zerolog/log"
 	"github.com/xmidt-org/ears/pkg/ratelimit"
 	"github.com/xmidt-org/ears/pkg/tenant"
 	"math/rand"
@@ -26,22 +27,24 @@ import (
 )
 
 type RedisRateLimiter struct {
-	client *redis.Client
-	rqs    int
-	tid    tenant.Id
+	client     *redis.Client
+	rqs        int
+	tid        tenant.Id
+	numRetries int
 }
 
 const NUM_REDIS_RETRY = 3
 
-func NewRedisRateLimiter(tid tenant.Id, addr string, rqs int) *RedisRateLimiter {
+func NewRedisRateLimiter(tid tenant.Id, addr string, rqs int, numRetries int) *RedisRateLimiter {
 	return &RedisRateLimiter{
 		client: redis.NewClient(&redis.Options{
 			Addr:     addr,
 			Password: "", // no password set
 			DB:       0,  // use default DB
 		}),
-		rqs: rqs,
-		tid: tid,
+		rqs:        rqs,
+		tid:        tid,
+		numRetries: numRetries,
 	}
 }
 
@@ -63,26 +66,37 @@ func (r *RedisRateLimiter) Take(ctx context.Context, unit int) error {
 		return nil
 	}
 
-	retry := NUM_REDIS_RETRY
+	retry := r.numRetries
 	for {
 		err := r.take(ctx, unit)
 		if err == nil {
 			return nil
 		}
-		if errors.Is(err, redis.TxFailedErr) {
+		var badUnitError *ratelimit.InvalidUnitError
+		var limitReached *ratelimit.LimitReached
+		if errors.As(err, &badUnitError) || errors.As(err, &limitReached) {
+			return err
+		} else {
+			log.Ctx(ctx).Error().Str("error", err.Error()).Int("unit", unit).Int("retry", retry).Msg("Error taking unit")
 			if retry == 0 {
 				return err
 			}
 			retry--
 		}
 		r := rand.Float32()
-		time.Sleep(time.Millisecond * time.Duration(r*100))
+		select {
+		case <-ctx.Done():
+			return &ratelimit.ContextCancelled{}
+		case <-time.After(time.Millisecond * time.Duration(r*100)):
+			//keep going
+		}
+
 	}
 }
 
 func (r *RedisRateLimiter) take(ctx context.Context, unit int) error {
 	if unit <= 0 || unit > r.rqs {
-		return &ratelimit.InvalidUnitError{}
+		return &ratelimit.InvalidUnitError{BadUnit: unit}
 	}
 
 	bucketKey := r.tid.Key() + "_bucket"
@@ -110,7 +124,7 @@ func (r *RedisRateLimiter) take(ctx context.Context, unit int) error {
 		currTs := time.Now()
 		elapsed := currTs.UnixNano() - refillTs
 
-		//fmt.Printf("allowance=%f elapsed=%d\n", allowance, elapsed)
+		//log.Ctx(ctx).Info().Float64("allowance", allowance).Int("elapsed", int(elapsed/1000000)).Int("rqs", r.rqs).Int("unit", unit).Msg("=========debug==========")
 
 		allowance += float64(elapsed) * float64(r.rqs) / float64(time.Second)
 

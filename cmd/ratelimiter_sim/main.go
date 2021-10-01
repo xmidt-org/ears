@@ -66,7 +66,7 @@ func errStr(err error) string {
 
 func worker(workerName string, wg *sync.WaitGroup, rps int, second int, initialRps, maxRps int) {
 	defer wg.Done()
-	backendLimiter := redis.NewRedisRateLimiter(tenant.Id{OrgId: "myOrg", AppId: "mchiang"}, redisAddr, maxRps)
+	backendLimiter := redis.NewRedisRateLimiter(tenant.Id{OrgId: "myOrg", AppId: "mchiang"}, redisAddr, maxRps, 3)
 	limiter := ratelimit.NewAdaptiveRateLimiter(backendLimiter, initialRps, maxRps)
 
 	ctx := context.Background()
