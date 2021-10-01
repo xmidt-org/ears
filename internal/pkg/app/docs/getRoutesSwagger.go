@@ -34,5 +34,6 @@ type RoutesResponse struct {
 	Items  []RouteConfig  `json:"items"`
 }
 
-// swagger:model RouteConfig
-type RouteConfig route.Config
+type RouteConfig struct {
+	route.Config
+}

@@ -36,5 +36,6 @@ type TenantResponse struct {
 	Item   TenantConfig   `json:"item"`
 }
 
-// swagger:model TenantConfig
-type TenantConfig tenant.Config
+type TenantConfig struct {
+	tenant.Config
+}
