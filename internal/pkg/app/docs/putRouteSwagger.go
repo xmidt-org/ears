@@ -20,8 +20,6 @@ package docs
 //   200: RouteResponse
 //   500: RouteErrorResponse
 
-import "github.com/xmidt-org/ears/pkg/route"
-
 // Item response containing a complete route configuration including sender, receiver and optional filter chain.
 // swagger:response routeResponse
 type routeResponseWrapper struct {
@@ -41,7 +39,7 @@ type routeParamWrapper struct {
 	// Route configuration including sender, receiver and optional filter chain.
 	// in: body
 	// required: true
-	Body route.Config
+	Body RouteConfig
 }
 
 // swagger:parameters putRoute getRoute deleteRoute
@@ -54,7 +52,7 @@ type routeIdParamWrapper struct {
 
 type RouteResponse struct {
 	Status responseStatus `json:"status"`
-	Item   route.Config   `json:"item"`
+	Item   RouteConfig    `json:"item"`
 }
 
 type RouteErrorResponse struct {

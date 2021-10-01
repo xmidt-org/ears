@@ -33,5 +33,9 @@ type tenantResponseWrapper struct {
 
 type TenantResponse struct {
 	Status responseStatus `json:"status"`
-	Item   tenant.Config  `json:"item"`
+	Item   TenantConfig   `json:"item"`
+}
+
+type TenantConfig struct {
+	tenant.Config
 }

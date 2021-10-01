@@ -20,10 +20,6 @@ package docs
 //   200: TenantsResponse
 //   500: TenantErrorResponse
 
-import (
-	"github.com/xmidt-org/ears/pkg/tenant"
-)
-
 // Item response containing list of tenants.
 // swagger:response tenantsResponse
 type tenantsResponseWrapper struct {
@@ -32,6 +28,6 @@ type tenantsResponseWrapper struct {
 }
 
 type TenantsResponse struct {
-	Status responseStatus  `json:"status"`
-	Item   []tenant.Config `json:"item"`
+	Status responseStatus `json:"status"`
+	Item   []TenantConfig `json:"item"`
 }
