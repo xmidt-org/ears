@@ -17,6 +17,7 @@ package ratelimit_test
 import (
 	"context"
 	"github.com/pkg/errors"
+	"github.com/rs/zerolog/log"
 	"github.com/xmidt-org/ears/pkg/ratelimit"
 	"testing"
 	"time"
@@ -39,6 +40,8 @@ func testBackendLimiter(r ratelimit.RateLimiter, t *testing.T) {
 	}
 
 	ctx := context.Background()
+	logger := log.With().Logger()
+	ctx = logger.WithContext(ctx)
 
 	time.Sleep(time.Second)
 	err = r.Take(ctx, 5)
