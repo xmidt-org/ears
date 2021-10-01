@@ -4,16 +4,45 @@ consumes:
 definitions:
   Config:
     properties:
+      created:
+        format: int64
+        type: integer
+        x-go-name: Created
+      debug:
+        type: boolean
+        x-go-name: Debug
+      deliveryMode:
+        type: string
+        x-go-name: DeliveryMode
+      filterChain:
+        items:
+          $ref: '#/definitions/PluginConfig'
+        type: array
+        x-go-name: FilterChain
+      id:
+        type: string
+        x-go-name: Id
       modified:
         format: int64
         type: integer
         x-go-name: Modified
-      quota:
-        $ref: '#/definitions/Quota'
+      name:
+        type: string
+        x-go-name: Name
+      origin:
+        type: string
+        x-go-name: Origin
+      receiver:
+        $ref: '#/definitions/PluginConfig'
+      sender:
+        $ref: '#/definitions/PluginConfig'
       tenant:
         $ref: '#/definitions/Id'
+      userId:
+        type: string
+        x-go-name: UserId
     type: object
-    x-go-package: github.com/xmidt-org/ears/pkg/tenant
+    x-go-package: github.com/xmidt-org/ears/pkg/route
   FilterStatus:
     properties:
       Config:
@@ -111,6 +140,8 @@ definitions:
         $ref: '#/definitions/responseStatus'
     type: object
     x-go-package: github.com/xmidt-org/ears/internal/pkg/app/docs
+  RouteConfig:
+    $ref: '#/definitions/Config'
   RouteDeleteResponse:
     properties:
       item:
@@ -132,7 +163,7 @@ definitions:
   RouteResponse:
     properties:
       item:
-        $ref: '#/definitions/Config'
+        $ref: '#/definitions/RouteConfig'
       status:
         $ref: '#/definitions/responseStatus'
     type: object
@@ -141,7 +172,7 @@ definitions:
     properties:
       items:
         items:
-          $ref: '#/definitions/Config'
+          $ref: '#/definitions/RouteConfig'
         type: array
         x-go-name: Items
       status:
@@ -181,6 +212,8 @@ definitions:
         $ref: '#/definitions/responseStatus'
     type: object
     x-go-package: github.com/xmidt-org/ears/internal/pkg/app/docs
+  TenantConfig:
+    $ref: '#/definitions/Config'
   TenantDeleteResponse:
     properties:
       item:
@@ -202,7 +235,7 @@ definitions:
   TenantResponse:
     properties:
       item:
-        $ref: '#/definitions/Config'
+        $ref: '#/definitions/TenantConfig'
       status:
         $ref: '#/definitions/responseStatus'
     type: object
@@ -211,7 +244,7 @@ definitions:
     properties:
       item:
         items:
-          $ref: '#/definitions/Config'
+          $ref: '#/definitions/TenantConfig'
         type: array
         x-go-name: Item
       status:
@@ -323,7 +356,7 @@ paths:
         name: Body
         required: true
         schema:
-          $ref: '#/definitions/Config'
+          $ref: '#/definitions/TenantConfig'
       - description: App ID
         in: path
         name: appId
@@ -447,7 +480,7 @@ paths:
         name: Body
         required: true
         schema:
-          $ref: '#/definitions/Config'
+          $ref: '#/definitions/RouteConfig'
       - description: Route ID
         in: path
         name: routeId
@@ -490,7 +523,7 @@ paths:
         name: Body
         required: true
         schema:
-          $ref: '#/definitions/Config'
+          $ref: '#/definitions/RouteConfig'
       - description: App ID
         in: path
         name: appId

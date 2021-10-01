@@ -14,28 +14,18 @@
 
 package docs
 
-// swagger:route PUT /v1/orgs/{orgId}/applications/{appId}/config tenants putTenant
-// Adds a new tenant with org ID, app ID and event quota given in the put body.
-// responses:
-//   200: TenantResponse
-//   500: TenantErrorResponse
-
-// Item response containing a route error.
-// swagger:response tenantErrorResponse
-type tenantErrorResponseWrapper struct {
-	// in: body
-	Body TenantErrorResponse
-}
-
-// swagger:parameters putTenant
-type tenantParamWrapper struct {
-	// Tenant configuration including event quota.
-	// in: body
+// swagger:parameters putRoute postRoute getRoute deleteRoute putTenant getTenant deleteTenant
+type appIdParamWrapper struct {
+	// App ID
+	// in: path
 	// required: true
-	Body TenantConfig
+	AppId string `json:"appId"`
 }
 
-type TenantErrorResponse struct {
-	Status responseStatus `json:"status"`
-	Item   string         `json:"item"`
+// swagger:parameters putRoute postRoute getRoute deleteRoute putTenant getTenant deleteTenant
+type orgIdParamWrapper struct {
+	// Org ID
+	// in: path
+	// required: true
+	OrgId string `json:"orgId"`
 }
