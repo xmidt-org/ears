@@ -31,5 +31,8 @@ type routesResponseWrapper struct {
 
 type RoutesResponse struct {
 	Status responseStatus `json:"status"`
-	Items  []route.Config `json:"items"`
+	Items  []RouteConfig  `json:"items"`
 }
+
+// swagger:model RouteConfig
+type RouteConfig route.Config

@@ -33,5 +33,8 @@ type tenantResponseWrapper struct {
 
 type TenantResponse struct {
 	Status responseStatus `json:"status"`
-	Item   tenant.Config  `json:"item"`
+	Item   TenantConfig   `json:"item"`
 }
+
+// swagger:model TenantConfig
+type TenantConfig tenant.Config
