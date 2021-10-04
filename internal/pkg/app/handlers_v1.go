@@ -16,6 +16,7 @@ package app
 
 import (
 	"context"
+	"embed"
 	"errors"
 	"github.com/goccy/go-yaml"
 	"github.com/xmidt-org/ears/internal/pkg/quota"
@@ -37,6 +38,9 @@ import (
 	"github.com/xmidt-org/ears/pkg/route"
 )
 
+//go:embed ears
+var WebsiteFS embed.FS
+
 type APIManager struct {
 	muxRouter                  *mux.Router
 	routingTableMgr            tablemgr.RoutingTableManager
@@ -55,6 +59,9 @@ func NewAPIManager(routingMgr tablemgr.RoutingTableManager, tenantStorer tenant.
 		tenantStorer:    tenantStorer,
 		quotaManager:    quotaManager,
 	}
+	api.muxRouter.PathPrefix("/ears/openapi").Handler(
+		http.FileServer(http.FS(WebsiteFS)),
+	)
 	api.muxRouter.HandleFunc("/ears/version", api.versionHandler).Methods(http.MethodGet)
 	api.muxRouter.HandleFunc("/ears/v1/orgs/{orgId}/applications/{appId}/routes/{routeId}", api.addRouteHandler).Methods(http.MethodPut)
 	api.muxRouter.HandleFunc("/ears/v1/orgs/{orgId}/applications/{appId}/routes", api.addRouteHandler).Methods(http.MethodPost)
