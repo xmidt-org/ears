@@ -1,6 +1,7 @@
-basePath: /
+basePath: /ears
 consumes:
 - application/json
+- application/yaml
 definitions:
   FilterStatus:
     properties:
@@ -279,7 +280,7 @@ definitions:
         x-go-name: Message
     type: object
     x-go-package: github.com/xmidt-org/ears/internal/pkg/app/docs
-host: ears.comcast.com
+host: qa.gears.comcast.com
 info:
   description: Documentation EARS API
   title: EARS
@@ -634,6 +635,7 @@ paths:
       - version
 produces:
 - application/json
+- application/yaml
 responses:
   filtersErrorResponse:
     description: Item response containing a filters error.
