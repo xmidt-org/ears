@@ -38,7 +38,7 @@ import (
 	"github.com/xmidt-org/ears/pkg/route"
 )
 
-//go:embed openapi
+//go:embed ears
 var WebsiteFS embed.FS
 
 type APIManager struct {
@@ -59,7 +59,7 @@ func NewAPIManager(routingMgr tablemgr.RoutingTableManager, tenantStorer tenant.
 		tenantStorer:    tenantStorer,
 		quotaManager:    quotaManager,
 	}
-	api.muxRouter.PathPrefix("/openapi").Handler(
+	api.muxRouter.PathPrefix("/ears/openapi").Handler(
 		http.FileServer(http.FS(WebsiteFS)),
 	)
 	api.muxRouter.HandleFunc("/ears/version", api.versionHandler).Methods(http.MethodGet)
