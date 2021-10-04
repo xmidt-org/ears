@@ -695,7 +695,7 @@ responses:
     schema:
       $ref: '#/definitions/VersionResponse'
 schemes:
-- http https
+- https
 securityDefinitions:
   basic:
     type: basic
