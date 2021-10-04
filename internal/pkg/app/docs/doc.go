@@ -16,7 +16,7 @@
 //
 // Documentation EARS API
 //
-//     Schemes: http https
+//     Schemes: https
 //     BasePath: /ears
 //     Version: 1.0.0
 //     Host: qa.gears.comcast.com
