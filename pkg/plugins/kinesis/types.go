@@ -58,6 +58,7 @@ var DefaultReceiverConfig = ReceiverConfig{
 	ReceiverPoolSize:   pointer.Int(1),
 	AcknowledgeTimeout: pointer.Int(5),
 	ShardIteratorType:  "LATEST",
+	TracePayloadOnNack: pointer.Bool(false),
 }
 
 type ReceiverConfig struct {
@@ -65,6 +66,7 @@ type ReceiverConfig struct {
 	ReceiverPoolSize   *int   `json:"receiverPoolSize,omitempty"`
 	AcknowledgeTimeout *int   `json:"acknowledgeTimeout,omitempty"`
 	ShardIteratorType  string `json:"shardIteratorType,omitempty"`
+	TracePayloadOnNack *bool  `json:"tracePayloadOnNack,omitempty"`
 }
 
 type Receiver struct {
@@ -99,13 +101,18 @@ type SenderConfig struct {
 
 type Sender struct {
 	sync.Mutex
-	kinesisService *kinesis.Kinesis
-	name           string
-	plugin         string
-	tid            tenant.Id
-	config         SenderConfig
-	count          int
-	logger         *zerolog.Logger
-	eventBatch     []event.Event
-	done           chan struct{}
+	kinesisService      *kinesis.Kinesis
+	name                string
+	plugin              string
+	tid                 tenant.Id
+	config              SenderConfig
+	count               int
+	logger              *zerolog.Logger
+	eventBatch          []event.Event
+	done                chan struct{}
+	eventSuccessCounter metric.BoundInt64Counter
+	eventFailureCounter metric.BoundInt64Counter
+	eventBytesCounter   metric.BoundInt64Counter
+	eventProcessingTime metric.BoundInt64Histogram
+	eventSendOutTime    metric.BoundInt64Histogram
 }

@@ -29,6 +29,7 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/global"
+	"go.opentelemetry.io/otel/metric/unit"
 	"io/ioutil"
 	"net/http"
 )
@@ -65,17 +66,19 @@ func NewReceiver(tid tenant.Id, plugin string, name string, config interface{}, 
 	// metric recorders
 	meter := global.Meter(rtsemconv.EARSMeterName)
 	commonLabels := []attribute.KeyValue{
-		attribute.String(rtsemconv.EARSPluginTypeLabel, rtsemconv.EARSPluginTypeHttp),
+		attribute.String(rtsemconv.EARSPluginTypeLabel, rtsemconv.EARSPluginTypeHttpReceiver),
+		attribute.String(rtsemconv.EARSPluginNameLabel, r.Name()),
 		attribute.String(rtsemconv.EARSAppIdLabel, r.tid.AppId),
 		attribute.String(rtsemconv.EARSOrgIdLabel, r.tid.OrgId),
+		attribute.String(rtsemconv.EARSReceiverName, r.name),
 	}
 	r.eventSuccessCounter = metric.Must(meter).
-		NewFloat64Counter(
+		NewInt64Counter(
 			rtsemconv.EARSMetricEventSuccess,
 			metric.WithDescription("measures the number of successful events"),
 		).Bind(commonLabels...)
 	r.eventFailureCounter = metric.Must(meter).
-		NewFloat64Counter(
+		NewInt64Counter(
 			rtsemconv.EARSMetricEventFailure,
 			metric.WithDescription("measures the number of unsuccessful events"),
 		).Bind(commonLabels...)
@@ -83,6 +86,7 @@ func NewReceiver(tid tenant.Id, plugin string, name string, config interface{}, 
 		NewInt64Counter(
 			rtsemconv.EARSMetricEventBytes,
 			metric.WithDescription("measures the number of event bytes processed"),
+			metric.WithUnit(unit.Bytes),
 		).Bind(commonLabels...)
 	return r, nil
 }
@@ -115,14 +119,15 @@ func (h *Receiver) Receive(next receiver.NextFn) error {
 		event, err := event.New(ctx, body,
 			event.WithAck(
 				func(e event.Event) {
-					h.eventSuccessCounter.Add(ctx, 1.0)
+					h.eventSuccessCounter.Add(ctx, 1)
 				}, func(e event.Event, err error) {
 					log.Ctx(e.Context()).Error().Str("error", err.Error()).Msg("nack handling events")
-					h.eventFailureCounter.Add(ctx, 1.0)
+					h.eventFailureCounter.Add(ctx, 1)
 				},
 			),
 			event.WithTenant(h.Tenant()),
-			event.WithSpan(h.Name()),
+			event.WithOtelTracing(h.Name()),
+			event.WithTracePayloadOnNack(*h.config.TracePayloadOnNack),
 		)
 		if err != nil {
 			h.logger.Error().Str("error", err.Error()).Msg("error creating event")

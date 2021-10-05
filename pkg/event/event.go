@@ -19,37 +19,40 @@ package event
 
 import (
 	"context"
+	"encoding/json"
+	"github.com/google/uuid"
 	"github.com/rs/zerolog"
 	"github.com/xmidt-org/ears/internal/pkg/ack"
 	"github.com/xmidt-org/ears/internal/pkg/rtsemconv"
 	"github.com/xmidt-org/ears/pkg/logs"
 	"github.com/xmidt-org/ears/pkg/tenant"
 	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
-	"go.opentelemetry.io/otel/semconv"
 	"go.opentelemetry.io/otel/trace"
-	"os"
 	"strings"
 	"sync/atomic"
+	"time"
 
 	"github.com/mohae/deepcopy"
 )
 
 type event struct {
-	metadata interface{}
-	payload  interface{}
-	ctx      context.Context
-	ack      ack.SubTree
-	tid      tenant.Id
-	spanName string
-	span     trace.Span //Only valid in the root event
+	metadata           map[string]interface{}
+	payload            interface{}
+	ctx                context.Context
+	ack                ack.SubTree
+	tid                tenant.Id
+	spanName           string
+	span               trace.Span //Only valid in the root event
+	tracePayloadOnNack bool
+	tracePayload       interface{}
+	created            time.Time
 }
 
 type EventOption func(*event) error
 
 var logger atomic.Value
-
-var hostname, _ = os.Hostname()
 
 func SetEventLogger(l *zerolog.Logger) {
 	logger.Store(l)
@@ -65,12 +68,12 @@ func GetEventLogger() *zerolog.Logger {
 
 //Create a new event given a context, a payload, and other event options
 func New(ctx context.Context, payload interface{}, options ...EventOption) (Event, error) {
-
 	e := &event{
 		payload: payload,
 		ctx:     ctx,
 		ack:     nil,
 		tid:     tenant.Id{OrgId: "", AppId: ""},
+		created: time.Now(),
 	}
 	for _, option := range options {
 		err := option(e)
@@ -78,32 +81,27 @@ func New(ctx context.Context, payload interface{}, options ...EventOption) (Even
 			return nil, err
 		}
 	}
+	traceId := uuid.New().String()
 
-	//Creating span for the event
-	if e.spanName == "" {
-		e.spanName = "generic"
+	// enable otel tracing
+	if e.spanName != "" {
+		tracer := otel.Tracer(rtsemconv.EARSTracerName)
+		var span trace.Span
+		ctx, span = tracer.Start(ctx, e.spanName)
+		span.SetAttributes(rtsemconv.EARSEventTrace)
+		span.SetAttributes(rtsemconv.EARSOrgId.String(e.tid.OrgId), rtsemconv.EARSAppId.String(e.tid.AppId))
+		traceId = span.SpanContext().TraceID().String()
+		span.SetAttributes(rtsemconv.EARSTraceId.String(traceId))
+		e.span = span
 	}
-	tracer := otel.Tracer(rtsemconv.EARSTracerName)
-	var span trace.Span
-	ctx, span = tracer.Start(ctx, e.spanName)
-	span.SetAttributes(rtsemconv.EARSEventTrace)
-	span.SetAttributes(rtsemconv.EARSOrgId.String(e.tid.OrgId), rtsemconv.EARSAppId.String(e.tid.AppId))
-	span.SetAttributes(semconv.NetHostNameKey.String(hostname))
 
-	traceId := span.SpanContext().TraceID().String()
-	span.SetAttributes(rtsemconv.EARSTraceId.String(traceId))
-
-	e.span = span
-
-	//Setting up logger for the event
+	// setting up logger for the event
 	parentLogger, ok := logger.Load().(*zerolog.Logger)
 	if ok {
 		ctx = logs.SubLoggerCtx(ctx, parentLogger)
-
 		logs.StrToLogCtx(ctx, rtsemconv.EarsLogTraceIdKey, traceId)
 		logs.StrToLogCtx(ctx, rtsemconv.EarsLogTenantIdKey, e.tid.ToString())
 	}
-
 	e.SetContext(ctx)
 	return e, nil
 }
@@ -134,6 +132,13 @@ func WithAck(handledFn func(Event), errFn func(Event, error)) EventOption {
 			if e.span != nil {
 				e.span.AddEvent("nack")
 				e.span.RecordError(err)
+				// log original payload here if desired
+				if e.tracePayloadOnNack && e.tracePayload != nil {
+					buf, err2 := json.Marshal(e.tracePayload)
+					if err2 == nil {
+						e.span.SetAttributes(attribute.String("payload", string(buf)))
+					}
+				}
 				e.span.SetStatus(codes.Error, "event processing error")
 				e.span.End()
 			}
@@ -142,9 +147,29 @@ func WithAck(handledFn func(Event), errFn func(Event, error)) EventOption {
 	}
 }
 
-func WithMetadata(metadata interface{}) EventOption {
+func WithTracePayloadOnNack(tracePayloadOnNack bool) EventOption {
+	return func(e *event) error {
+		e.tracePayloadOnNack = tracePayloadOnNack
+		if tracePayloadOnNack {
+			e.tracePayload = deepcopy.Copy(e.payload)
+		}
+		return nil
+	}
+}
+
+func WithMetadata(metadata map[string]interface{}) EventOption {
 	return func(e *event) error {
 		e.SetMetadata(metadata)
+		return nil
+	}
+}
+
+func WithMetadataKeyValue(key string, val interface{}) EventOption {
+	return func(e *event) error {
+		if e.metadata == nil {
+			e.metadata = make(map[string]interface{})
+		}
+		e.metadata[key] = val
 		return nil
 	}
 }
@@ -156,12 +181,16 @@ func WithTenant(tid tenant.Id) EventOption {
 	}
 }
 
-//WithSpan provides a span name for event tracing
-func WithSpan(spanName string) EventOption {
+//WithOtelTracing enables opentelemtry tracing for the event
+func WithOtelTracing(spanName string) EventOption {
 	return func(e *event) error {
 		e.spanName = spanName
 		return nil
 	}
+}
+
+func (e *event) Created() time.Time {
+	return e.created
 }
 
 func (e *event) Payload() interface{} {
@@ -176,11 +205,11 @@ func (e *event) SetPayload(payload interface{}) error {
 	return nil
 }
 
-func (e *event) Metadata() interface{} {
+func (e *event) Metadata() map[string]interface{} {
 	return e.metadata
 }
 
-func (e *event) SetMetadata(metadata interface{}) error {
+func (e *event) SetMetadata(metadata map[string]interface{}) error {
 	if e.ack != nil && e.ack.IsAcked() {
 		return &ack.AlreadyAckedError{}
 	}
@@ -241,12 +270,16 @@ func (e *event) GetPathValue(path string) (interface{}, interface{}, string) {
 func (e *event) SetPathValue(path string, val interface{}, createPath bool) (interface{}, string) {
 	obj := e.Payload()
 	if strings.HasPrefix(path, METADATA+".") || path == METADATA {
-		obj = e.Metadata()
-		if obj == nil && createPath {
-			e.SetMetadata(make(map[string]interface{}))
-			obj = e.Metadata()
+		metaObj := e.Metadata()
+		if metaObj == nil {
+			if createPath {
+				e.SetMetadata(make(map[string]interface{}))
+				obj = e.Metadata()
+			} else {
+				return nil, ""
+			}
 		} else {
-			return nil, ""
+			obj = metaObj
 		}
 	}
 	if strings.HasPrefix(path, ".") {
@@ -255,11 +288,14 @@ func (e *event) SetPathValue(path string, val interface{}, createPath bool) (int
 	if path == "" {
 		path = PAYLOAD
 	}
-	if path == PAYLOAD {
+	if path == PAYLOAD || path == PAYLOAD+"." {
 		e.SetPayload(val)
 		return nil, ""
-	} else if path == METADATA {
-		e.SetMetadata(val)
+	} else if path == METADATA || path == METADATA+"." {
+		valMap, ok := val.(map[string]interface{})
+		if ok {
+			e.SetMetadata(valMap)
+		}
 		return nil, ""
 	}
 	if !strings.HasPrefix(path, PAYLOAD+".") && !strings.HasPrefix(path, METADATA+".") {
@@ -271,6 +307,9 @@ func (e *event) SetPathValue(path string, val interface{}, createPath bool) (int
 	segments := strings.Split(path, ".")
 	for i := 1; i < len(segments); i++ {
 		s := segments[i]
+		if s == "" {
+			continue
+		}
 		parent = obj
 		key = s
 		if i == len(segments)-1 {
@@ -328,12 +367,13 @@ func (e *event) Clone(ctx context.Context) (Event, error) {
 	//Unclear if all types are supported:
 	//https://github.com/mohae/deepcopy/blob/master/deepcopy.go#L45-L46
 	newPayloadCopy := deepcopy.Copy(e.payload)
-	newMetadtaCopy := deepcopy.Copy(e.metadata)
+	newMetadtaCopy := deepcopy.Copy(e.metadata).(map[string]interface{})
 	return &event{
 		payload:  newPayloadCopy,
 		metadata: newMetadtaCopy,
 		ctx:      ctx,
 		ack:      subTree,
 		tid:      e.tid,
+		created:  e.created,
 	}, nil
 }

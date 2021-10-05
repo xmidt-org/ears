@@ -80,6 +80,24 @@ issues:
     - path: pkg/plugins/redis/receiver\.go
       linters:
         - funlen
+    - path: pkg/plugins/debug/sender\.go
+      linters:
+        - funlen
+    - path: pkg/plugins/sqs/sender\.go
+      linters:
+        - funlen
+    - path: pkg/plugins/kafka/sender\.go
+      linters:
+        - funlen
+    - path: pkg/plugins/kinesis/sender\.go
+      linters:
+        - funlen
+    - path: pkg/plugins/redis/sender\.go
+      linters:
+        - funlen
+    - path: pkg/plugins/http/sender\.go
+      linters:
+        - funlen
     - path: pkg/ratelimit/adaptive_limiter\.go
       linters:
         - funlen

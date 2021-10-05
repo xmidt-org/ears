@@ -16,7 +16,7 @@ package rtsemconv
 
 import (
 	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/semconv"
+	"go.opentelemetry.io/otel/semconv/v1.4.0"
 )
 
 const (
@@ -24,21 +24,33 @@ const (
 	EARSTracerName  = "ears"
 	EARSMeterName   = "ears"
 
-	EARSPluginTypeLabel   = "pluginType"
-	EARSPluginTypeDebug   = "debug"
-	EARSPluginTypeSQS     = "sqs"
-	EARSPluginTypeKinesis = "kinesis"
-	EARSPluginTypeKafka   = "kafka"
-	EARSPluginTypeHttp    = "http"
-	EARSPluginTypeRedis   = "redis"
+	EARSPluginNameLabel = "pluginName"
+	EARSPluginTypeLabel = "pluginType"
 
-	EARSMetricEventSuccess       = "ears.eventSuccess"
-	EARSMetricEventFailure       = "ears.eventFailure"
-	EARSMetricEventBytes         = "ears.eventBytes"
-	EARSMetricAddRouteSuccess    = "ears.addRouteSuccess"
-	EARSMetricAddRouteFailure    = "ears.addRouteFailure"
-	EARSMetricRemoveRouteSuccess = "ears.removeRouteSuccess"
-	EARSMetricRemoveRouteFailure = "ears.removeRouteFailure"
+	EARSPluginTypeDebugSender   = "debugSender"
+	EARSPluginTypeSQSSender     = "sqsSender"
+	EARSPluginTypeKinesisSender = "kinesisSender"
+	EARSPluginTypeKafkaSender   = "kafkaSender"
+	EARSPluginTypeHttpSender    = "httpSender"
+	EARSPluginTypeRedisSender   = "redisSender"
+
+	EARSPluginTypeDebugReceiver   = "debugReceiver"
+	EARSPluginTypeSQSReceiver     = "sqsReceiver"
+	EARSPluginTypeKinesisReceiver = "kinesisReceiver"
+	EARSPluginTypeKafkaReceiver   = "kafkaReceiver"
+	EARSPluginTypeHttpReceiver    = "httpReceiver"
+	EARSPluginTypeRedisReceiver   = "redisReceiver"
+
+	EARSMetricEventSuccess        = "ears.eventSuccess"
+	EARSMetricEventFailure        = "ears.eventFailure"
+	EARSMetricEventBytes          = "ears.eventBytes"
+	EARSMetricEventProcessingTime = "ears.eventProcessingTime"
+	EARSMetricEventSendOutTime    = "ears.eventSendOutTime"
+	EARSMetricEventQueueDepth     = "ears.eventQueueDepth"
+	EARSMetricAddRouteSuccess     = "ears.addRouteSuccess"
+	EARSMetricAddRouteFailure     = "ears.addRouteFailure"
+	EARSMetricRemoveRouteSuccess  = "ears.removeRouteSuccess"
+	EARSMetricRemoveRouteFailure  = "ears.removeRouteFailure"
 
 	EARSRouteId = attribute.Key("ears.routeId")
 
@@ -46,10 +58,11 @@ const (
 	EARSOrgId = attribute.Key("ears.orgId")
 
 	EARSInstanceId = attribute.Key("ears.instance")
-	EARSTraceId    = attribute.Key("ears.traceId")
+	EARSTraceId    = attribute.Key("trace.id")
 
-	EARSAppIdLabel = "ears.appId"
-	EARSOrgIdLabel = "ears.orgId"
+	EARSAppIdLabel   = "ears.appId"
+	EARSOrgIdLabel   = "ears.orgId"
+	EARSReceiverName = "ears.receiver"
 
 	DBTable = attribute.Key("db.table")
 

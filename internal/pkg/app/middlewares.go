@@ -30,7 +30,7 @@ var middlewareLogger *zerolog.Logger
 
 func NewMiddleware(logger *zerolog.Logger) []func(next http.Handler) http.Handler {
 	middlewareLogger = logger
-	otelMiddleware := otelmux.Middleware("ears", otelmux.WithPropagators(b3.B3{}))
+	otelMiddleware := otelmux.Middleware("ears", otelmux.WithPropagators(b3.New()))
 
 	return []func(next http.Handler) http.Handler{
 		authenticateMiddleware,

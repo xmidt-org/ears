@@ -24,11 +24,16 @@ import (
 	"github.com/goccy/go-yaml"
 	"github.com/google/uuid"
 	"github.com/rs/zerolog/log"
+	"github.com/xmidt-org/ears/internal/pkg/rtsemconv"
 	"github.com/xmidt-org/ears/pkg/event"
 	pkgplugin "github.com/xmidt-org/ears/pkg/plugin"
 	"github.com/xmidt-org/ears/pkg/secret"
 	"github.com/xmidt-org/ears/pkg/sender"
 	"github.com/xmidt-org/ears/pkg/tenant"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/metric"
+	"go.opentelemetry.io/otel/metric/global"
+	"go.opentelemetry.io/otel/metric/unit"
 	"time"
 )
 
@@ -63,6 +68,43 @@ func NewSender(tid tenant.Id, plugin string, name string, config interface{}, se
 		logger: event.GetEventLogger(),
 	}
 	s.initPlugin()
+	// metric recorders
+	meter := global.Meter(rtsemconv.EARSMeterName)
+	commonLabels := []attribute.KeyValue{
+		attribute.String(rtsemconv.EARSPluginTypeLabel, rtsemconv.EARSPluginTypeKinesisSender),
+		attribute.String(rtsemconv.EARSPluginNameLabel, s.Name()),
+		attribute.String(rtsemconv.EARSAppIdLabel, s.tid.AppId),
+		attribute.String(rtsemconv.EARSOrgIdLabel, s.tid.OrgId),
+		attribute.String(rtsemconv.KinesisStreamNameLabel, s.config.StreamName),
+	}
+	s.eventSuccessCounter = metric.Must(meter).
+		NewInt64Counter(
+			rtsemconv.EARSMetricEventSuccess,
+			metric.WithDescription("measures the number of successful events"),
+		).Bind(commonLabels...)
+	s.eventFailureCounter = metric.Must(meter).
+		NewInt64Counter(
+			rtsemconv.EARSMetricEventFailure,
+			metric.WithDescription("measures the number of unsuccessful events"),
+		).Bind(commonLabels...)
+	s.eventBytesCounter = metric.Must(meter).
+		NewInt64Counter(
+			rtsemconv.EARSMetricEventBytes,
+			metric.WithDescription("measures the number of event bytes processed"),
+			metric.WithUnit(unit.Bytes),
+		).Bind(commonLabels...)
+	s.eventProcessingTime = metric.Must(meter).
+		NewInt64Histogram(
+			rtsemconv.EARSMetricEventProcessingTime,
+			metric.WithDescription("measures the time an event spends in ears"),
+			metric.WithUnit(unit.Milliseconds),
+		).Bind(commonLabels...)
+	s.eventSendOutTime = metric.Must(meter).
+		NewInt64Histogram(
+			rtsemconv.EARSMetricEventSendOutTime,
+			metric.WithDescription("measures the time ears spends to send an event to a downstream data sink"),
+			metric.WithUnit(unit.Milliseconds),
+		).Bind(commonLabels...)
 	return s, nil
 }
 
@@ -121,6 +163,11 @@ func (s *Sender) Count() int {
 func (s *Sender) StopSending(ctx context.Context) {
 	s.Lock()
 	if s.done != nil {
+		s.eventSuccessCounter.Unbind()
+		s.eventFailureCounter.Unbind()
+		s.eventBytesCounter.Unbind()
+		s.eventProcessingTime.Unbind()
+		s.eventSendOutTime.Unbind()
 		s.done <- struct{}{}
 		s.done = nil
 	}
@@ -145,24 +192,31 @@ func (s *Sender) send(events []event.Event) {
 			PartitionKey: aws.String(uuid.New().String()),
 		}
 		batchReqs = append(batchReqs, &putReq)
+		s.eventBytesCounter.Add(evt.Context(), int64(len(buf)))
+		s.eventProcessingTime.Record(evt.Context(), time.Since(evt.Created()).Milliseconds())
 	}
 	batchPut := kinesis.PutRecordsInput{
 		Records:    batchReqs,
 		StreamName: aws.String(s.config.StreamName),
 	}
+	start := time.Now()
 	putResults, err := s.kinesisService.PutRecordsWithContext(events[0].Context(), &batchPut)
+	s.eventSendOutTime.Record(events[0].Context(), time.Since(start).Milliseconds())
 	successCount := 0
 	if err != nil {
 		log.Ctx(events[0].Context()).Error().Str("op", "Kinesis.sendWorker").Str("name", s.Name()).Str("tid", s.Tenant().ToString()).Int("batchSize", len(events)).Msg("batch send error: " + err.Error())
 		for idx := range events {
+			s.eventFailureCounter.Add(events[idx].Context(), 1)
 			events[idx].Nack(err)
 		}
 	} else {
 		for idx, putResult := range putResults.Records {
 			if putResult.ErrorCode == nil {
+				s.eventSuccessCounter.Add(events[idx].Context(), 1)
 				successCount++
 				events[idx].Ack()
 			} else {
+				s.eventFailureCounter.Add(events[idx].Context(), 1)
 				events[idx].Nack(err)
 			}
 		}

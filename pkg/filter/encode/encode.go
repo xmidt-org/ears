@@ -65,9 +65,9 @@ func (f *Filter) Filter(evt event.Event) []event.Event {
 		return []event.Event{}
 	}
 	output := base64.StdEncoding.EncodeToString(buf)
-	path := f.config.ToPath
-	if f.config.FromPath != "" {
-		path = f.config.FromPath
+	path := f.config.FromPath
+	if f.config.ToPath != "" {
+		path = f.config.ToPath
 	}
 	evt.SetPathValue(path, output, true)
 	log.Ctx(evt.Context()).Debug().Str("op", "filter").Str("filterType", "encode").Str("name", f.Name()).Msg("encode")

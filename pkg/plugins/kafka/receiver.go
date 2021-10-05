@@ -26,11 +26,15 @@ import (
 	"github.com/Shopify/sarama"
 	"github.com/rs/zerolog/log"
 	"github.com/xmidt-org/ears/internal/pkg/rtsemconv"
+	"github.com/xmidt-org/ears/pkg/panics"
 	"github.com/xmidt-org/ears/pkg/secret"
 	"github.com/xmidt-org/ears/pkg/tenant"
+	"go.opentelemetry.io/contrib/instrumentation/github.com/Shopify/sarama/otelsarama"
+	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/global"
+	"go.opentelemetry.io/otel/metric/unit"
 	"strings"
 	"time"
 
@@ -90,19 +94,21 @@ func NewReceiver(tid tenant.Id, plugin string, name string, config interface{}, 
 	// metric recorders
 	meter := global.Meter(rtsemconv.EARSMeterName)
 	commonLabels := []attribute.KeyValue{
-		attribute.String(rtsemconv.EARSPluginTypeLabel, rtsemconv.EARSPluginTypeKafka),
+		attribute.String(rtsemconv.EARSPluginTypeLabel, rtsemconv.EARSPluginTypeKafkaReceiver),
+		attribute.String(rtsemconv.EARSPluginNameLabel, r.Name()),
 		attribute.String(rtsemconv.EARSAppIdLabel, r.tid.AppId),
 		attribute.String(rtsemconv.EARSOrgIdLabel, r.tid.OrgId),
 		attribute.String(rtsemconv.KafkaTopicLabel, r.config.Topic),
 		attribute.String(rtsemconv.KafkaGroupIdLabel, r.config.GroupId),
+		attribute.String(rtsemconv.EARSReceiverName, r.name),
 	}
 	r.eventSuccessCounter = metric.Must(meter).
-		NewFloat64Counter(
+		NewInt64Counter(
 			rtsemconv.EARSMetricEventSuccess,
 			metric.WithDescription("measures the number of successful events"),
 		).Bind(commonLabels...)
 	r.eventFailureCounter = metric.Must(meter).
-		NewFloat64Counter(
+		NewInt64Counter(
 			rtsemconv.EARSMetricEventFailure,
 			metric.WithDescription("measures the number of unsuccessful events"),
 		).Bind(commonLabels...)
@@ -110,6 +116,7 @@ func NewReceiver(tid tenant.Id, plugin string, name string, config interface{}, 
 		NewInt64Counter(
 			rtsemconv.EARSMetricEventBytes,
 			metric.WithDescription("measures the number of event bytes processed"),
+			metric.WithUnit(unit.Bytes),
 		).Bind(commonLabels...)
 	return r, nil
 }
@@ -151,9 +158,12 @@ func (r *Receiver) Start(handler func(*sarama.ConsumerMessage) bool) {
 		// `Consume` should be called inside an infinite loop, when a
 		// server-side rebalance happens, the consumer session will need to be
 		// recreated to get the new claims
+		//err := r.client.Consume(r.ctx, r.topics, otelsarama.WrapConsumerGroupHandler(r))
 		err := r.client.Consume(r.ctx, r.topics, r)
 		if err != nil { // the receiver itself is the group handler
 			r.logger.Error().Str("op", "kafka.Start").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Msg(err.Error())
+			//Sleep for a little bit to prevent busy loop
+			time.Sleep(time.Second)
 		} else {
 			r.logger.Info().Str("op", "kafka.Start").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Msg("kafka consumer finished without error")
 		}
@@ -260,7 +270,25 @@ func (r *Receiver) Receive(next receiver.NextFn) error {
 	r.stopped = false
 	r.Unlock()
 	go func() {
+		defer func() {
+			p := recover()
+			if p != nil {
+				panicErr := panics.ToError(p)
+				r.logger.Error().Str("op", "kafka.Receive").Str("error", panicErr.Error()).
+					Str("stackTrace", panicErr.StackTrace()).Msg("A panic has occurred")
+				r.Close()
+			}
+		}()
 		r.Start(func(msg *sarama.ConsumerMessage) bool {
+			defer func() {
+				p := recover()
+				if p != nil {
+					panicErr := panics.ToError(p)
+					r.logger.Error().Str("op", "kafka.Receive").Str("error", panicErr.Error()).
+						Str("stackTrace", panicErr.StackTrace()).Msg("A panic has occurred while handling a message")
+				}
+			}()
+
 			// bail if context has been canceled
 			if r.ctx.Err() != nil {
 				r.logger.Info().Str("op", "kafka.Receive").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Msg("abandoning message due to canceled context")
@@ -277,20 +305,25 @@ func (r *Receiver) Receive(next receiver.NextFn) error {
 				return false
 			}
 			ctx, cancel := context.WithTimeout(context.Background(), time.Duration(5)*time.Second)
+
+			//extract otel tracing info
+			ctx = otel.GetTextMapPropagator().Extract(ctx, otelsarama.NewConsumerMessageCarrier(msg))
+
 			r.eventBytesCounter.Add(ctx, int64(len(msg.Value)))
 			e, err := event.New(ctx, pl, event.WithAck(
 				func(e event.Event) {
 					log.Ctx(e.Context()).Debug().Str("op", "kafka.Receive").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Msg("processed message from kafka topic")
-					r.eventSuccessCounter.Add(ctx, 1.0)
+					r.eventSuccessCounter.Add(ctx, 1)
 					cancel()
 				},
 				func(e event.Event, err error) {
 					log.Ctx(e.Context()).Error().Str("op", "kafka.Receive").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Msg("failed to process message: " + err.Error())
-					r.eventFailureCounter.Add(ctx, 1.0)
+					r.eventFailureCounter.Add(ctx, 1)
 					cancel()
 				}),
-				event.WithSpan(r.Name()),
-				event.WithTenant(r.Tenant()))
+				event.WithOtelTracing(r.Name()),
+				event.WithTenant(r.Tenant()),
+				event.WithTracePayloadOnNack(*r.config.TracePayloadOnNack))
 			if err != nil {
 				r.logger.Error().Str("op", "kafka.Receive").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Msg("cannot create event: " + err.Error())
 				return false
