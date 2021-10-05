@@ -49,9 +49,10 @@ func NewPluginVersion(name string, version string, commitID string) (*pkgplugin.
 }
 
 type ReceiverConfig struct {
-	Path   string `json:"path"`
-	Method string `json:"method"`
-	Port   *int   `json:"port"`
+	Path               string `json:"path"`
+	Method             string `json:"method"`
+	Port               *int   `json:"port"`
+	TracePayloadOnNack *bool  `json:"tracePayloadOnNack,omitempty"`
 }
 
 type Receiver struct {
@@ -61,8 +62,8 @@ type Receiver struct {
 	name                string
 	plugin              string
 	tid                 tenant.Id
-	eventSuccessCounter metric.BoundFloat64Counter
-	eventFailureCounter metric.BoundFloat64Counter
+	eventSuccessCounter metric.BoundInt64Counter
+	eventFailureCounter metric.BoundInt64Counter
 	eventBytesCounter   metric.BoundInt64Counter
 }
 
@@ -72,11 +73,16 @@ type SenderConfig struct {
 }
 
 type Sender struct {
-	client *http.Client
-	config SenderConfig
-	name   string
-	plugin string
-	tid    tenant.Id
+	client              *http.Client
+	config              SenderConfig
+	name                string
+	plugin              string
+	tid                 tenant.Id
+	eventSuccessCounter metric.BoundInt64Counter
+	eventFailureCounter metric.BoundInt64Counter
+	eventBytesCounter   metric.BoundInt64Counter
+	eventProcessingTime metric.BoundInt64Histogram
+	eventSendOutTime    metric.BoundInt64Histogram
 }
 
 type BadHttpStatusError struct {

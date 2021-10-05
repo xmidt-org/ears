@@ -63,6 +63,7 @@ var DefaultReceiverConfig = ReceiverConfig{
 	ReceiverQueueDepth:  pointer.Int(100),
 	ReceiverPoolSize:    pointer.Int(1),
 	NeverDelete:         pointer.Bool(false),
+	TracePayloadOnNack:  pointer.Bool(false),
 }
 
 type ReceiverConfig struct {
@@ -75,6 +76,7 @@ type ReceiverConfig struct {
 	ReceiverQueueDepth  *int   `json:"receiverQueueDepth,omitempty"`
 	ReceiverPoolSize    *int   `json:"receiverPoolSize,omitempty"`
 	NeverDelete         *bool  `json:"neverDelete,omitempty"`
+	TracePayloadOnNack  *bool  `json:"tracePayloadOnNack,omitempty"`
 }
 
 type Receiver struct {
@@ -90,9 +92,10 @@ type Receiver struct {
 	receiveCount        int
 	deleteCount         int
 	startTime           time.Time
-	eventSuccessCounter metric.BoundFloat64Counter
-	eventFailureCounter metric.BoundFloat64Counter
+	eventSuccessCounter metric.BoundInt64Counter
+	eventFailureCounter metric.BoundInt64Counter
 	eventBytesCounter   metric.BoundInt64Counter
+	eventQueueDepth     metric.BoundInt64Histogram
 }
 
 var DefaultSenderConfig = SenderConfig{
@@ -113,13 +116,18 @@ type SenderConfig struct {
 
 type Sender struct {
 	sync.Mutex
-	sqsService *sqs.SQS
-	name       string
-	plugin     string
-	tid        tenant.Id
-	config     SenderConfig
-	count      int
-	logger     *zerolog.Logger
-	eventBatch []event.Event
-	done       chan struct{}
+	sqsService          *sqs.SQS
+	name                string
+	plugin              string
+	tid                 tenant.Id
+	config              SenderConfig
+	count               int
+	logger              *zerolog.Logger
+	eventBatch          []event.Event
+	done                chan struct{}
+	eventSuccessCounter metric.BoundInt64Counter
+	eventFailureCounter metric.BoundInt64Counter
+	eventBytesCounter   metric.BoundInt64Counter
+	eventProcessingTime metric.BoundInt64Histogram
+	eventSendOutTime    metric.BoundInt64Histogram
 }

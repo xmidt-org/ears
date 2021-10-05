@@ -41,5 +41,11 @@ func (v *TenantConfigVault) Secret(key string) string {
 		return ""
 	}
 	configKey := key[0:len(secret.Protocol)] + v.tid.OrgId + "." + v.tid.AppId + "." + key[len(secret.Protocol):]
+	val := v.parentVault.Secret(configKey)
+	if val != "" {
+		return val
+	}
+	//try again with global key/secrets
+	configKey = key[0:len(secret.Protocol)] + "all.all." + key[len(secret.Protocol):]
 	return v.parentVault.Secret(configKey)
 }

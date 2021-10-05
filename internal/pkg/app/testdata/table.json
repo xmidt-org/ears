@@ -5,7 +5,8 @@
   "storageType": "",
   "table": {
     "simpleRouteA": {
-      "id": 0,
+      "seq": 0,
+      "disabled": false,
       "routeFiles": [
         "simpleRouteA"
       ],
@@ -21,6 +22,7 @@
     },
     "simpleRouteB": {
       "seq": 1,
+      "disabled": false,
       "routeFiles": [
         "simpleRouteB"
       ],
@@ -36,6 +38,7 @@
     },
     "simpleSplitRoute": {
       "seq": 2,
+      "disabled": false,
       "routeFiles": [
         "simpleFilterSplitRoute"
       ],
@@ -51,6 +54,7 @@
     },
     "simpleDeepSplitRoute": {
       "seq": 3,
+      "disabled": false,
       "routeFiles": [
         "simpleFilterDeepSplitRoute"
       ],
@@ -66,6 +70,7 @@
     },
     "matchFilterAllow": {
       "seq": 4,
+      "disabled": false,
       "routeFiles": [
         "simpleFilterMatchAllowRoute"
       ],
@@ -81,6 +86,7 @@
     },
     "matchFilterDeny": {
       "seq": 5,
+      "disabled": false,
       "routeFiles": [
         "simpleFilterMatchDenyRoute"
       ],
@@ -96,6 +102,7 @@
     },
     "simpleFilterChainMatchRoute": {
       "seq": 6,
+      "disabled": false,
       "routeFiles": [
         "simpleFilterChainMatchRoute"
       ],
@@ -111,6 +118,7 @@
     },
     "multiRouteAABB": {
       "seq": 7,
+      "disabled": true,
       "routeFiles": [
         "simpleRouteAA",
         "simpleRouteBB"
@@ -157,6 +165,7 @@
     },
     "simpleFilterUnwrapRoute": {
       "seq": 9,
+      "disabled": false,
       "routeFiles": [
         "simpleFilterUnwrapRoute"
       ],
@@ -172,6 +181,7 @@
     },
     "simpleFilterLongChainRoute": {
       "seq": 10,
+      "disabled": false,
       "routeFiles": [
         "simpleFilterLongChainRoute"
       ],
@@ -187,6 +197,7 @@
     },
     "simpleFilterMatchPatternAllowRoute": {
       "seq": 11,
+      "disabled": false,
       "routeFiles": [
         "simpleFilterMatchPatternAllowRoute"
       ],
@@ -202,6 +213,7 @@
     },
     "simpleFilterMatchPatternDenyRoute": {
       "seq": 12,
+      "disabled": false,
       "routeFiles": [
         "simpleFilterMatchPatternDenyRoute"
       ],
@@ -217,6 +229,7 @@
     },
     "simpleFilterMatchPatternWildRoute": {
       "seq": 13,
+      "disabled": false,
       "routeFiles": [
         "simpleFilterMatchPatternWildRoute"
       ],
@@ -232,6 +245,7 @@
     },
     "simpleFilterTransformRoute": {
       "seq": 14,
+      "disabled": false,
       "routeFiles": [
         "simpleFilterTransformRoute"
       ],
@@ -247,6 +261,7 @@
     },
     "simpleFilterJsRoute": {
       "seq": 15,
+      "disabled": false,
       "routeFiles": [
         "simpleFilterJsRoute"
       ],
@@ -262,6 +277,7 @@
     },
     "simpleFilterJsDropRoute": {
       "seq": 16,
+      "disabled": false,
       "routeFiles": [
         "simpleFilterJsDropRoute"
       ],
@@ -275,6 +291,7 @@
     },
     "simpleFilterJsSplitRoute": {
       "seq": 17,
+      "disabled": false,
       "routeFiles": [
         "simpleFilterJsSplitRoute"
       ],
@@ -288,6 +305,7 @@
     },
     "simpleFilterDedupRoute": {
       "seq": 18,
+      "disabled": false,
       "routeFiles": [
         "simpleFilterDedupRoute"
       ],
@@ -303,6 +321,7 @@
     },
     "simpleFilterTtlRoute": {
       "seq": 19,
+      "disabled": false,
       "routeFiles": [
         "simpleFilterTtlRoute"
       ],
@@ -316,6 +335,7 @@
     },
     "simpleFilterDecodeRoute": {
       "seq": 20,
+      "disabled": false,
       "routeFiles": [
         "simpleFilterDecodeRoute"
       ],
@@ -331,6 +351,7 @@
     },
     "simpleFilterEncodeRoute": {
       "seq": 21,
+      "disabled": false,
       "routeFiles": [
         "simpleFilterEncodeRoute"
       ],
@@ -346,6 +367,7 @@
     },
     "simpleFilterHashRoute": {
       "seq": 22,
+      "disabled": false,
       "routeFiles": [
         "simpleFilterHashRoute"
       ],
@@ -361,6 +383,7 @@
     },
     "simpleFilterBatchRoute": {
       "seq": 23,
+      "disabled": false,
       "routeFiles": [
         "simpleFilterBatchRoute"
       ],
@@ -376,6 +399,7 @@
     },
     "useCaseOneRoute": {
       "seq": 24,
+      "disabled": false,
       "routeFiles": [
         "useCaseOneRoute"
       ],
@@ -386,6 +410,54 @@
           "expectedEventCount": 1,
           "expectedEventIndex": 0,
           "expectedEventPayloadFile": "event15"
+        }
+      ]
+    },
+    "simpleFilterRegexRoute": {
+      "seq": 25,
+      "disabled": false,
+      "routeFiles": [
+        "simpleFilterRegexRoute"
+      ],
+      "waitMs": 1000,
+      "events": [
+        {
+          "senderRouteFiles": "simpleFilterRegexRoute",
+          "expectedEventCount": 5,
+          "expectedEventIndex": 0,
+          "expectedEventPayloadFile": "event16"
+        }
+      ]
+    },
+    "simpleFilterRegexReplaceAllRoute": {
+      "seq": 26,
+      "disabled": false,
+      "routeFiles": [
+        "simpleFilterRegexReplaceAllRoute"
+      ],
+      "waitMs": 1000,
+      "events": [
+        {
+          "senderRouteFiles": "simpleFilterRegexReplaceAllRoute",
+          "expectedEventCount": 5,
+          "expectedEventIndex": 0,
+          "expectedEventPayloadFile": "event18"
+        }
+      ]
+    },
+    "simpleFilterTransformMissingFieldRoute": {
+      "seq": 26,
+      "disabled": false,
+      "routeFiles": [
+        "simpleFilterTransformMissingFieldRoute"
+      ],
+      "waitMs": 1000,
+      "events": [
+        {
+          "senderRouteFiles": "simpleFilterTransformMissingFieldRoute",
+          "expectedEventCount": 5,
+          "expectedEventIndex": 0,
+          "expectedEventPayloadFile": "event17"
         }
       ]
     }

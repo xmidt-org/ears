@@ -55,17 +55,18 @@ func NewPluginVersion(name string, version string, commitID string) (*pkgplugin.
 }
 
 var DefaultReceiverConfig = ReceiverConfig{
-	Brokers:           "localhost:9092",
-	Topic:             "quickstart-events",
-	GroupId:           "",
-	Username:          "",
-	Password:          "",
-	CACert:            "",
-	AccessCert:        "",
-	AccessKey:         "",
-	Version:           "",
-	CommitInterval:    pointer.Int(1),
-	ChannelBufferSize: pointer.Int(0),
+	Brokers:            "localhost:9092",
+	Topic:              "quickstart-events",
+	GroupId:            "",
+	Username:           "",
+	Password:           "",
+	CACert:             "",
+	AccessCert:         "",
+	AccessKey:          "",
+	Version:            "",
+	CommitInterval:     pointer.Int(1),
+	ChannelBufferSize:  pointer.Int(0),
+	TracePayloadOnNack: pointer.Bool(false),
 }
 
 type ReceiverConfig struct {
@@ -82,6 +83,7 @@ type ReceiverConfig struct {
 	ChannelBufferSize   *int   `json:"channelBufferSize,omitempty"`
 	ConsumeByPartitions bool   `json:"consumeByPartitions,omitempty"`
 	TLSEnable           bool   `json:"tlsEnable,omitempty"`
+	TracePayloadOnNack  *bool  `json:"tracePayloadOnNack,omitempty"`
 }
 
 type Receiver struct {
@@ -104,43 +106,63 @@ type Receiver struct {
 	client              sarama.ConsumerGroup
 	topics              []string
 	handler             func(message *sarama.ConsumerMessage) bool
-	eventSuccessCounter metric.BoundFloat64Counter
-	eventFailureCounter metric.BoundFloat64Counter
+	eventSuccessCounter metric.BoundInt64Counter
+	eventFailureCounter metric.BoundInt64Counter
 	eventBytesCounter   metric.BoundInt64Counter
 	secrets             secret.Vault
 }
 
 var DefaultSenderConfig = SenderConfig{
-	Brokers:           "localhost:9092",
-	Topic:             "quickstart-events",
-	Partition:         pointer.Int(-1),
-	ChannelBufferSize: pointer.Int(0),
-	Username:          "",
-	Password:          "",
-	CACert:            "",
-	AccessCert:        "",
-	AccessKey:         "",
-	Version:           "",
-	SenderPoolSize:    pointer.Int(1),
-	PartitionPath:     "",
+	Brokers:             "localhost:9092",
+	Topic:               "quickstart-events",
+	Partition:           pointer.Int(-1),
+	ChannelBufferSize:   pointer.Int(0),
+	Username:            "",
+	Password:            "",
+	CACert:              "",
+	AccessCert:          "",
+	AccessKey:           "",
+	Version:             "",
+	SenderPoolSize:      pointer.Int(1),
+	PartitionPath:       "",
+	DynamicMetricLabels: make([]DynamicMetricLabel, 0),
 }
 
 // SenderConfig can be passed into NewSender() in order to configure
 // the behavior of the sender.
 type SenderConfig struct {
-	Brokers           string `json:"brokers,omitempty"`
-	Topic             string `json:"topic,omitempty"`
-	Partition         *int   `json:"partition,omitempty"`
-	PartitionPath     string `json:"partitionPath,omitempty"` // if path is set look up partition from event rather than using the hard coded partition id
-	Username          string `json:"username,omitempty"`
-	Password          string `json:"password,omitempty"`
-	CACert            string `json:"caCert,omitempty"`
-	AccessCert        string `json:"accessCert,omitempty"`
-	AccessKey         string `json:"accessKey,omitempty"`
-	Version           string `json:"version,omitempty"`
-	ChannelBufferSize *int   `json:"channelBufferSize,omitempty"`
-	TLSEnable         bool   `json:"tlsEnable,omitempty"`
-	SenderPoolSize    *int   `json:"senderPoolSize,omitempty"`
+	Brokers             string               `json:"brokers,omitempty"`
+	Topic               string               `json:"topic,omitempty"`
+	Partition           *int                 `json:"partition,omitempty"`
+	PartitionPath       string               `json:"partitionPath,omitempty"` // if path is set, look up partition from event rather than using the hard coded partition id
+	Username            string               `json:"username,omitempty"`
+	Password            string               `json:"password,omitempty"`
+	CACert              string               `json:"caCert,omitempty"`
+	AccessCert          string               `json:"accessCert,omitempty"`
+	AccessKey           string               `json:"accessKey,omitempty"`
+	Version             string               `json:"version,omitempty"`
+	ChannelBufferSize   *int                 `json:"channelBufferSize,omitempty"`
+	TLSEnable           bool                 `json:"tlsEnable,omitempty"`
+	SenderPoolSize      *int                 `json:"senderPoolSize,omitempty"`
+	DynamicMetricLabels []DynamicMetricLabel `json:"dynamicMetricLabel,omitempty"`
+}
+
+type DynamicMetricLabel struct {
+	Label string `json:"label,omitempty"`
+	Path  string `json:"path,omitempty"`
+}
+
+type DynamicMetricValue struct {
+	Label string `json:"label,omitempty"`
+	Value string `json:"value,omitempty"`
+}
+
+type SenderMetrics struct {
+	eventSuccessCounter metric.BoundInt64Counter
+	eventFailureCounter metric.BoundInt64Counter
+	eventBytesCounter   metric.BoundInt64Counter
+	eventProcessingTime metric.BoundInt64Histogram
+	eventSendOutTime    metric.BoundInt64Histogram
 }
 
 type Sender struct {
@@ -154,6 +176,7 @@ type Sender struct {
 	producer *Producer
 	stopped  bool
 	secrets  secret.Vault
+	metrics  map[string]*SenderMetrics
 }
 
 type ManualHashPartitioner struct {
@@ -164,5 +187,6 @@ type Producer struct {
 	pool   chan sarama.SyncProducer
 	done   chan bool
 	client sarama.Client
+	sender *Sender
 	logger *zerolog.Logger
 }

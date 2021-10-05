@@ -1,34 +1,22 @@
 {
-  "sharePluginsAcrossTests" : true,
-  "testToRunAllIfBlank" : "",
+  "sharePluginsAcrossTests": false,
+  "testToRunAllIfBlank": "",
+  "numInstances": 3,
+  "storageType": "",
   "table" : {
-    "test1": {
-      "id": 0,
+    "useCaseOneRoute": {
+      "seq": 0,
+      "disabled": false,
       "routeFiles": [
-        "simpleRouteAB"
+        "useCaseOneRoute"
       ],
-      "waitMs": 100,
+      "waitMs": 1000,
       "events": [
         {
-          "senderRouteFiles": "simpleRouteAB",
-          "expectedEventCount": 5,
+          "senderRouteFiles": "useCaseOneRoute",
+          "expectedEventCount": 1,
           "expectedEventIndex": 0,
-          "expectedEventPayloadFile": "event1"
-        }
-      ]
-    },
-    "test2": {
-      "id": 1,
-      "routeFiles": [
-        "simpleRouteBB"
-      ],
-      "waitMs": 100,
-      "events": [
-        {
-          "senderRouteFiles": "simpleRouteBB",
-          "expectedEventCount": 5,
-          "expectedEventIndex": 0,
-          "expectedEventPayloadFile": "event1"
+          "expectedEventPayloadFile": "event15"
         }
       ]
     }

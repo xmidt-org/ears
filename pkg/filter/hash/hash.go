@@ -62,7 +62,11 @@ func (f *Filter) Filter(evt event.Event) []event.Event {
 	}
 	obj, _, _ := evt.GetPathValue(f.config.FromPath)
 	if obj == nil {
-		evt.Nack(errors.New("nil object at path " + f.config.FromPath))
+		//span := trace.SpanFromContext(evt.Context())
+		//if span != nil {
+		// add stuff to span here
+		//}
+		evt.Nack(errors.New("cannot hash nil object at path " + f.config.FromPath))
 		return []event.Event{}
 	}
 	buf, err := json.Marshal(obj)
@@ -122,9 +126,9 @@ func (f *Filter) Filter(evt event.Event) []event.Event {
 	} else if f.config.Encoding == "hex" {
 		output = hex.EncodeToString(output.([]byte))
 	}
-	path := f.config.ToPath
-	if path == "" {
-		path = f.config.FromPath
+	path := f.config.FromPath
+	if f.config.ToPath != "" {
+		path = f.config.ToPath
 	}
 	evt.SetPathValue(path, output, true)
 	log.Ctx(evt.Context()).Debug().Str("op", "filter").Str("filterType", "hash").Str("name", f.Name()).Msg("hash")

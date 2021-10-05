@@ -80,9 +80,9 @@ func (f *Filter) Filter(evt event.Event) []event.Event {
 		evt.Nack(err)
 		return []event.Event{}
 	}
-	path := f.config.ToPath
-	if f.config.FromPath != "" {
-		path = f.config.FromPath
+	path := f.config.FromPath
+	if f.config.ToPath != "" {
+		path = f.config.ToPath
 	}
 	evt.SetPathValue(path, output, true)
 	log.Ctx(evt.Context()).Debug().Str("op", "filter").Str("filterType", "decode").Str("name", f.Name()).Msg("decode")

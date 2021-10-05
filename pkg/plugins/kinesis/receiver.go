@@ -32,6 +32,7 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/global"
+	"go.opentelemetry.io/otel/metric/unit"
 	"os"
 	"time"
 )
@@ -71,7 +72,8 @@ func NewReceiver(tid tenant.Id, plugin string, name string, config interface{}, 
 	// metric recorders
 	meter := global.Meter(rtsemconv.EARSMeterName)
 	commonLabels := []attribute.KeyValue{
-		attribute.String(rtsemconv.EARSPluginTypeLabel, rtsemconv.EARSPluginTypeKinesis),
+		attribute.String(rtsemconv.EARSPluginTypeLabel, rtsemconv.EARSPluginTypeKinesisReceiver),
+		attribute.String(rtsemconv.EARSPluginNameLabel, r.Name()),
 		attribute.String(rtsemconv.EARSAppIdLabel, r.tid.AppId),
 		attribute.String(rtsemconv.EARSOrgIdLabel, r.tid.OrgId),
 		attribute.String(rtsemconv.KinesisStreamNameLabel, r.config.StreamName),
@@ -91,6 +93,7 @@ func NewReceiver(tid tenant.Id, plugin string, name string, config interface{}, 
 		NewInt64Counter(
 			rtsemconv.EARSMetricEventBytes,
 			metric.WithDescription("measures the number of event bytes processed"),
+			metric.WithUnit(unit.Bytes),
 		).Bind(commonLabels...)
 	return r, nil
 }
@@ -160,7 +163,7 @@ func (r *Receiver) startReceiveWorker(svc *kinesis.Kinesis, n int) {
 						}
 						ctx, cancel := context.WithTimeout(context.Background(), time.Duration(*r.config.AcknowledgeTimeout)*time.Second)
 						r.eventBytesCounter.Add(ctx, int64(len(msg.Data)))
-						e, err := event.New(ctx, payload, event.WithMetadata(*msg), event.WithAck(
+						e, err := event.New(ctx, payload, event.WithMetadataKeyValue("kinesisMessage", *msg), event.WithAck(
 							func(e event.Event) {
 								r.eventSuccessCounter.Add(ctx, 1)
 								cancel()
@@ -170,7 +173,8 @@ func (r *Receiver) startReceiveWorker(svc *kinesis.Kinesis, n int) {
 								cancel()
 							}),
 							event.WithTenant(r.Tenant()),
-							event.WithSpan(r.Name()))
+							event.WithOtelTracing(r.Name()),
+							event.WithTracePayloadOnNack(*r.config.TracePayloadOnNack))
 						if err != nil {
 							r.logger.Error().Str("op", "Kinesis.receiveWorker").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Int("workerNum", n).Msg("cannot create event: " + err.Error())
 							return

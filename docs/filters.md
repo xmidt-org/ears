@@ -10,7 +10,7 @@
 
 * Payloads are either byte arrays or strings. If a payload is a string it will be parsed as JSON into an `interface{}`. Thus the payload will be one of `map[string]interface{}`, `[]interface{}`, `string`, `bool` or `float`. 
 * Some filter configs require to specify a particular subset of a deeply nested map. We use dot-delimited path syntax for this purpose, for example `.foo.bar.baz` to reach the value `hello` of the payload `{ "foo" : { "bar" : { "baz" : "hello" }}}`. The root path is defined as `.` or blank string.
-* Some filters take data from one sub section of a payload and move them to another sub section of the same payload. By convention we use the configs `FromPath`and `ToPath` for this purpose. If `ToPath` is omitted, then `FromPath` will be used as `ToPath` as well. 
+* Some filters take data from one sub section of a payload and move them to another sub section of the same payload. By convention, we use the configs `FromPath`and `ToPath` for this purpose. If `ToPath` is omitted, then `FromPath` will be used as `ToPath` as well. 
 * Events carry two distinct pieces of data objects: payload and metadata and in the future possibly more. Metadata can be used to store temporary data that is produced by one filter and may be consumed by another filter or sender downstream. We use the path prefix `payload.` and `metadata.` to indicate if a filter should operate on metadata or payload. By default we assume a path is used for payloads so the path `.foo` is equivalent to `payload.foo`. 
 
 ## Standard Library Of Filters

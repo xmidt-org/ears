@@ -7,6 +7,7 @@ import (
 	"context"
 	"github.com/xmidt-org/ears/pkg/tenant"
 	"sync"
+	"time"
 )
 
 // Ensure, that EventMock does implement Event.
@@ -28,10 +29,13 @@ var _ Event = &EventMock{}
 // 			ContextFunc: func() context.Context {
 // 				panic("mock out the Context method")
 // 			},
+// 			CreatedFunc: func() time.Time {
+// 				panic("mock out the Created method")
+// 			},
 // 			GetPathValueFunc: func(path string) (interface{}, interface{}, string) {
 // 				panic("mock out the GetPathValue method")
 // 			},
-// 			MetadataFunc: func() interface{} {
+// 			MetadataFunc: func() map[string]interface{} {
 // 				panic("mock out the Metadata method")
 // 			},
 // 			NackFunc: func(err error)  {
@@ -43,7 +47,7 @@ var _ Event = &EventMock{}
 // 			SetContextFunc: func(ctx context.Context) error {
 // 				panic("mock out the SetContext method")
 // 			},
-// 			SetMetadataFunc: func(metadata interface{}) error {
+// 			SetMetadataFunc: func(metadata map[string]interface{}) error {
 // 				panic("mock out the SetMetadata method")
 // 			},
 // 			SetPathValueFunc: func(path string, val interface{}, createPath bool) (interface{}, string) {
@@ -71,11 +75,14 @@ type EventMock struct {
 	// ContextFunc mocks the Context method.
 	ContextFunc func() context.Context
 
+	// CreatedFunc mocks the Created method.
+	CreatedFunc func() time.Time
+
 	// GetPathValueFunc mocks the GetPathValue method.
 	GetPathValueFunc func(path string) (interface{}, interface{}, string)
 
 	// MetadataFunc mocks the Metadata method.
-	MetadataFunc func() interface{}
+	MetadataFunc func() map[string]interface{}
 
 	// NackFunc mocks the Nack method.
 	NackFunc func(err error)
@@ -87,7 +94,7 @@ type EventMock struct {
 	SetContextFunc func(ctx context.Context) error
 
 	// SetMetadataFunc mocks the SetMetadata method.
-	SetMetadataFunc func(metadata interface{}) error
+	SetMetadataFunc func(metadata map[string]interface{}) error
 
 	// SetPathValueFunc mocks the SetPathValue method.
 	SetPathValueFunc func(path string, val interface{}, createPath bool) (interface{}, string)
@@ -110,6 +117,9 @@ type EventMock struct {
 		}
 		// Context holds details about calls to the Context method.
 		Context []struct {
+		}
+		// Created holds details about calls to the Created method.
+		Created []struct {
 		}
 		// GetPathValue holds details about calls to the GetPathValue method.
 		GetPathValue []struct {
@@ -135,7 +145,7 @@ type EventMock struct {
 		// SetMetadata holds details about calls to the SetMetadata method.
 		SetMetadata []struct {
 			// Metadata is the metadata argument value.
-			Metadata interface{}
+			Metadata map[string]interface{}
 		}
 		// SetPathValue holds details about calls to the SetPathValue method.
 		SetPathValue []struct {
@@ -158,6 +168,7 @@ type EventMock struct {
 	lockAck          sync.RWMutex
 	lockClone        sync.RWMutex
 	lockContext      sync.RWMutex
+	lockCreated      sync.RWMutex
 	lockGetPathValue sync.RWMutex
 	lockMetadata     sync.RWMutex
 	lockNack         sync.RWMutex
@@ -252,6 +263,32 @@ func (mock *EventMock) ContextCalls() []struct {
 	return calls
 }
 
+// Created calls CreatedFunc.
+func (mock *EventMock) Created() time.Time {
+	if mock.CreatedFunc == nil {
+		panic("EventMock.CreatedFunc: method is nil but Event.Created was just called")
+	}
+	callInfo := struct {
+	}{}
+	mock.lockCreated.Lock()
+	mock.calls.Created = append(mock.calls.Created, callInfo)
+	mock.lockCreated.Unlock()
+	return mock.CreatedFunc()
+}
+
+// CreatedCalls gets all the calls that were made to Created.
+// Check the length with:
+//     len(mockedEvent.CreatedCalls())
+func (mock *EventMock) CreatedCalls() []struct {
+} {
+	var calls []struct {
+	}
+	mock.lockCreated.RLock()
+	calls = mock.calls.Created
+	mock.lockCreated.RUnlock()
+	return calls
+}
+
 // GetPathValue calls GetPathValueFunc.
 func (mock *EventMock) GetPathValue(path string) (interface{}, interface{}, string) {
 	if mock.GetPathValueFunc == nil {
@@ -284,7 +321,7 @@ func (mock *EventMock) GetPathValueCalls() []struct {
 }
 
 // Metadata calls MetadataFunc.
-func (mock *EventMock) Metadata() interface{} {
+func (mock *EventMock) Metadata() map[string]interface{} {
 	if mock.MetadataFunc == nil {
 		panic("EventMock.MetadataFunc: method is nil but Event.Metadata was just called")
 	}
@@ -398,12 +435,12 @@ func (mock *EventMock) SetContextCalls() []struct {
 }
 
 // SetMetadata calls SetMetadataFunc.
-func (mock *EventMock) SetMetadata(metadata interface{}) error {
+func (mock *EventMock) SetMetadata(metadata map[string]interface{}) error {
 	if mock.SetMetadataFunc == nil {
 		panic("EventMock.SetMetadataFunc: method is nil but Event.SetMetadata was just called")
 	}
 	callInfo := struct {
-		Metadata interface{}
+		Metadata map[string]interface{}
 	}{
 		Metadata: metadata,
 	}
@@ -417,10 +454,10 @@ func (mock *EventMock) SetMetadata(metadata interface{}) error {
 // Check the length with:
 //     len(mockedEvent.SetMetadataCalls())
 func (mock *EventMock) SetMetadataCalls() []struct {
-	Metadata interface{}
+	Metadata map[string]interface{}
 } {
 	var calls []struct {
-		Metadata interface{}
+		Metadata map[string]interface{}
 	}
 	mock.lockSetMetadata.RLock()
 	calls = mock.calls.SetMetadata

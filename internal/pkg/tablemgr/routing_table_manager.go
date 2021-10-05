@@ -220,6 +220,10 @@ func (r *DefaultRoutingTableManager) AddRoute(ctx context.Context, routeConfig *
 	// currently storage layer handles created and updated timestamps
 	err = r.storageMgr.SetRoute(ctx, *routeConfig)
 	if err != nil {
+		err2 := r.unregisterAndStopRoute(ctx, routeConfig.TenantId, routeConfig.Id)
+		if err2 != nil {
+			r.logger.Error().Str("op", "addRoute").Str("routeId", routeConfig.Id).Msg("failed to stop router following storage error")
+		}
 		return err
 	}
 	r.rtSyncer.PublishSyncRequest(ctx, routeConfig.TenantId, syncer.ITEM_TYPE_ROUTE, routeConfig.Id, true)

@@ -26,13 +26,16 @@ import (
 	"github.com/rs/zerolog/log"
 	"github.com/xmidt-org/ears/internal/pkg/rtsemconv"
 	"github.com/xmidt-org/ears/pkg/event"
+	"github.com/xmidt-org/ears/pkg/panics"
 	pkgplugin "github.com/xmidt-org/ears/pkg/plugin"
 	"github.com/xmidt-org/ears/pkg/receiver"
 	"github.com/xmidt-org/ears/pkg/secret"
 	"github.com/xmidt-org/ears/pkg/tenant"
+	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/global"
+	"go.opentelemetry.io/otel/metric/unit"
 	"os"
 	"strconv"
 	"time"
@@ -73,19 +76,21 @@ func NewReceiver(tid tenant.Id, plugin string, name string, config interface{}, 
 	// metric recorders
 	meter := global.Meter(rtsemconv.EARSMeterName)
 	commonLabels := []attribute.KeyValue{
-		attribute.String(rtsemconv.EARSPluginTypeLabel, rtsemconv.EARSPluginTypeSQS),
+		attribute.String(rtsemconv.EARSPluginTypeLabel, rtsemconv.EARSPluginTypeSQSReceiver),
+		attribute.String(rtsemconv.EARSPluginNameLabel, r.Name()),
 		attribute.String(rtsemconv.EARSAppIdLabel, r.tid.AppId),
 		attribute.String(rtsemconv.EARSOrgIdLabel, r.tid.OrgId),
 		attribute.String(rtsemconv.SQSQueueUrlLabel, r.config.QueueUrl),
 		attribute.String(rtsemconv.HostnameLabel, hostname),
+		attribute.String(rtsemconv.EARSReceiverName, r.name),
 	}
 	r.eventSuccessCounter = metric.Must(meter).
-		NewFloat64Counter(
+		NewInt64Counter(
 			rtsemconv.EARSMetricEventSuccess,
 			metric.WithDescription("measures the number of successful events"),
 		).Bind(commonLabels...)
 	r.eventFailureCounter = metric.Must(meter).
-		NewFloat64Counter(
+		NewInt64Counter(
 			rtsemconv.EARSMetricEventFailure,
 			metric.WithDescription("measures the number of unsuccessful events"),
 		).Bind(commonLabels...)
@@ -93,16 +98,76 @@ func NewReceiver(tid tenant.Id, plugin string, name string, config interface{}, 
 		NewInt64Counter(
 			rtsemconv.EARSMetricEventBytes,
 			metric.WithDescription("measures the number of event bytes processed"),
+			metric.WithUnit(unit.Bytes),
+		).Bind(commonLabels...)
+	r.eventQueueDepth = metric.Must(meter).
+		NewInt64Histogram(
+			rtsemconv.EARSMetricEventQueueDepth,
+			metric.WithDescription("measures the time ears spends to send an event to a downstream data sink"),
 		).Bind(commonLabels...)
 	return r, nil
 }
 
+const (
+	approximateReceiveCount     = "ApproximateReceiveCount"
+	approximateNumberOfMessages = "ApproximateNumberOfMessages"
+	attributeNames              = "All"
+)
+
 func (r *Receiver) startReceiveWorker(svc *sqs.SQS, n int) {
 	go func() {
+		defer func() {
+			p := recover()
+			if p != nil {
+				panicErr := panics.ToError(p)
+				r.logger.Error().Str("op", "sqs.Receive").Str("error", panicErr.Error()).
+					Str("stackTrace", panicErr.StackTrace()).Msg("A panic has occurred")
+				r.StopReceiving(context.Background())
+			}
+		}()
+		// periodically check queue depth
+		go func() {
+			defer func() {
+				p := recover()
+				if p != nil {
+					panicErr := panics.ToError(p)
+					r.logger.Error().Str("op", "sqs.Receive").Str("error", panicErr.Error()).
+						Str("stackTrace", panicErr.StackTrace()).Msg("A panic has occurred while checking queue attributes")
+				}
+			}()
+			ctx := context.Background()
+			for {
+				queueAttributesParams := &sqs.GetQueueAttributesInput{
+					QueueUrl:       aws.String(r.config.QueueUrl),
+					AttributeNames: []*string{aws.String(approximateNumberOfMessages)},
+				}
+				queueAttributesResp, err := svc.GetQueueAttributes(queueAttributesParams)
+				if err != nil {
+					r.logger.Error().Str("op", "SQS.receiveWorker").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Int("workerNum", n).Msg(err.Error())
+				} else {
+					if queueAttributesResp.Attributes[approximateNumberOfMessages] != nil {
+						numMsgs, err := strconv.Atoi(*queueAttributesResp.Attributes[approximateNumberOfMessages])
+						if err != nil {
+							r.logger.Error().Str("op", "SQS.receiveWorker").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Int("workerNum", n).Msg("error parsing message count: " + err.Error())
+						}
+						r.eventQueueDepth.Record(ctx, int64(numMsgs))
+					}
+				}
+				time.Sleep(30 * time.Second)
+			}
+		}()
 		//messageRetries := make(map[string]int)
 		entries := make(chan *sqs.DeleteMessageBatchRequestEntry, *r.config.ReceiverQueueDepth)
 		// delete messages
 		go func() {
+			defer func() {
+				p := recover()
+				if p != nil {
+					panicErr := panics.ToError(p)
+					r.logger.Error().Str("op", "sqs.Receive").Str("error", panicErr.Error()).
+						Str("stackTrace", panicErr.StackTrace()).Msg("A panic has occurred while batch deleting messages")
+				}
+			}()
 			deleteBatch := make([]*sqs.DeleteMessageBatchRequestEntry, 0)
 			for {
 				var delEntry *sqs.DeleteMessageBatchRequestEntry
@@ -145,13 +210,13 @@ func (r *Receiver) startReceiveWorker(svc *sqs.SQS, n int) {
 		}()
 		// receive messages
 		for {
-			approximateReceiveCount := "ApproximateReceiveCount"
 			sqsParams := &sqs.ReceiveMessageInput{
-				QueueUrl:            aws.String(r.config.QueueUrl),
-				MaxNumberOfMessages: aws.Int64(int64(*r.config.MaxNumberOfMessages)),
-				VisibilityTimeout:   aws.Int64(int64(*r.config.VisibilityTimeout)),
-				WaitTimeSeconds:     aws.Int64(int64(*r.config.WaitTimeSeconds)),
-				AttributeNames:      []*string{&approximateReceiveCount},
+				QueueUrl:              aws.String(r.config.QueueUrl),
+				MaxNumberOfMessages:   aws.Int64(int64(*r.config.MaxNumberOfMessages)),
+				VisibilityTimeout:     aws.Int64(int64(*r.config.VisibilityTimeout)),
+				WaitTimeSeconds:       aws.Int64(int64(*r.config.WaitTimeSeconds)),
+				AttributeNames:        []*string{aws.String(approximateReceiveCount)},
+				MessageAttributeNames: []*string{aws.String(attributeNames)},
 			}
 			sqsResp, err := svc.ReceiveMessage(sqsParams)
 			r.Lock()
@@ -199,25 +264,40 @@ func (r *Receiver) startReceiveWorker(svc *sqs.SQS, n int) {
 					continue
 				}
 				ctx, cancel := context.WithTimeout(context.Background(), time.Duration(*r.config.AcknowledgeTimeout)*time.Second)
+
+				//extract otel tracing info
+				if message.MessageAttributes != nil {
+					ctx = otel.GetTextMapPropagator().Extract(ctx, NewSqsMessageAttributeCarrier(message.MessageAttributes))
+				}
+
 				r.eventBytesCounter.Add(ctx, int64(len(*message.Body)))
-				e, err := event.New(ctx, payload, event.WithMetadata(*message), event.WithAck(
+				e, err := event.New(ctx, payload, event.WithMetadataKeyValue("sqsMessage", *message), event.WithAck(
 					func(e event.Event) {
-						msg := e.Metadata().(sqs.Message) // get metadata associated with this event
+						msg, ok := e.Metadata()["sqsMessage"].(sqs.Message) // get metadata associated with this event
 						//log.Ctx(e.Context()).Debug().Str("op", "SQS.receiveWorker").Int("batchSize", len(sqsResp.Messages)).Int("workerNum", n).Msg("processed message " + (*msg.MessageId))
-						entry := sqs.DeleteMessageBatchRequestEntry{Id: msg.MessageId, ReceiptHandle: msg.ReceiptHandle}
-						entries <- &entry
-						r.eventSuccessCounter.Add(ctx, 1.0)
+						if ok {
+							entry := sqs.DeleteMessageBatchRequestEntry{Id: msg.MessageId, ReceiptHandle: msg.ReceiptHandle}
+							entries <- &entry
+							r.eventSuccessCounter.Add(ctx, 1)
+						} else {
+							log.Ctx(e.Context()).Error().Str("op", "SQS.receiveWorker").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Int("workerNum", n).Msg("failed to process message with missing sqs metadata")
+						}
 						cancel()
 					},
 					func(e event.Event, err error) {
-						msg := e.Metadata().(sqs.Message) // get metadata associated with this event
-						log.Ctx(e.Context()).Error().Str("op", "SQS.receiveWorker").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Int("workerNum", n).Msg("failed to process message " + (*msg.MessageId) + ": " + err.Error())
+						msg, ok := e.Metadata()["sqsMessage"].(sqs.Message) // get metadata associated with this event
+						if ok {
+							log.Ctx(e.Context()).Error().Str("op", "SQS.receiveWorker").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Int("workerNum", n).Msg("failed to process message " + (*msg.MessageId) + ": " + err.Error())
+						} else {
+							log.Ctx(e.Context()).Error().Str("op", "SQS.receiveWorker").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Int("workerNum", n).Msg("failed to process message with missing sqs metadata: " + err.Error())
+						}
 						// a nack below max retries - this is the only case where we do not delete the message yet
-						r.eventFailureCounter.Add(ctx, 1.0)
+						r.eventFailureCounter.Add(ctx, 1)
 						cancel()
 					}),
 					event.WithTenant(r.Tenant()),
-					event.WithSpan(r.Name()))
+					event.WithOtelTracing(r.Name()),
+					event.WithTracePayloadOnNack(*r.config.TracePayloadOnNack))
 				if err != nil {
 					r.logger.Error().Str("op", "SQS.receiveWorker").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Int("workerNum", n).Msg("cannot create event: " + err.Error())
 					return
@@ -286,6 +366,7 @@ func (r *Receiver) StopReceiving(ctx context.Context) error {
 		r.eventSuccessCounter.Unbind()
 		r.eventFailureCounter.Unbind()
 		r.eventBytesCounter.Unbind()
+		r.eventQueueDepth.Unbind()
 		close(r.done)
 	}
 	r.Unlock()
