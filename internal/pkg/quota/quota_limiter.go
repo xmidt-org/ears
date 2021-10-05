@@ -35,7 +35,7 @@ func NewQuotaLimiter(tid tenant.Id, backendLimiterType string, redisAddr string,
 
 	var backendLimiter ratelimit.RateLimiter
 	if backendLimiterType == "redis" {
-		backendLimiter = redis.NewRedisRateLimiter(tid, redisAddr, tenantRqs, 3)
+		backendLimiter = redis.NewRedisRateLimiter(tid, redisAddr, tenantRqs)
 	} else {
 		backendLimiter = ratelimit.NewInMemoryBackendLimiter(tid, tenantRqs)
 	}

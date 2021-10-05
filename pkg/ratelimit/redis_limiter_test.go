@@ -28,7 +28,6 @@ func TestRedisBackendLimiter(t *testing.T) {
 		tenant.Id{"myOrg", "myUnitTestApp"},
 		"localhost:6379",
 		0,
-		3,
 	)
 
 	testBackendLimiter(limiter, t)
