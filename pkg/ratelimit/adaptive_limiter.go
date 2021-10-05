@@ -45,8 +45,8 @@ func NewAdaptiveRateLimiter(backendLimiter RateLimiter, initialRqs int, totalRqs
 		limiter:    nil,
 		lock:       &sync.Mutex{},
 		lastTune:   time.Now(),
-		takeCount:  0,
-		limitCount: 0,
+		takeCount:  0, //how many Take happened between a tune
+		limitCount: 0, //how many limit happened between a tune
 	}
 }
 
@@ -78,6 +78,7 @@ func (r *AdaptiveRateLimiter) AdaptiveLimit() int {
 }
 
 func (r *AdaptiveRateLimiter) Take(ctx context.Context, unit int) error {
+
 	r.lock.Lock()
 	defer r.lock.Unlock()
 
@@ -97,6 +98,7 @@ func (r *AdaptiveRateLimiter) Take(ctx context.Context, unit int) error {
 	}
 
 	allowed := r.limiter.AllowN(time.Now(), unit)
+
 	if !allowed {
 		r.limitCount++
 		return &LimitReached{}
@@ -152,6 +154,17 @@ func (r *AdaptiveRateLimiter) tuneRqs(ctx context.Context) error {
 	//try to see if we can actually take newRqs from backend
 	target := newRqs
 	floor := r.currentRqs
+
+	if target > r.totalRqs {
+		//This case can happen when user set new limit that is much lower than the previous limit.
+		//In this case, lets just start with half of current quota.
+		//The adaptive algorithm should converge to a new rps quickly.
+		target = r.totalRqs / 2
+		if target == 0 {
+			target = 1
+		}
+		floor = 0
+	}
 
 	for {
 		err := r.backend.Take(ctx, target)

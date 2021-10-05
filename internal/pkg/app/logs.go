@@ -29,7 +29,10 @@ func ProvideLogger(config config.Config) (*zerolog.Logger, error) {
 			Option: fmt.Sprintf("loglevel %s is not valid", config.GetString("ears.logLevel")),
 		}
 	}
-	hostname, _ := os.Hostname()
+	hostname := config.GetString("ears.hostname")
+	if hostname == "" {
+		hostname, _ = os.Hostname()
+	}
 	logger := zerolog.New(os.Stdout).Level(logLevel).With().
 		Str(rtsemconv.EarsLogHostnameKey, hostname).
 		Timestamp().Logger()

@@ -17,6 +17,7 @@ package quota
 import (
 	"context"
 	"errors"
+	"github.com/rs/zerolog/log"
 	"github.com/xmidt-org/ears/pkg/ratelimit"
 	"github.com/xmidt-org/ears/pkg/ratelimit/redis"
 	"github.com/xmidt-org/ears/pkg/tenant"
@@ -58,6 +59,8 @@ func (r *QuotaLimiter) Wait(ctx context.Context) error {
 		if errors.As(err, &limitReached) {
 			//TODO figure out what's the optimal way of waiting
 			sleepTO = time.Millisecond * 100
+		} else {
+			log.Ctx(ctx).Error().Str("op", "QuotaLimiter.Wait").Str("error", err.Error()).Msg("Error taking quota")
 		}
 		select {
 		case <-ctx.Done():
@@ -98,5 +101,6 @@ func (r *QuotaLimiter) SetLimit(newLimit int) error {
 	case r.wakeup <- true:
 	default:
 	}
+
 	return nil
 }
