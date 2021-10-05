@@ -12,19 +12,20 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+//go:build integration
 // +build integration
 
 package ratelimit_test
 
 import (
-	"github.com/xmidt-org/ears/pkg/ratelimit"
+	"github.com/xmidt-org/ears/pkg/ratelimit/redis"
 	"github.com/xmidt-org/ears/pkg/tenant"
 	"testing"
 )
 
 func TestRedisBackendLimiter(t *testing.T) {
-	limiter := ratelimit.NewRedisRateLimiter(
-		tenant.Id{"myOrg", "myAppblah2"},
+	limiter := redis.NewRedisRateLimiter(
+		tenant.Id{"myOrg", "myUnitTestApp"},
 		"localhost:6379",
 		0,
 	)
