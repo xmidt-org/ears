@@ -27,24 +27,22 @@ import (
 )
 
 type RedisRateLimiter struct {
-	client     *redis.Client
-	rqs        int
-	tid        tenant.Id
-	numRetries int
+	client *redis.Client
+	rqs    int
+	tid    tenant.Id
 }
 
 const NUM_REDIS_RETRY = 3
 
-func NewRedisRateLimiter(tid tenant.Id, addr string, rqs int, numRetries int) *RedisRateLimiter {
+func NewRedisRateLimiter(tid tenant.Id, addr string, rqs int) *RedisRateLimiter {
 	return &RedisRateLimiter{
 		client: redis.NewClient(&redis.Options{
 			Addr:     addr,
 			Password: "", // no password set
 			DB:       0,  // use default DB
 		}),
-		rqs:        rqs,
-		tid:        tid,
-		numRetries: numRetries,
+		rqs: rqs,
+		tid: tid,
 	}
 }
 
@@ -66,7 +64,7 @@ func (r *RedisRateLimiter) Take(ctx context.Context, unit int) error {
 		return nil
 	}
 
-	retry := r.numRetries
+	retry := NUM_REDIS_RETRY
 	for {
 		err := r.take(ctx, unit)
 		if err == nil {
