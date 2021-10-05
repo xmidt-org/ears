@@ -266,6 +266,7 @@ func (r *Receiver) startReceiveWorker(svc *sqs.SQS, n int) {
 					r.logger.Error().Str("op", "SQS.receiveWorker").Str(rtsemconv.EarsLogTraceIdKey, traceId).Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Int("workerNum", n).Msg("max retries reached for " + (*message.MessageId))
 					entry := sqs.DeleteMessageBatchRequestEntry{Id: message.MessageId, ReceiptHandle: message.ReceiptHandle}
 					entries <- &entry
+					cancel()
 					continue
 				}
 				var payload interface{}
@@ -274,6 +275,7 @@ func (r *Receiver) startReceiveWorker(svc *sqs.SQS, n int) {
 					r.logger.Error().Str("op", "SQS.receiveWorker").Str(rtsemconv.EarsLogTraceIdKey, traceId).Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Int("workerNum", n).Msg("cannot parse message " + (*message.MessageId) + ": " + err.Error())
 					entry := sqs.DeleteMessageBatchRequestEntry{Id: message.MessageId, ReceiptHandle: message.ReceiptHandle}
 					entries <- &entry
+					cancel()
 					continue
 				}
 
