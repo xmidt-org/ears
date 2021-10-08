@@ -98,6 +98,9 @@ func NewReceiver(tid tenant.Id, plugin string, name string, config interface{}, 
 	return r, nil
 }
 
+func (r *Receiver) startReceiveWorkerEnhancedFanOut(svc *kinesis.Kinesis, n int) {
+}
+
 func (r *Receiver) startReceiveWorker(svc *kinesis.Kinesis, n int) {
 	go func() {
 		// receive messages
@@ -220,7 +223,11 @@ func (r *Receiver) Receive(next receiver.NextFn) error {
 	}
 	for i := 0; i < *r.config.ReceiverPoolSize; i++ {
 		r.logger.Info().Str("op", "Kinesis.Receive").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Int("workerNum", i).Msg("launching receiver pool thread")
-		r.startReceiveWorker(kinesis.New(sess), i)
+		if *r.config.EnhancedFanOut {
+			r.startReceiveWorkerEnhancedFanOut(kinesis.New(sess), i)
+		} else {
+			r.startReceiveWorker(kinesis.New(sess), i)
+		}
 	}
 	r.logger.Info().Str("op", "Kinesis.Receive").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Msg("waiting for receive done")
 	<-r.done
