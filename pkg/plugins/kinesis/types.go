@@ -60,6 +60,7 @@ var DefaultReceiverConfig = ReceiverConfig{
 	ShardIteratorType:  "LATEST",
 	TracePayloadOnNack: pointer.Bool(false),
 	EnhancedFanOut:     pointer.Bool(false),
+	ConsumerName:       "",
 }
 
 type ReceiverConfig struct {
@@ -69,6 +70,7 @@ type ReceiverConfig struct {
 	ShardIteratorType  string `json:"shardIteratorType,omitempty"`
 	TracePayloadOnNack *bool  `json:"tracePayloadOnNack,omitempty"`
 	EnhancedFanOut     *bool  `json:"EnhancedFanOut,omitempty"`
+	ConsumerName       string `json:"consumerName,omitempty"` // enhanced fan-out only
 }
 
 type Receiver struct {
