@@ -91,12 +91,16 @@ var DefaultSenderConfig = SenderConfig{
 	StreamName:          "",
 	MaxNumberOfMessages: pointer.Int(1),
 	SendTimeout:         pointer.Int(1),
+	PartitionKey:        "",
+	PartitionKeyPath:    "",
 }
 
 type SenderConfig struct {
 	StreamName          string `json:"streamName,omitempty"`
 	MaxNumberOfMessages *int   `json:"maxNumberOfMessages,omitempty"`
 	SendTimeout         *int   `json:"sendTimeout,omitempty"`
+	PartitionKey        string `json:"partitionKey,omitempty"`
+	PartitionKeyPath    string `json:"partitionKeyPath,omitempty"`
 }
 
 type Sender struct {
