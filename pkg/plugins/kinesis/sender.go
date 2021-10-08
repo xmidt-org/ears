@@ -187,9 +187,20 @@ func (s *Sender) send(events []event.Event) {
 		if err != nil {
 			continue
 		}
+		partitionKey := s.config.PartitionKey
+		if s.config.PartitionKeyPath != "" {
+			pv, _, _ := evt.GetPathValue(s.config.PartitionKeyPath)
+			pvstr, ok := pv.(string)
+			if ok && pvstr != "" {
+				partitionKey = pvstr
+			}
+		}
+		if partitionKey == "" {
+			partitionKey = uuid.New().String()
+		}
 		putReq := kinesis.PutRecordsRequestEntry{
 			Data:         buf,
-			PartitionKey: aws.String(uuid.New().String()),
+			PartitionKey: aws.String(partitionKey),
 		}
 		batchReqs = append(batchReqs, &putReq)
 		s.eventBytesCounter.Add(evt.Context(), int64(len(buf)))

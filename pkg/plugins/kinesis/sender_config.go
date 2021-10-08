@@ -57,6 +57,12 @@ const senderSchema = `
                 "streamName": {
                     "type": "string"
                 },
+                "partitionKey": {
+                    "type": "string"
+                },
+                "partitionKeyPath": {
+                    "type": "string"
+                },
 				"maxNumberOfMessages": {
                     "type": "integer", 
 					"minimum": 1,
