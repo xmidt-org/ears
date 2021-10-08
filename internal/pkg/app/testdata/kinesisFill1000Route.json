@@ -21,6 +21,12 @@
       "streamName": "bw-ears-demo"
     }
   },
+  "filterChain" : [
+    {
+      "plugin" : "log",
+      "name" : "kinesisFill1000RouteLogFilter"
+    }
+  ],
   "deliveryMode": "atLeastOnce"
 }
 
