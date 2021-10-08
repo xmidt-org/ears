@@ -68,6 +68,9 @@ const receiverSchema = `
                 "streamName": {
                     "type": "string"
                 },
+                "consumerName": {
+                    "type": "string"
+                },
                 "shardIteratorType": {
                     "type": "string"
                 },
