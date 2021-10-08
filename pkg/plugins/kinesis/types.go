@@ -59,6 +59,7 @@ var DefaultReceiverConfig = ReceiverConfig{
 	AcknowledgeTimeout: pointer.Int(5),
 	ShardIteratorType:  "LATEST",
 	TracePayloadOnNack: pointer.Bool(false),
+	EnhancedFanOut:     pointer.Bool(false),
 }
 
 type ReceiverConfig struct {
@@ -67,6 +68,7 @@ type ReceiverConfig struct {
 	AcknowledgeTimeout *int   `json:"acknowledgeTimeout,omitempty"`
 	ShardIteratorType  string `json:"shardIteratorType,omitempty"`
 	TracePayloadOnNack *bool  `json:"tracePayloadOnNack,omitempty"`
+	EnhancedFanOut     *bool  `json:"EnhancedFanOut,omitempty"`
 }
 
 type Receiver struct {

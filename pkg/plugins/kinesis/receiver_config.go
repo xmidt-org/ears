@@ -36,6 +36,9 @@ func (rc *ReceiverConfig) WithDefaults() ReceiverConfig {
 	if cfg.TracePayloadOnNack == nil {
 		cfg.TracePayloadOnNack = DefaultReceiverConfig.TracePayloadOnNack
 	}
+	if cfg.EnhancedFanOut == nil {
+		cfg.EnhancedFanOut = DefaultReceiverConfig.EnhancedFanOut
+	}
 	return cfg
 }
 
@@ -79,6 +82,10 @@ const receiverSchema = `
 					"maximum": 60
 				},
 				"tracePayloadOnNack" : {
+					"type": "boolean",
+					"default": false
+				},
+				"enhancedFanOut" : {
 					"type": "boolean",
 					"default": false
 				}
