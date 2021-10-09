@@ -53,6 +53,9 @@ func (rc *ReceiverConfig) Validate() error {
 	if !result.Valid() {
 		return fmt.Errorf(fmt.Sprintf("%+v", result.Errors()))
 	}
+	if *rc.EnhancedFanOut && rc.ConsumerName == "" {
+		return fmt.Errorf("must provide consumer name with enhanced fan-out option")
+	}
 	return nil
 }
 
