@@ -135,19 +135,13 @@ func (r *Receiver) createStreamConsumer(svc *kinesis.Kinesis, streamName, consum
 	return fmt.Errorf("failed to wait for consumer to exist, %v, %v", *descParams.StreamARN, *descParams.ConsumerName)
 }
 
-func (r *Receiver) startReceiveWorkerEnhancedFanOut(svc *kinesis.Kinesis, shardIdx int) {
+func (r *Receiver) startReceiveWorkerEnhancedFanOut(svc *kinesis.Kinesis, stream *kinesis.DescribeStreamOutput, shardIdx int) {
 	// this is an enhanced consumer that will only consume from a dedicated shard
 	go func() {
 		for {
 			// receive messages
 			// we only use this stream description to look up its arn we need below
-			stream, err := svc.DescribeStream(&kinesis.DescribeStreamInput{StreamName: aws.String(r.config.StreamName)})
-			if err != nil {
-				r.logger.Error().Str("op", "Kinesis.receiveWorkerEFO").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Int("shardIdx", shardIdx).Msg(err.Error())
-				time.Sleep(1 * time.Second)
-				continue
-			}
-			err = r.createStreamConsumer(svc, r.config.StreamName, r.config.ConsumerName)
+			err := r.createStreamConsumer(svc, r.config.StreamName, r.config.ConsumerName)
 			if err != nil {
 				r.logger.Error().Str("op", "Kinesis.receiveWorkerEFO").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Int("shardIdx", shardIdx).Msg(err.Error())
 				time.Sleep(1 * time.Second)
@@ -240,19 +234,13 @@ func (r *Receiver) startReceiveWorkerEnhancedFanOut(svc *kinesis.Kinesis, shardI
 	}()
 }
 
-func (r *Receiver) startReceiveWorker(svc *kinesis.Kinesis, shardIdx int) {
+func (r *Receiver) startReceiveWorker(svc *kinesis.Kinesis, stream *kinesis.DescribeStreamOutput, shardIdx int) {
 	// this is a non-enhanced consumer that will only consume from one shard
 	// n is number of worker in pool
 	go func() {
 		// receive messages
 		for {
 			// this is a normal receiver
-			stream, err := svc.DescribeStream(&kinesis.DescribeStreamInput{StreamName: aws.String(r.config.StreamName)})
-			if err != nil {
-				r.logger.Error().Str("op", "Kinesis.receiveWorker").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Int("shardIdx", shardIdx).Msg(err.Error())
-				time.Sleep(1 * time.Second)
-				continue
-			}
 			//startingTimestamp := time.Now().Add(-(time.Second) * 30)
 			iteratorOutput, err := svc.GetShardIterator(&kinesis.GetShardIteratorInput{
 				ShardId:           aws.String(*stream.StreamDescription.Shards[shardIdx].ShardId),
@@ -363,15 +351,20 @@ func (r *Receiver) Receive(next receiver.NextFn) error {
 	if nil != err {
 		return err
 	}
-	for i := 0; i < *r.config.ReceiverPoolSize; i++ {
+	svc := kinesis.New(sess)
+	stream, err := svc.DescribeStream(&kinesis.DescribeStreamInput{StreamName: aws.String(r.config.StreamName)})
+	if err != nil {
+		return err
+	}
+	for i := 0; i < len(stream.StreamDescription.Shards); i++ {
 		//TODO: this should only be done for owned shards
 		//TODO: need to reshuffle when shards get added or removed
 		//TODO: need to reshuffle when ears nodes join or leave
 		r.logger.Info().Str("op", "Kinesis.Receive").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Int("shardIdx", i).Msg("launching receiver pool thread")
 		if *r.config.EnhancedFanOut {
-			r.startReceiveWorkerEnhancedFanOut(kinesis.New(sess), i)
+			r.startReceiveWorkerEnhancedFanOut(svc, stream, i)
 		} else {
-			r.startReceiveWorker(kinesis.New(sess), i)
+			r.startReceiveWorker(svc, stream, i)
 		}
 	}
 	r.logger.Info().Str("op", "Kinesis.Receive").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Msg("waiting for receive done")
