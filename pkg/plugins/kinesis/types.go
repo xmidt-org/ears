@@ -69,7 +69,7 @@ type ReceiverConfig struct {
 	AcknowledgeTimeout *int   `json:"acknowledgeTimeout,omitempty"`
 	ShardIteratorType  string `json:"shardIteratorType,omitempty"`
 	TracePayloadOnNack *bool  `json:"tracePayloadOnNack,omitempty"`
-	EnhancedFanOut     *bool  `json:"EnhancedFanOut,omitempty"`
+	EnhancedFanOut     *bool  `json:"enhancedFanOut,omitempty"`
 	ConsumerName       string `json:"consumerName,omitempty"` // enhanced fan-out only
 }
 
