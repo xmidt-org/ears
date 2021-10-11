@@ -55,7 +55,6 @@ func NewPluginVersion(name string, version string, commitID string) (*pkgplugin.
 
 var DefaultReceiverConfig = ReceiverConfig{
 	StreamName:         "",
-	ReceiverPoolSize:   pointer.Int(1),
 	AcknowledgeTimeout: pointer.Int(5),
 	ShardIteratorType:  "LATEST",
 	TracePayloadOnNack: pointer.Bool(false),
@@ -65,7 +64,6 @@ var DefaultReceiverConfig = ReceiverConfig{
 
 type ReceiverConfig struct {
 	StreamName         string `json:"streamName,omitempty"`
-	ReceiverPoolSize   *int   `json:"receiverPoolSize,omitempty"`
 	AcknowledgeTimeout *int   `json:"acknowledgeTimeout,omitempty"`
 	ShardIteratorType  string `json:"shardIteratorType,omitempty"`
 	TracePayloadOnNack *bool  `json:"tracePayloadOnNack,omitempty"`

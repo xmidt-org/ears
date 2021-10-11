@@ -24,9 +24,6 @@ import (
 // of the unset (nil) values filled in.
 func (rc *ReceiverConfig) WithDefaults() ReceiverConfig {
 	cfg := *rc
-	if cfg.ReceiverPoolSize == nil {
-		cfg.ReceiverPoolSize = DefaultReceiverConfig.ReceiverPoolSize
-	}
 	if cfg.AcknowledgeTimeout == nil {
 		cfg.AcknowledgeTimeout = DefaultReceiverConfig.AcknowledgeTimeout
 	}
@@ -77,11 +74,6 @@ const receiverSchema = `
                 "shardIteratorType": {
                     "type": "string"
                 },
-				"receiverPoolSize": {
-                    "type": "integer", 
-					"minimum": 1,
-					"maximum": 5
-				},
 				"acknowledgeTimeout": {
                     "type": "integer", 
 					"minimum": 1,
