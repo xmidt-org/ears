@@ -62,12 +62,13 @@ func NewReceiver(tid tenant.Id, plugin string, name string, config interface{}, 
 		return nil, err
 	}
 	r := &Receiver{
-		config:  cfg,
-		name:    name,
-		plugin:  plugin,
-		tid:     tid,
-		logger:  event.GetEventLogger(),
-		stopped: true,
+		config:         cfg,
+		name:           name,
+		plugin:         plugin,
+		tid:            tid,
+		logger:         event.GetEventLogger(),
+		stopped:        true,
+		stopChannelMap: make(map[int]chan bool),
 	}
 	hostname, _ := os.Hostname()
 	// metric recorders
@@ -97,6 +98,19 @@ func NewReceiver(tid tenant.Id, plugin string, name string, config interface{}, 
 			metric.WithUnit(unit.Bytes),
 		).Bind(commonLabels...)
 	return r, nil
+}
+
+func (r *Receiver) stopShardReceiver(shardIdx int) {
+	if shardIdx < 0 {
+		for _, stopChan := range r.stopChannelMap {
+			stopChan <- true
+		}
+	} else {
+		stopChan, ok := r.stopChannelMap[shardIdx]
+		if ok {
+			stopChan <- true
+		}
+	}
 }
 
 func (r *Receiver) registerStreamConsumer(svc *kinesis.Kinesis, streamName, consumerName string) (*kinesis.DescribeStreamConsumerOutput, error) {
@@ -135,7 +149,7 @@ func (r *Receiver) registerStreamConsumer(svc *kinesis.Kinesis, streamName, cons
 	return nil, fmt.Errorf("failed to wait for consumer to exist, %v, %v", *descParams.StreamARN, *descParams.ConsumerName)
 }
 
-func (r *Receiver) startReceiveWorkerEnhancedFanOut(svc *kinesis.Kinesis, stream *kinesis.DescribeStreamOutput, consumer *kinesis.DescribeStreamConsumerOutput, shardIdx int) {
+func (r *Receiver) startShardReceiverEFO(svc *kinesis.Kinesis, stream *kinesis.DescribeStreamOutput, consumer *kinesis.DescribeStreamConsumerOutput, shardIdx int) {
 	// this is an enhanced consumer that will only consume from a dedicated shard
 	go func() {
 		for {
@@ -150,22 +164,20 @@ func (r *Receiver) startReceiveWorkerEnhancedFanOut(svc *kinesis.Kinesis, stream
 			//params.StartingPosition.Type = aws.String(kinesis.ShardIteratorTypeAtSequenceNumber)
 			//params.StartingPosition.SetSequenceNumber(*startSequenceNumber)
 			for {
-				r.Lock()
-				stopNow := r.stopped
-				r.Unlock()
-				if stopNow {
+				select {
+				case <-r.stopChannelMap[shardIdx]:
 					r.logger.Info().Str("op", "Kinesis.receiveWorkerEFO").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Int("shardIdx", shardIdx).Msg("receive loop stopped")
 					return
+				default:
 				}
 				sub, err := svc.SubscribeToShard(params)
 				for evt := range sub.EventStream.Events() {
-					r.Lock()
-					stopNow := r.stopped
-					r.Unlock()
-					if stopNow {
+					select {
+					case <-r.stopChannelMap[shardIdx]:
 						r.logger.Info().Str("op", "Kinesis.receiveWorkerEFO").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Int("shardIdx", shardIdx).Msg("receive loop stopped")
 						sub.EventStream.Close()
 						return
+					default:
 					}
 					switch kinEvt := evt.(type) {
 					case *kinesis.SubscribeToShardEvent:
@@ -214,7 +226,7 @@ func (r *Receiver) startReceiveWorkerEnhancedFanOut(svc *kinesis.Kinesis, stream
 	}()
 }
 
-func (r *Receiver) startReceiveWorker(svc *kinesis.Kinesis, stream *kinesis.DescribeStreamOutput, shardIdx int) {
+func (r *Receiver) startShardReceiver(svc *kinesis.Kinesis, stream *kinesis.DescribeStreamOutput, shardIdx int) {
 	// this is a non-enhanced consumer that will only consume from one shard
 	// n is number of worker in pool
 	go func() {
@@ -240,16 +252,15 @@ func (r *Receiver) startReceiveWorker(svc *kinesis.Kinesis, stream *kinesis.Desc
 			}
 			shardIterator := iteratorOutput.ShardIterator
 			for {
+				select {
+				case <-r.stopChannelMap[shardIdx]:
+					r.logger.Info().Str("op", "Kinesis.receiveWorker").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Int("shardIdx", shardIdx).Msg("receive loop stopped")
+					return
+				default:
+				}
 				getRecordsOutput, err := svc.GetRecords(&kinesis.GetRecordsInput{
 					ShardIterator: shardIterator,
 				})
-				r.Lock()
-				stopNow := r.stopped
-				r.Unlock()
-				if stopNow {
-					r.logger.Info().Str("op", "Kinesis.receiveWorker").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Int("shardIdx", shardIdx).Msg("receive loop stopped")
-					return
-				}
 				if err != nil {
 					r.logger.Error().Str("op", "Kinesis.receiveWorker").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Int("shardIdx", shardIdx).Msg(err.Error())
 					time.Sleep(1 * time.Second)
@@ -347,12 +358,13 @@ func (r *Receiver) Receive(next receiver.NextFn) error {
 			//TODO: need to reshuffle when ears nodes join or leave
 			//TODO: need to account for boot lag when cluster comes up or new route is created
 			r.logger.Info().Str("op", "Kinesis.Receive").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Int("shardIdx", i).Msg("launching receiver pool thread")
-			r.startReceiveWorkerEnhancedFanOut(svc, stream, consumer, i)
+			r.stopChannelMap[i] = make(chan bool)
+			r.startShardReceiverEFO(svc, stream, consumer, i)
 		}
 	} else {
 		for i := 0; i < len(stream.StreamDescription.Shards); i++ {
 			r.logger.Info().Str("op", "Kinesis.Receive").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Int("shardIdx", i).Msg("launching receiver pool thread")
-			r.startReceiveWorker(svc, stream, i)
+			r.startShardReceiver(svc, stream, i)
 		}
 	}
 	r.logger.Info().Str("op", "Kinesis.Receive").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Msg("waiting for receive done")
