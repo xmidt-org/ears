@@ -75,6 +75,7 @@ type Receiver struct {
 	sync.Mutex
 	done                chan struct{}
 	stopped             bool
+	stopChannelMap      map[int]chan bool
 	config              ReceiverConfig
 	name                string
 	plugin              string
