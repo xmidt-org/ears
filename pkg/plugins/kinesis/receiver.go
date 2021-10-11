@@ -99,12 +99,12 @@ func NewReceiver(tid tenant.Id, plugin string, name string, config interface{}, 
 	return r, nil
 }
 
-func (r *Receiver) createStreamConsumer(svc *kinesis.Kinesis, streamName, consumerName string) error {
+func (r *Receiver) registerStreamConsumer(svc *kinesis.Kinesis, streamName, consumerName string) (*kinesis.DescribeStreamConsumerOutput, error) {
 	desc, err := svc.DescribeStream(&kinesis.DescribeStreamInput{
 		StreamName: &streamName,
 	})
 	if err != nil {
-		return fmt.Errorf("failed to describe stream, %s, %v", streamName, err)
+		return nil, fmt.Errorf("failed to describe stream, %s, %v", streamName, err)
 	}
 	descParams := &kinesis.DescribeStreamConsumerInput{
 		StreamARN:    desc.StreamDescription.StreamARN,
@@ -119,45 +119,26 @@ func (r *Receiver) createStreamConsumer(svc *kinesis.Kinesis, streamName, consum
 			},
 		)
 		if err != nil {
-			return fmt.Errorf("failed to create stream consumer %s, %v", consumerName, err)
+			return nil, fmt.Errorf("failed to create stream consumer %s, %v", consumerName, err)
 		}
 	} else if err != nil {
-		return fmt.Errorf("failed to describe stream consumer %s, %v", consumerName, err)
+		return nil, fmt.Errorf("failed to describe stream consumer %s, %v", consumerName, err)
 	}
 	for i := 0; i < 10; i++ {
-		resp, err := svc.DescribeStreamConsumer(descParams)
-		if err != nil || aws.StringValue(resp.ConsumerDescription.ConsumerStatus) != kinesis.ConsumerStatusActive {
+		streamConsumer, err := svc.DescribeStreamConsumer(descParams)
+		if err != nil || aws.StringValue(streamConsumer.ConsumerDescription.ConsumerStatus) != kinesis.ConsumerStatusActive {
 			time.Sleep(time.Second * 30)
 			continue
 		}
-		return nil
+		return streamConsumer, nil
 	}
-	return fmt.Errorf("failed to wait for consumer to exist, %v, %v", *descParams.StreamARN, *descParams.ConsumerName)
+	return nil, fmt.Errorf("failed to wait for consumer to exist, %v, %v", *descParams.StreamARN, *descParams.ConsumerName)
 }
 
-func (r *Receiver) startReceiveWorkerEnhancedFanOut(svc *kinesis.Kinesis, stream *kinesis.DescribeStreamOutput, shardIdx int) {
+func (r *Receiver) startReceiveWorkerEnhancedFanOut(svc *kinesis.Kinesis, stream *kinesis.DescribeStreamOutput, consumer *kinesis.DescribeStreamConsumerOutput, shardIdx int) {
 	// this is an enhanced consumer that will only consume from a dedicated shard
 	go func() {
 		for {
-			// receive messages
-			// we only use this stream description to look up its arn we need below
-			err := r.createStreamConsumer(svc, r.config.StreamName, r.config.ConsumerName)
-			if err != nil {
-				r.logger.Error().Str("op", "Kinesis.receiveWorkerEFO").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Int("shardIdx", shardIdx).Msg(err.Error())
-				time.Sleep(1 * time.Second)
-				continue
-			}
-			var consumer *kinesis.DescribeStreamConsumerOutput
-			consumer, err = svc.DescribeStreamConsumer(
-				&kinesis.DescribeStreamConsumerInput{
-					StreamARN:    stream.StreamDescription.StreamARN,
-					ConsumerName: &r.config.ConsumerName,
-				})
-			if err != nil {
-				r.logger.Error().Str("op", "Kinesis.receiveWorkerEFO").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Int("shardIdx", shardIdx).Msg(err.Error())
-				time.Sleep(1 * time.Second)
-				continue
-			}
 			shard := stream.StreamDescription.Shards[shardIdx]
 			params := &kinesis.SubscribeToShardInput{
 				ConsumerARN: consumer.ConsumerDescription.ConsumerARN,
@@ -176,8 +157,7 @@ func (r *Receiver) startReceiveWorkerEnhancedFanOut(svc *kinesis.Kinesis, stream
 					r.logger.Info().Str("op", "Kinesis.receiveWorkerEFO").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Int("shardIdx", shardIdx).Msg("receive loop stopped")
 					return
 				}
-				var sub *kinesis.SubscribeToShardOutput
-				sub, err = svc.SubscribeToShard(params)
+				sub, err := svc.SubscribeToShard(params)
 				for evt := range sub.EventStream.Events() {
 					r.Lock()
 					stopNow := r.stopped
@@ -356,14 +336,22 @@ func (r *Receiver) Receive(next receiver.NextFn) error {
 	if err != nil {
 		return err
 	}
-	for i := 0; i < len(stream.StreamDescription.Shards); i++ {
-		//TODO: this should only be done for owned shards
-		//TODO: need to reshuffle when shards get added or removed
-		//TODO: need to reshuffle when ears nodes join or leave
-		r.logger.Info().Str("op", "Kinesis.Receive").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Int("shardIdx", i).Msg("launching receiver pool thread")
-		if *r.config.EnhancedFanOut {
-			r.startReceiveWorkerEnhancedFanOut(svc, stream, i)
-		} else {
+	if *r.config.EnhancedFanOut {
+		consumer, err := r.registerStreamConsumer(svc, r.config.StreamName, r.config.ConsumerName)
+		if err != nil {
+			return err
+		}
+		for i := 0; i < len(stream.StreamDescription.Shards); i++ {
+			//TODO: this should only be done for owned shards
+			//TODO: need to reshuffle when shards get added or removed
+			//TODO: need to reshuffle when ears nodes join or leave
+			//TODO: need to account for boot lag when cluster comes up or new route is created
+			r.logger.Info().Str("op", "Kinesis.Receive").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Int("shardIdx", i).Msg("launching receiver pool thread")
+			r.startReceiveWorkerEnhancedFanOut(svc, stream, consumer, i)
+		}
+	} else {
+		for i := 0; i < len(stream.StreamDescription.Shards); i++ {
+			r.logger.Info().Str("op", "Kinesis.Receive").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Int("shardIdx", i).Msg("launching receiver pool thread")
 			r.startReceiveWorker(svc, stream, i)
 		}
 	}
