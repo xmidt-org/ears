@@ -171,6 +171,10 @@ func (r *Receiver) startShardReceiverEFO(svc *kinesis.Kinesis, stream *kinesis.D
 				default:
 				}
 				sub, err := svc.SubscribeToShard(params)
+				if err != nil {
+					r.logger.Error().Str("op", "Kinesis.receiveWorkerEFO").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Int("shardIdx", shardIdx).Msg("subscribe error: " + err.Error())
+					continue
+				}
 				for evt := range sub.EventStream.Events() {
 					select {
 					case <-r.stopChannelMap[shardIdx]:
@@ -390,6 +394,7 @@ func (r *Receiver) StopReceiving(ctx context.Context) error {
 	r.Lock()
 	if !r.stopped {
 		r.stopped = true
+		r.stopShardReceiver(-1)
 		r.eventSuccessCounter.Unbind()
 		r.eventFailureCounter.Unbind()
 		r.eventBytesCounter.Unbind()
