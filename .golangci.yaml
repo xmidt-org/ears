@@ -77,6 +77,7 @@ issues:
     - path: pkg/plugins/kinesis/receiver\.go
       linters:
         - funlen
+        - errorlint
     - path: pkg/plugins/redis/receiver\.go
       linters:
         - funlen
