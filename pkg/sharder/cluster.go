@@ -60,7 +60,7 @@ func DefaultControllerConfig() *ControllerConfig {
 			NumShards:   DefaultNumShards,
 			OwnedShards: []string{"0"},
 		},
-		Storage: DefaultDistributorConfigs,
+		StorageConfig: DefaultDistributorConfigs,
 	}
 	cc.NodeName = os.Getenv("HOSTNAME")
 	if "" == cc.NodeName {
