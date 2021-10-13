@@ -25,32 +25,30 @@ func init() {
 	rand.Seed(time.Now().UnixNano())
 }
 
-func defaultSimpleHashDistributor(identity string, shards int) (*SimpleHashDistributor, error) {
-	c := &SimpleHashDistributor{}
-	c.ShardConfig.NumShards = shards
-	c.ShardConfig.IP = identity
-	c.updateChan = make(ShardUpdater)
-	c.enabled = true
-	c.identity = identity
-	return c, nil
-}
-
-func NewDynamoSimpleHashDistributor(identity string, shards int, data map[string]string) (*SimpleHashDistributor, error) {
-	d, _ := defaultSimpleHashDistributor(identity, shards)
-	healthTableName, found := data["healthTable"]
+func NewDynamoSimpleHashDistributor(identity string, numShards int, configData map[string]string) (*SimpleHashDistributor, error) {
+	d := &SimpleHashDistributor{
+		enabled:    true,
+		identity:   identity,
+		updateChan: make(ShardUpdater),
+		ShardConfig: ShardConfig{
+			NumShards: numShards,
+			IP:        identity,
+		},
+	}
+	healthTableName, found := configData["healthTable"]
 	if !found {
 		return nil, errors.New("healthTable must be set")
 	}
-	var frqI, oldI int
-	if frq, found := data["updateFrequency"]; found {
-		frqI, _ = strconv.Atoi(frq)
+	var updateFrequency, olderThan int
+	if frq, found := configData["updateFrequency"]; found {
+		updateFrequency, _ = strconv.Atoi(frq)
 	}
-	if old, found := data["olderThan"]; found {
-		oldI, _ = strconv.Atoi(old)
+	if old, found := configData["olderThan"]; found {
+		olderThan, _ = strconv.Atoi(old)
 	}
-	region := data["region"]
-	tag := data["tag"]
-	m, err := newDynamoDBNodesManager(healthTableName, region, identity, frqI, oldI, tag)
+	region := configData["region"]
+	tag := configData["tag"]
+	m, err := newDynamoDBNodesManager(healthTableName, region, identity, updateFrequency, olderThan, tag)
 	if err != nil {
 		return nil, err
 	}
