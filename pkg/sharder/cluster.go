@@ -1,9 +1,9 @@
 package sharder
 
 import (
+	"github.com/xmidt-org/ears/internal/pkg/config"
 	"net"
 	"os"
-	"sync"
 )
 
 const (
@@ -15,53 +15,43 @@ const (
 	DefaultDistributor = "manual"
 )
 
-// Controller represents persistence and work sharing elements
-type Controller struct {
-	Distributor ShardDistributor
-	ShardConfig
-	StorageConfig map[string]string
-	sync.RWMutex
-}
+var (
+	DefaultDistributorStorageMap = map[string]string{
+		"type": "dynamo",
+		//"region": "local",
+		"region":          "us-west-2",
+		"table":           "ears-peers",
+		"updateFrequency": "10",
+		"olderThan":       "60",
+		"tag":             "dev",
+	}
+)
 
-// ShardStatus represents a single shard's status
-type ShardStatus struct {
-	Shard      string `json:"shard"`
-	LastPolled string `json:"lastPolledAt"`
-}
-
-// ShardConfig represents the shard ownership of each node
-type ShardConfig struct {
-	IP          string   `json:"IP"`
-	NumShards   int      `json:"clusterShardNumber"`
-	OwnedShards []string `json:"ownedShards"`
-}
-
-// ShardUpdater will return a ShardConfig whenever the configuration changes
-type ShardUpdater chan ShardConfig
-
-// ShardDistributor defines
-type ShardDistributor interface {
-	// Stop shuts down any resources used
-	Stop()
-	// Status returns whether the ShardDistributor is healthy
-	//Status() error
-	// Updates
-	//return the ShardConfig channel
-	Updates() ShardUpdater
-	// Peers returns the list of healthy peers
-	Peers() []string
-	// Identity returns the identity of this node
-	Identity() string
-}
-
-// ControllerConfig contains cluster and node based configuration data
-type ControllerConfig struct {
-	Name  string
-	Local bool
-	ShardConfig
-	Storage     map[string]string
-	NodeName    string
-	Distributor string
+func InitDistributorStorageMap(config config.Config) {
+	storageType := config.GetString("ears.sharder.type")
+	if storageType != "" {
+		DefaultDistributorStorageMap["type"] = storageType
+	}
+	region := config.GetString("ears.sharder.region")
+	if region != "" {
+		DefaultDistributorStorageMap["region"] = region
+	}
+	table := config.GetString("ears.sharder.table")
+	if table != "" {
+		DefaultDistributorStorageMap["table"] = table
+	}
+	updateFrequency := config.GetString("ears.sharder.updateFrequency")
+	if updateFrequency != "" {
+		DefaultDistributorStorageMap["updateFrequency"] = updateFrequency
+	}
+	olderThan := config.GetString("ears.sharder.olderThan")
+	if olderThan != "" {
+		DefaultDistributorStorageMap["olderThan"] = olderThan
+	}
+	tag := config.GetString("ears.env")
+	if tag != "" {
+		DefaultDistributorStorageMap["tag"] = tag
+	}
 }
 
 // DefaultControllerConfig generates a default configuration based on a local dynamo instance
@@ -73,15 +63,7 @@ func DefaultControllerConfig() *ControllerConfig {
 			NumShards:   DefaultNumShards,
 			OwnedShards: []string{"0"},
 		},
-		Storage: map[string]string{
-			"type": "dynamo",
-			//"region": "local",
-			"region":          "us-west-2",
-			"table":           "ears-peers",
-			"updateFrequency": "10",
-			"olderThan":       "60",
-			"tag":             "bwenv",
-		},
+		Storage:     DefaultDistributorStorageMap,
 		Distributor: DefaultDistributor,
 	}
 	cc.NodeName = os.Getenv("HOSTNAME")

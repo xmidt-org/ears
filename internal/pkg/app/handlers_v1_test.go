@@ -407,7 +407,7 @@ func getConfig() (config.Config, error) {
 	return config, nil
 }
 
-// if storageType is blank choose storag elayer specified in ears.yaml
+// if storageType is blank choose storage layer specified in ears.yaml
 func getStorageLayer(t *testing.T, config config.Config, storageType string) (route.RouteStorer, error) {
 	if storageType == "" {
 		storageType = config.GetString("ears.storage.route.type")
