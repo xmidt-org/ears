@@ -7,6 +7,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/dynamodb"
 	"github.com/aws/aws-sdk-go/service/dynamodb/expression"
+	"strings"
 	"time"
 )
 
@@ -19,12 +20,6 @@ const write_cap = 10
 const key_name = "key"
 const sort_key_name = "ip"
 const value_name = "lastUpdated"
-
-// interface to get nodes state in the cluster
-type NodeStateManager interface {
-	GetNodeState() (peers []string, err error)
-	CleanUp()
-}
 
 //dynamoDB as the node states manager
 type dynamoDBNodesManager struct {
@@ -98,8 +93,8 @@ func newDynamoDBNodesManager(tableName, region, ip string, frq, older int, tag s
 	return d, nil
 }
 
-func (d *dynamoDBNodesManager) GetNodeState() (peers []string, err error) {
-	healthNodes := make([]string, 0)
+func (d *dynamoDBNodesManager) GetClusterState() ([]string, error) {
+	activeNodes := make([]string, 0)
 	keyCond := expression.Key(key_name).Equal(expression.Value(d.tag))
 	proj := expression.NamesList(expression.Name(sort_key_name), expression.Name(value_name))
 	expr, err := expression.NewBuilder().
@@ -129,27 +124,36 @@ func (d *dynamoDBNodesManager) GetNodeState() (peers []string, err error) {
 		if !found {
 			continue
 		}
-		// lastUpdated := lastUpdatedAttr.String()
 		lastUpdated := aws.StringValue(lastUpdatedAttr.S)
-		updateTime, err := ParseTime(lastUpdated)
+		updateTime, err := time.Parse(time.RFC3339Nano, lastUpdated)
 		if err != nil {
 			return nil, err
 		}
 		if int(time.Since(updateTime).Seconds()) > d.older {
 			d.deleteRecord(aws.StringValue(ipAttr.S))
 		}
-		healthNodes = append(healthNodes, aws.StringValue(ipAttr.S))
+		activeNodes = append(activeNodes, aws.StringValue(ipAttr.S))
 	}
-	return healthNodes, nil
+	return activeNodes, nil
+}
+
+func (d *dynamoDBNodesManager) timestamp(t time.Time) string {
+	ts := t.UTC().Format(time.RFC3339Nano)
+	// format library cuts off trailing 0s. See: https://github.com/golang/go/issues/19635
+	// this causes problems for string based sorting
+	if !strings.Contains(ts, ".") {
+		ts = ts[0:len(ts)-1] + ".000000000Z"
+	}
+	return ts
 }
 
 func (d *dynamoDBNodesManager) updateMyState() {
-	defer d.CleanUp()
+	defer d.RemoveNode()
 	for {
 		input := &dynamodb.UpdateItemInput{
 			ExpressionAttributeValues: map[string]*dynamodb.AttributeValue{
 				":u": {
-					S: aws.String(Timestamp(time.Now())),
+					S: aws.String(d.timestamp(time.Now())),
 				},
 			},
 			TableName: aws.String(d.tableName),
@@ -171,7 +175,7 @@ func (d *dynamoDBNodesManager) updateMyState() {
 }
 
 // remove own record from health table
-func (d *dynamoDBNodesManager) CleanUp() {
+func (d *dynamoDBNodesManager) RemoveNode() {
 	d.deleteRecord(d.identity)
 }
 

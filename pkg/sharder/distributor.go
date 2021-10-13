@@ -14,7 +14,7 @@ type (
 		ShardConfig
 		nodeManager NodeStateManager
 		identity    string
-		peers       []string
+		nodes       []string
 		updateChan  chan ShardConfig
 		enabled     bool
 		sync.Mutex
@@ -73,32 +73,30 @@ func (c *SimpleHashDistributor) Identity() string {
 
 // peerMonitor watches for changes in the health service
 func (c *SimpleHashDistributor) peerMonitor() {
-	defer c.nodeManager.CleanUp()
+	defer c.nodeManager.RemoveNode()
 	go func() {
-		defer c.nodeManager.CleanUp()
+		defer c.nodeManager.RemoveNode()
 		for {
 			time.Sleep(time.Duration(rand.Intn(10)) * time.Second)
-			aliveNodes, err := c.nodeManager.GetNodeState()
+			aliveNodes, err := c.nodeManager.GetClusterState()
 			if err != nil || aliveNodes == nil {
-				//need add retry logical here later
-				/*time.Sleep(time.Duration(rand.Intn(10)) * time.Second)*/
 				continue
 			}
 			sort.Strings(aliveNodes)
 			var change bool
 			c.Lock()
-			if len(aliveNodes) != len(c.peers) {
+			if len(aliveNodes) != len(c.nodes) {
 				change = true
 			} else {
 				for i, peer := range aliveNodes {
-					if peer != c.peers[i] {
+					if peer != c.nodes[i] {
 						change = true
 						break
 					}
 				}
 			}
 			if change {
-				c.peers = aliveNodes
+				c.nodes = aliveNodes
 				c.Unlock()
 				c.ownership()
 				continue
@@ -108,17 +106,17 @@ func (c *SimpleHashDistributor) peerMonitor() {
 	}()
 }
 
-// Peers returns our list of peers
+// Peers returns our list of nodes
 func (c *SimpleHashDistributor) Peers() []string {
 	c.Lock()
 	defer c.Unlock()
-	return c.peers
+	return c.nodes
 }
 
 // ownership receives events about peer changes and determines if shard ownership has changed
 // c.Lock() is held by peerMonitor() before calling us
 func (c *SimpleHashDistributor) ownership() {
-	if len(c.peers) == 0 {
+	if len(c.nodes) == 0 {
 		c.ShardConfig.OwnedShards = nil
 		c.updateChan <- c.ShardConfig
 		return
@@ -133,14 +131,14 @@ func (c *SimpleHashDistributor) ownership() {
 func (c *SimpleHashDistributor) getShardsByHash() bool {
 	var shards []string
 	var identityIndex int
-	for i, peer := range c.peers {
+	for i, peer := range c.nodes {
 		if peer == c.identity {
 			identityIndex = i
 			break
 		}
 	}
 	for j := 0; j < c.ShardConfig.NumShards; j++ {
-		if (j % len(c.peers)) == identityIndex {
+		if (j % len(c.nodes)) == identityIndex {
 			shards = append(shards, strconv.Itoa(j))
 		}
 	}

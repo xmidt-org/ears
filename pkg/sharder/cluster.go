@@ -20,7 +20,7 @@ var (
 		"type": "dynamo",
 		//"region": "local",
 		"region":          "us-west-2",
-		"table":           "ears-peers",
+		"table":           "ears-nodes",
 		"updateFrequency": "10",
 		"olderThan":       "60",
 		"tag":             "dev",
