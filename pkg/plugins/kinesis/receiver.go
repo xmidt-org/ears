@@ -327,9 +327,7 @@ func (r *Receiver) startShardReceiver(svc *kinesis.Kinesis, stream *kinesis.Desc
 }
 
 func (r *Receiver) UpdateListener(distributor *sharder.SimpleHashDistributor) {
-	// listen to cluster updates and adjust shards accordingly
-	C := distributor.Updates()
-	for config := range C {
+	for config := range distributor.Updates() {
 		r.UpdateShards(config)
 	}
 }
@@ -348,7 +346,7 @@ func (r *Receiver) UpdateShards(newShards sharder.ShardConfig) {
 			if err != nil {
 				continue
 			}
-			r.logger.Info().Str("op", "Kinesis.Receive").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Int("shardIdx", shardIdx).Msg("stopping shard consumer")
+			r.logger.Info().Str("op", "Kinesis.UpdateShards").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Int("shardIdx", shardIdx).Msg("stopping shard consumer")
 			r.stopShardReceiver(shardIdx)
 		}
 	}
@@ -367,15 +365,15 @@ func (r *Receiver) UpdateShards(newShards sharder.ShardConfig) {
 			}
 			stream, err := r.svc.DescribeStream(&kinesis.DescribeStreamInput{StreamName: aws.String(r.config.StreamName)})
 			//TODO: what to do with an error here?
-			//TODO: must also let sharder know about changed number of shards
+			//TODO: must also let sharder know about changed number of shards - unlike the number of peers this will be stream specific!)
 			if err != nil {
 				return
 			}
 			if *r.config.EnhancedFanOut {
-				r.logger.Info().Str("op", "Kinesis.Receive").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Int("shardIdx", shardIdx).Msg("launching efo shard consumer")
+				r.logger.Info().Str("op", "Kinesis.UpdateShards").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Int("shardIdx", shardIdx).Msg("launching efo shard consumer")
 				r.startShardReceiverEFO(r.svc, stream, r.consumer, shardIdx)
 			} else {
-				r.logger.Info().Str("op", "Kinesis.Receive").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Int("shardIdx", shardIdx).Msg("launching shard consumer")
+				r.logger.Info().Str("op", "Kinesis.UpdateShards").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Int("shardIdx", shardIdx).Msg("launching shard consumer")
 				r.startShardReceiver(r.svc, stream, shardIdx)
 			}
 		}
@@ -431,11 +429,7 @@ func (r *Receiver) Receive(next receiver.NextFn) error {
 		}
 	}
 	sharderConfig := sharder.DefaultControllerConfig()
-	sharderConfig.Storage["healthTable"] = "ears-peers"
-	sharderConfig.Storage["updateFrequency"] = "10"
-	sharderConfig.Storage["olderThan"] = "60"
-	sharderConfig.Storage["region"] = "us-west-2"
-	sharderConfig.Storage["tag"] = "bwenv"
+	//sharderConfig.Storage["tag"] = "bwenv"
 	shardDistributor, err := sharder.NewDynamoSimpleHashDistributor(sharderConfig.NodeName, len(stream.StreamDescription.Shards), sharderConfig.Storage)
 	if err != nil {
 		return err
