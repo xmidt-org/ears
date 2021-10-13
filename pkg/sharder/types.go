@@ -51,6 +51,6 @@ type ShardDistributor interface {
 type ControllerConfig struct {
 	//Name string
 	ShardConfig
-	Storage  map[string]string
-	NodeName string
+	StorageConfig map[string]string
+	NodeName      string
 }

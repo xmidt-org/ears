@@ -103,20 +103,15 @@ func NewReceiver(tid tenant.Id, plugin string, name string, config interface{}, 
 }
 
 func (r *Receiver) stopShardReceiver(shardIdx int) {
-	//TODO: lock
 	if shardIdx < 0 {
 		for _, stopChan := range r.stopChannelMap {
 			stopChan <- true
 		}
-		r.stopChannelMap = make(map[int]chan bool)
-		//TODO: close chan
 	} else {
 		stopChan, ok := r.stopChannelMap[shardIdx]
 		if ok {
 			stopChan <- true
 		}
-		delete(r.stopChannelMap, shardIdx)
-		//TODO: close chan
 	}
 }
 
@@ -159,6 +154,7 @@ func (r *Receiver) registerStreamConsumer(svc *kinesis.Kinesis, streamName, cons
 func (r *Receiver) startShardReceiverEFO(svc *kinesis.Kinesis, stream *kinesis.DescribeStreamOutput, consumer *kinesis.DescribeStreamConsumerOutput, shardIdx int) {
 	// this is an enhanced consumer that will only consume from a dedicated shard
 	go func() {
+		r.stopChannelMap[shardIdx] = make(chan bool)
 		for {
 			shard := stream.StreamDescription.Shards[shardIdx]
 			params := &kinesis.SubscribeToShardInput{
@@ -174,6 +170,8 @@ func (r *Receiver) startShardReceiverEFO(svc *kinesis.Kinesis, stream *kinesis.D
 				select {
 				case <-r.stopChannelMap[shardIdx]:
 					r.logger.Info().Str("op", "Kinesis.receiveWorkerEFO").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Int("shardIdx", shardIdx).Msg("receive loop stopped")
+					close(r.stopChannelMap[shardIdx])
+					delete(r.stopChannelMap, shardIdx)
 					return
 				default:
 				}
@@ -187,6 +185,8 @@ func (r *Receiver) startShardReceiverEFO(svc *kinesis.Kinesis, stream *kinesis.D
 					case <-r.stopChannelMap[shardIdx]:
 						r.logger.Info().Str("op", "Kinesis.receiveWorkerEFO").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Int("shardIdx", shardIdx).Msg("receive loop stopped")
 						sub.EventStream.Close()
+						close(r.stopChannelMap[shardIdx])
+						delete(r.stopChannelMap, shardIdx)
 						return
 					default:
 					}
@@ -241,6 +241,7 @@ func (r *Receiver) startShardReceiver(svc *kinesis.Kinesis, stream *kinesis.Desc
 	// this is a non-enhanced consumer that will only consume from one shard
 	// n is number of worker in pool
 	go func() {
+		r.stopChannelMap[shardIdx] = make(chan bool)
 		// receive messages
 		for {
 			// this is a normal receiver
@@ -266,6 +267,8 @@ func (r *Receiver) startShardReceiver(svc *kinesis.Kinesis, stream *kinesis.Desc
 				select {
 				case <-r.stopChannelMap[shardIdx]:
 					r.logger.Info().Str("op", "Kinesis.receiveWorker").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Int("shardIdx", shardIdx).Msg("receive loop stopped")
+					close(r.stopChannelMap[shardIdx])
+					delete(r.stopChannelMap, shardIdx)
 					return
 				default:
 				}
@@ -360,8 +363,8 @@ func (r *Receiver) UpdateShards(newShards sharder.ShardConfig) {
 		}
 		if startUp {
 			shardIdx, err := strconv.Atoi(newShardStr)
-			//TODO: what to do with an error here?
 			if err != nil {
+				r.logger.Error().Str("op", "Kinesis.UpdateShards").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Int("shardIdx", shardIdx).Msg(err.Error())
 				continue
 			}
 			if *r.config.EnhancedFanOut {
@@ -408,15 +411,12 @@ func (r *Receiver) Receive(next receiver.NextFn) error {
 	if err != nil {
 		return err
 	}
-	//DONE: this should only be done for owned shards
 	//TODO: need to reshuffle when shards get added or removed
-	//DONE: need to reshuffle when ears nodes join or leave
-	//DONE: need to account for boot lag when cluster comes up or new route is created
 	//TODO: what about kinesis checkpoints
 	//TODO: handle panics
 	//TODO: batch events in sender
-	//TODO: locks for stopChannelMap etc.
-	//
+	//TODO: locks
+	//TODO: deregister stream
 	if *r.config.EnhancedFanOut {
 		r.consumer, err = r.registerStreamConsumer(r.svc, r.config.StreamName, r.config.ConsumerName)
 		if err != nil {
@@ -424,7 +424,7 @@ func (r *Receiver) Receive(next receiver.NextFn) error {
 		}
 	}
 	sharderConfig := sharder.DefaultControllerConfig()
-	shardDistributor, err := sharder.NewDynamoSimpleHashDistributor(sharderConfig.NodeName, len(r.stream.StreamDescription.Shards), sharderConfig.Storage)
+	shardDistributor, err := sharder.NewDynamoSimpleHashDistributor(sharderConfig.NodeName, len(r.stream.StreamDescription.Shards), sharderConfig.StorageConfig)
 	if err != nil {
 		return err
 	}
