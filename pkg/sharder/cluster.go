@@ -73,9 +73,14 @@ func DefaultControllerConfig() *ControllerConfig {
 			NumShards:   DefaultNumShards,
 			OwnedShards: []string{"0"},
 		},
-		Storage: map[string]string{"type": "dynamo",
-			"region": "local",
-			"table":  "ears-peers",
+		Storage: map[string]string{
+			"type": "dynamo",
+			//"region": "local",
+			"region":          "us-west-2",
+			"table":           "ears-peers",
+			"updateFrequency": "10",
+			"olderThan":       "60",
+			"tag":             "bwenv",
 		},
 		Distributor: DefaultDistributor,
 	}
