@@ -49,10 +49,8 @@ type ShardDistributor interface {
 
 // ControllerConfig contains cluster and node based configuration data
 type ControllerConfig struct {
-	Name  string
-	Local bool
+	//Name string
 	ShardConfig
-	Storage     map[string]string
-	NodeName    string
-	Distributor string
+	Storage  map[string]string
+	NodeName string
 }
