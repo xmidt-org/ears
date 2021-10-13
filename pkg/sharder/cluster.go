@@ -10,13 +10,11 @@ const (
 	// DefaultNumShards is the default number of shards for the cluster as a whole
 	DefaultNumShards = 1
 	// DefaultClusterName is the default name of the cluster
-	DefaultClusterName = "dev"
-	// DefaultDistributor is the default shard distribution mechanism
-	DefaultDistributor = "manual"
+	//DefaultClusterName = "ears"
 )
 
 var (
-	DefaultDistributorStorageMap = map[string]string{
+	DefaultDistributorConfigs = map[string]string{
 		"type": "dynamo",
 		//"region": "local",
 		"region":          "us-west-2",
@@ -27,44 +25,42 @@ var (
 	}
 )
 
-func InitDistributorStorageMap(config config.Config) {
+func InitDistributorConfigs(config config.Config) {
 	storageType := config.GetString("ears.sharder.type")
 	if storageType != "" {
-		DefaultDistributorStorageMap["type"] = storageType
+		DefaultDistributorConfigs["type"] = storageType
 	}
 	region := config.GetString("ears.sharder.region")
 	if region != "" {
-		DefaultDistributorStorageMap["region"] = region
+		DefaultDistributorConfigs["region"] = region
 	}
 	table := config.GetString("ears.sharder.table")
 	if table != "" {
-		DefaultDistributorStorageMap["table"] = table
+		DefaultDistributorConfigs["table"] = table
 	}
 	updateFrequency := config.GetString("ears.sharder.updateFrequency")
 	if updateFrequency != "" {
-		DefaultDistributorStorageMap["updateFrequency"] = updateFrequency
+		DefaultDistributorConfigs["updateFrequency"] = updateFrequency
 	}
 	olderThan := config.GetString("ears.sharder.olderThan")
 	if olderThan != "" {
-		DefaultDistributorStorageMap["olderThan"] = olderThan
+		DefaultDistributorConfigs["olderThan"] = olderThan
 	}
 	tag := config.GetString("ears.env")
 	if tag != "" {
-		DefaultDistributorStorageMap["tag"] = tag
+		DefaultDistributorConfigs["tag"] = tag
 	}
 }
 
 // DefaultControllerConfig generates a default configuration based on a local dynamo instance
 func DefaultControllerConfig() *ControllerConfig {
 	cc := ControllerConfig{
-		Name:  DefaultClusterName,
-		Local: true,
+		//Name: DefaultClusterName,
 		ShardConfig: ShardConfig{
 			NumShards:   DefaultNumShards,
 			OwnedShards: []string{"0"},
 		},
-		Storage:     DefaultDistributorStorageMap,
-		Distributor: DefaultDistributor,
+		Storage: DefaultDistributorConfigs,
 	}
 	cc.NodeName = os.Getenv("HOSTNAME")
 	if "" == cc.NodeName {
