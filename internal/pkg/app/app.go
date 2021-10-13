@@ -25,6 +25,7 @@ import (
 	"github.com/xmidt-org/ears/internal/pkg/rtsemconv"
 	"github.com/xmidt-org/ears/pkg/app"
 	"github.com/xmidt-org/ears/pkg/event"
+	"github.com/xmidt-org/ears/pkg/sharder"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc"
@@ -65,6 +66,8 @@ func SetupAPIServer(lifecycle fx.Lifecycle, config config.Config, logger *zerolo
 		Addr:    ":" + config.GetString("ears.api.port"),
 		Handler: mux,
 	}
+
+	sharder.InitDistributorStorageMap(config)
 
 	//var ls launcher.Launcher
 	var traceProvider *sdktrace.TracerProvider
