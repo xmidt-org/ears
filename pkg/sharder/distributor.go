@@ -53,7 +53,7 @@ func NewDynamoSimpleHashDistributor(identity string, numShards int, configData m
 		return nil, err
 	}
 	d.nodeManager = m
-	go d.peerMonitor()
+	d.nodeMonitor()
 	return d, nil
 }
 
@@ -71,14 +71,13 @@ func (c *SimpleHashDistributor) Identity() string {
 	return c.identity
 }
 
-// peerMonitor watches for changes in the health service
-func (c *SimpleHashDistributor) peerMonitor() {
-	defer c.nodeManager.RemoveNode()
+// nodeMonitor watches for changes in the health service
+func (c *SimpleHashDistributor) nodeMonitor() {
 	go func() {
 		defer c.nodeManager.RemoveNode()
 		for {
 			time.Sleep(time.Duration(rand.Intn(10)) * time.Second)
-			aliveNodes, err := c.nodeManager.GetClusterState()
+			aliveNodes, err := c.nodeManager.GetActiveNodes()
 			if err != nil || aliveNodes == nil {
 				continue
 			}
@@ -98,7 +97,7 @@ func (c *SimpleHashDistributor) peerMonitor() {
 			if change {
 				c.nodes = aliveNodes
 				c.Unlock()
-				c.ownership()
+				c.publishChanges()
 				continue
 			}
 			c.Unlock()
@@ -106,51 +105,50 @@ func (c *SimpleHashDistributor) peerMonitor() {
 	}()
 }
 
-// Peers returns our list of nodes
-func (c *SimpleHashDistributor) Peers() []string {
+// Nodes returns list of nodes
+func (c *SimpleHashDistributor) Nodes() []string {
 	c.Lock()
 	defer c.Unlock()
 	return c.nodes
 }
 
-// ownership receives events about peer changes and determines if shard ownership has changed
-// c.Lock() is held by peerMonitor() before calling us
-func (c *SimpleHashDistributor) ownership() {
+func (c *SimpleHashDistributor) publishChanges() {
+	// c.Lock() is held by nodeMonitor() before calling us
 	if len(c.nodes) == 0 {
 		c.ShardConfig.OwnedShards = nil
 		c.updateChan <- c.ShardConfig
 		return
 	}
-	changeFlag := c.getShardsByHash()
+	changeFlag := c.hashShards()
 	if changeFlag {
 		c.updateChan <- c.ShardConfig
 		return
 	}
 }
 
-func (c *SimpleHashDistributor) getShardsByHash() bool {
-	var shards []string
-	var identityIndex int
+func (c *SimpleHashDistributor) hashShards() bool {
+	var myShards []string
+	var myPeerIndex int
 	for i, peer := range c.nodes {
 		if peer == c.identity {
-			identityIndex = i
+			myPeerIndex = i
 			break
 		}
 	}
 	for j := 0; j < c.ShardConfig.NumShards; j++ {
-		if (j % len(c.nodes)) == identityIndex {
-			shards = append(shards, strconv.Itoa(j))
+		if (j % len(c.nodes)) == myPeerIndex {
+			myShards = append(myShards, strconv.Itoa(j))
 		}
 	}
-	// check the len of the shards change
-	if len(shards) != len(c.ShardConfig.OwnedShards) {
-		c.ShardConfig.OwnedShards = shards
+	// check the len of the myShards change
+	if len(myShards) != len(c.ShardConfig.OwnedShards) {
+		c.ShardConfig.OwnedShards = myShards
 		return true
 	}
 	// check the content of owned shard change
-	for i, shard := range shards {
+	for i, shard := range myShards {
 		if shard != c.ShardConfig.OwnedShards[i] {
-			c.ShardConfig.OwnedShards = shards
+			c.ShardConfig.OwnedShards = myShards
 			return true
 		}
 	}

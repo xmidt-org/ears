@@ -93,7 +93,7 @@ func newDynamoDBNodesManager(tableName, region, ip string, frq, older int, tag s
 	return d, nil
 }
 
-func (d *dynamoDBNodesManager) GetClusterState() ([]string, error) {
+func (d *dynamoDBNodesManager) GetActiveNodes() ([]string, error) {
 	activeNodes := make([]string, 0)
 	keyCond := expression.Key(key_name).Equal(expression.Value(d.tag))
 	proj := expression.NamesList(expression.Name(sort_key_name), expression.Name(value_name))

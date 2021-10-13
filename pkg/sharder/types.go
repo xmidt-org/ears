@@ -30,7 +30,7 @@ type ShardUpdater chan ShardConfig
 
 // interface to get node state in the cluster
 type NodeStateManager interface {
-	GetClusterState() ([]string, error)
+	GetActiveNodes() ([]string, error)
 	RemoveNode()
 }
 
@@ -38,13 +38,11 @@ type NodeStateManager interface {
 type ShardDistributor interface {
 	// Stop shuts down any resources used
 	Stop()
-	// Status returns whether the ShardDistributor is healthy
-	//Status() error
 	// Updates
 	//return the ShardConfig channel
 	Updates() ShardUpdater
 	// Peers returns the list of healthy nodes
-	Peers() []string
+	Nodes() []string
 	// Identity returns the identity of this node
 	Identity() string
 }
