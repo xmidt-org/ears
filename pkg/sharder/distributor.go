@@ -35,7 +35,7 @@ func NewDynamoSimpleHashDistributor(identity string, numShards int, configData m
 			IP:        identity,
 		},
 	}
-	healthTableName, found := configData["healthTable"]
+	tableName, found := configData["table"]
 	if !found {
 		return nil, errors.New("healthTable must be set")
 	}
@@ -48,7 +48,7 @@ func NewDynamoSimpleHashDistributor(identity string, numShards int, configData m
 	}
 	region := configData["region"]
 	tag := configData["tag"]
-	m, err := newDynamoDBNodesManager(healthTableName, region, identity, updateFrequency, olderThan, tag)
+	m, err := newDynamoDBNodesManager(tableName, region, identity, updateFrequency, olderThan, tag)
 	if err != nil {
 		return nil, err
 	}

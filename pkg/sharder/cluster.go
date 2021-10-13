@@ -8,7 +8,7 @@ import (
 
 const (
 	// DefaultNumShards is the default number of shards for the cluster as a whole
-	DefaultNumShards = 1
+	DefaultNumShards = 0
 	// DefaultClusterName is the default name of the cluster
 	//DefaultClusterName = "ears"
 )
@@ -57,8 +57,9 @@ func DefaultControllerConfig() *ControllerConfig {
 	cc := ControllerConfig{
 		//Name: DefaultClusterName,
 		ShardConfig: ShardConfig{
-			NumShards:   DefaultNumShards,
-			OwnedShards: []string{"0"},
+			NumShards: DefaultNumShards,
+			//OwnedShards: []string{"0"},
+			OwnedShards: []string{},
 		},
 		StorageConfig: DefaultDistributorConfigs,
 	}
