@@ -29,12 +29,14 @@ import (
 	pkgplugin "github.com/xmidt-org/ears/pkg/plugin"
 	"github.com/xmidt-org/ears/pkg/receiver"
 	"github.com/xmidt-org/ears/pkg/secret"
+	"github.com/xmidt-org/ears/pkg/sharder"
 	"github.com/xmidt-org/ears/pkg/tenant"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/global"
 	"go.opentelemetry.io/otel/metric/unit"
 	"os"
+	"strconv"
 	"time"
 )
 
@@ -101,15 +103,20 @@ func NewReceiver(tid tenant.Id, plugin string, name string, config interface{}, 
 }
 
 func (r *Receiver) stopShardReceiver(shardIdx int) {
+	//TODO: lock
 	if shardIdx < 0 {
 		for _, stopChan := range r.stopChannelMap {
 			stopChan <- true
 		}
+		r.stopChannelMap = make(map[int]chan bool)
+		//TODO: close chan
 	} else {
 		stopChan, ok := r.stopChannelMap[shardIdx]
 		if ok {
 			stopChan <- true
 		}
+		delete(r.stopChannelMap, shardIdx)
+		//TODO: close chan
 	}
 }
 
@@ -319,6 +326,66 @@ func (r *Receiver) startShardReceiver(svc *kinesis.Kinesis, stream *kinesis.Desc
 	}()
 }
 
+func (r *Receiver) UpdateListener(distributor *sharder.SimpleHashDistributor) {
+	// listen to cluster updates and adjust shards accordingly
+	C := distributor.Updates()
+	for {
+		select {
+		case config := <-C:
+			r.UpdateShards(config)
+		}
+	}
+}
+
+func (r *Receiver) UpdateShards(newShards sharder.ShardConfig) {
+	// shut down old shards not needed any more
+	for _, oldShardStr := range r.shardConfig.OwnedShards {
+		shutDown := true
+		for _, newShardStr := range newShards.OwnedShards {
+			if newShardStr == oldShardStr {
+				shutDown = false
+			}
+		}
+		if shutDown {
+			shardIdx, err := strconv.Atoi(oldShardStr)
+			if err != nil {
+				continue
+			}
+			r.logger.Info().Str("op", "Kinesis.Receive").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Int("shardIdx", shardIdx).Msg("stopping shard consumer")
+			r.stopShardReceiver(shardIdx)
+		}
+	}
+	// start new shards
+	for _, newShardStr := range newShards.OwnedShards {
+		startUp := true
+		for _, oldShardStr := range r.shardConfig.OwnedShards {
+			if newShardStr == oldShardStr {
+				startUp = false
+			}
+		}
+		if startUp {
+			shardIdx, err := strconv.Atoi(newShardStr)
+			if err != nil {
+				continue
+			}
+			stream, err := r.svc.DescribeStream(&kinesis.DescribeStreamInput{StreamName: aws.String(r.config.StreamName)})
+			//TODO: what to do with an error here?
+			//TODO: must also let sharder know about changed number of shards
+			if err != nil {
+				return
+			}
+			if *r.config.EnhancedFanOut {
+				r.logger.Info().Str("op", "Kinesis.Receive").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Int("shardIdx", shardIdx).Msg("launching efo shard consumer")
+				r.startShardReceiverEFO(r.svc, stream, r.consumer, shardIdx)
+			} else {
+				r.logger.Info().Str("op", "Kinesis.Receive").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Int("shardIdx", shardIdx).Msg("launching shard consumer")
+				r.startShardReceiver(r.svc, stream, shardIdx)
+			}
+		}
+	}
+	r.shardConfig = newShards
+}
+
 func (r *Receiver) Receive(next receiver.NextFn) error {
 	if r == nil {
 		return &pkgplugin.Error{
@@ -346,31 +413,37 @@ func (r *Receiver) Receive(next receiver.NextFn) error {
 	if nil != err {
 		return err
 	}
-	svc := kinesis.New(sess)
-	stream, err := svc.DescribeStream(&kinesis.DescribeStreamInput{StreamName: aws.String(r.config.StreamName)})
+	r.svc = kinesis.New(sess)
+	stream, err := r.svc.DescribeStream(&kinesis.DescribeStreamInput{StreamName: aws.String(r.config.StreamName)})
 	if err != nil {
 		return err
 	}
+	//DONE: this should only be done for owned shards
+	//TODO: need to reshuffle when shards get added or removed
+	//DONE: need to reshuffle when ears nodes join or leave
+	//DONE: need to account for boot lag when cluster comes up or new route is created
+	//TODO: what about kinesis checkpoints
+	//TODO: handle panics
+	//TODO: batch events in sender
+	//TODO: locks for stopChannelMap etc.
+	//
 	if *r.config.EnhancedFanOut {
-		consumer, err := r.registerStreamConsumer(svc, r.config.StreamName, r.config.ConsumerName)
+		r.consumer, err = r.registerStreamConsumer(r.svc, r.config.StreamName, r.config.ConsumerName)
 		if err != nil {
 			return err
 		}
-		for i := 0; i < len(stream.StreamDescription.Shards); i++ {
-			//TODO: this should only be done for owned shards
-			//TODO: need to reshuffle when shards get added or removed
-			//TODO: need to reshuffle when ears nodes join or leave
-			//TODO: need to account for boot lag when cluster comes up or new route is created
-			r.logger.Info().Str("op", "Kinesis.Receive").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Int("shardIdx", i).Msg("launching receiver pool thread")
-			r.stopChannelMap[i] = make(chan bool)
-			r.startShardReceiverEFO(svc, stream, consumer, i)
-		}
-	} else {
-		for i := 0; i < len(stream.StreamDescription.Shards); i++ {
-			r.logger.Info().Str("op", "Kinesis.Receive").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Int("shardIdx", i).Msg("launching receiver pool thread")
-			r.startShardReceiver(svc, stream, i)
-		}
 	}
+	sharderConfig := sharder.DefaultControllerConfig()
+	sharderConfig.Storage["healthTable"] = "ears-peers"
+	sharderConfig.Storage["updateFrequency"] = "10"
+	sharderConfig.Storage["olderThan"] = "60"
+	sharderConfig.Storage["region"] = "us-west-2"
+	sharderConfig.Storage["tag"] = "bwenv"
+	shardDistributor, err := sharder.NewDynamoSimpleHashDistributor(sharderConfig.NodeName, len(stream.StreamDescription.Shards), sharderConfig.Storage)
+	if err != nil {
+		return err
+	}
+	go r.UpdateListener(shardDistributor)
 	r.logger.Info().Str("op", "Kinesis.Receive").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Msg("waiting for receive done")
 	<-r.done
 	r.Lock()

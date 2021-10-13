@@ -18,6 +18,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/kinesis"
 	"github.com/rs/zerolog"
 	"github.com/xmidt-org/ears/pkg/event"
+	"github.com/xmidt-org/ears/pkg/sharder"
 	"github.com/xmidt-org/ears/pkg/tenant"
 	"github.com/xorcare/pointer"
 	"go.opentelemetry.io/otel/metric"
@@ -84,6 +85,9 @@ type Receiver struct {
 	logger              *zerolog.Logger
 	receiveCount        int
 	deleteCount         int
+	shardConfig         sharder.ShardConfig
+	svc                 *kinesis.Kinesis
+	consumer            *kinesis.DescribeStreamConsumerOutput
 	startTime           time.Time
 	eventSuccessCounter metric.BoundInt64Counter
 	eventFailureCounter metric.BoundInt64Counter
