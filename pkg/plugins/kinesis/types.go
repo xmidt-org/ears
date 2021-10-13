@@ -88,6 +88,7 @@ type Receiver struct {
 	shardConfig         sharder.ShardConfig
 	svc                 *kinesis.Kinesis
 	consumer            *kinesis.DescribeStreamConsumerOutput
+	stream              *kinesis.DescribeStreamOutput
 	startTime           time.Time
 	eventSuccessCounter metric.BoundInt64Counter
 	eventFailureCounter metric.BoundInt64Counter

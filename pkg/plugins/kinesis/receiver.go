@@ -360,21 +360,16 @@ func (r *Receiver) UpdateShards(newShards sharder.ShardConfig) {
 		}
 		if startUp {
 			shardIdx, err := strconv.Atoi(newShardStr)
+			//TODO: what to do with an error here?
 			if err != nil {
 				continue
 			}
-			stream, err := r.svc.DescribeStream(&kinesis.DescribeStreamInput{StreamName: aws.String(r.config.StreamName)})
-			//TODO: what to do with an error here?
-			//TODO: must also let sharder know about changed number of shards - unlike the number of peers this will be stream specific!)
-			if err != nil {
-				return
-			}
 			if *r.config.EnhancedFanOut {
 				r.logger.Info().Str("op", "Kinesis.UpdateShards").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Int("shardIdx", shardIdx).Msg("launching efo shard consumer")
-				r.startShardReceiverEFO(r.svc, stream, r.consumer, shardIdx)
+				r.startShardReceiverEFO(r.svc, r.stream, r.consumer, shardIdx)
 			} else {
 				r.logger.Info().Str("op", "Kinesis.UpdateShards").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Int("shardIdx", shardIdx).Msg("launching shard consumer")
-				r.startShardReceiver(r.svc, stream, shardIdx)
+				r.startShardReceiver(r.svc, r.stream, shardIdx)
 			}
 		}
 	}
@@ -409,7 +404,7 @@ func (r *Receiver) Receive(next receiver.NextFn) error {
 		return err
 	}
 	r.svc = kinesis.New(sess)
-	stream, err := r.svc.DescribeStream(&kinesis.DescribeStreamInput{StreamName: aws.String(r.config.StreamName)})
+	r.stream, err = r.svc.DescribeStream(&kinesis.DescribeStreamInput{StreamName: aws.String(r.config.StreamName)})
 	if err != nil {
 		return err
 	}
@@ -429,8 +424,7 @@ func (r *Receiver) Receive(next receiver.NextFn) error {
 		}
 	}
 	sharderConfig := sharder.DefaultControllerConfig()
-	//sharderConfig.Storage["tag"] = "bwenv"
-	shardDistributor, err := sharder.NewDynamoSimpleHashDistributor(sharderConfig.NodeName, len(stream.StreamDescription.Shards), sharderConfig.Storage)
+	shardDistributor, err := sharder.NewDynamoSimpleHashDistributor(sharderConfig.NodeName, len(r.stream.StreamDescription.Shards), sharderConfig.Storage)
 	if err != nil {
 		return err
 	}
