@@ -329,11 +329,8 @@ func (r *Receiver) startShardReceiver(svc *kinesis.Kinesis, stream *kinesis.Desc
 func (r *Receiver) UpdateListener(distributor *sharder.SimpleHashDistributor) {
 	// listen to cluster updates and adjust shards accordingly
 	C := distributor.Updates()
-	for {
-		select {
-		case config := <-C:
-			r.UpdateShards(config)
-		}
+	for config := range C {
+		r.UpdateShards(config)
 	}
 }
 
