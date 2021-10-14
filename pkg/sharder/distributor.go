@@ -71,6 +71,11 @@ func (c *SimpleHashDistributor) Identity() string {
 	return c.identity
 }
 
+func (c *SimpleHashDistributor) UpdateNumberShards(numShards int) {
+	c.NumShards = numShards
+	c.publishChanges()
+}
+
 // nodeMonitor watches for changes in the health service
 func (c *SimpleHashDistributor) nodeMonitor() {
 	go func() {
