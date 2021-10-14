@@ -20,7 +20,7 @@ type ShardStatus struct {
 
 // ShardConfig represents the shard ownership of each node
 type ShardConfig struct {
-	IP          string   `json:"IP"`
+	Identity    string   `json:"identity"`
 	NumShards   int      `json:"clusterShardNumber"`
 	OwnedShards []string `json:"ownedShards"`
 }

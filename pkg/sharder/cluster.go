@@ -6,13 +6,6 @@ import (
 	"os"
 )
 
-const (
-	// DefaultNumShards is the default number of shards for the cluster as a whole
-	DefaultNumShards = 0
-	// DefaultClusterName is the default name of the cluster
-	//DefaultClusterName = "ears"
-)
-
 var (
 	DefaultDistributorConfigs = map[string]string{
 		"type": "dynamo",
@@ -55,10 +48,8 @@ func InitDistributorConfigs(config config.Config) {
 // DefaultControllerConfig generates a default configuration based on a local dynamo instance
 func DefaultControllerConfig() *ControllerConfig {
 	cc := ControllerConfig{
-		//Name: DefaultClusterName,
 		ShardConfig: ShardConfig{
-			NumShards: DefaultNumShards,
-			//OwnedShards: []string{"0"},
+			NumShards:   0,
 			OwnedShards: []string{},
 		},
 		StorageConfig: DefaultDistributorConfigs,
