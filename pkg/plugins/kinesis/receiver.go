@@ -115,15 +115,48 @@ func (r *Receiver) stopShardReceiver(shardIdx int) {
 	}
 }
 
+func (r *Receiver) shardMonitor(svc *kinesis.Kinesis, distributor *sharder.SimpleHashDistributor) {
+	for {
+		time.Sleep(60 * time.Second)
+		r.Lock()
+		stopped := r.stopped
+		r.Unlock()
+		if stopped {
+			r.logger.Error().Str("op", "Kinesis.shardMonitor").Str("stream", *r.stream.StreamDescription.StreamName).Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Msg("stopping shard monitor")
+			return
+		}
+		stream, err := svc.DescribeStream(&kinesis.DescribeStreamInput{
+			StreamName: &r.config.StreamName,
+		})
+		if err != nil {
+			r.logger.Error().Str("op", "Kinesis.shardMonitor").Str("stream", *r.stream.StreamDescription.StreamName).Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Msg("cannot get number of shards: " + err.Error())
+			continue
+		}
+		if len(stream.StreamDescription.Shards) == 0 {
+			continue
+		}
+		update := false
+		if len(stream.StreamDescription.Shards) != len(r.stream.StreamDescription.Shards) {
+			update = true
+		}
+		if update {
+			r.logger.Error().Str("op", "Kinesis.shardMonitor").Str("stream", *r.stream.StreamDescription.StreamName).Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Int("numShards", len(stream.StreamDescription.Shards)).Msg("update number of shards")
+			r.stream = stream
+			// this will trigger updates on the
+			distributor.UpdateNumberShards(len(stream.StreamDescription.Shards))
+		}
+	}
+}
+
 func (r *Receiver) registerStreamConsumer(svc *kinesis.Kinesis, streamName, consumerName string) (*kinesis.DescribeStreamConsumerOutput, error) {
-	desc, err := svc.DescribeStream(&kinesis.DescribeStreamInput{
+	stream, err := svc.DescribeStream(&kinesis.DescribeStreamInput{
 		StreamName: &streamName,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to describe stream, %s, %v", streamName, err)
 	}
 	descParams := &kinesis.DescribeStreamConsumerInput{
-		StreamARN:    desc.StreamDescription.StreamARN,
+		StreamARN:    stream.StreamDescription.StreamARN,
 		ConsumerName: &consumerName,
 	}
 	_, err = svc.DescribeStreamConsumer(descParams)
@@ -131,7 +164,7 @@ func (r *Receiver) registerStreamConsumer(svc *kinesis.Kinesis, streamName, cons
 		_, err := svc.RegisterStreamConsumer(
 			&kinesis.RegisterStreamConsumerInput{
 				ConsumerName: aws.String(consumerName),
-				StreamARN:    desc.StreamDescription.StreamARN,
+				StreamARN:    stream.StreamDescription.StreamARN,
 			},
 		)
 		if err != nil {
@@ -169,7 +202,7 @@ func (r *Receiver) startShardReceiverEFO(svc *kinesis.Kinesis, stream *kinesis.D
 			for {
 				select {
 				case <-r.stopChannelMap[shardIdx]:
-					r.logger.Info().Str("op", "Kinesis.receiveWorkerEFO").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Int("shardIdx", shardIdx).Msg("receive loop stopped")
+					r.logger.Info().Str("op", "Kinesis.receiveWorkerEFO").Str("stream", *r.stream.StreamDescription.StreamName).Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Int("shardIdx", shardIdx).Msg("receive loop stopped")
 					close(r.stopChannelMap[shardIdx])
 					delete(r.stopChannelMap, shardIdx)
 					return
@@ -177,13 +210,13 @@ func (r *Receiver) startShardReceiverEFO(svc *kinesis.Kinesis, stream *kinesis.D
 				}
 				sub, err := svc.SubscribeToShard(params)
 				if err != nil {
-					r.logger.Error().Str("op", "Kinesis.receiveWorkerEFO").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Int("shardIdx", shardIdx).Msg("subscribe error: " + err.Error())
+					r.logger.Error().Str("op", "Kinesis.receiveWorkerEFO").Str("stream", *r.stream.StreamDescription.StreamName).Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Int("shardIdx", shardIdx).Msg("subscribe error: " + err.Error())
 					continue
 				}
 				for evt := range sub.EventStream.Events() {
 					select {
 					case <-r.stopChannelMap[shardIdx]:
-						r.logger.Info().Str("op", "Kinesis.receiveWorkerEFO").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Int("shardIdx", shardIdx).Msg("receive loop stopped")
+						r.logger.Info().Str("op", "Kinesis.receiveWorkerEFO").Str("stream", *r.stream.StreamDescription.StreamName).Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Int("shardIdx", shardIdx).Msg("receive loop stopped")
 						sub.EventStream.Close()
 						close(r.stopChannelMap[shardIdx])
 						delete(r.stopChannelMap, shardIdx)
@@ -205,7 +238,7 @@ func (r *Receiver) startShardReceiverEFO(svc *kinesis.Kinesis, stream *kinesis.D
 									var payload interface{}
 									err = json.Unmarshal(rec.Data, &payload)
 									if err != nil {
-										r.logger.Error().Str("op", "Kinesis.receiveWorkerEFO").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Int("shardIdx", shardIdx).Msg("cannot parse message " + (*rec.SequenceNumber) + ": " + err.Error())
+										r.logger.Error().Str("op", "Kinesis.receiveWorkerEFO").Str("stream", *r.stream.StreamDescription.StreamName).Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Int("shardIdx", shardIdx).Msg("cannot parse message " + (*rec.SequenceNumber) + ": " + err.Error())
 										continue
 									}
 									ctx, cancel := context.WithTimeout(context.Background(), time.Duration(*r.config.AcknowledgeTimeout)*time.Second)
@@ -223,7 +256,7 @@ func (r *Receiver) startShardReceiverEFO(svc *kinesis.Kinesis, stream *kinesis.D
 										event.WithOtelTracing(r.Name()),
 										event.WithTracePayloadOnNack(*r.config.TracePayloadOnNack))
 									if err != nil {
-										r.logger.Error().Str("op", "Kinesis.receiveWorkerEFO").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Int("shardIdx", shardIdx).Msg("cannot create event: " + err.Error())
+										r.logger.Error().Str("op", "Kinesis.receiveWorkerEFO").Str("stream", *r.stream.StreamDescription.StreamName).Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Int("shardIdx", shardIdx).Msg("cannot create event: " + err.Error())
 										return
 									}
 									r.Trigger(e)
@@ -258,7 +291,7 @@ func (r *Receiver) startShardReceiver(svc *kinesis.Kinesis, stream *kinesis.Desc
 				StreamName: aws.String(r.config.StreamName),
 			})
 			if err != nil {
-				r.logger.Error().Str("op", "Kinesis.receiveWorker").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Int("shardIdx", shardIdx).Msg(err.Error())
+				r.logger.Error().Str("op", "Kinesis.receiveWorker").Str("stream", *r.stream.StreamDescription.StreamName).Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Int("shardIdx", shardIdx).Msg(err.Error())
 				time.Sleep(1 * time.Second)
 				continue
 			}
@@ -266,7 +299,7 @@ func (r *Receiver) startShardReceiver(svc *kinesis.Kinesis, stream *kinesis.Desc
 			for {
 				select {
 				case <-r.stopChannelMap[shardIdx]:
-					r.logger.Info().Str("op", "Kinesis.receiveWorker").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Int("shardIdx", shardIdx).Msg("receive loop stopped")
+					r.logger.Info().Str("op", "Kinesis.receiveWorker").Str("stream", *r.stream.StreamDescription.StreamName).Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Int("shardIdx", shardIdx).Msg("receive loop stopped")
 					close(r.stopChannelMap[shardIdx])
 					delete(r.stopChannelMap, shardIdx)
 					return
@@ -276,14 +309,14 @@ func (r *Receiver) startShardReceiver(svc *kinesis.Kinesis, stream *kinesis.Desc
 					ShardIterator: shardIterator,
 				})
 				if err != nil {
-					r.logger.Error().Str("op", "Kinesis.receiveWorker").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Int("shardIdx", shardIdx).Msg(err.Error())
+					r.logger.Error().Str("op", "Kinesis.receiveWorker").Str("stream", *r.stream.StreamDescription.StreamName).Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Int("shardIdx", shardIdx).Msg(err.Error())
 					time.Sleep(1 * time.Second)
 					continue
 				}
 				records := getRecordsOutput.Records
 				if len(records) > 0 {
 					r.Lock()
-					r.logger.Debug().Str("op", "Kinesis.receiveWorker").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Int("receiveCount", r.receiveCount).Int("batchSize", len(records)).Int("shardIdx", shardIdx).Msg("received message batch")
+					r.logger.Debug().Str("op", "Kinesis.receiveWorker").Str("stream", *r.stream.StreamDescription.StreamName).Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Int("receiveCount", r.receiveCount).Int("batchSize", len(records)).Int("shardIdx", shardIdx).Msg("received message batch")
 					r.Unlock()
 				}
 				for _, msg := range records {
@@ -296,7 +329,7 @@ func (r *Receiver) startShardReceiver(svc *kinesis.Kinesis, stream *kinesis.Desc
 						var payload interface{}
 						err = json.Unmarshal(msg.Data, &payload)
 						if err != nil {
-							r.logger.Error().Str("op", "Kinesis.receiveWorker").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Int("shardIdx", shardIdx).Msg("cannot parse message " + (*msg.SequenceNumber) + ": " + err.Error())
+							r.logger.Error().Str("op", "Kinesis.receiveWorker").Str("stream", *r.stream.StreamDescription.StreamName).Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Int("shardIdx", shardIdx).Msg("cannot parse message " + (*msg.SequenceNumber) + ": " + err.Error())
 							continue
 						}
 						ctx, cancel := context.WithTimeout(context.Background(), time.Duration(*r.config.AcknowledgeTimeout)*time.Second)
@@ -314,7 +347,7 @@ func (r *Receiver) startShardReceiver(svc *kinesis.Kinesis, stream *kinesis.Desc
 							event.WithOtelTracing(r.Name()),
 							event.WithTracePayloadOnNack(*r.config.TracePayloadOnNack))
 						if err != nil {
-							r.logger.Error().Str("op", "Kinesis.receiveWorker").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Int("shardIdx", shardIdx).Msg("cannot create event: " + err.Error())
+							r.logger.Error().Str("op", "Kinesis.receiveWorker").Str("stream", *r.stream.StreamDescription.StreamName).Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Int("shardIdx", shardIdx).Msg("cannot create event: " + err.Error())
 							return
 						}
 						r.Trigger(e)
@@ -329,13 +362,13 @@ func (r *Receiver) startShardReceiver(svc *kinesis.Kinesis, stream *kinesis.Desc
 	}()
 }
 
-func (r *Receiver) UpdateListener(distributor *sharder.SimpleHashDistributor) {
+func (r *Receiver) updateListener(distributor *sharder.SimpleHashDistributor) {
 	for config := range distributor.Updates() {
-		r.UpdateShards(config)
+		r.updateShards(config)
 	}
 }
 
-func (r *Receiver) UpdateShards(newShards sharder.ShardConfig) {
+func (r *Receiver) updateShards(newShards sharder.ShardConfig) {
 	// shut down old shards not needed any more
 	for _, oldShardStr := range r.shardConfig.OwnedShards {
 		shutDown := true
@@ -349,7 +382,7 @@ func (r *Receiver) UpdateShards(newShards sharder.ShardConfig) {
 			if err != nil {
 				continue
 			}
-			r.logger.Info().Str("op", "Kinesis.UpdateShards").Str("identity", newShards.Identity).Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Int("shardIdx", shardIdx).Msg("stopping shard consumer")
+			r.logger.Info().Str("op", "Kinesis.UpdateShards").Str("stream", *r.stream.StreamDescription.StreamName).Str("identity", newShards.Identity).Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Int("shardIdx", shardIdx).Msg("stopping shard consumer")
 			r.stopShardReceiver(shardIdx)
 		}
 	}
@@ -364,14 +397,14 @@ func (r *Receiver) UpdateShards(newShards sharder.ShardConfig) {
 		if startUp {
 			shardIdx, err := strconv.Atoi(newShardStr)
 			if err != nil {
-				r.logger.Error().Str("op", "Kinesis.UpdateShards").Str("identity", newShards.Identity).Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Int("shardIdx", shardIdx).Msg(err.Error())
+				r.logger.Error().Str("op", "Kinesis.UpdateShards").Str("stream", *r.stream.StreamDescription.StreamName).Str("identity", newShards.Identity).Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Int("shardIdx", shardIdx).Msg(err.Error())
 				continue
 			}
 			if *r.config.EnhancedFanOut {
-				r.logger.Info().Str("op", "Kinesis.UpdateShards").Str("identity", newShards.Identity).Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Int("shardIdx", shardIdx).Msg("launching efo shard consumer")
+				r.logger.Info().Str("op", "Kinesis.UpdateShards").Str("stream", *r.stream.StreamDescription.StreamName).Str("identity", newShards.Identity).Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Int("shardIdx", shardIdx).Msg("launching efo shard consumer")
 				r.startShardReceiverEFO(r.svc, r.stream, r.consumer, shardIdx)
 			} else {
-				r.logger.Info().Str("op", "Kinesis.UpdateShards").Str("identity", newShards.Identity).Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Int("shardIdx", shardIdx).Msg("launching shard consumer")
+				r.logger.Info().Str("op", "Kinesis.UpdateShards").Str("stream", *r.stream.StreamDescription.StreamName).Str("identity", newShards.Identity).Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Int("shardIdx", shardIdx).Msg("launching shard consumer")
 				r.startShardReceiver(r.svc, r.stream, shardIdx)
 			}
 		}
@@ -428,8 +461,9 @@ func (r *Receiver) Receive(next receiver.NextFn) error {
 	if err != nil {
 		return err
 	}
-	go r.UpdateListener(shardDistributor)
-	r.logger.Info().Str("op", "Kinesis.Receive").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Msg("waiting for receive done")
+	go r.updateListener(shardDistributor)
+	go r.shardMonitor(r.svc, shardDistributor)
+	r.logger.Info().Str("op", "Kinesis.Receive").Str("stream", *r.stream.StreamDescription.StreamName).Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Msg("waiting for receive done")
 	<-r.done
 	r.Lock()
 	elapsedMs := time.Since(r.startTime).Milliseconds()
@@ -438,7 +472,7 @@ func (r *Receiver) Receive(next receiver.NextFn) error {
 	receiveCnt := r.receiveCount
 	deleteCnt := r.deleteCount
 	r.Unlock()
-	r.logger.Info().Str("op", "Kinesis.Receive").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Int("elapsedMs", int(elapsedMs)).Int("deleteCount", deleteCnt).Int("receiveCount", receiveCnt).Int("receiveThroughput", receiveThroughput).Int("deleteThroughput", deleteThroughput).Msg("receive done")
+	r.logger.Info().Str("op", "Kinesis.Receive").Str("stream", *r.stream.StreamDescription.StreamName).Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Int("elapsedMs", int(elapsedMs)).Int("deleteCount", deleteCnt).Int("receiveCount", receiveCnt).Int("receiveThroughput", receiveThroughput).Int("deleteThroughput", deleteThroughput).Msg("receive done")
 	return nil
 }
 

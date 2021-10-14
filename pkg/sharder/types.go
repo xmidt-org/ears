@@ -45,6 +45,8 @@ type ShardDistributor interface {
 	Nodes() []string
 	// Identity returns the identity of this node
 	Identity() string
+	// UpdateNumberShards sets a new number of shards, rehashes shards and publishes updates
+	UpdateNumberShards(numShards int)
 }
 
 // ControllerConfig contains cluster and node based configuration data
