@@ -28,69 +28,69 @@ type dynamoDBNodesManager struct {
 	region string
 	// table name of the healthTable
 	tableName string
-	// frequency to read/write the state from/to dynamoDB
-	frequency int
-	// node state's last updated time is older than this (in seconds), treat as bad node
+	// updateFrequency to read/write the state from/to dynamoDB
+	updateFrequency int
+	// node state's last updated time is olderThan than this (in seconds), treat as bad node
 	// also if can't get/update node state for this time than it will exit the service
-	older int
+	olderThan int
 	// ip address of this node
 	identity string
 }
 
-func newDynamoDBNodesManager(tableName, region, ip string, frq, older int, tag string) (*dynamoDBNodesManager, error) {
-	d := &dynamoDBNodesManager{}
-	d.region = region
-	d.tableName = tableName
+func newDynamoDBNodesManager(tableName, region, identity string, updateFrequency, olderThan int, tag string) (*dynamoDBNodesManager, error) {
+	nodeManager := &dynamoDBNodesManager{}
+	nodeManager.region = region
+	nodeManager.tableName = tableName
 	if tag != "" {
-		d.tag = tag
+		nodeManager.tag = tag
 	} else {
-		d.tag = "node"
+		nodeManager.tag = "node"
 	}
-	d.identity = ip
-	if frq > 0 {
-		d.frequency = frq
-	} else if frq == 0 {
-		d.frequency = update_frequency
+	nodeManager.identity = identity
+	if updateFrequency > 0 {
+		nodeManager.updateFrequency = updateFrequency
+	} else if updateFrequency == 0 {
+		nodeManager.updateFrequency = update_frequency
 	} else {
-		err := fmt.Errorf("update frequency value is invalid: %d", frq)
+		err := fmt.Errorf("update updateFrequency value is invalid: %nodeManager", updateFrequency)
 		return nil, err
 	}
-	if older > 0 {
-		d.older = older
-	} else if older == 0 {
-		d.older = older_than
+	if olderThan > 0 {
+		nodeManager.olderThan = olderThan
+	} else if olderThan == 0 {
+		nodeManager.olderThan = older_than
 	} else {
-		err := fmt.Errorf("old value is invalid: %d", older)
+		err := fmt.Errorf("old value is invalid: %nodeManager", olderThan)
 		return nil, err
 	}
 	// validate regions we can handle
-	switch d.region {
+	switch nodeManager.region {
 	case "local":
-		s, err := session.NewSession(&aws.Config{
+		session, err := session.NewSession(&aws.Config{
 			Endpoint: aws.String("http://127.0.0.1:8000")},
 		)
 		if nil != err {
 			return nil, err
 		}
-		d.server = dynamodb.New(s)
+		nodeManager.server = dynamodb.New(session)
 	case "":
 		return nil, errors.New("region must be specified")
 	default:
-		s, err := session.NewSession(&aws.Config{
+		session, err := session.NewSession(&aws.Config{
 			Region: aws.String(region)},
 		)
 		if nil != err {
 			return nil, err
 		}
-		d.server = dynamodb.New(s)
+		nodeManager.server = dynamodb.New(session)
 	}
 	// at this point we have a server
-	err := d.ensureTable()
+	err := nodeManager.ensureTable()
 	if err != nil {
 		return nil, err
 	}
-	go d.updateMyState()
-	return d, nil
+	go nodeManager.updateMyState()
+	return nodeManager, nil
 }
 
 func (d *dynamoDBNodesManager) GetActiveNodes() ([]string, error) {
@@ -129,7 +129,7 @@ func (d *dynamoDBNodesManager) GetActiveNodes() ([]string, error) {
 		if err != nil {
 			return nil, err
 		}
-		if int(time.Since(updateTime).Seconds()) > d.older {
+		if int(time.Since(updateTime).Seconds()) > d.olderThan {
 			d.deleteRecord(aws.StringValue(ipAttr.S))
 		}
 		activeNodes = append(activeNodes, aws.StringValue(ipAttr.S))
