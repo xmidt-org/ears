@@ -32,7 +32,7 @@ func NewDynamoSimpleHashDistributor(identity string, numShards int, configData m
 		updateChan: make(ShardUpdater),
 		ShardConfig: ShardConfig{
 			NumShards: numShards,
-			IP:        identity,
+			Identity:  identity,
 		},
 	}
 	tableName, found := configData["table"]
@@ -66,7 +66,7 @@ func (c *SimpleHashDistributor) Updates() ShardUpdater {
 	return c.updateChan
 }
 
-// Identity returns the note IP that SimpleHashDistributor locate
+// Identity returns the note Identity that SimpleHashDistributor locate
 func (c *SimpleHashDistributor) Identity() string {
 	return c.identity
 }

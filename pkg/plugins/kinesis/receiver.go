@@ -349,7 +349,7 @@ func (r *Receiver) UpdateShards(newShards sharder.ShardConfig) {
 			if err != nil {
 				continue
 			}
-			r.logger.Info().Str("op", "Kinesis.UpdateShards").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Int("shardIdx", shardIdx).Msg("stopping shard consumer")
+			r.logger.Info().Str("op", "Kinesis.UpdateShards").Str("identity", newShards.Identity).Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Int("shardIdx", shardIdx).Msg("stopping shard consumer")
 			r.stopShardReceiver(shardIdx)
 		}
 	}
@@ -364,14 +364,14 @@ func (r *Receiver) UpdateShards(newShards sharder.ShardConfig) {
 		if startUp {
 			shardIdx, err := strconv.Atoi(newShardStr)
 			if err != nil {
-				r.logger.Error().Str("op", "Kinesis.UpdateShards").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Int("shardIdx", shardIdx).Msg(err.Error())
+				r.logger.Error().Str("op", "Kinesis.UpdateShards").Str("identity", newShards.Identity).Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Int("shardIdx", shardIdx).Msg(err.Error())
 				continue
 			}
 			if *r.config.EnhancedFanOut {
-				r.logger.Info().Str("op", "Kinesis.UpdateShards").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Int("shardIdx", shardIdx).Msg("launching efo shard consumer")
+				r.logger.Info().Str("op", "Kinesis.UpdateShards").Str("identity", newShards.Identity).Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Int("shardIdx", shardIdx).Msg("launching efo shard consumer")
 				r.startShardReceiverEFO(r.svc, r.stream, r.consumer, shardIdx)
 			} else {
-				r.logger.Info().Str("op", "Kinesis.UpdateShards").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Int("shardIdx", shardIdx).Msg("launching shard consumer")
+				r.logger.Info().Str("op", "Kinesis.UpdateShards").Str("identity", newShards.Identity).Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Int("shardIdx", shardIdx).Msg("launching shard consumer")
 				r.startShardReceiver(r.svc, r.stream, shardIdx)
 			}
 		}
