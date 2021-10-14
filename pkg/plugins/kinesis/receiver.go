@@ -26,6 +26,7 @@ import (
 	"github.com/goccy/go-yaml"
 	"github.com/xmidt-org/ears/internal/pkg/rtsemconv"
 	"github.com/xmidt-org/ears/pkg/event"
+	"github.com/xmidt-org/ears/pkg/panics"
 	pkgplugin "github.com/xmidt-org/ears/pkg/plugin"
 	"github.com/xmidt-org/ears/pkg/receiver"
 	"github.com/xmidt-org/ears/pkg/secret"
@@ -129,36 +130,46 @@ func (r *Receiver) stopShardReceiver(shardIdx int) {
 }
 
 func (r *Receiver) shardMonitor(svc *kinesis.Kinesis, distributor *sharder.SimpleHashDistributor) {
-	for {
-		time.Sleep(60 * time.Second)
-		r.Lock()
-		stopped := r.stopped
-		r.Unlock()
-		if stopped {
-			r.logger.Error().Str("op", "Kinesis.shardMonitor").Str("stream", *r.stream.StreamDescription.StreamName).Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Msg("stopping shard monitor")
-			return
+	go func() {
+		defer func() {
+			p := recover()
+			if p != nil {
+				panicErr := panics.ToError(p)
+				r.logger.Error().Str("op", "kinesis.shardMonitor").Str("error", panicErr.Error()).
+					Str("stackTrace", panicErr.StackTrace()).Msg("a panic has occurred in shard monitor")
+			}
+		}()
+		for {
+			time.Sleep(10 * time.Second)
+			r.Lock()
+			stopped := r.stopped
+			r.Unlock()
+			if stopped {
+				r.logger.Error().Str("op", "Kinesis.shardMonitor").Str("stream", *r.stream.StreamDescription.StreamName).Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Msg("stopping shard monitor")
+				return
+			}
+			stream, err := svc.DescribeStream(&kinesis.DescribeStreamInput{
+				StreamName: &r.config.StreamName,
+			})
+			if err != nil {
+				r.logger.Error().Str("op", "Kinesis.shardMonitor").Str("stream", *r.stream.StreamDescription.StreamName).Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Msg("cannot get number of shards: " + err.Error())
+				continue
+			}
+			if len(stream.StreamDescription.Shards) == 0 {
+				continue
+			}
+			update := false
+			if len(stream.StreamDescription.Shards) != len(r.stream.StreamDescription.Shards) {
+				update = true
+			}
+			if update {
+				r.logger.Info().Str("op", "Kinesis.shardMonitor").Str("stream", *r.stream.StreamDescription.StreamName).Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Int("numShards", len(stream.StreamDescription.Shards)).Msg("update number of shards")
+				r.stream = stream
+				// this will trigger updates on the
+				distributor.UpdateNumberShards(len(stream.StreamDescription.Shards))
+			}
 		}
-		stream, err := svc.DescribeStream(&kinesis.DescribeStreamInput{
-			StreamName: &r.config.StreamName,
-		})
-		if err != nil {
-			r.logger.Error().Str("op", "Kinesis.shardMonitor").Str("stream", *r.stream.StreamDescription.StreamName).Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Msg("cannot get number of shards: " + err.Error())
-			continue
-		}
-		if len(stream.StreamDescription.Shards) == 0 {
-			continue
-		}
-		update := false
-		if len(stream.StreamDescription.Shards) != len(r.stream.StreamDescription.Shards) {
-			update = true
-		}
-		if update {
-			r.logger.Info().Str("op", "Kinesis.shardMonitor").Str("stream", *r.stream.StreamDescription.StreamName).Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Int("numShards", len(stream.StreamDescription.Shards)).Msg("update number of shards")
-			r.stream = stream
-			// this will trigger updates on the
-			distributor.UpdateNumberShards(len(stream.StreamDescription.Shards))
-		}
-	}
+	}()
 }
 
 func (r *Receiver) registerStreamConsumer(svc *kinesis.Kinesis, streamName, consumerName string) (*kinesis.DescribeStreamConsumerOutput, error) {
@@ -200,6 +211,14 @@ func (r *Receiver) registerStreamConsumer(svc *kinesis.Kinesis, streamName, cons
 func (r *Receiver) startShardReceiverEFO(svc *kinesis.Kinesis, stream *kinesis.DescribeStreamOutput, consumer *kinesis.DescribeStreamConsumerOutput, shardIdx int) {
 	// this is an enhanced consumer that will only consume from a dedicated shard
 	go func() {
+		defer func() {
+			p := recover()
+			if p != nil {
+				panicErr := panics.ToError(p)
+				r.logger.Error().Str("op", "kinesis.startShardReceiverEFO").Str("error", panicErr.Error()).
+					Str("stackTrace", panicErr.StackTrace()).Msg("a panic has occurred in efo shard receiver")
+			}
+		}()
 		r.Lock()
 		r.stopChannelMap[shardIdx] = make(chan bool)
 		r.Unlock()
@@ -293,6 +312,14 @@ func (r *Receiver) startShardReceiver(svc *kinesis.Kinesis, stream *kinesis.Desc
 	// this is a non-enhanced consumer that will only consume from one shard
 	// n is number of worker in pool
 	go func() {
+		defer func() {
+			p := recover()
+			if p != nil {
+				panicErr := panics.ToError(p)
+				r.logger.Error().Str("op", "kinesis.startShardReceiver").Str("error", panicErr.Error()).
+					Str("stackTrace", panicErr.StackTrace()).Msg("a panic has occurred in shard receiver")
+			}
+		}()
 		r.Lock()
 		r.stopChannelMap[shardIdx] = make(chan bool)
 		r.Unlock()
@@ -385,10 +412,20 @@ func (r *Receiver) startShardReceiver(svc *kinesis.Kinesis, stream *kinesis.Desc
 	}()
 }
 
-func (r *Receiver) updateListener(distributor *sharder.SimpleHashDistributor) {
-	for config := range distributor.Updates() {
-		r.updateShards(config)
-	}
+func (r *Receiver) shardUpdateListener(distributor *sharder.SimpleHashDistributor) {
+	go func() {
+		defer func() {
+			p := recover()
+			if p != nil {
+				panicErr := panics.ToError(p)
+				r.logger.Error().Str("op", "kinesis.shardUpdateListener").Str("error", panicErr.Error()).
+					Str("stackTrace", panicErr.StackTrace()).Msg("a panic has occurred in shard update listener")
+			}
+		}()
+		for config := range distributor.Updates() {
+			r.updateShards(config)
+		}
+	}()
 }
 
 func (r *Receiver) updateShards(newShards sharder.ShardConfig) {
@@ -467,9 +504,10 @@ func (r *Receiver) Receive(next receiver.NextFn) error {
 	if err != nil {
 		return err
 	}
-	//TODO: need to reshuffle when shards get added or removed
+	//TODO: singleton for updateMyNode() and getNodes()
+	//TODO: make distributor node table persistence pluggable
 	//TODO: what about kinesis checkpoints and ack/nack
-	//TODO: handle panics in go routines
+	//TODO: consider redis implementation of node table persistence
 	//TODO: batch events in sender
 	//TODO: deregister stream
 	if *r.config.EnhancedFanOut {
@@ -483,8 +521,8 @@ func (r *Receiver) Receive(next receiver.NextFn) error {
 	if err != nil {
 		return err
 	}
-	go r.updateListener(shardDistributor)
-	go r.shardMonitor(r.svc, shardDistributor)
+	r.shardUpdateListener(shardDistributor)
+	r.shardMonitor(r.svc, shardDistributor)
 	r.logger.Info().Str("op", "Kinesis.Receive").Str("stream", *r.stream.StreamDescription.StreamName).Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Msg("waiting for receive done")
 	<-r.done
 	r.Lock()
