@@ -52,7 +52,7 @@ func newDynamoDBNodesManager(tableName, region, identity string, updateFrequency
 	} else if updateFrequency == 0 {
 		nodeManager.updateFrequency = update_frequency
 	} else {
-		err := fmt.Errorf("update updateFrequency value is invalid: %nodeManager", updateFrequency)
+		err := fmt.Errorf("update updateFrequency value is invalid: %d", updateFrequency)
 		return nil, err
 	}
 	if olderThan > 0 {
@@ -60,7 +60,7 @@ func newDynamoDBNodesManager(tableName, region, identity string, updateFrequency
 	} else if olderThan == 0 {
 		nodeManager.olderThan = older_than
 	} else {
-		err := fmt.Errorf("old value is invalid: %nodeManager", olderThan)
+		err := fmt.Errorf("old value is invalid: %d", olderThan)
 		return nil, err
 	}
 	// validate regions we can handle
