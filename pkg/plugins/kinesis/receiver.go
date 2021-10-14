@@ -64,14 +64,16 @@ func NewReceiver(tid tenant.Id, plugin string, name string, config interface{}, 
 		return nil, err
 	}
 	r := &Receiver{
-		config:         cfg,
-		name:           name,
-		plugin:         plugin,
-		tid:            tid,
-		logger:         event.GetEventLogger(),
-		stopped:        true,
-		stopChannelMap: make(map[int]chan bool),
+		config:  cfg,
+		name:    name,
+		plugin:  plugin,
+		tid:     tid,
+		logger:  event.GetEventLogger(),
+		stopped: true,
 	}
+	r.Lock()
+	r.stopChannelMap = make(map[int]chan bool)
+	r.Unlock()
 	hostname, _ := os.Hostname()
 	// metric recorders
 	meter := global.Meter(rtsemconv.EARSMeterName)
@@ -102,14 +104,25 @@ func NewReceiver(tid tenant.Id, plugin string, name string, config interface{}, 
 	return r, nil
 }
 
+func (r *Receiver) getStopChannel(shardIdx int) chan bool {
+	var c chan bool
+	r.Lock()
+	c = r.stopChannelMap[shardIdx]
+	r.Unlock()
+	return c
+}
+
 func (r *Receiver) stopShardReceiver(shardIdx int) {
 	if shardIdx < 0 {
-		for _, stopChan := range r.stopChannelMap {
+		r.Lock()
+		m := r.stopChannelMap
+		r.Unlock()
+		for _, stopChan := range m {
 			stopChan <- true
 		}
 	} else {
-		stopChan, ok := r.stopChannelMap[shardIdx]
-		if ok {
+		stopChan := r.getStopChannel(shardIdx)
+		if stopChan != nil {
 			stopChan <- true
 		}
 	}
@@ -140,7 +153,7 @@ func (r *Receiver) shardMonitor(svc *kinesis.Kinesis, distributor *sharder.Simpl
 			update = true
 		}
 		if update {
-			r.logger.Error().Str("op", "Kinesis.shardMonitor").Str("stream", *r.stream.StreamDescription.StreamName).Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Int("numShards", len(stream.StreamDescription.Shards)).Msg("update number of shards")
+			r.logger.Info().Str("op", "Kinesis.shardMonitor").Str("stream", *r.stream.StreamDescription.StreamName).Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Int("numShards", len(stream.StreamDescription.Shards)).Msg("update number of shards")
 			r.stream = stream
 			// this will trigger updates on the
 			distributor.UpdateNumberShards(len(stream.StreamDescription.Shards))
@@ -187,7 +200,9 @@ func (r *Receiver) registerStreamConsumer(svc *kinesis.Kinesis, streamName, cons
 func (r *Receiver) startShardReceiverEFO(svc *kinesis.Kinesis, stream *kinesis.DescribeStreamOutput, consumer *kinesis.DescribeStreamConsumerOutput, shardIdx int) {
 	// this is an enhanced consumer that will only consume from a dedicated shard
 	go func() {
+		r.Lock()
 		r.stopChannelMap[shardIdx] = make(chan bool)
+		r.Unlock()
 		for {
 			shard := stream.StreamDescription.Shards[shardIdx]
 			params := &kinesis.SubscribeToShardInput{
@@ -201,10 +216,12 @@ func (r *Receiver) startShardReceiverEFO(svc *kinesis.Kinesis, stream *kinesis.D
 			//params.StartingPosition.SetSequenceNumber(*startSequenceNumber)
 			for {
 				select {
-				case <-r.stopChannelMap[shardIdx]:
+				case <-r.getStopChannel(shardIdx):
 					r.logger.Info().Str("op", "Kinesis.receiveWorkerEFO").Str("stream", *r.stream.StreamDescription.StreamName).Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Int("shardIdx", shardIdx).Msg("receive loop stopped")
+					r.Lock()
 					close(r.stopChannelMap[shardIdx])
 					delete(r.stopChannelMap, shardIdx)
+					r.Unlock()
 					return
 				default:
 				}
@@ -215,11 +232,13 @@ func (r *Receiver) startShardReceiverEFO(svc *kinesis.Kinesis, stream *kinesis.D
 				}
 				for evt := range sub.EventStream.Events() {
 					select {
-					case <-r.stopChannelMap[shardIdx]:
+					case <-r.getStopChannel(shardIdx):
 						r.logger.Info().Str("op", "Kinesis.receiveWorkerEFO").Str("stream", *r.stream.StreamDescription.StreamName).Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Int("shardIdx", shardIdx).Msg("receive loop stopped")
 						sub.EventStream.Close()
+						r.Lock()
 						close(r.stopChannelMap[shardIdx])
 						delete(r.stopChannelMap, shardIdx)
+						r.Unlock()
 						return
 					default:
 					}
@@ -274,7 +293,9 @@ func (r *Receiver) startShardReceiver(svc *kinesis.Kinesis, stream *kinesis.Desc
 	// this is a non-enhanced consumer that will only consume from one shard
 	// n is number of worker in pool
 	go func() {
+		r.Lock()
 		r.stopChannelMap[shardIdx] = make(chan bool)
+		r.Unlock()
 		// receive messages
 		for {
 			// this is a normal receiver
@@ -298,10 +319,12 @@ func (r *Receiver) startShardReceiver(svc *kinesis.Kinesis, stream *kinesis.Desc
 			shardIterator := iteratorOutput.ShardIterator
 			for {
 				select {
-				case <-r.stopChannelMap[shardIdx]:
+				case <-r.getStopChannel(shardIdx):
 					r.logger.Info().Str("op", "Kinesis.receiveWorker").Str("stream", *r.stream.StreamDescription.StreamName).Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Int("shardIdx", shardIdx).Msg("receive loop stopped")
+					r.Lock()
 					close(r.stopChannelMap[shardIdx])
 					delete(r.stopChannelMap, shardIdx)
+					r.Unlock()
 					return
 				default:
 				}
@@ -445,10 +468,9 @@ func (r *Receiver) Receive(next receiver.NextFn) error {
 		return err
 	}
 	//TODO: need to reshuffle when shards get added or removed
-	//TODO: what about kinesis checkpoints
-	//TODO: handle panics
+	//TODO: what about kinesis checkpoints and ack/nack
+	//TODO: handle panics in go routines
 	//TODO: batch events in sender
-	//TODO: locks
 	//TODO: deregister stream
 	if *r.config.EnhancedFanOut {
 		r.consumer, err = r.registerStreamConsumer(r.svc, r.config.StreamName, r.config.ConsumerName)
@@ -484,15 +506,18 @@ func (r *Receiver) Count() int {
 
 func (r *Receiver) StopReceiving(ctx context.Context) error {
 	r.Lock()
-	if !r.stopped {
-		r.stopped = true
+	stopped := r.stopped
+	r.stopped = true
+	r.Unlock()
+	if !stopped {
 		r.stopShardReceiver(-1)
 		r.eventSuccessCounter.Unbind()
 		r.eventFailureCounter.Unbind()
 		r.eventBytesCounter.Unbind()
+		r.Lock()
 		close(r.done)
+		r.Unlock()
 	}
-	r.Unlock()
 	return nil
 }
 
