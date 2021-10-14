@@ -26,7 +26,7 @@ func init() {
 }
 
 func NewDynamoSimpleHashDistributor(identity string, numShards int, configData map[string]string) (*SimpleHashDistributor, error) {
-	d := &SimpleHashDistributor{
+	hashDistributor := &SimpleHashDistributor{
 		enabled:    true,
 		identity:   identity,
 		updateChan: make(ShardUpdater),
@@ -48,13 +48,13 @@ func NewDynamoSimpleHashDistributor(identity string, numShards int, configData m
 	}
 	region := configData["region"]
 	tag := configData["tag"]
-	m, err := newDynamoDBNodesManager(tableName, region, identity, updateFrequency, olderThan, tag)
+	nodeManager, err := newDynamoDBNodesManager(tableName, region, identity, updateFrequency, olderThan, tag)
 	if err != nil {
 		return nil, err
 	}
-	d.nodeManager = m
-	d.nodeMonitor()
-	return d, nil
+	hashDistributor.nodeManager = nodeManager
+	hashDistributor.nodeMonitor()
+	return hashDistributor, nil
 }
 
 // Stop releases any resources
