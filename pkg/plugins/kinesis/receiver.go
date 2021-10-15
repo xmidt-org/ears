@@ -20,7 +20,8 @@ import (
 	"fmt"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
-	"github.com/aws/aws-sdk-go/aws/endpoints"
+	"github.com/aws/aws-sdk-go/aws/credentials"
+	"github.com/aws/aws-sdk-go/aws/credentials/stscreds"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/kinesis"
 	"github.com/goccy/go-yaml"
@@ -71,6 +72,7 @@ func NewReceiver(tid tenant.Id, plugin string, name string, config interface{}, 
 		tid:     tid,
 		logger:  event.GetEventLogger(),
 		stopped: true,
+		secrets: secrets,
 	}
 	r.Lock()
 	r.stopChannelMap = make(map[int]chan bool)
@@ -489,9 +491,19 @@ func (r *Receiver) Receive(next receiver.NextFn) error {
 	r.done = make(chan struct{})
 	r.next = next
 	r.Unlock()
-	sess, err := session.NewSession(&aws.Config{
-		Region: aws.String(endpoints.UsWest2RegionID),
-	})
+	sess, err := session.NewSession()
+	if err != nil {
+		return err
+	}
+	var creds *credentials.Credentials
+	if r.config.AWSRoleARN != "" {
+		creds = stscreds.NewCredentials(sess, r.config.AWSRoleARN)
+	} else if r.config.AWSAccessKeyId != "" && r.config.AWSSecretAccessKey != "" {
+		creds = credentials.NewStaticCredentials(r.secrets.Secret(r.config.AWSAccessKeyId), r.secrets.Secret(r.config.AWSSecretAccessKey), "")
+	} else {
+		creds = sess.Config.Credentials
+	}
+	sess, err = session.NewSession(&aws.Config{Region: aws.String(r.config.AWSRegion), Credentials: creds})
 	if nil != err {
 		return err
 	}

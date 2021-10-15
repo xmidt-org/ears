@@ -36,6 +36,9 @@ func (rc *ReceiverConfig) WithDefaults() ReceiverConfig {
 	if cfg.EnhancedFanOut == nil {
 		cfg.EnhancedFanOut = DefaultReceiverConfig.EnhancedFanOut
 	}
+	if cfg.AWSRegion == "" {
+		cfg.AWSRegion = DefaultReceiverConfig.AWSRegion
+	}
 	return cfg
 }
 
@@ -71,6 +74,18 @@ const receiverSchema = `
                 "consumerName": {
                     "type": "string"
                 },
+				"awsRoleARN": {
+                    "type": "string"
+				},
+				"awsAccessKeyId": {
+                    "type": "string"
+				},
+				"awsSecretAccessKey": {
+                    "type": "string"
+				},
+				"awsRegion": {
+                    "type": "string"
+				},
                 "shardIteratorType": {
                     "type": "string"
                 },
