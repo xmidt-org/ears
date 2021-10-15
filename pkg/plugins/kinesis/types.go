@@ -15,9 +15,11 @@
 package kinesis
 
 import (
+	"github.com/aws/aws-sdk-go/aws/endpoints"
 	"github.com/aws/aws-sdk-go/service/kinesis"
 	"github.com/rs/zerolog"
 	"github.com/xmidt-org/ears/pkg/event"
+	"github.com/xmidt-org/ears/pkg/secret"
 	"github.com/xmidt-org/ears/pkg/sharder"
 	"github.com/xmidt-org/ears/pkg/tenant"
 	"github.com/xorcare/pointer"
@@ -61,6 +63,10 @@ var DefaultReceiverConfig = ReceiverConfig{
 	TracePayloadOnNack: pointer.Bool(false),
 	EnhancedFanOut:     pointer.Bool(false),
 	ConsumerName:       "",
+	AWSRoleARN:         "",
+	AWSSecretAccessKey: "",
+	AWSAccessKeyId:     "",
+	AWSRegion:          endpoints.UsWest2RegionID,
 }
 
 type ReceiverConfig struct {
@@ -70,6 +76,10 @@ type ReceiverConfig struct {
 	TracePayloadOnNack *bool  `json:"tracePayloadOnNack,omitempty"`
 	EnhancedFanOut     *bool  `json:"enhancedFanOut,omitempty"`
 	ConsumerName       string `json:"consumerName,omitempty"` // enhanced fan-out only
+	AWSRoleARN         string `json:"awsRoleARN,omitempty"`
+	AWSAccessKeyId     string `json:"awsAccessKeyId,omitempty"`
+	AWSSecretAccessKey string `json:"awsSecretAccessKey,omitempty"`
+	AWSRegion          string `json:"awsRegion,omitempty"`
 }
 
 type Receiver struct {
@@ -90,6 +100,7 @@ type Receiver struct {
 	consumer            *kinesis.DescribeStreamConsumerOutput
 	stream              *kinesis.DescribeStreamOutput
 	startTime           time.Time
+	secrets             secret.Vault
 	eventSuccessCounter metric.BoundInt64Counter
 	eventFailureCounter metric.BoundInt64Counter
 	eventBytesCounter   metric.BoundInt64Counter
