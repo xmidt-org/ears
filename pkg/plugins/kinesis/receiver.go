@@ -504,13 +504,10 @@ func (r *Receiver) Receive(next receiver.NextFn) error {
 	if err != nil {
 		return err
 	}
-	//TODO: make dynamo node manager singleton
-	//TODO: cache getNode results for 10 sec
-	//TODO: only remove node when ears shuts down (if at all)
 	//TODO: what about kinesis checkpoints and ack/nack
-	//TODO: consider redis implementation of node table persistence
 	//TODO: batch events in sender
 	//TODO: deregister stream
+	//TODO: assume role
 	if *r.config.EnhancedFanOut {
 		r.consumer, err = r.registerStreamConsumer(r.svc, r.config.StreamName, r.config.ConsumerName)
 		if err != nil {
