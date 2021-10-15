@@ -129,7 +129,7 @@ func (r *Receiver) stopShardReceiver(shardIdx int) {
 	}
 }
 
-func (r *Receiver) shardMonitor(svc *kinesis.Kinesis, distributor *sharder.SimpleHashDistributor) {
+func (r *Receiver) shardMonitor(svc *kinesis.Kinesis, distributor sharder.ShardDistributor) {
 	go func() {
 		defer func() {
 			p := recover()
@@ -412,7 +412,7 @@ func (r *Receiver) startShardReceiver(svc *kinesis.Kinesis, stream *kinesis.Desc
 	}()
 }
 
-func (r *Receiver) shardUpdateListener(distributor *sharder.SimpleHashDistributor) {
+func (r *Receiver) shardUpdateListener(distributor sharder.ShardDistributor) {
 	go func() {
 		defer func() {
 			p := recover()
@@ -517,7 +517,7 @@ func (r *Receiver) Receive(next receiver.NextFn) error {
 		}
 	}
 	sharderConfig := sharder.DefaultControllerConfig()
-	shardDistributor, err := sharder.NewDynamoSimpleHashDistributor(sharderConfig.NodeName, len(r.stream.StreamDescription.Shards), sharderConfig.StorageConfig)
+	shardDistributor, err := sharder.GetDefaultHashDistributor(sharderConfig.NodeName, len(r.stream.StreamDescription.Shards), sharderConfig.StorageConfig)
 	if err != nil {
 		return err
 	}

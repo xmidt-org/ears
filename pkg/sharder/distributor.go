@@ -1,33 +1,18 @@
 package sharder
 
 import (
-	"errors"
 	"math/rand"
 	"sort"
 	"strconv"
-	"sync"
 	"time"
-)
-
-type (
-	SimpleHashDistributor struct {
-		ShardConfig
-		nodeManager NodeStateManager
-		identity    string
-		nodes       []string
-		updateChan  chan ShardConfig
-		enabled     bool
-		sync.Mutex
-	}
 )
 
 func init() {
 	rand.Seed(time.Now().UnixNano())
 }
 
-func NewDynamoSimpleHashDistributor(identity string, numShards int, configData map[string]string) (*SimpleHashDistributor, error) {
+func newSimpleHashDistributor(identity string, numShards int, configData map[string]string) (*SimpleHashDistributor, error) {
 	hashDistributor := &SimpleHashDistributor{
-		enabled:    true,
 		identity:   identity,
 		updateChan: make(ShardUpdater),
 		ShardConfig: ShardConfig{
@@ -35,20 +20,7 @@ func NewDynamoSimpleHashDistributor(identity string, numShards int, configData m
 			Identity:  identity,
 		},
 	}
-	tableName, found := configData["table"]
-	if !found {
-		return nil, errors.New("healthTable must be set")
-	}
-	var updateFrequency, olderThan int
-	if frq, found := configData["updateFrequency"]; found {
-		updateFrequency, _ = strconv.Atoi(frq)
-	}
-	if old, found := configData["olderThan"]; found {
-		olderThan, _ = strconv.Atoi(old)
-	}
-	region := configData["region"]
-	tag := configData["tag"]
-	nodeManager, err := newDynamoDBNodesManager(tableName, region, identity, updateFrequency, olderThan, tag)
+	nodeManager, err := GetDefaultNodeStateManager(identity, configData)
 	if err != nil {
 		return nil, err
 	}
