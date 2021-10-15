@@ -7,6 +7,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/dynamodb"
 	"github.com/aws/aws-sdk-go/service/dynamodb/expression"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -37,7 +38,20 @@ type dynamoDBNodesManager struct {
 	identity string
 }
 
-func newDynamoDBNodesManager(tableName, region, identity string, updateFrequency, olderThan int, tag string) (*dynamoDBNodesManager, error) {
+func newDynamoDBNodesManager(identity string, configData map[string]string) (*dynamoDBNodesManager, error) {
+	tableName, found := configData["table"]
+	if !found {
+		return nil, errors.New("table name must be set")
+	}
+	var updateFrequency, olderThan int
+	if frq, found := configData["updateFrequency"]; found {
+		updateFrequency, _ = strconv.Atoi(frq)
+	}
+	if old, found := configData["olderThan"]; found {
+		olderThan, _ = strconv.Atoi(old)
+	}
+	region := configData["region"]
+	tag := configData["tag"]
 	nodeManager := &dynamoDBNodesManager{}
 	nodeManager.region = region
 	nodeManager.tableName = tableName

@@ -56,3 +56,14 @@ type ControllerConfig struct {
 	StorageConfig map[string]string
 	NodeName      string
 }
+
+type (
+	SimpleHashDistributor struct {
+		ShardConfig
+		nodeManager NodeStateManager
+		identity    string
+		nodes       []string
+		updateChan  chan ShardConfig
+		sync.Mutex
+	}
+)

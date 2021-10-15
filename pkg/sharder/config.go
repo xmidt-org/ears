@@ -71,3 +71,11 @@ func DefaultControllerConfig() *ControllerConfig {
 	}
 	return &cc
 }
+
+func GetDefaultNodeStateManager(identity string, configData map[string]string) (NodeStateManager, error) {
+	return newDynamoDBNodesManager(identity, configData)
+}
+
+func GetDefaultHashDistributor(identity string, numShards int, configData map[string]string) (ShardDistributor, error) {
+	return newSimpleHashDistributor(identity, numShards, configData)
+}
