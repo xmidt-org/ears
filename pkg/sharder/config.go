@@ -16,6 +16,7 @@ var (
 		"olderThan":       "60",
 		"tag":             "dev",
 	}
+	defaultNodeStateManager NodeStateManager
 )
 
 func InitDistributorConfigs(config config.Config) {
@@ -73,7 +74,11 @@ func DefaultControllerConfig() *ControllerConfig {
 }
 
 func GetDefaultNodeStateManager(identity string, configData map[string]string) (NodeStateManager, error) {
-	return newDynamoDBNodesManager(identity, configData)
+	var err error
+	if defaultNodeStateManager == nil {
+		defaultNodeStateManager, err = newDynamoDBNodesManager(identity, configData)
+	}
+	return defaultNodeStateManager, err
 }
 
 func GetDefaultHashDistributor(identity string, numShards int, configData map[string]string) (ShardDistributor, error) {

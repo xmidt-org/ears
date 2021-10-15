@@ -93,16 +93,16 @@ func newDynamoDBNodesManager(identity string, configData map[string]string) (*dy
 		}
 		nodeManager.server = dynamodb.New(session)
 	}
-	// at this point we have a server
 	err := nodeManager.ensureTable()
 	if err != nil {
 		return nil, err
 	}
-	nodeManager.updateMyState()
+	nodeManager.updateState()
 	return nodeManager, nil
 }
 
 func (d *dynamoDBNodesManager) GetActiveNodes() ([]string, error) {
+	//TODO: cache result for short period of time
 	activeNodes := make([]string, 0)
 	keyCond := expression.Key(key_name).Equal(expression.Value(d.tag))
 	proj := expression.NamesList(expression.Name(sort_key_name), expression.Name(value_name))
@@ -156,7 +156,7 @@ func (d *dynamoDBNodesManager) timestamp(t time.Time) string {
 	return ts
 }
 
-func (d *dynamoDBNodesManager) updateMyState() {
+func (d *dynamoDBNodesManager) updateState() {
 	go func() {
 		defer func() {
 			p := recover()
