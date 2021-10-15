@@ -67,7 +67,7 @@ func SetupAPIServer(lifecycle fx.Lifecycle, config config.Config, logger *zerolo
 		Handler: mux,
 	}
 
-	sharder.InitDistributorStorageMap(config)
+	sharder.InitDistributorConfigs(config)
 
 	//var ls launcher.Launcher
 	var traceProvider *sdktrace.TracerProvider
@@ -177,6 +177,12 @@ func SetupAPIServer(lifecycle fx.Lifecycle, config config.Config, logger *zerolo
 		logger.Info().Str("telemetryexporter", "stdout").Msg("started")
 	}
 
+	sharderConfig := sharder.DefaultControllerConfig()
+	nodeStateManager, err := sharder.GetDefaultNodeStateManager(sharderConfig.Identity, sharderConfig.StorageConfig)
+	if err != nil {
+		return err
+	}
+
 	lifecycle.Append(
 		fx.Hook{
 			OnStart: func(context.Context) error {
@@ -185,7 +191,8 @@ func SetupAPIServer(lifecycle fx.Lifecycle, config config.Config, logger *zerolo
 				return nil
 			},
 			OnStop: func(ctx context.Context) error {
-				err := server.Shutdown(ctx)
+				nodeStateManager.Stop()
+				err = server.Shutdown(ctx)
 				if err != nil {
 					logger.Error().Str("op", "SetupAPIServer.OnStop").Msg(err.Error())
 				} else {
