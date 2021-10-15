@@ -11,6 +11,7 @@ import (
 	"github.com/xmidt-org/ears/pkg/panics"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -26,6 +27,7 @@ const value_name = "lastUpdated"
 
 //dynamoDB as the node states manager
 type dynamoDBNodesManager struct {
+	sync.Mutex
 	server *dynamodb.DynamoDB
 	tag    string
 	region string
@@ -40,6 +42,8 @@ type dynamoDBNodesManager struct {
 	identity string
 	// logger
 	logger *zerolog.Logger
+	//
+	stopped bool
 }
 
 func newDynamoDBNodesManager(identity string, configData map[string]string) (*dynamoDBNodesManager, error) {
@@ -62,6 +66,7 @@ func newDynamoDBNodesManager(identity string, configData map[string]string) (*dy
 		identity:        identity,
 		updateFrequency: updateFrequency,
 		olderThan:       olderThan,
+		stopped:         false,
 	}
 	if nodeManager.tag == "" {
 		nodeManager.tag = "node"
@@ -98,6 +103,7 @@ func newDynamoDBNodesManager(identity string, configData map[string]string) (*dy
 		return nil, err
 	}
 	nodeManager.updateState()
+	nodeManager.logger.Info().Str("op", "sharder.newDynamoDBNodesManager").Str("identity", nodeManager.identity).Msg("starting node state manager")
 	return nodeManager, nil
 }
 
@@ -166,8 +172,15 @@ func (d *dynamoDBNodesManager) updateState() {
 					Str("stackTrace", panicErr.StackTrace()).Msg("a panic has occurred in state updater")
 			}
 		}()
-		defer d.RemoveNode()
 		for {
+			d.Lock()
+			s := d.stopped
+			d.Unlock()
+			if s {
+				d.logger.Info().Str("op", "sharder.updateState").Str("identity", d.identity).Msg("stopping node state manager")
+				defaultNodeStateManager = nil
+				return
+			}
 			input := &dynamodb.UpdateItemInput{
 				ExpressionAttributeValues: map[string]*dynamodb.AttributeValue{
 					":u": {
@@ -186,9 +199,11 @@ func (d *dynamoDBNodesManager) updateState() {
 				ReturnValues:     aws.String("UPDATED_NEW"),
 				UpdateExpression: aws.String("set " + value_name + " = :u"),
 			}
-			d.server.UpdateItem(input)
+			_, err := d.server.UpdateItem(input)
+			if err != nil {
+				d.logger.Error().Str("op", "sharder.updateState").Str("identity", d.identity).Msg(err.Error())
+			}
 			time.Sleep(update_frequency * time.Second)
-			continue
 		}
 	}()
 }
@@ -196,6 +211,13 @@ func (d *dynamoDBNodesManager) updateState() {
 // remove own record from health table
 func (d *dynamoDBNodesManager) RemoveNode() {
 	d.deleteRecord(d.identity)
+}
+
+func (d *dynamoDBNodesManager) Stop() {
+	d.Lock()
+	d.stopped = true
+	d.RemoveNode()
+	d.Unlock()
 }
 
 // delete stale record, not care if success of not

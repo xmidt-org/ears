@@ -33,6 +33,7 @@ type ShardUpdater chan ShardConfig
 type NodeStateManager interface {
 	GetActiveNodes() ([]string, error)
 	RemoveNode()
+	Stop()
 }
 
 // ShardDistributor defines

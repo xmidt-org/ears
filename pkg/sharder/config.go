@@ -65,6 +65,7 @@ func DefaultControllerConfig() *ControllerConfig {
 			if ipnet, ok := addr.(*net.IPNet); ok && !ipnet.IP.IsLoopback() {
 				if ipnet.IP.To4() != nil {
 					cc.NodeName = ipnet.IP.String()
+					cc.Identity = cc.NodeName
 					break
 				}
 			}
