@@ -2,11 +2,13 @@ package sharder
 
 import (
 	"errors"
-	"fmt"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/dynamodb"
 	"github.com/aws/aws-sdk-go/service/dynamodb/expression"
+	"github.com/rs/zerolog"
+	"github.com/xmidt-org/ears/pkg/event"
+	"github.com/xmidt-org/ears/pkg/panics"
 	"strconv"
 	"strings"
 	"time"
@@ -36,6 +38,8 @@ type dynamoDBNodesManager struct {
 	olderThan int
 	// ip address of this node
 	identity string
+	// logger
+	logger *zerolog.Logger
 }
 
 func newDynamoDBNodesManager(identity string, configData map[string]string) (*dynamoDBNodesManager, error) {
@@ -50,32 +54,23 @@ func newDynamoDBNodesManager(identity string, configData map[string]string) (*dy
 	if old, found := configData["olderThan"]; found {
 		olderThan, _ = strconv.Atoi(old)
 	}
-	region := configData["region"]
-	tag := configData["tag"]
-	nodeManager := &dynamoDBNodesManager{}
-	nodeManager.region = region
-	nodeManager.tableName = tableName
-	if tag != "" {
-		nodeManager.tag = tag
-	} else {
+	nodeManager := &dynamoDBNodesManager{
+		logger:          event.GetEventLogger(),
+		region:          configData["region"],
+		tableName:       tableName,
+		tag:             configData["tag"],
+		identity:        identity,
+		updateFrequency: updateFrequency,
+		olderThan:       olderThan,
+	}
+	if nodeManager.tag == "" {
 		nodeManager.tag = "node"
 	}
-	nodeManager.identity = identity
-	if updateFrequency > 0 {
-		nodeManager.updateFrequency = updateFrequency
-	} else if updateFrequency == 0 {
+	if nodeManager.updateFrequency <= 0 {
 		nodeManager.updateFrequency = update_frequency
-	} else {
-		err := fmt.Errorf("update updateFrequency value is invalid: %d", updateFrequency)
-		return nil, err
 	}
-	if olderThan > 0 {
-		nodeManager.olderThan = olderThan
-	} else if olderThan == 0 {
+	if nodeManager.olderThan <= 0 {
 		nodeManager.olderThan = older_than
-	} else {
-		err := fmt.Errorf("old value is invalid: %d", olderThan)
-		return nil, err
 	}
 	// validate regions we can handle
 	switch nodeManager.region {
@@ -91,7 +86,7 @@ func newDynamoDBNodesManager(identity string, configData map[string]string) (*dy
 		return nil, errors.New("region must be specified")
 	default:
 		session, err := session.NewSession(&aws.Config{
-			Region: aws.String(region)},
+			Region: aws.String(nodeManager.region)},
 		)
 		if nil != err {
 			return nil, err
@@ -103,7 +98,7 @@ func newDynamoDBNodesManager(identity string, configData map[string]string) (*dy
 	if err != nil {
 		return nil, err
 	}
-	go nodeManager.updateMyState()
+	nodeManager.updateMyState()
 	return nodeManager, nil
 }
 
@@ -162,30 +157,40 @@ func (d *dynamoDBNodesManager) timestamp(t time.Time) string {
 }
 
 func (d *dynamoDBNodesManager) updateMyState() {
-	defer d.RemoveNode()
-	for {
-		input := &dynamodb.UpdateItemInput{
-			ExpressionAttributeValues: map[string]*dynamodb.AttributeValue{
-				":u": {
-					S: aws.String(d.timestamp(time.Now())),
+	go func() {
+		defer func() {
+			p := recover()
+			if p != nil {
+				panicErr := panics.ToError(p)
+				d.logger.Error().Str("op", "sharder.updateMyState").Str("error", panicErr.Error()).
+					Str("stackTrace", panicErr.StackTrace()).Msg("a panic has occurred in state updater")
+			}
+		}()
+		defer d.RemoveNode()
+		for {
+			input := &dynamodb.UpdateItemInput{
+				ExpressionAttributeValues: map[string]*dynamodb.AttributeValue{
+					":u": {
+						S: aws.String(d.timestamp(time.Now())),
+					},
 				},
-			},
-			TableName: aws.String(d.tableName),
-			Key: map[string]*dynamodb.AttributeValue{
-				key_name: {
-					S: aws.String(d.tag),
+				TableName: aws.String(d.tableName),
+				Key: map[string]*dynamodb.AttributeValue{
+					key_name: {
+						S: aws.String(d.tag),
+					},
+					sort_key_name: {
+						S: aws.String(d.identity),
+					},
 				},
-				sort_key_name: {
-					S: aws.String(d.identity),
-				},
-			},
-			ReturnValues:     aws.String("UPDATED_NEW"),
-			UpdateExpression: aws.String("set " + value_name + " = :u"),
+				ReturnValues:     aws.String("UPDATED_NEW"),
+				UpdateExpression: aws.String("set " + value_name + " = :u"),
+			}
+			d.server.UpdateItem(input)
+			time.Sleep(update_frequency * time.Second)
+			continue
 		}
-		d.server.UpdateItem(input)
-		time.Sleep(update_frequency * time.Second)
-		continue
-	}
+	}()
 }
 
 // remove own record from health table

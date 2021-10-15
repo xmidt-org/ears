@@ -1,6 +1,7 @@
 package sharder
 
 import (
+	"github.com/rs/zerolog"
 	"sync"
 )
 
@@ -57,13 +58,12 @@ type ControllerConfig struct {
 	NodeName      string
 }
 
-type (
-	SimpleHashDistributor struct {
-		ShardConfig
-		nodeManager NodeStateManager
-		identity    string
-		nodes       []string
-		updateChan  chan ShardConfig
-		sync.Mutex
-	}
-)
+type SimpleHashDistributor struct {
+	ShardConfig
+	nodeManager NodeStateManager
+	identity    string
+	nodes       []string
+	updateChan  chan ShardConfig
+	logger      *zerolog.Logger
+	sync.Mutex
+}
