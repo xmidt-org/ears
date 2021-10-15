@@ -62,7 +62,6 @@ func (c *SimpleHashDistributor) nodeMonitor() {
 					Str("stackTrace", panicErr.StackTrace()).Msg("a panic has occurred in node monitor")
 			}
 		}()
-		defer c.nodeManager.RemoveNode()
 		for {
 			time.Sleep(time.Duration(rand.Intn(10)) * time.Second)
 			aliveNodes, err := c.nodeManager.GetActiveNodes()
