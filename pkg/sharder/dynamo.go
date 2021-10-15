@@ -25,6 +25,8 @@ const key_name = "key"
 const sort_key_name = "ip"
 const value_name = "lastUpdated"
 
+var activeNodes []string
+
 //dynamoDB as the node states manager
 type dynamoDBNodesManager struct {
 	sync.Mutex
@@ -44,6 +46,10 @@ type dynamoDBNodesManager struct {
 	logger *zerolog.Logger
 	//
 	stopped bool
+	// cached nodes
+	activeNodes []string
+	// last update time
+	lastUpdateTime time.Time
 }
 
 func newDynamoDBNodesManager(identity string, configData map[string]string) (*dynamoDBNodesManager, error) {
@@ -67,6 +73,8 @@ func newDynamoDBNodesManager(identity string, configData map[string]string) (*dy
 		updateFrequency: updateFrequency,
 		olderThan:       olderThan,
 		stopped:         false,
+		activeNodes:     make([]string, 0),
+		lastUpdateTime:  time.Now(),
 	}
 	if nodeManager.tag == "" {
 		nodeManager.tag = "node"
@@ -108,7 +116,9 @@ func newDynamoDBNodesManager(identity string, configData map[string]string) (*dy
 }
 
 func (d *dynamoDBNodesManager) GetActiveNodes() ([]string, error) {
-	//TODO: cache result for short period of time
+	if int(time.Since(d.lastUpdateTime).Seconds()) < d.updateFrequency && len(d.activeNodes) > 0 {
+		return d.activeNodes, nil
+	}
 	activeNodes := make([]string, 0)
 	keyCond := expression.Key(key_name).Equal(expression.Value(d.tag))
 	proj := expression.NamesList(expression.Name(sort_key_name), expression.Name(value_name))
@@ -149,6 +159,8 @@ func (d *dynamoDBNodesManager) GetActiveNodes() ([]string, error) {
 		}
 		activeNodes = append(activeNodes, aws.StringValue(ipAttr.S))
 	}
+	d.activeNodes = activeNodes
+	d.lastUpdateTime = time.Now()
 	return activeNodes, nil
 }
 
