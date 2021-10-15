@@ -1,6 +1,8 @@
 package sharder
 
 import (
+	"github.com/xmidt-org/ears/pkg/event"
+	"github.com/xmidt-org/ears/pkg/panics"
 	"math/rand"
 	"sort"
 	"strconv"
@@ -15,6 +17,7 @@ func newSimpleHashDistributor(identity string, numShards int, configData map[str
 	hashDistributor := &SimpleHashDistributor{
 		identity:   identity,
 		updateChan: make(ShardUpdater),
+		logger:     event.GetEventLogger(),
 		ShardConfig: ShardConfig{
 			NumShards: numShards,
 			Identity:  identity,
@@ -51,6 +54,14 @@ func (c *SimpleHashDistributor) UpdateNumberShards(numShards int) {
 // nodeMonitor watches for changes in the health service
 func (c *SimpleHashDistributor) nodeMonitor() {
 	go func() {
+		defer func() {
+			p := recover()
+			if p != nil {
+				panicErr := panics.ToError(p)
+				c.logger.Error().Str("op", "sharder.nodeMonitor").Str("error", panicErr.Error()).
+					Str("stackTrace", panicErr.StackTrace()).Msg("a panic has occurred in node monitor")
+			}
+		}()
 		defer c.nodeManager.RemoveNode()
 		for {
 			time.Sleep(time.Duration(rand.Intn(10)) * time.Second)
