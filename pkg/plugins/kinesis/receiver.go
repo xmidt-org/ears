@@ -517,9 +517,7 @@ func (r *Receiver) Receive(next receiver.NextFn) error {
 		return err
 	}
 	//TODO: what about kinesis checkpoints and ack/nack
-	//TODO: batch events in sender
-	//TODO: deregister stream
-	//TODO: assume role
+	//TODO: consider deregistering stream
 	if *r.config.EnhancedFanOut {
 		r.consumer, err = r.registerStreamConsumer(r.svc, r.config.StreamName, r.config.ConsumerName)
 		if err != nil {

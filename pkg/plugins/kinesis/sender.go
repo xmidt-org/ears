@@ -175,7 +175,6 @@ func (s *Sender) StopSending(ctx context.Context) {
 }
 
 func (s *Sender) send(events []event.Event) {
-	//TODO: sender should batch
 	if len(events) == 0 {
 		return
 	}
