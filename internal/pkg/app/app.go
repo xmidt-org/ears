@@ -177,10 +177,14 @@ func SetupAPIServer(lifecycle fx.Lifecycle, config config.Config, logger *zerolo
 		logger.Info().Str("telemetryexporter", "stdout").Msg("started")
 	}
 
-	sharderConfig := sharder.DefaultControllerConfig()
-	nodeStateManager, err := sharder.GetDefaultNodeStateManager(sharderConfig.Identity, sharderConfig.StorageConfig)
-	if err != nil {
-		return err
+	var nodeStateManager sharder.NodeStateManager
+	if config.GetBool("ears.sharder.active") {
+		sharderConfig := sharder.DefaultControllerConfig()
+		var err error
+		nodeStateManager, err = sharder.GetDefaultNodeStateManager(sharderConfig.Identity, sharderConfig.StorageConfig)
+		if err != nil {
+			return err
+		}
 	}
 
 	lifecycle.Append(
@@ -191,8 +195,10 @@ func SetupAPIServer(lifecycle fx.Lifecycle, config config.Config, logger *zerolo
 				return nil
 			},
 			OnStop: func(ctx context.Context) error {
-				nodeStateManager.Stop()
-				err = server.Shutdown(ctx)
+				if nodeStateManager != nil {
+					nodeStateManager.Stop()
+				}
+				err := server.Shutdown(ctx)
 				if err != nil {
 					logger.Error().Str("op", "SetupAPIServer.OnStop").Msg(err.Error())
 				} else {
