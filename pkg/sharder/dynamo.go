@@ -25,8 +25,6 @@ const key_name = "key"
 const sort_key_name = "ip"
 const value_name = "lastUpdated"
 
-var activeNodes []string
-
 //dynamoDB as the node states manager
 type dynamoDBNodesManager struct {
 	sync.Mutex
