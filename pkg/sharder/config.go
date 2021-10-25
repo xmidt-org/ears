@@ -77,7 +77,11 @@ func DefaultControllerConfig() *ControllerConfig {
 func GetDefaultNodeStateManager(identity string, configData map[string]string) (NodeStateManager, error) {
 	var err error
 	if defaultNodeStateManager == nil {
-		defaultNodeStateManager, err = newDynamoDBNodesManager(identity, configData)
+		if configData["table"] == "dynamodb" {
+			defaultNodeStateManager, err = newDynamoDBNodesManager(identity, configData)
+		} else if configData["table"] == "inmemory" {
+			defaultNodeStateManager, err = newInMemoryNodeManager(identity, configData)
+		}
 	}
 	return defaultNodeStateManager, err
 }
