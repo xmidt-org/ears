@@ -16,17 +16,17 @@ import (
 )
 
 // dynamodb default values
-const update_frequency = 10
-const older_than = 60
-const read_cap = 10
-const write_cap = 10
+const defaultUpdateFrequency = 10
+const defaultOlderThan = 60
+const readCap = 10
+const writeCap = 10
 
-const key_name = "key"
-const sort_key_name = "ip"
-const value_name = "lastUpdated"
+const keyName = "key"
+const sortKeyName = "ip"
+const valueName = "lastUpdated"
 
 //dynamoDB as the node states manager
-type dynamoDBNodesManager struct {
+type dynamoDBNodeManager struct {
 	sync.Mutex
 	server *dynamodb.DynamoDB
 	tag    string
@@ -50,7 +50,7 @@ type dynamoDBNodesManager struct {
 	lastUpdateTime time.Time
 }
 
-func newDynamoDBNodesManager(identity string, configData map[string]string) (*dynamoDBNodesManager, error) {
+func newDynamoDBNodeManager(identity string, configData map[string]string) (*dynamoDBNodeManager, error) {
 	tableName, found := configData["table"]
 	if !found {
 		return nil, errors.New("table name must be set")
@@ -62,7 +62,7 @@ func newDynamoDBNodesManager(identity string, configData map[string]string) (*dy
 	if old, found := configData["olderThan"]; found {
 		olderThan, _ = strconv.Atoi(old)
 	}
-	nodeManager := &dynamoDBNodesManager{
+	nodeManager := &dynamoDBNodeManager{
 		logger:          event.GetEventLogger(),
 		region:          configData["region"],
 		tableName:       tableName,
@@ -78,10 +78,10 @@ func newDynamoDBNodesManager(identity string, configData map[string]string) (*dy
 		nodeManager.tag = "node"
 	}
 	if nodeManager.updateFrequency <= 0 {
-		nodeManager.updateFrequency = update_frequency
+		nodeManager.updateFrequency = defaultUpdateFrequency
 	}
 	if nodeManager.olderThan <= 0 {
-		nodeManager.olderThan = older_than
+		nodeManager.olderThan = defaultOlderThan
 	}
 	// validate regions we can handle
 	switch nodeManager.region {
@@ -109,17 +109,17 @@ func newDynamoDBNodesManager(identity string, configData map[string]string) (*dy
 		return nil, err
 	}
 	nodeManager.updateState()
-	nodeManager.logger.Info().Str("op", "sharder.newDynamoDBNodesManager").Str("identity", nodeManager.identity).Msg("starting node state manager")
+	nodeManager.logger.Info().Str("op", "sharder.newDynamoDBNodeManager").Str("identity", nodeManager.identity).Msg("starting node state manager")
 	return nodeManager, nil
 }
 
-func (d *dynamoDBNodesManager) GetActiveNodes() ([]string, error) {
+func (d *dynamoDBNodeManager) GetActiveNodes() ([]string, error) {
 	if int(time.Since(d.lastUpdateTime).Seconds()) < d.updateFrequency && len(d.activeNodes) > 0 {
 		return d.activeNodes, nil
 	}
 	activeNodes := make([]string, 0)
-	keyCond := expression.Key(key_name).Equal(expression.Value(d.tag))
-	proj := expression.NamesList(expression.Name(sort_key_name), expression.Name(value_name))
+	keyCond := expression.Key(keyName).Equal(expression.Value(d.tag))
+	proj := expression.NamesList(expression.Name(sortKeyName), expression.Name(valueName))
 	expr, err := expression.NewBuilder().
 		WithKeyCondition(keyCond).
 		WithProjection(proj).
@@ -139,11 +139,11 @@ func (d *dynamoDBNodesManager) GetActiveNodes() ([]string, error) {
 		return nil, err
 	}
 	for _, record := range results.Items {
-		ipAttr, found := record[sort_key_name]
+		ipAttr, found := record[sortKeyName]
 		if !found { // ip address not existing in this record
 			continue
 		}
-		lastUpdatedAttr, found := record[value_name]
+		lastUpdatedAttr, found := record[valueName]
 		if !found {
 			continue
 		}
@@ -162,7 +162,7 @@ func (d *dynamoDBNodesManager) GetActiveNodes() ([]string, error) {
 	return activeNodes, nil
 }
 
-func (d *dynamoDBNodesManager) timestamp(t time.Time) string {
+func (d *dynamoDBNodeManager) timestamp(t time.Time) string {
 	ts := t.UTC().Format(time.RFC3339Nano)
 	// format library cuts off trailing 0s. See: https://github.com/golang/go/issues/19635
 	// this causes problems for string based sorting
@@ -172,7 +172,7 @@ func (d *dynamoDBNodesManager) timestamp(t time.Time) string {
 	return ts
 }
 
-func (d *dynamoDBNodesManager) updateState() {
+func (d *dynamoDBNodeManager) updateState() {
 	go func() {
 		defer func() {
 			p := recover()
@@ -199,31 +199,31 @@ func (d *dynamoDBNodesManager) updateState() {
 				},
 				TableName: aws.String(d.tableName),
 				Key: map[string]*dynamodb.AttributeValue{
-					key_name: {
+					keyName: {
 						S: aws.String(d.tag),
 					},
-					sort_key_name: {
+					sortKeyName: {
 						S: aws.String(d.identity),
 					},
 				},
 				ReturnValues:     aws.String("UPDATED_NEW"),
-				UpdateExpression: aws.String("set " + value_name + " = :u"),
+				UpdateExpression: aws.String("set " + valueName + " = :u"),
 			}
 			_, err := d.server.UpdateItem(input)
 			if err != nil {
 				d.logger.Error().Str("op", "sharder.updateState").Str("identity", d.identity).Msg(err.Error())
 			}
-			time.Sleep(update_frequency * time.Second)
+			time.Sleep(time.Duration(d.updateFrequency) * time.Second)
 		}
 	}()
 }
 
 // remove own record from health table
-func (d *dynamoDBNodesManager) RemoveNode() {
+func (d *dynamoDBNodeManager) RemoveNode() {
 	d.deleteRecord(d.identity)
 }
 
-func (d *dynamoDBNodesManager) Stop() {
+func (d *dynamoDBNodeManager) Stop() {
 	d.Lock()
 	d.stopped = true
 	d.RemoveNode()
@@ -231,13 +231,13 @@ func (d *dynamoDBNodesManager) Stop() {
 }
 
 // delete stale record, not care if success of not
-func (d *dynamoDBNodesManager) deleteRecord(ip string) {
+func (d *dynamoDBNodeManager) deleteRecord(ip string) {
 	input := &dynamodb.DeleteItemInput{
 		Key: map[string]*dynamodb.AttributeValue{
-			key_name: {
+			keyName: {
 				S: aws.String(d.tag),
 			},
-			sort_key_name: {
+			sortKeyName: {
 				S: aws.String(ip),
 			},
 		},
@@ -247,38 +247,38 @@ func (d *dynamoDBNodesManager) deleteRecord(ip string) {
 }
 
 // health_table description
-func (d *dynamoDBNodesManager) tableDescription() *dynamodb.CreateTableInput {
+func (d *dynamoDBNodeManager) tableDescription() *dynamodb.CreateTableInput {
 	return &dynamodb.CreateTableInput{
 		TableName: aws.String(d.tableName),
 		AttributeDefinitions: []*dynamodb.AttributeDefinition{
 			{
-				AttributeName: aws.String(key_name),
+				AttributeName: aws.String(keyName),
 				AttributeType: aws.String("S"),
 			},
 			{
-				AttributeName: aws.String(sort_key_name),
+				AttributeName: aws.String(sortKeyName),
 				AttributeType: aws.String("S"),
 			},
 		},
 		KeySchema: []*dynamodb.KeySchemaElement{
 			{
-				AttributeName: aws.String(key_name),
+				AttributeName: aws.String(keyName),
 				KeyType:       aws.String("HASH"),
 			},
 			{
-				AttributeName: aws.String(sort_key_name),
+				AttributeName: aws.String(sortKeyName),
 				KeyType:       aws.String("RANGE"),
 			},
 		},
 		ProvisionedThroughput: &dynamodb.ProvisionedThroughput{
-			ReadCapacityUnits:  aws.Int64(read_cap),
-			WriteCapacityUnits: aws.Int64(write_cap),
+			ReadCapacityUnits:  aws.Int64(readCap),
+			WriteCapacityUnits: aws.Int64(writeCap),
 		},
 	}
 }
 
 // ensureTable verifies the table already exists, otherwise creates it
-func (d *dynamoDBNodesManager) ensureTable() error {
+func (d *dynamoDBNodeManager) ensureTable() error {
 	describe := &dynamodb.DescribeTableInput{
 		TableName: aws.String(d.tableName),
 	}

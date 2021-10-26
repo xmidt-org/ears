@@ -524,7 +524,7 @@ func (r *Receiver) Receive(next receiver.NextFn) error {
 			return err
 		}
 	}
-	sharderConfig := sharder.DefaultControllerConfig()
+	sharderConfig := sharder.DefaultControllerConfig(nil)
 	shardDistributor, err := sharder.GetDefaultHashDistributor(sharderConfig.NodeName, len(r.stream.StreamDescription.Shards), sharderConfig.StorageConfig)
 	if err != nil {
 		return err
