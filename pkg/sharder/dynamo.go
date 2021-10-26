@@ -9,18 +9,14 @@ import (
 	"github.com/rs/zerolog"
 	"github.com/xmidt-org/ears/pkg/event"
 	"github.com/xmidt-org/ears/pkg/panics"
-	"strconv"
 	"strings"
 	"sync"
 	"time"
 )
 
 // dynamodb default values
-const defaultUpdateFrequency = 10
-const defaultOlderThan = 60
 const readCap = 10
 const writeCap = 10
-
 const keyName = "key"
 const sortKeyName = "ip"
 const valueName = "lastUpdated"
@@ -34,10 +30,10 @@ type dynamoDBNodeManager struct {
 	// table name of the healthTable
 	tableName string
 	// updateFrequency to read/write the state from/to dynamoDB
-	updateFrequency int
+	updateFrequencySeconds int
 	// node state's last updated time is olderThan than this (in seconds), treat as bad node
 	// also if can't get/update node state for this time than it will exit the service
-	olderThan int
+	updateFrequencyTtl int
 	// ip address of this node
 	identity string
 	// logger
@@ -50,38 +46,27 @@ type dynamoDBNodeManager struct {
 	lastUpdateTime time.Time
 }
 
-func newDynamoDBNodeManager(identity string, configData map[string]string) (*dynamoDBNodeManager, error) {
-	tableName, found := configData["table"]
-	if !found {
-		return nil, errors.New("table name must be set")
-	}
-	var updateFrequency, olderThan int
-	if frq, found := configData["updateFrequency"]; found {
-		updateFrequency, _ = strconv.Atoi(frq)
-	}
-	if old, found := configData["olderThan"]; found {
-		olderThan, _ = strconv.Atoi(old)
-	}
+func newDynamoDBNodeManager(identity string, configData SharderConfig) (*dynamoDBNodeManager, error) {
 	nodeManager := &dynamoDBNodeManager{
-		logger:          event.GetEventLogger(),
-		region:          configData["region"],
-		tableName:       tableName,
-		tag:             configData["tag"],
-		identity:        identity,
-		updateFrequency: updateFrequency,
-		olderThan:       olderThan,
-		stopped:         false,
-		activeNodes:     make([]string, 0),
-		lastUpdateTime:  time.Now(),
+		logger:                 event.GetEventLogger(),
+		region:                 configData.StorageRegion,
+		tableName:              configData.StorageTable,
+		tag:                    configData.StorageTag,
+		identity:               identity,
+		updateFrequencySeconds: configData.UpdateFrequencySeconds,
+		updateFrequencyTtl:     configData.UpdateTtlSeconds,
+		stopped:                false,
+		activeNodes:            make([]string, 0),
+		lastUpdateTime:         time.Now(),
 	}
 	if nodeManager.tag == "" {
 		nodeManager.tag = "node"
 	}
-	if nodeManager.updateFrequency <= 0 {
-		nodeManager.updateFrequency = defaultUpdateFrequency
+	if nodeManager.updateFrequencySeconds <= 0 {
+		nodeManager.updateFrequencySeconds = defaultUpdateFrequencySeconds
 	}
-	if nodeManager.olderThan <= 0 {
-		nodeManager.olderThan = defaultOlderThan
+	if nodeManager.updateFrequencyTtl <= 0 {
+		nodeManager.updateFrequencyTtl = defaultUpdateTtlSeconds
 	}
 	// validate regions we can handle
 	switch nodeManager.region {
@@ -114,7 +99,7 @@ func newDynamoDBNodeManager(identity string, configData map[string]string) (*dyn
 }
 
 func (d *dynamoDBNodeManager) GetActiveNodes() ([]string, error) {
-	if int(time.Since(d.lastUpdateTime).Seconds()) < d.updateFrequency && len(d.activeNodes) > 0 {
+	if int(time.Since(d.lastUpdateTime).Seconds()) < d.updateFrequencySeconds && len(d.activeNodes) > 0 {
 		return d.activeNodes, nil
 	}
 	activeNodes := make([]string, 0)
@@ -152,7 +137,7 @@ func (d *dynamoDBNodeManager) GetActiveNodes() ([]string, error) {
 		if err != nil {
 			return nil, err
 		}
-		if int(time.Since(updateTime).Seconds()) > d.olderThan {
+		if int(time.Since(updateTime).Seconds()) > d.updateFrequencyTtl {
 			d.deleteRecord(aws.StringValue(ipAttr.S))
 		}
 		activeNodes = append(activeNodes, aws.StringValue(ipAttr.S))
@@ -213,7 +198,7 @@ func (d *dynamoDBNodeManager) updateState() {
 			if err != nil {
 				d.logger.Error().Str("op", "sharder.updateState").Str("identity", d.identity).Msg(err.Error())
 			}
-			time.Sleep(time.Duration(d.updateFrequency) * time.Second)
+			time.Sleep(time.Duration(d.updateFrequencySeconds) * time.Second)
 		}
 	}()
 }

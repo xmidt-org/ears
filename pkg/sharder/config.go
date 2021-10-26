@@ -1,20 +1,41 @@
 package sharder
 
 import (
+	"errors"
 	"github.com/xmidt-org/ears/internal/pkg/config"
 	"net"
 	"os"
 )
 
+const (
+	storageTypeDynamo             = "dynamodb"
+	defaultUpdateFrequencySeconds = 10
+	defaultUpdateTtlSeconds       = 60
+	defaultTable                  = "ears-nodes"
+	defaultTag                    = "local"
+	defaultRegion                 = "us-west-2"
+	//defaultRegion          = "local"
+)
+
+type (
+	SharderConfig struct {
+		StorageType            string
+		StorageRegion          string
+		StorageTable           string
+		StorageTag             string
+		UpdateFrequencySeconds int
+		UpdateTtlSeconds       int
+	}
+)
+
 var (
-	DefaultDistributorConfigs = map[string]string{
-		"type": "dynamodb",
-		//"region": "local",
-		"region":          "us-west-2",
-		"table":           "ears-nodes",
-		"updateFrequency": "10",
-		"olderThan":       "60",
-		"tag":             "dev",
+	DefaultSharderConfig = SharderConfig{
+		StorageType:            storageTypeDynamo,
+		StorageRegion:          defaultRegion,
+		StorageTable:           defaultTable,
+		StorageTag:             defaultTag,
+		UpdateFrequencySeconds: defaultUpdateFrequencySeconds,
+		UpdateTtlSeconds:       defaultUpdateTtlSeconds,
 	}
 	defaultNodeStateManager NodeStateManager
 )
@@ -22,64 +43,38 @@ var (
 func InitDistributorConfigs(config config.Config) {
 	storageType := config.GetString("ears.sharder.type")
 	if storageType != "" {
-		DefaultDistributorConfigs["type"] = storageType
+		DefaultSharderConfig.StorageType = storageType
 	}
 	region := config.GetString("ears.sharder.region")
 	if region != "" {
-		DefaultDistributorConfigs["region"] = region
+		DefaultSharderConfig.StorageRegion = region
 	}
 	table := config.GetString("ears.sharder.table")
 	if table != "" {
-		DefaultDistributorConfigs["table"] = table
+		DefaultSharderConfig.StorageTable = table
 	}
-	updateFrequency := config.GetString("ears.sharder.updateFrequency")
-	if updateFrequency != "" {
-		DefaultDistributorConfigs["updateFrequency"] = updateFrequency
+	updateFrequencySeconds := config.GetInt("ears.sharder.updateFrequencySeconds")
+	if updateFrequencySeconds > 0 {
+		DefaultSharderConfig.UpdateFrequencySeconds = updateFrequencySeconds
 	}
-	olderThan := config.GetString("ears.sharder.olderThan")
-	if olderThan != "" {
-		DefaultDistributorConfigs["olderThan"] = olderThan
+	updateTtlSeconds := config.GetInt("ears.sharder.updateTtlSeconds")
+	if updateTtlSeconds > 0 {
+		DefaultSharderConfig.UpdateTtlSeconds = updateTtlSeconds
 	}
 	tag := config.GetString("ears.env")
 	if tag != "" {
-		DefaultDistributorConfigs["tag"] = tag
+		DefaultSharderConfig.StorageTag = tag
 	}
 }
 
 // DefaultControllerConfig generates a default configuration based on a local dynamo instance
-func DefaultControllerConfig(config config.Config) *ControllerConfig {
+func DefaultControllerConfig() *ControllerConfig {
 	cc := ControllerConfig{
 		ShardConfig: ShardConfig{
 			NumShards:   0,
 			OwnedShards: []string{},
 		},
-		StorageConfig: DefaultDistributorConfigs,
-	}
-	if config != nil {
-		customType := config.GetString("ears.sharder.type")
-		if customType != "" {
-			cc.StorageConfig["type"] = customType
-		}
-		customRegion := config.GetString("ears.sharder.region")
-		if customRegion != "" {
-			cc.StorageConfig["region"] = customRegion
-		}
-		customTable := config.GetString("ears.sharder.table")
-		if customTable != "" {
-			cc.StorageConfig["table"] = customTable
-		}
-		customUpdateFrequency := config.GetString("ears.sharder.updateFrequency")
-		if customUpdateFrequency != "" {
-			cc.StorageConfig["updateFrequency"] = customUpdateFrequency
-		}
-		customOlderThan := config.GetString("ears.sharder.olderThan")
-		if customOlderThan != "" {
-			cc.StorageConfig["olderThan"] = customOlderThan
-		}
-		customTag := config.GetString("ears.env")
-		if customTag != "" {
-			cc.StorageConfig["tag"] = customTag
-		}
+		StorageConfig: DefaultSharderConfig,
 	}
 	cc.NodeName = os.Getenv("HOSTNAME")
 	if "" == cc.NodeName {
@@ -100,18 +95,20 @@ func DefaultControllerConfig(config config.Config) *ControllerConfig {
 	return &cc
 }
 
-func GetDefaultNodeStateManager(identity string, configData map[string]string) (NodeStateManager, error) {
+func GetDefaultNodeStateManager(identity string, configData SharderConfig) (NodeStateManager, error) {
 	var err error
 	if defaultNodeStateManager == nil {
-		if configData["table"] == "dynamodb" {
+		if configData.StorageTable == "dynamodb" {
 			defaultNodeStateManager, err = newDynamoDBNodeManager(identity, configData)
-		} else if configData["table"] == "inmemory" {
+		} else if configData.StorageTable == "inmemory" {
 			defaultNodeStateManager, err = newInMemoryNodeManager(identity, configData)
+		} else {
+			return nil, errors.New("unknown sharder storage type " + configData.StorageTable)
 		}
 	}
 	return defaultNodeStateManager, err
 }
 
-func GetDefaultHashDistributor(identity string, numShards int, configData map[string]string) (ShardDistributor, error) {
+func GetDefaultHashDistributor(identity string, numShards int, configData SharderConfig) (ShardDistributor, error) {
 	return newSimpleHashDistributor(identity, numShards, configData)
 }
