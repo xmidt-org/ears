@@ -18,7 +18,7 @@ const (
 )
 
 type (
-	SharderConfig struct {
+	StorageConfig struct {
 		StorageType            string
 		StorageRegion          string
 		StorageTable           string
@@ -29,7 +29,7 @@ type (
 )
 
 var (
-	DefaultSharderConfig = SharderConfig{
+	DefaultStorageConfig = StorageConfig{
 		StorageType:            storageTypeDynamo,
 		StorageRegion:          defaultRegion,
 		StorageTable:           defaultTable,
@@ -43,27 +43,27 @@ var (
 func InitDistributorConfigs(config config.Config) {
 	storageType := config.GetString("ears.sharder.type")
 	if storageType != "" {
-		DefaultSharderConfig.StorageType = storageType
+		DefaultStorageConfig.StorageType = storageType
 	}
 	region := config.GetString("ears.sharder.region")
 	if region != "" {
-		DefaultSharderConfig.StorageRegion = region
+		DefaultStorageConfig.StorageRegion = region
 	}
 	table := config.GetString("ears.sharder.table")
 	if table != "" {
-		DefaultSharderConfig.StorageTable = table
+		DefaultStorageConfig.StorageTable = table
 	}
 	updateFrequencySeconds := config.GetInt("ears.sharder.updateFrequencySeconds")
 	if updateFrequencySeconds > 0 {
-		DefaultSharderConfig.UpdateFrequencySeconds = updateFrequencySeconds
+		DefaultStorageConfig.UpdateFrequencySeconds = updateFrequencySeconds
 	}
 	updateTtlSeconds := config.GetInt("ears.sharder.updateTtlSeconds")
 	if updateTtlSeconds > 0 {
-		DefaultSharderConfig.UpdateTtlSeconds = updateTtlSeconds
+		DefaultStorageConfig.UpdateTtlSeconds = updateTtlSeconds
 	}
 	tag := config.GetString("ears.env")
 	if tag != "" {
-		DefaultSharderConfig.StorageTag = tag
+		DefaultStorageConfig.StorageTag = tag
 	}
 }
 
@@ -74,7 +74,7 @@ func DefaultControllerConfig() *ControllerConfig {
 			NumShards:   0,
 			OwnedShards: []string{},
 		},
-		StorageConfig: DefaultSharderConfig,
+		StorageConfig: DefaultStorageConfig,
 	}
 	cc.NodeName = os.Getenv("HOSTNAME")
 	if "" == cc.NodeName {
@@ -95,12 +95,12 @@ func DefaultControllerConfig() *ControllerConfig {
 	return &cc
 }
 
-func GetDefaultNodeStateManager(identity string, configData SharderConfig) (NodeStateManager, error) {
+func GetDefaultNodeStateManager(identity string, configData StorageConfig) (NodeStateManager, error) {
 	var err error
 	if defaultNodeStateManager == nil {
-		if configData.StorageTable == "dynamodb" {
+		if configData.StorageType == "dynamodb" {
 			defaultNodeStateManager, err = newDynamoDBNodeManager(identity, configData)
-		} else if configData.StorageTable == "inmemory" {
+		} else if configData.StorageType == "inmemory" {
 			defaultNodeStateManager, err = newInMemoryNodeManager(identity, configData)
 		} else {
 			return nil, errors.New("unknown sharder storage type " + configData.StorageTable)
@@ -109,6 +109,6 @@ func GetDefaultNodeStateManager(identity string, configData SharderConfig) (Node
 	return defaultNodeStateManager, err
 }
 
-func GetDefaultHashDistributor(identity string, numShards int, configData SharderConfig) (ShardDistributor, error) {
+func GetDefaultHashDistributor(identity string, numShards int, configData StorageConfig) (ShardDistributor, error) {
 	return newSimpleHashDistributor(identity, numShards, configData)
 }

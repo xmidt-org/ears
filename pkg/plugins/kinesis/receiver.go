@@ -147,7 +147,7 @@ func (r *Receiver) shardMonitor(svc *kinesis.Kinesis, distributor sharder.ShardD
 			stopped := r.stopped
 			r.Unlock()
 			if stopped {
-				r.logger.Error().Str("op", "Kinesis.shardMonitor").Str("stream", *r.stream.StreamDescription.StreamName).Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Msg("stopping shard monitor")
+				r.logger.Info().Str("op", "Kinesis.shardMonitor").Str("stream", *r.stream.StreamDescription.StreamName).Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Msg("stopping shard monitor")
 				return
 			}
 			stream, err := svc.DescribeStream(&kinesis.DescribeStreamInput{

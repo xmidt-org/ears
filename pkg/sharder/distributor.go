@@ -13,7 +13,7 @@ func init() {
 	rand.Seed(time.Now().UnixNano())
 }
 
-func newSimpleHashDistributor(identity string, numShards int, configData SharderConfig) (*SimpleHashDistributor, error) {
+func newSimpleHashDistributor(identity string, numShards int, configData StorageConfig) (*SimpleHashDistributor, error) {
 	hashDistributor := &SimpleHashDistributor{
 		identity:   identity,
 		updateChan: make(ShardUpdater),

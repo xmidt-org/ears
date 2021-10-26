@@ -5,7 +5,7 @@ type inmemoryNodeManager struct {
 	identity string
 }
 
-func newInMemoryNodeManager(identity string, config SharderConfig) (*inmemoryNodeManager, error) {
+func newInMemoryNodeManager(identity string, config StorageConfig) (*inmemoryNodeManager, error) {
 	nodeManager := inmemoryNodeManager{
 		identity: identity,
 	}
