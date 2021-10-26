@@ -25,15 +25,6 @@ const valueName = "lastUpdated"
 type dynamoDBNodeManager struct {
 	sync.Mutex
 	server *dynamodb.DynamoDB
-	tag    string
-	region string
-	// table name of the healthTable
-	tableName string
-	// updateFrequency to read/write the state from/to dynamoDB
-	updateFrequencySeconds int
-	// node state's last updated time is olderThan than this (in seconds), treat as bad node
-	// also if can't get/update node state for this time than it will exit the service
-	updateFrequencyTtl int
 	// ip address of this node
 	identity string
 	// logger
@@ -44,32 +35,21 @@ type dynamoDBNodeManager struct {
 	activeNodes []string
 	// last update time
 	lastUpdateTime time.Time
+	// sharder configurations
+	config StorageConfig
 }
 
-func newDynamoDBNodeManager(identity string, configData SharderConfig) (*dynamoDBNodeManager, error) {
+func newDynamoDBNodeManager(identity string, configData StorageConfig) (*dynamoDBNodeManager, error) {
 	nodeManager := &dynamoDBNodeManager{
-		logger:                 event.GetEventLogger(),
-		region:                 configData.StorageRegion,
-		tableName:              configData.StorageTable,
-		tag:                    configData.StorageTag,
-		identity:               identity,
-		updateFrequencySeconds: configData.UpdateFrequencySeconds,
-		updateFrequencyTtl:     configData.UpdateTtlSeconds,
-		stopped:                false,
-		activeNodes:            make([]string, 0),
-		lastUpdateTime:         time.Now(),
-	}
-	if nodeManager.tag == "" {
-		nodeManager.tag = "node"
-	}
-	if nodeManager.updateFrequencySeconds <= 0 {
-		nodeManager.updateFrequencySeconds = defaultUpdateFrequencySeconds
-	}
-	if nodeManager.updateFrequencyTtl <= 0 {
-		nodeManager.updateFrequencyTtl = defaultUpdateTtlSeconds
+		logger:         event.GetEventLogger(),
+		config:         configData,
+		identity:       identity,
+		stopped:        false,
+		activeNodes:    make([]string, 0),
+		lastUpdateTime: time.Now(),
 	}
 	// validate regions we can handle
-	switch nodeManager.region {
+	switch nodeManager.config.StorageRegion {
 	case "local":
 		session, err := session.NewSession(&aws.Config{
 			Endpoint: aws.String("http://127.0.0.1:8000")},
@@ -82,7 +62,7 @@ func newDynamoDBNodeManager(identity string, configData SharderConfig) (*dynamoD
 		return nil, errors.New("region must be specified")
 	default:
 		session, err := session.NewSession(&aws.Config{
-			Region: aws.String(nodeManager.region)},
+			Region: aws.String(nodeManager.config.StorageRegion)},
 		)
 		if nil != err {
 			return nil, err
@@ -99,11 +79,11 @@ func newDynamoDBNodeManager(identity string, configData SharderConfig) (*dynamoD
 }
 
 func (d *dynamoDBNodeManager) GetActiveNodes() ([]string, error) {
-	if int(time.Since(d.lastUpdateTime).Seconds()) < d.updateFrequencySeconds && len(d.activeNodes) > 0 {
+	if int(time.Since(d.lastUpdateTime).Seconds()) < d.config.UpdateFrequencySeconds && len(d.activeNodes) > 0 {
 		return d.activeNodes, nil
 	}
 	activeNodes := make([]string, 0)
-	keyCond := expression.Key(keyName).Equal(expression.Value(d.tag))
+	keyCond := expression.Key(keyName).Equal(expression.Value(d.config.StorageTag))
 	proj := expression.NamesList(expression.Name(sortKeyName), expression.Name(valueName))
 	expr, err := expression.NewBuilder().
 		WithKeyCondition(keyCond).
@@ -117,7 +97,7 @@ func (d *dynamoDBNodeManager) GetActiveNodes() ([]string, error) {
 		ExpressionAttributeValues: expr.Values(),
 		KeyConditionExpression:    expr.KeyCondition(),
 		ProjectionExpression:      expr.Projection(),
-		TableName:                 aws.String(d.tableName),
+		TableName:                 aws.String(d.config.StorageTable),
 	}
 	results, err := d.server.Query(input)
 	if err != nil {
@@ -137,7 +117,7 @@ func (d *dynamoDBNodeManager) GetActiveNodes() ([]string, error) {
 		if err != nil {
 			return nil, err
 		}
-		if int(time.Since(updateTime).Seconds()) > d.updateFrequencyTtl {
+		if int(time.Since(updateTime).Seconds()) > d.config.UpdateTtlSeconds {
 			d.deleteRecord(aws.StringValue(ipAttr.S))
 		}
 		activeNodes = append(activeNodes, aws.StringValue(ipAttr.S))
@@ -182,10 +162,10 @@ func (d *dynamoDBNodeManager) updateState() {
 						S: aws.String(d.timestamp(time.Now())),
 					},
 				},
-				TableName: aws.String(d.tableName),
+				TableName: aws.String(d.config.StorageTable),
 				Key: map[string]*dynamodb.AttributeValue{
 					keyName: {
-						S: aws.String(d.tag),
+						S: aws.String(d.config.StorageTag),
 					},
 					sortKeyName: {
 						S: aws.String(d.identity),
@@ -198,7 +178,7 @@ func (d *dynamoDBNodeManager) updateState() {
 			if err != nil {
 				d.logger.Error().Str("op", "sharder.updateState").Str("identity", d.identity).Msg(err.Error())
 			}
-			time.Sleep(time.Duration(d.updateFrequencySeconds) * time.Second)
+			time.Sleep(time.Duration(d.config.UpdateFrequencySeconds) * time.Second)
 		}
 	}()
 }
@@ -220,13 +200,13 @@ func (d *dynamoDBNodeManager) deleteRecord(ip string) {
 	input := &dynamodb.DeleteItemInput{
 		Key: map[string]*dynamodb.AttributeValue{
 			keyName: {
-				S: aws.String(d.tag),
+				S: aws.String(d.config.StorageTag),
 			},
 			sortKeyName: {
 				S: aws.String(ip),
 			},
 		},
-		TableName: aws.String(d.tableName),
+		TableName: aws.String(d.config.StorageTable),
 	}
 	d.server.DeleteItem(input)
 }
@@ -234,7 +214,7 @@ func (d *dynamoDBNodeManager) deleteRecord(ip string) {
 // health_table description
 func (d *dynamoDBNodeManager) tableDescription() *dynamodb.CreateTableInput {
 	return &dynamodb.CreateTableInput{
-		TableName: aws.String(d.tableName),
+		TableName: aws.String(d.config.StorageTable),
 		AttributeDefinitions: []*dynamodb.AttributeDefinition{
 			{
 				AttributeName: aws.String(keyName),
@@ -265,7 +245,7 @@ func (d *dynamoDBNodeManager) tableDescription() *dynamodb.CreateTableInput {
 // ensureTable verifies the table already exists, otherwise creates it
 func (d *dynamoDBNodeManager) ensureTable() error {
 	describe := &dynamodb.DescribeTableInput{
-		TableName: aws.String(d.tableName),
+		TableName: aws.String(d.config.StorageTable),
 	}
 	_, err := d.server.DescribeTable(describe)
 	if err != nil {

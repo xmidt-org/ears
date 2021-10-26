@@ -55,7 +55,7 @@ type ShardDistributor interface {
 type ControllerConfig struct {
 	//Name string
 	ShardConfig
-	StorageConfig SharderConfig
+	StorageConfig StorageConfig
 	NodeName      string
 }
 
