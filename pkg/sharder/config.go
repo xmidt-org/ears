@@ -8,7 +8,7 @@ import (
 
 var (
 	DefaultDistributorConfigs = map[string]string{
-		"type": "dynamo",
+		"type": "dynamodb",
 		//"region": "local",
 		"region":          "us-west-2",
 		"table":           "ears-nodes",
@@ -47,13 +47,39 @@ func InitDistributorConfigs(config config.Config) {
 }
 
 // DefaultControllerConfig generates a default configuration based on a local dynamo instance
-func DefaultControllerConfig() *ControllerConfig {
+func DefaultControllerConfig(config config.Config) *ControllerConfig {
 	cc := ControllerConfig{
 		ShardConfig: ShardConfig{
 			NumShards:   0,
 			OwnedShards: []string{},
 		},
 		StorageConfig: DefaultDistributorConfigs,
+	}
+	if config != nil {
+		customType := config.GetString("ears.sharder.type")
+		if customType != "" {
+			cc.StorageConfig["type"] = customType
+		}
+		customRegion := config.GetString("ears.sharder.region")
+		if customRegion != "" {
+			cc.StorageConfig["region"] = customRegion
+		}
+		customTable := config.GetString("ears.sharder.table")
+		if customTable != "" {
+			cc.StorageConfig["table"] = customTable
+		}
+		customUpdateFrequency := config.GetString("ears.sharder.updateFrequency")
+		if customUpdateFrequency != "" {
+			cc.StorageConfig["updateFrequency"] = customUpdateFrequency
+		}
+		customOlderThan := config.GetString("ears.sharder.olderThan")
+		if customOlderThan != "" {
+			cc.StorageConfig["olderThan"] = customOlderThan
+		}
+		customTag := config.GetString("ears.env")
+		if customTag != "" {
+			cc.StorageConfig["tag"] = customTag
+		}
 	}
 	cc.NodeName = os.Getenv("HOSTNAME")
 	if "" == cc.NodeName {
@@ -78,7 +104,7 @@ func GetDefaultNodeStateManager(identity string, configData map[string]string) (
 	var err error
 	if defaultNodeStateManager == nil {
 		if configData["table"] == "dynamodb" {
-			defaultNodeStateManager, err = newDynamoDBNodesManager(identity, configData)
+			defaultNodeStateManager, err = newDynamoDBNodeManager(identity, configData)
 		} else if configData["table"] == "inmemory" {
 			defaultNodeStateManager, err = newInMemoryNodeManager(identity, configData)
 		}
