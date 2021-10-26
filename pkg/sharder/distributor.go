@@ -15,7 +15,6 @@ func init() {
 
 func newSimpleHashDistributor(identity string, numShards int, configData StorageConfig) (*SimpleHashDistributor, error) {
 	hashDistributor := &SimpleHashDistributor{
-		identity:   identity,
 		updateChan: make(ShardUpdater),
 		logger:     event.GetEventLogger(),
 		ShardConfig: ShardConfig{
@@ -43,7 +42,7 @@ func (c *SimpleHashDistributor) Updates() ShardUpdater {
 
 // Identity returns the note Identity that SimpleHashDistributor locate
 func (c *SimpleHashDistributor) Identity() string {
-	return c.identity
+	return c.ShardConfig.Identity
 }
 
 func (c *SimpleHashDistributor) UpdateNumberShards(numShards int) {
@@ -117,7 +116,7 @@ func (c *SimpleHashDistributor) hashShards() bool {
 	var myShards []string
 	var myPeerIndex int
 	for i, peer := range c.nodes {
-		if peer == c.identity {
+		if peer == c.ShardConfig.Identity {
 			myPeerIndex = i
 			break
 		}

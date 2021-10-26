@@ -62,7 +62,6 @@ type ControllerConfig struct {
 type SimpleHashDistributor struct {
 	ShardConfig
 	nodeManager NodeStateManager
-	identity    string
 	nodes       []string
 	updateChan  chan ShardConfig
 	logger      *zerolog.Logger
