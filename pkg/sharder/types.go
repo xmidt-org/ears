@@ -9,7 +9,7 @@ import (
 type Controller struct {
 	Distributor ShardDistributor
 	ShardConfig
-	StorageConfig map[string]string
+	StorageConfig map[string]interface{}
 	sync.RWMutex
 }
 
@@ -55,7 +55,7 @@ type ShardDistributor interface {
 type ControllerConfig struct {
 	//Name string
 	ShardConfig
-	StorageConfig map[string]string
+	StorageConfig SharderConfig
 	NodeName      string
 }
 
