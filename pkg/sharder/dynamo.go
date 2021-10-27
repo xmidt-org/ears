@@ -211,7 +211,6 @@ func (d *dynamoDBNodeManager) deleteRecord(ip string) {
 	d.server.DeleteItem(input)
 }
 
-// health_table description
 func (d *dynamoDBNodeManager) tableDescription() *dynamodb.CreateTableInput {
 	return &dynamodb.CreateTableInput{
 		TableName: aws.String(d.config.StorageTable),
