@@ -57,29 +57,33 @@ func NewPluginVersion(name string, version string, commitID string) (*pkgplugin.
 }
 
 var DefaultReceiverConfig = ReceiverConfig{
-	StreamName:         "",
-	AcknowledgeTimeout: pointer.Int(5),
-	ShardIteratorType:  "LATEST",
-	TracePayloadOnNack: pointer.Bool(false),
-	EnhancedFanOut:     pointer.Bool(false),
-	ConsumerName:       "",
-	AWSRoleARN:         "",
-	AWSSecretAccessKey: "",
-	AWSAccessKeyId:     "",
-	AWSRegion:          endpoints.UsWest2RegionID,
+	StreamName:              "",
+	AcknowledgeTimeout:      pointer.Int(5),
+	ShardIteratorType:       "LATEST",
+	TracePayloadOnNack:      pointer.Bool(false),
+	EnhancedFanOut:          pointer.Bool(false),
+	ConsumerName:            "",
+	AWSRoleARN:              "",
+	AWSSecretAccessKey:      "",
+	AWSAccessKeyId:          "",
+	AWSRegion:               endpoints.UsWest2RegionID,
+	MaxCheckpointAgeSeconds: pointer.Int(86400),
+	UseCheckpoint:           pointer.Bool(true),
 }
 
 type ReceiverConfig struct {
-	StreamName         string `json:"streamName,omitempty"`
-	AcknowledgeTimeout *int   `json:"acknowledgeTimeout,omitempty"`
-	ShardIteratorType  string `json:"shardIteratorType,omitempty"`
-	TracePayloadOnNack *bool  `json:"tracePayloadOnNack,omitempty"`
-	EnhancedFanOut     *bool  `json:"enhancedFanOut,omitempty"`
-	ConsumerName       string `json:"consumerName,omitempty"` // enhanced fan-out only
-	AWSRoleARN         string `json:"awsRoleARN,omitempty"`
-	AWSAccessKeyId     string `json:"awsAccessKeyId,omitempty"`
-	AWSSecretAccessKey string `json:"awsSecretAccessKey,omitempty"`
-	AWSRegion          string `json:"awsRegion,omitempty"`
+	StreamName              string `json:"streamName,omitempty"`
+	AcknowledgeTimeout      *int   `json:"acknowledgeTimeout,omitempty"`
+	ShardIteratorType       string `json:"shardIteratorType,omitempty"`
+	TracePayloadOnNack      *bool  `json:"tracePayloadOnNack,omitempty"`
+	EnhancedFanOut          *bool  `json:"enhancedFanOut,omitempty"`
+	ConsumerName            string `json:"consumerName,omitempty"` // enhanced fan-out only
+	AWSRoleARN              string `json:"awsRoleARN,omitempty"`
+	AWSAccessKeyId          string `json:"awsAccessKeyId,omitempty"`
+	AWSSecretAccessKey      string `json:"awsSecretAccessKey,omitempty"`
+	AWSRegion               string `json:"awsRegion,omitempty"`
+	UseCheckpoint           *bool  `json:"useCheckpoint,omitempty"`
+	MaxCheckpointAgeSeconds *int   `json:"maxCheckpointAgeSeconds,omitempty"`
 }
 
 type Receiver struct {
