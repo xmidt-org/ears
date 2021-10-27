@@ -225,19 +225,32 @@ func (r *Receiver) startShardReceiverEFO(svc *kinesis.Kinesis, stream *kinesis.D
 		r.Lock()
 		r.stopChannelMap[shardIdx] = make(chan bool)
 		r.Unlock()
-		checkpoint, _ := checkpoint.GetDefaultCheckpointManager(nil)
+		checkpoint, err := checkpoint.GetDefaultCheckpointManager(nil)
+		if err != nil {
+			r.logger.Error().Str("op", "Kinesis.receiveWorkerEFO").Str("stream", *r.stream.StreamDescription.StreamName).Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Int("shardIdx", shardIdx).Msg("checkpoint error: " + err.Error())
+			return
+		}
 		checkpointId := checkpoint.GetId(r.name, r.config.ConsumerName, r.config.StreamName, strconv.Itoa(shardIdx))
 		for {
 			shard := stream.StreamDescription.Shards[shardIdx]
 			params := &kinesis.SubscribeToShardInput{
 				ConsumerARN: consumer.ConsumerDescription.ConsumerARN,
 				StartingPosition: &kinesis.StartingPosition{
-					Type: aws.String(kinesis.ShardIteratorTypeLatest),
+					Type: aws.String(r.config.ShardIteratorType),
+					//SequenceNumber: aws.String(""),
+					//Timestamp: aws.Time(time.Now()),
 				},
 				ShardId: shard.ShardId,
 			}
-			//params.StartingPosition.Type = aws.String(kinesis.ShardIteratorTypeAtSequenceNumber)
-			//params.StartingPosition.SetSequenceNumber(*startSequenceNumber)
+			if *r.config.UseCheckpoint {
+				sequenceId, lastUpdate, err := checkpoint.GetCheckpoint(checkpointId)
+				if err != nil {
+					if int(time.Since(lastUpdate).Seconds()) <= *r.config.MaxCheckpointAgeSeconds {
+						params.StartingPosition.Type = aws.String(kinesis.ShardIteratorTypeAfterSequenceNumber)
+						params.StartingPosition.SequenceNumber = aws.String(sequenceId)
+					}
+				}
+			}
 			for {
 				select {
 				case <-r.getStopChannel(shardIdx):
@@ -330,23 +343,33 @@ func (r *Receiver) startShardReceiver(svc *kinesis.Kinesis, stream *kinesis.Desc
 		r.Lock()
 		r.stopChannelMap[shardIdx] = make(chan bool)
 		r.Unlock()
-		checkpoint, _ := checkpoint.GetDefaultCheckpointManager(nil)
+		checkpoint, err := checkpoint.GetDefaultCheckpointManager(nil)
+		if err != nil {
+			r.logger.Error().Str("op", "Kinesis.receiveWorkerEFO").Str("stream", *r.stream.StreamDescription.StreamName).Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Int("shardIdx", shardIdx).Msg("checkpoint error: " + err.Error())
+			return
+		}
 		checkpointId := checkpoint.GetId(r.name, r.config.ConsumerName, r.config.StreamName, strconv.Itoa(shardIdx))
 		// receive messages
 		for {
 			// this is a normal receiver
 			//startingTimestamp := time.Now().Add(-(time.Second) * 30)
-			iteratorOutput, err := svc.GetShardIterator(&kinesis.GetShardIteratorInput{
+			shardIteratorInput := &kinesis.GetShardIteratorInput{
 				ShardId:           aws.String(*stream.StreamDescription.Shards[shardIdx].ShardId),
 				ShardIteratorType: aws.String(r.config.ShardIteratorType),
-				// ShardIteratorType: aws.String("LATEST"),
-				// ShardIteratorType: aws.String("AT_TIMESTAMP"),
-				// ShardIteratorType: aws.String("TRIM_HORIZON"),
-				// ShardIteratorType: aws.String("AT_SEQUENCE_NUMBER"),
-				// Timestamp:         &startingTimestamp,
-				// StartingSequenceNumber: aws.String("10"),
+				// Timestamp:         aws.Time(startingTimestamp),
+				// StartingSequenceNumber: aws.String(""),
 				StreamName: aws.String(r.config.StreamName),
-			})
+			}
+			if *r.config.UseCheckpoint {
+				sequenceId, lastUpdate, err := checkpoint.GetCheckpoint(checkpointId)
+				if err != nil {
+					if int(time.Since(lastUpdate).Seconds()) <= *r.config.MaxCheckpointAgeSeconds {
+						shardIteratorInput.ShardIteratorType = aws.String(kinesis.ShardIteratorTypeAfterSequenceNumber)
+						shardIteratorInput.StartingSequenceNumber = aws.String(sequenceId)
+					}
+				}
+			}
+			iteratorOutput, err := svc.GetShardIterator(shardIteratorInput)
 			if err != nil {
 				r.logger.Error().Str("op", "Kinesis.receiveWorker").Str("stream", *r.stream.StreamDescription.StreamName).Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Int("shardIdx", shardIdx).Msg(err.Error())
 				time.Sleep(1 * time.Second)
