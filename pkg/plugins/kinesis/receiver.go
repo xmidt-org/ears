@@ -26,6 +26,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/kinesis"
 	"github.com/goccy/go-yaml"
 	"github.com/xmidt-org/ears/internal/pkg/rtsemconv"
+	"github.com/xmidt-org/ears/pkg/checkpoint"
 	"github.com/xmidt-org/ears/pkg/event"
 	"github.com/xmidt-org/ears/pkg/panics"
 	pkgplugin "github.com/xmidt-org/ears/pkg/plugin"
@@ -224,6 +225,8 @@ func (r *Receiver) startShardReceiverEFO(svc *kinesis.Kinesis, stream *kinesis.D
 		r.Lock()
 		r.stopChannelMap[shardIdx] = make(chan bool)
 		r.Unlock()
+		checkpoint, _ := checkpoint.GetDefaultCheckpointManager(nil)
+		checkpointId := checkpoint.GetId(r.name, r.config.ConsumerName, r.config.StreamName, strconv.Itoa(shardIdx))
 		for {
 			shard := stream.StreamDescription.Shards[shardIdx]
 			params := &kinesis.SubscribeToShardInput{
@@ -286,10 +289,12 @@ func (r *Receiver) startShardReceiverEFO(svc *kinesis.Kinesis, stream *kinesis.D
 									e, err := event.New(ctx, payload, event.WithMetadataKeyValue("kinesisMessage", rec), event.WithAck(
 										func(e event.Event) {
 											r.eventSuccessCounter.Add(ctx, 1)
+											checkpoint.SetCheckpoint(checkpointId, *rec.SequenceNumber)
 											cancel()
 										},
 										func(e event.Event, err error) {
 											r.eventFailureCounter.Add(ctx, 1)
+											checkpoint.SetCheckpoint(checkpointId, *rec.SequenceNumber)
 											cancel()
 										}),
 										event.WithTenant(r.Tenant()),
@@ -325,6 +330,8 @@ func (r *Receiver) startShardReceiver(svc *kinesis.Kinesis, stream *kinesis.Desc
 		r.Lock()
 		r.stopChannelMap[shardIdx] = make(chan bool)
 		r.Unlock()
+		checkpoint, _ := checkpoint.GetDefaultCheckpointManager(nil)
+		checkpointId := checkpoint.GetId(r.name, r.config.ConsumerName, r.config.StreamName, strconv.Itoa(shardIdx))
 		// receive messages
 		for {
 			// this is a normal receiver
@@ -389,10 +396,12 @@ func (r *Receiver) startShardReceiver(svc *kinesis.Kinesis, stream *kinesis.Desc
 						e, err := event.New(ctx, payload, event.WithMetadataKeyValue("kinesisMessage", *msg), event.WithAck(
 							func(e event.Event) {
 								r.eventSuccessCounter.Add(ctx, 1)
+								checkpoint.SetCheckpoint(checkpointId, *msg.SequenceNumber)
 								cancel()
 							},
 							func(e event.Event, err error) {
 								r.eventFailureCounter.Add(ctx, 1)
+								checkpoint.SetCheckpoint(checkpointId, *msg.SequenceNumber)
 								cancel()
 							}),
 							event.WithTenant(r.Tenant()),

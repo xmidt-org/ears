@@ -24,6 +24,7 @@ import (
 	"github.com/xmidt-org/ears/internal/pkg/config"
 	"github.com/xmidt-org/ears/internal/pkg/rtsemconv"
 	"github.com/xmidt-org/ears/pkg/app"
+	"github.com/xmidt-org/ears/pkg/checkpoint"
 	"github.com/xmidt-org/ears/pkg/event"
 	"github.com/xmidt-org/ears/pkg/sharder"
 	"go.opentelemetry.io/otel"
@@ -186,6 +187,8 @@ func SetupAPIServer(lifecycle fx.Lifecycle, config config.Config, logger *zerolo
 			return err
 		}
 	}
+
+	checkpoint.GetDefaultCheckpointManager(config)
 
 	lifecycle.Append(
 		fx.Hook{
