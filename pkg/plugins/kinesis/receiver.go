@@ -244,11 +244,13 @@ func (r *Receiver) startShardReceiverEFO(svc *kinesis.Kinesis, stream *kinesis.D
 			}
 			if *r.config.UseCheckpoint {
 				sequenceId, lastUpdate, err := checkpoint.GetCheckpoint(checkpointId)
-				if err != nil {
+				if err == nil {
 					if int(time.Since(lastUpdate).Seconds()) <= *r.config.MaxCheckpointAgeSeconds {
 						params.StartingPosition.Type = aws.String(kinesis.ShardIteratorTypeAfterSequenceNumber)
 						params.StartingPosition.SequenceNumber = aws.String(sequenceId)
 					}
+				} else {
+					r.logger.Error().Str("op", "Kinesis.receiveWorkerEFO").Str("stream", *r.stream.StreamDescription.StreamName).Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Int("shardIdx", shardIdx).Msg("checkpoint error: " + err.Error())
 				}
 			}
 			for {
@@ -362,11 +364,13 @@ func (r *Receiver) startShardReceiver(svc *kinesis.Kinesis, stream *kinesis.Desc
 			}
 			if *r.config.UseCheckpoint {
 				sequenceId, lastUpdate, err := checkpoint.GetCheckpoint(checkpointId)
-				if err != nil {
+				if err == nil {
 					if int(time.Since(lastUpdate).Seconds()) <= *r.config.MaxCheckpointAgeSeconds {
 						shardIteratorInput.ShardIteratorType = aws.String(kinesis.ShardIteratorTypeAfterSequenceNumber)
 						shardIteratorInput.StartingSequenceNumber = aws.String(sequenceId)
 					}
+				} else {
+					r.logger.Error().Str("op", "Kinesis.receiveWorkerEFO").Str("stream", *r.stream.StreamDescription.StreamName).Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Int("shardIdx", shardIdx).Msg("checkpoint error: " + err.Error())
 				}
 			}
 			iteratorOutput, err := svc.GetShardIterator(shardIteratorInput)
