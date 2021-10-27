@@ -59,7 +59,7 @@ func NewPluginVersion(name string, version string, commitID string) (*pkgplugin.
 var DefaultReceiverConfig = ReceiverConfig{
 	StreamName:              "",
 	AcknowledgeTimeout:      pointer.Int(5),
-	ShardIteratorType:       "LATEST",
+	ShardIteratorType:       kinesis.ShardIteratorTypeLatest, // AT_SEQUENCE_NUMBER, AFTER_SEQUENCE_NUMBER, LATEST, AT_TIMESTAMP, TRIM_HORIZON
 	TracePayloadOnNack:      pointer.Bool(false),
 	EnhancedFanOut:          pointer.Bool(false),
 	ConsumerName:            "",
