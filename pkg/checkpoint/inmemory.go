@@ -1,6 +1,9 @@
 package checkpoint
 
-import "errors"
+import (
+	"errors"
+	"time"
+)
 
 func newInMemoryCheckpointManager(config StorageConfig) CheckpointManager {
 	cm := new(InMemoryCheckpointManager)
@@ -8,10 +11,10 @@ func newInMemoryCheckpointManager(config StorageConfig) CheckpointManager {
 	return cm
 }
 
-func (cm *InMemoryCheckpointManager) GetCheckpoint(Id string) (string, string, error) {
+func (cm *InMemoryCheckpointManager) GetCheckpoint(Id string) (string, time.Time, error) {
 	cm.Lock()
 	defer cm.Unlock()
-	return cm.checkpoints[Id], "", nil
+	return cm.checkpoints[Id], time.Now(), nil
 }
 
 func (cm *InMemoryCheckpointManager) SetCheckpoint(Id string, sequenceNumber string) error {

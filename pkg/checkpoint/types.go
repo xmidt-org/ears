@@ -8,7 +8,7 @@ import (
 
 type (
 	CheckpointManager interface {
-		GetCheckpoint(Id string) (string, string, error)
+		GetCheckpoint(Id string) (string, time.Time, error)
 		SetCheckpoint(Id string, sequenceNumber string) error
 		GetId(pluginHash, consumerName, streamName, shardID string) string
 	}
