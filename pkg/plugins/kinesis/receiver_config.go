@@ -39,6 +39,12 @@ func (rc *ReceiverConfig) WithDefaults() ReceiverConfig {
 	if cfg.AWSRegion == "" {
 		cfg.AWSRegion = DefaultReceiverConfig.AWSRegion
 	}
+	if cfg.UseCheckpoint == nil {
+		cfg.UseCheckpoint = DefaultReceiverConfig.UseCheckpoint
+	}
+	if cfg.MaxCheckpointAgeSeconds == nil {
+		cfg.MaxCheckpointAgeSeconds = DefaultReceiverConfig.MaxCheckpointAgeSeconds
+	}
 	return cfg
 }
 
@@ -101,6 +107,14 @@ const receiverSchema = `
 				"enhancedFanOut" : {
 					"type": "boolean",
 					"default": false
+				},
+				"useCheckpoint" : {
+					"type": "boolean",
+					"default": true
+				},
+				"maxCheckpointAgeSeconds" : {
+                    "type": "integer", 
+					"minimum": 0
 				}
             },
             "required": [
