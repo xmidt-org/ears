@@ -50,7 +50,7 @@ func newDynamoCheckpointManager(config StorageConfig) (CheckpointManager, error)
 	return &cm, nil
 }
 
-func (cm *DynamoCheckpointManager) GetCheckpoint(Id string) (string, string, error) {
+func (cm *DynamoCheckpointManager) GetCheckpoint(Id string) (string, time.Time, error) {
 	keyCond := expression.Key(keyName).Equal(expression.Value(cm.Env))
 	proj := expression.NamesList(expression.Name(sortKeyName), expression.Name(valueNameSequenceId), expression.Name(valueNameLastUpdated))
 	expr, err := expression.NewBuilder().
@@ -58,7 +58,7 @@ func (cm *DynamoCheckpointManager) GetCheckpoint(Id string) (string, string, err
 		WithProjection(proj).
 		Build()
 	if err != nil {
-		return "", "", err
+		return "", time.Time{}, err
 	}
 	input := &dynamodb.QueryInput{
 		ExpressionAttributeNames:  expr.Names(),
@@ -69,22 +69,26 @@ func (cm *DynamoCheckpointManager) GetCheckpoint(Id string) (string, string, err
 	}
 	results, err := cm.svc.Query(input)
 	if err != nil {
-		return "", "", err
+		return "", time.Time{}, err
 	}
 	if len(results.Items) == 0 {
-		return "", "", nil
+		return "", time.Time{}, nil
 	} else if len(results.Items) > 1 {
-		return "", "", errors.New("found more than one checkpoint for Id " + Id)
+		return "", time.Time{}, errors.New("found more than one checkpoint for Id " + Id)
 	} else {
 		sequenceIdAttr, found := results.Items[0][valueNameSequenceId]
 		if !found {
-			return "", "", errors.New("invalid checkpoint for Id " + Id)
+			return "", time.Time{}, errors.New("invalid checkpoint for Id " + Id)
 		}
 		lastUpdatedAttr, found := results.Items[0][valueNameLastUpdated]
 		if !found {
-			return "", "", errors.New("invalid checkpoint for Id " + Id)
+			return "", time.Time{}, errors.New("invalid checkpoint for Id " + Id)
 		}
-		return aws.StringValue(sequenceIdAttr.S), aws.StringValue(lastUpdatedAttr.S), nil
+		updateTime, err := time.Parse(time.RFC3339Nano, aws.StringValue(lastUpdatedAttr.S))
+		if err != nil {
+			return "", time.Time{}, err
+		}
+		return aws.StringValue(sequenceIdAttr.S), updateTime, nil
 	}
 }
 
