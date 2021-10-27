@@ -8,7 +8,8 @@
     "config": {
       "streamName": "bw-ears-demo",
       "enhancedFanOut": true,
-      "consumerName": "bwtest"
+      "consumerName": "bwtest",
+      "useCheckpoint": false
     }
   },
   "sender": {
