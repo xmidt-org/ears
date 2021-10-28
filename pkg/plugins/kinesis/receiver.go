@@ -161,6 +161,8 @@ func (r *Receiver) shardMonitor(svc *kinesis.Kinesis, distributor sharder.ShardD
 			if len(stream.StreamDescription.Shards) == 0 {
 				continue
 			}
+			//TODO: consider ListShard()
+			//TODO: consider not supporting shard splitting and merging
 			update := false
 			if len(stream.StreamDescription.Shards) != len(r.stream.StreamDescription.Shards) {
 				update = true
@@ -231,33 +233,51 @@ func (r *Receiver) startShardReceiverEFO(svc *kinesis.Kinesis, stream *kinesis.D
 			return
 		}
 		checkpointId := checkpoint.GetId(r.name, r.config.ConsumerName, r.config.StreamName, strconv.Itoa(shardIdx))
-		for {
-			// shard 0 is the parent shard id for all shards, the first child shard id is at 1
-			shard := stream.StreamDescription.Shards[shardIdx+1]
-			params := &kinesis.SubscribeToShardInput{
-				ConsumerARN: consumer.ConsumerDescription.ConsumerARN,
-				StartingPosition: &kinesis.StartingPosition{
-					Type: aws.String(r.config.ShardIteratorType),
-					//SequenceNumber: aws.String(""),
-					//Timestamp: aws.Time(time.Now()),
-				},
-				ShardId: shard.ShardId,
-			}
-			if *r.config.UseCheckpoint {
-				sequenceId, lastUpdate, err := checkpoint.GetCheckpoint(checkpointId)
-				if err == nil {
-					if int(time.Since(lastUpdate).Seconds()) <= *r.config.MaxCheckpointAgeSeconds {
-						params.StartingPosition.Type = aws.String(kinesis.ShardIteratorTypeAfterSequenceNumber)
-						params.StartingPosition.SequenceNumber = aws.String(sequenceId)
-					}
-				} else {
-					r.logger.Error().Str("op", "Kinesis.receiveWorkerEFO").Str("stream", *r.stream.StreamDescription.StreamName).Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Int("shardIdx", shardIdx).Msg("checkpoint error: " + err.Error())
+		// note, there may be dead parent shards in the mix
+		shard := stream.StreamDescription.Shards[shardIdx]
+		params := &kinesis.SubscribeToShardInput{
+			ConsumerARN: consumer.ConsumerDescription.ConsumerARN,
+			StartingPosition: &kinesis.StartingPosition{
+				Type: aws.String(r.config.ShardIteratorType),
+				//SequenceNumber: aws.String(""),
+				//Timestamp: aws.Time(time.Now()),
+			},
+			ShardId: shard.ShardId,
+		}
+		if *r.config.UseCheckpoint {
+			sequenceId, lastUpdate, err := checkpoint.GetCheckpoint(checkpointId)
+			if err == nil {
+				if int(time.Since(lastUpdate).Seconds()) <= *r.config.MaxCheckpointAgeSeconds {
+					params.StartingPosition.Type = aws.String(kinesis.ShardIteratorTypeAfterSequenceNumber)
+					params.StartingPosition.SequenceNumber = aws.String(sequenceId)
 				}
+			} else {
+				r.logger.Error().Str("op", "Kinesis.receiveWorkerEFO").Str("stream", *r.stream.StreamDescription.StreamName).Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Int("shardIdx", shardIdx).Msg("checkpoint error: " + err.Error())
 			}
-			for {
+		}
+		for {
+			select {
+			case <-r.getStopChannel(shardIdx):
+				r.logger.Info().Str("op", "Kinesis.receiveWorkerEFO").Str("stream", *r.stream.StreamDescription.StreamName).Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Int("shardIdx", shardIdx).Msg("receive loop stopped")
+				r.Lock()
+				close(r.stopChannelMap[shardIdx])
+				delete(r.stopChannelMap, shardIdx)
+				r.Unlock()
+				return
+			default:
+			}
+			sub, err := svc.SubscribeToShard(params)
+			if err != nil {
+				r.logger.Error().Str("op", "Kinesis.receiveWorkerEFO").Str("stream", *r.stream.StreamDescription.StreamName).Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Int("shardIdx", shardIdx).Msg("subscribe error: " + err.Error())
+				time.Sleep(10 * time.Second)
+				continue
+				//return
+			}
+			for evt := range sub.EventStream.Events() {
 				select {
 				case <-r.getStopChannel(shardIdx):
 					r.logger.Info().Str("op", "Kinesis.receiveWorkerEFO").Str("stream", *r.stream.StreamDescription.StreamName).Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Int("shardIdx", shardIdx).Msg("receive loop stopped")
+					sub.EventStream.Close()
 					r.Lock()
 					close(r.stopChannelMap[shardIdx])
 					delete(r.stopChannelMap, shardIdx)
@@ -265,64 +285,46 @@ func (r *Receiver) startShardReceiverEFO(svc *kinesis.Kinesis, stream *kinesis.D
 					return
 				default:
 				}
-				sub, err := svc.SubscribeToShard(params)
-				if err != nil {
-					r.logger.Error().Str("op", "Kinesis.receiveWorkerEFO").Str("stream", *r.stream.StreamDescription.StreamName).Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Int("shardIdx", shardIdx).Msg("subscribe error: " + err.Error())
-					continue
-				}
-				for evt := range sub.EventStream.Events() {
-					select {
-					case <-r.getStopChannel(shardIdx):
-						r.logger.Info().Str("op", "Kinesis.receiveWorkerEFO").Str("stream", *r.stream.StreamDescription.StreamName).Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Int("shardIdx", shardIdx).Msg("receive loop stopped")
-						sub.EventStream.Close()
-						r.Lock()
-						close(r.stopChannelMap[shardIdx])
-						delete(r.stopChannelMap, shardIdx)
-						r.Unlock()
-						return
-					default:
-					}
-					switch kinEvt := evt.(type) {
-					case *kinesis.SubscribeToShardEvent:
-						//startSequenceNumber = e.ContinuationSequenceNumber
-						if len(kinEvt.Records) == 0 {
-						} else {
-							for _, rec := range kinEvt.Records {
-								if len(rec.Data) == 0 {
+				switch kinEvt := evt.(type) {
+				case *kinesis.SubscribeToShardEvent:
+					//startSequenceNumber = e.ContinuationSequenceNumber
+					if len(kinEvt.Records) == 0 {
+					} else {
+						for _, rec := range kinEvt.Records {
+							if len(rec.Data) == 0 {
+								continue
+							} else {
+								r.Lock()
+								r.receiveCount++
+								r.Unlock()
+								var payload interface{}
+								err = json.Unmarshal(rec.Data, &payload)
+								if err != nil {
+									r.logger.Error().Str("op", "Kinesis.receiveWorkerEFO").Str("stream", *r.stream.StreamDescription.StreamName).Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Int("shardIdx", shardIdx).Msg("cannot parse message " + (*rec.SequenceNumber) + ": " + err.Error())
 									continue
-								} else {
-									r.Lock()
-									r.receiveCount++
-									r.Unlock()
-									var payload interface{}
-									err = json.Unmarshal(rec.Data, &payload)
-									if err != nil {
-										r.logger.Error().Str("op", "Kinesis.receiveWorkerEFO").Str("stream", *r.stream.StreamDescription.StreamName).Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Int("shardIdx", shardIdx).Msg("cannot parse message " + (*rec.SequenceNumber) + ": " + err.Error())
-										continue
-									}
-									ctx, cancel := context.WithTimeout(context.Background(), time.Duration(*r.config.AcknowledgeTimeout)*time.Second)
-									r.eventBytesCounter.Add(ctx, int64(len(rec.Data)))
-									r.logger.Debug().Str("op", "Kinesis.receiveWorkerEFO").Str("stream", *r.stream.StreamDescription.StreamName).Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Int("shardIdx", shardIdx).Str("partitionId", *rec.PartitionKey).Str("sequenceId", *rec.SequenceNumber).Msg("message received")
-									e, err := event.New(ctx, payload, event.WithMetadataKeyValue("kinesisMessage", rec), event.WithAck(
-										func(e event.Event) {
-											r.eventSuccessCounter.Add(ctx, 1)
-											checkpoint.SetCheckpoint(checkpointId, *rec.SequenceNumber)
-											cancel()
-										},
-										func(e event.Event, err error) {
-											r.eventFailureCounter.Add(ctx, 1)
-											checkpoint.SetCheckpoint(checkpointId, *rec.SequenceNumber)
-											cancel()
-										}),
-										event.WithTenant(r.Tenant()),
-										event.WithOtelTracing(r.Name()),
-										event.WithTracePayloadOnNack(*r.config.TracePayloadOnNack))
-									if err != nil {
-										r.logger.Error().Str("op", "Kinesis.receiveWorkerEFO").Str("stream", *r.stream.StreamDescription.StreamName).Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Int("shardIdx", shardIdx).Msg("cannot create event: " + err.Error())
-										return
-									}
-									r.Trigger(e)
 								}
+								ctx, cancel := context.WithTimeout(context.Background(), time.Duration(*r.config.AcknowledgeTimeout)*time.Second)
+								r.eventBytesCounter.Add(ctx, int64(len(rec.Data)))
+								r.logger.Debug().Str("op", "Kinesis.receiveWorkerEFO").Str("stream", *r.stream.StreamDescription.StreamName).Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Int("shardIdx", shardIdx).Str("partitionId", *rec.PartitionKey).Str("sequenceId", *rec.SequenceNumber).Msg("message received")
+								e, err := event.New(ctx, payload, event.WithMetadataKeyValue("kinesisMessage", rec), event.WithAck(
+									func(e event.Event) {
+										r.eventSuccessCounter.Add(ctx, 1)
+										checkpoint.SetCheckpoint(checkpointId, *rec.SequenceNumber)
+										cancel()
+									},
+									func(e event.Event, err error) {
+										r.eventFailureCounter.Add(ctx, 1)
+										checkpoint.SetCheckpoint(checkpointId, *rec.SequenceNumber)
+										cancel()
+									}),
+									event.WithTenant(r.Tenant()),
+									event.WithOtelTracing(r.Name()),
+									event.WithTracePayloadOnNack(*r.config.TracePayloadOnNack))
+								if err != nil {
+									r.logger.Error().Str("op", "Kinesis.receiveWorkerEFO").Str("stream", *r.stream.StreamDescription.StreamName).Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Int("shardIdx", shardIdx).Msg("cannot create event: " + err.Error())
+									return
+								}
+								r.Trigger(e)
 							}
 						}
 					}
