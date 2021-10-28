@@ -51,6 +51,7 @@ const (
 	EARSMetricAddRouteFailure     = "ears.addRouteFailure"
 	EARSMetricRemoveRouteSuccess  = "ears.removeRouteSuccess"
 	EARSMetricRemoveRouteFailure  = "ears.removeRouteFailure"
+	EARSMetricMillisBehindLatest  = "ears.millisBehindLatest"
 
 	EARSRouteId = attribute.Key("ears.routeId")
 

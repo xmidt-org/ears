@@ -105,8 +105,16 @@ func NewReceiver(tid tenant.Id, plugin string, name string, config interface{}, 
 			metric.WithDescription("measures the number of event bytes processed"),
 			metric.WithUnit(unit.Bytes),
 		).Bind(commonLabels...)
+	r.eventLagMillis = metric.Must(meter).
+		NewInt64Histogram(
+			rtsemconv.EARSMetricMillisBehindLatest,
+			metric.WithDescription("measures the number of milliseconds current event is behind tip of stream"),
+			metric.WithUnit(unit.Milliseconds),
+		).Bind(commonLabels...)
 	return r, nil
 }
+
+//TODO: retry policy on nack
 
 func (r *Receiver) getStopChannel(shardIdx int) chan bool {
 	var c chan bool
@@ -161,13 +169,12 @@ func (r *Receiver) shardMonitor(svc *kinesis.Kinesis, distributor sharder.ShardD
 			if len(stream.StreamDescription.Shards) == 0 {
 				continue
 			}
-			//TODO: consider ListShard()
-			//TODO: consider not supporting shard splitting and merging
 			update := false
 			if len(stream.StreamDescription.Shards) != len(r.stream.StreamDescription.Shards) {
 				update = true
 			}
 			if update {
+				//TODO: wait until ready
 				r.logger.Info().Str("op", "Kinesis.shardMonitor").Str("stream", *r.stream.StreamDescription.StreamName).Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Int("numShards", len(stream.StreamDescription.Shards)).Msg("update number of shards")
 				r.stream = stream
 				// this will trigger updates on the
@@ -288,7 +295,6 @@ func (r *Receiver) startShardReceiverEFO(svc *kinesis.Kinesis, stream *kinesis.D
 				}
 				switch kinEvt := evt.(type) {
 				case *kinesis.SubscribeToShardEvent:
-					//TODO: consider millis behind tip for
 					params.StartingPosition.Type = aws.String(kinesis.ShardIteratorTypeAfterSequenceNumber)
 					params.StartingPosition.SequenceNumber = kinEvt.ContinuationSequenceNumber
 					if len(kinEvt.Records) == 0 {
@@ -308,6 +314,7 @@ func (r *Receiver) startShardReceiverEFO(svc *kinesis.Kinesis, stream *kinesis.D
 								}
 								ctx, cancel := context.WithTimeout(context.Background(), time.Duration(*r.config.AcknowledgeTimeout)*time.Second)
 								r.eventBytesCounter.Add(ctx, int64(len(rec.Data)))
+								r.eventLagMillis.Record(ctx, *kinEvt.MillisBehindLatest)
 								r.logger.Debug().Str("op", "Kinesis.receiveWorkerEFO").Str("stream", *r.stream.StreamDescription.StreamName).Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Int("shardIdx", shardIdx).Str("partitionId", *rec.PartitionKey).Str("sequenceId", *rec.SequenceNumber).Msg("message received")
 								e, err := event.New(ctx, payload, event.WithMetadataKeyValue("kinesisMessage", rec), event.WithAck(
 									func(e event.Event) {
@@ -559,8 +566,6 @@ func (r *Receiver) Receive(next receiver.NextFn) error {
 	if err != nil {
 		return err
 	}
-	//TODO: what about kinesis checkpoints and ack/nack
-	//TODO: consider deregistering stream
 	if *r.config.EnhancedFanOut {
 		r.consumer, err = r.registerStreamConsumer(r.svc, r.config.StreamName, r.config.ConsumerName)
 		if err != nil {
