@@ -269,6 +269,7 @@ func (r *Receiver) startShardReceiverEFO(svc *kinesis.Kinesis, stream *kinesis.D
 			sub, err := svc.SubscribeToShard(params)
 			if err != nil {
 				r.logger.Error().Str("op", "Kinesis.receiveWorkerEFO").Str("stream", *r.stream.StreamDescription.StreamName).Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Int("shardIdx", shardIdx).Msg("subscribe error: " + err.Error())
+				// a fully processed parent shard will cause errors here until its decommission
 				time.Sleep(10 * time.Second)
 				continue
 				//return
@@ -287,7 +288,9 @@ func (r *Receiver) startShardReceiverEFO(svc *kinesis.Kinesis, stream *kinesis.D
 				}
 				switch kinEvt := evt.(type) {
 				case *kinesis.SubscribeToShardEvent:
-					//startSequenceNumber = e.ContinuationSequenceNumber
+					//TODO: consider millis behind tip for
+					params.StartingPosition.Type = aws.String(kinesis.ShardIteratorTypeAfterSequenceNumber)
+					params.StartingPosition.SequenceNumber = kinEvt.ContinuationSequenceNumber
 					if len(kinEvt.Records) == 0 {
 					} else {
 						for _, rec := range kinEvt.Records {
