@@ -130,7 +130,7 @@ func (r *Receiver) stopShardReceiver(shardIdx int) {
 		m := r.stopChannelMap
 		r.Unlock()
 		for _, stopChan := range m {
-			stopChan <- true
+			go func(stopChan chan bool) { stopChan <- true }(stopChan)
 		}
 	} else {
 		stopChan := r.getStopChannel(shardIdx)
