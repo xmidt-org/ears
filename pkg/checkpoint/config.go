@@ -29,23 +29,23 @@ func GetStorageConfig(config config.Config) StorageConfig {
 	if config != nil {
 		storageType := config.GetString("ears.checkpointer.type")
 		if storageType != "" {
-			defaultStorageConfig.StorageType = storageType
+			storageConfig.StorageType = storageType
 		}
 		region := config.GetString("ears.checkpointer.region")
 		if region != "" {
-			defaultStorageConfig.Region = region
+			storageConfig.Region = region
 		}
 		table := config.GetString("ears.checkpointer.table")
 		if table != "" {
-			defaultStorageConfig.Table = table
+			storageConfig.Table = table
 		}
 		updateFrequencySeconds := config.GetInt("ears.checkpointer.updateFrequencySeconds")
 		if updateFrequencySeconds > 0 {
-			defaultStorageConfig.UpdateFrequencySeconds = updateFrequencySeconds
+			storageConfig.UpdateFrequencySeconds = updateFrequencySeconds
 		}
 		env := config.GetString("ears.env")
 		if env != "" {
-			defaultStorageConfig.Env = env
+			storageConfig.Env = env
 		}
 	}
 	return storageConfig

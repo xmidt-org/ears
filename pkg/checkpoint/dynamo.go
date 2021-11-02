@@ -13,7 +13,8 @@ import (
 // dynamodb default values
 const readCap = 10
 const writeCap = 10
-const keyName = "key"
+
+//const keyName = "key"
 const sortKeyName = "id"
 const valueNameSequenceId = "sequenceId"
 const valueNameLastUpdated = "lastUpdated"
@@ -51,7 +52,7 @@ func newDynamoCheckpointManager(config StorageConfig) (CheckpointManager, error)
 }
 
 func (cm *DynamoCheckpointManager) GetCheckpoint(Id string) (string, time.Time, error) {
-	keyCond := expression.Key(keyName).Equal(expression.Value(cm.Env))
+	keyCond := expression.Key(sortKeyName).Equal(expression.Value(Id))
 	proj := expression.NamesList(expression.Name(sortKeyName), expression.Name(valueNameSequenceId), expression.Name(valueNameLastUpdated))
 	expr, err := expression.NewBuilder().
 		WithKeyCondition(keyCond).
@@ -126,9 +127,6 @@ func (cm *DynamoCheckpointManager) SetCheckpoint(Id string, sequenceNumber strin
 			},
 			TableName: aws.String(cm.Table),
 			Key: map[string]*dynamodb.AttributeValue{
-				keyName: {
-					S: aws.String(cm.Env),
-				},
 				sortKeyName: {
 					S: aws.String(Id),
 				},
@@ -171,22 +169,14 @@ func (cm *DynamoCheckpointManager) tableDescription() *dynamodb.CreateTableInput
 		TableName: aws.String(cm.Table),
 		AttributeDefinitions: []*dynamodb.AttributeDefinition{
 			{
-				AttributeName: aws.String(keyName),
-				AttributeType: aws.String("S"),
-			},
-			{
 				AttributeName: aws.String(sortKeyName),
 				AttributeType: aws.String("S"),
 			},
 		},
 		KeySchema: []*dynamodb.KeySchemaElement{
 			{
-				AttributeName: aws.String(keyName),
-				KeyType:       aws.String("HASH"),
-			},
-			{
 				AttributeName: aws.String(sortKeyName),
-				KeyType:       aws.String("RANGE"),
+				KeyType:       aws.String("HASH"),
 			},
 		},
 		ProvisionedThroughput: &dynamodb.ProvisionedThroughput{
