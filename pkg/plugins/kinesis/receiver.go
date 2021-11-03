@@ -67,13 +67,14 @@ func NewReceiver(tid tenant.Id, plugin string, name string, config interface{}, 
 		return nil, err
 	}
 	r := &Receiver{
-		config:  cfg,
-		name:    name,
-		plugin:  plugin,
-		tid:     tid,
-		logger:  event.GetEventLogger(),
-		stopped: true,
-		secrets: secrets,
+		config:                  cfg,
+		name:                    name,
+		plugin:                  plugin,
+		tid:                     tid,
+		logger:                  event.GetEventLogger(),
+		stopped:                 true,
+		secrets:                 secrets,
+		shardMonitorStopChannel: make(chan bool),
 	}
 	r.Lock()
 	r.stopChannelMap = make(map[int]chan bool)
@@ -151,13 +152,11 @@ func (r *Receiver) shardMonitor(svc *kinesis.Kinesis, distributor sharder.ShardD
 			}
 		}()
 		for {
-			time.Sleep(10 * time.Second)
-			r.Lock()
-			stopped := r.stopped
-			r.Unlock()
-			if stopped {
+			select {
+			case <-r.shardMonitorStopChannel:
 				r.logger.Info().Str("op", "Kinesis.shardMonitor").Str("stream", *r.stream.StreamDescription.StreamName).Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Msg("stopping shard monitor")
 				return
+			case <-time.After(10 * time.Second):
 			}
 			stream, err := svc.DescribeStream(&kinesis.DescribeStreamInput{
 				StreamName: &r.config.StreamName,
@@ -174,7 +173,7 @@ func (r *Receiver) shardMonitor(svc *kinesis.Kinesis, distributor sharder.ShardD
 				update = true
 			}
 			if update {
-				//TODO: wait until ready
+				// should we wait here until kinesis is ready? compare with code for registering efo consumer!
 				r.logger.Info().Str("op", "Kinesis.shardMonitor").Str("stream", *r.stream.StreamDescription.StreamName).Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Int("numShards", len(stream.StreamDescription.Shards)).Msg("update number of shards")
 				r.stream = stream
 				// this will trigger updates on the
@@ -638,6 +637,7 @@ func (r *Receiver) StopReceiving(ctx context.Context) error {
 	r.stopped = true
 	r.Unlock()
 	if !stopped {
+		r.shardMonitorStopChannel <- true
 		r.stopShardReceiver(-1)
 		r.eventSuccessCounter.Unbind()
 		r.eventFailureCounter.Unbind()
