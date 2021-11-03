@@ -19,9 +19,10 @@ import "github.com/xmidt-org/ears/pkg/tenant"
 // Config can be passed into NewFilter() in order to configure
 // the behavior of the sender.
 type Config struct {
-	FromPath string `json:"fromPath,omitempty"`
-	ToPath   string `json:"toPath,omitempty"`
-	Regex    string `json:"regex,omitempty"`
+	FromPath         string  `json:"fromPath,omitempty"`
+	ToPath           string  `json:"toPath,omitempty"`
+	Regex            string  `json:"regex,omitempty"`
+	ReplaceAllString *string `json:"replaceAllString,omitempty"`
 }
 
 var DefaultConfig = Config{

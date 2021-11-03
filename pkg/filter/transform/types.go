@@ -20,7 +20,7 @@ import "github.com/xmidt-org/ears/pkg/tenant"
 // the behavior of the sender.
 type Config struct {
 	Transformation interface{} `json:"transformation,omitempty"`
-	ToPath         string      `json:"formPath,omitempty"`
+	ToPath         string      `json:"toPath,omitempty"`
 }
 
 var empty interface{}

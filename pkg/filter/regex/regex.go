@@ -69,7 +69,18 @@ func (f *Filter) Filter(evt event.Event) []event.Event {
 		evt.Nack(err)
 		return []event.Event{}
 	}
-	output := r.FindString(string(buf))
+	var output string
+	if f.config.ReplaceAllString != nil {
+		output = r.ReplaceAllString(string(buf), *f.config.ReplaceAllString)
+		// to get rid of extra quotes, why?
+		err = json.Unmarshal([]byte(output), &output)
+		if err != nil {
+			evt.Nack(err)
+			return []event.Event{}
+		}
+	} else {
+		output = r.FindString(string(buf))
+	}
 	path := f.config.FromPath
 	if f.config.ToPath != "" {
 		path = f.config.ToPath
