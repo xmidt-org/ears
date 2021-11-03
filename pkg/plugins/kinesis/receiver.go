@@ -281,7 +281,8 @@ func (r *Receiver) startShardReceiverEFO(svc *kinesis.Kinesis, stream *kinesis.D
 				continue
 				//return
 			}
-			for evt := range sub.EventStream.Events() {
+			for {
+				var evt kinesis.SubscribeToShardEventStreamEvent
 				select {
 				case <-r.getStopChannel(shardIdx):
 					r.logger.Info().Str("op", "Kinesis.receiveWorkerEFO").Str("stream", *r.stream.StreamDescription.StreamName).Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Int("shardIdx", shardIdx).Msg("receive loop stopped")
@@ -291,7 +292,7 @@ func (r *Receiver) startShardReceiverEFO(svc *kinesis.Kinesis, stream *kinesis.D
 					delete(r.stopChannelMap, shardIdx)
 					r.Unlock()
 					return
-				default:
+				case evt = <-sub.EventStream.Events():
 				}
 				switch kinEvt := evt.(type) {
 				case *kinesis.SubscribeToShardEvent:
@@ -309,9 +310,8 @@ func (r *Receiver) startShardReceiverEFO(svc *kinesis.Kinesis, stream *kinesis.D
 								delete(r.stopChannelMap, shardIdx)
 								r.Unlock()
 								return
-							default:
+							case <-time.After(5 * time.Second):
 								r.logger.Info().Str("op", "Kinesis.receiveWorker").Str("stream", *r.stream.StreamDescription.StreamName).Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Int("shardIdx", shardIdx).Msg("waiting for decommission")
-								time.Sleep(5 * time.Second)
 							}
 						}
 					}
@@ -488,9 +488,8 @@ func (r *Receiver) startShardReceiver(svc *kinesis.Kinesis, stream *kinesis.Desc
 							delete(r.stopChannelMap, shardIdx)
 							r.Unlock()
 							return
-						default:
+						case <-time.After(5 * time.Second):
 							r.logger.Info().Str("op", "Kinesis.receiveWorker").Str("stream", *r.stream.StreamDescription.StreamName).Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Int("shardIdx", shardIdx).Msg("waiting for decommission")
-							time.Sleep(5 * time.Second)
 						}
 					}
 				}
