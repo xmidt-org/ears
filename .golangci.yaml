@@ -81,6 +81,7 @@ issues:
       linters:
         - funlen
         - errorlint
+        - dupl
     - path: pkg/plugins/redis/receiver\.go
       linters:
         - funlen
