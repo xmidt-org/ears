@@ -85,6 +85,9 @@ issues:
     - path: pkg/plugins/s3/receiver\.go
       linters:
         - funlen
+    - path: pkg/plugins/s3/sender\.go
+      linters:
+        - funlen
     - path: pkg/plugins/redis/receiver\.go
       linters:
         - funlen

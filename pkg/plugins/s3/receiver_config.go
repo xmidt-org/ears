@@ -64,6 +64,9 @@ const receiverSchema = `
                 },
                 "region": {
                     "type": "string"
+                },
+                "acknowledgeTimeout": {
+                    "type": "integer"
                 }
             },
             "required": [
