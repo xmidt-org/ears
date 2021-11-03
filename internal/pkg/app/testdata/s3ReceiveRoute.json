@@ -1,0 +1,23 @@
+{
+  "id": "s3100",
+  "userId": "boris",
+  "name": "s3ReceiverRoute",
+  "receiver": {
+    "plugin": "s3",
+    "name": "s3ReceiverRouteReceiver",
+    "config": {
+      "bucket": "ears-test",
+      "path": "local"
+    }
+  },
+  "sender": {
+    "plugin": "debug",
+    "name": "s3ReceiverRouteSender",
+    "config": {
+      "destination": "stdout",
+      "maxHistory": 100
+    }
+  },
+  "deliveryMode": "atLeastOnce"
+}
+

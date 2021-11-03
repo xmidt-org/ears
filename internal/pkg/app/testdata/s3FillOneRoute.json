@@ -1,7 +1,7 @@
 {
   "id": "s3100",
   "userId": "boris",
-  "name": "kinesisFill10Route",
+  "name": "s3Fill1Route",
   "receiver": {
     "plugin": "debug",
     "name": "s3Fill1RouteReceiver",
