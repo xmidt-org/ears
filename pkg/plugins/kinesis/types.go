@@ -88,28 +88,29 @@ type ReceiverConfig struct {
 
 type Receiver struct {
 	sync.Mutex
-	done                    chan struct{}
-	stopped                 bool
-	stopChannelMap          map[int]chan bool
-	shardMonitorStopChannel chan bool
-	config                  ReceiverConfig
-	name                    string
-	plugin                  string
-	tid                     tenant.Id
-	next                    receiver.NextFn
-	logger                  *zerolog.Logger
-	receiveCount            int
-	deleteCount             int
-	shardConfig             sharder.ShardConfig
-	svc                     *kinesis.Kinesis
-	consumer                *kinesis.DescribeStreamConsumerOutput
-	stream                  *kinesis.DescribeStreamOutput
-	startTime               time.Time
-	secrets                 secret.Vault
-	eventSuccessCounter     metric.BoundInt64Counter
-	eventFailureCounter     metric.BoundInt64Counter
-	eventBytesCounter       metric.BoundInt64Counter
-	eventLagMillis          metric.BoundInt64Histogram
+	done                           chan struct{}
+	stopped                        bool
+	stopChannelMap                 map[int]chan bool
+	shardMonitorStopChannel        chan bool
+	shardUpdateListenerStopChannel chan bool
+	config                         ReceiverConfig
+	name                           string
+	plugin                         string
+	tid                            tenant.Id
+	next                           receiver.NextFn
+	logger                         *zerolog.Logger
+	receiveCount                   int
+	deleteCount                    int
+	shardConfig                    sharder.ShardConfig
+	svc                            *kinesis.Kinesis
+	consumer                       *kinesis.DescribeStreamConsumerOutput
+	stream                         *kinesis.DescribeStreamOutput
+	startTime                      time.Time
+	secrets                        secret.Vault
+	eventSuccessCounter            metric.BoundInt64Counter
+	eventFailureCounter            metric.BoundInt64Counter
+	eventBytesCounter              metric.BoundInt64Counter
+	eventLagMillis                 metric.BoundInt64Histogram
 }
 
 var DefaultSenderConfig = SenderConfig{

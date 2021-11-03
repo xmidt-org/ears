@@ -67,14 +67,15 @@ func NewReceiver(tid tenant.Id, plugin string, name string, config interface{}, 
 		return nil, err
 	}
 	r := &Receiver{
-		config:                  cfg,
-		name:                    name,
-		plugin:                  plugin,
-		tid:                     tid,
-		logger:                  event.GetEventLogger(),
-		stopped:                 true,
-		secrets:                 secrets,
-		shardMonitorStopChannel: make(chan bool),
+		config:                         cfg,
+		name:                           name,
+		plugin:                         plugin,
+		tid:                            tid,
+		logger:                         event.GetEventLogger(),
+		stopped:                        true,
+		secrets:                        secrets,
+		shardMonitorStopChannel:        make(chan bool),
+		shardUpdateListenerStopChannel: make(chan bool),
 	}
 	r.Lock()
 	r.stopChannelMap = make(map[int]chan bool)
@@ -115,7 +116,8 @@ func NewReceiver(tid tenant.Id, plugin string, name string, config interface{}, 
 	return r, nil
 }
 
-//TODO: retry policy on nack
+//TODO: generic solution for retry policy on nack
+//TODO: checkpoint to advance on nack after final retry
 
 func (r *Receiver) getStopChannel(shardIdx int) chan bool {
 	var c chan bool
@@ -507,8 +509,14 @@ func (r *Receiver) shardUpdateListener(distributor sharder.ShardDistributor) {
 					Str("stackTrace", panicErr.StackTrace()).Msg("a panic has occurred in shard update listener")
 			}
 		}()
-		for config := range distributor.Updates() {
-			r.updateShards(config)
+		for {
+			select {
+			case config := <-distributor.Updates():
+				r.logger.Info().Str("op", "kinesis.shardUpdateListener").Msg("shard update received")
+				r.updateShards(config)
+			case <-r.shardUpdateListenerStopChannel:
+				r.logger.Info().Str("op", "kinesis.shardUpdateListener").Msg("stopping shard update listener")
+			}
 		}
 	}()
 }
@@ -638,6 +646,7 @@ func (r *Receiver) StopReceiving(ctx context.Context) error {
 	r.Unlock()
 	if !stopped {
 		r.shardMonitorStopChannel <- true
+		r.shardUpdateListenerStopChannel <- true
 		r.stopShardReceiver(-1)
 		r.eventSuccessCounter.Unbind()
 		r.eventFailureCounter.Unbind()
