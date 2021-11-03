@@ -1,0 +1,27 @@
+{
+  "id": "s3100",
+  "userId": "boris",
+  "name": "kinesisFill10Route",
+  "receiver": {
+    "plugin": "debug",
+    "name": "s3Fill1RouteReceiver",
+    "config": {
+      "intervalMs": 1,
+      "maxHistory": 100,
+      "payload": {
+        "foo": "bar"
+      },
+      "rounds": 10
+    }
+  },
+  "sender": {
+    "plugin": "s3",
+    "name": "s3Fill1RouteSender",
+    "config": {
+      "bucket": "ears-test",
+      "path": "local",
+      "fileName": "foobar.json"
+    }
+  },
+  "deliveryMode": "atLeastOnce"
+}

@@ -36,6 +36,7 @@ import (
 	"github.com/xmidt-org/ears/pkg/plugins/pass"
 	"github.com/xmidt-org/ears/pkg/plugins/redis"
 	"github.com/xmidt-org/ears/pkg/plugins/regex"
+	"github.com/xmidt-org/ears/pkg/plugins/s3"
 	"github.com/xmidt-org/ears/pkg/plugins/split"
 	"github.com/xmidt-org/ears/pkg/plugins/sqs"
 	"github.com/xmidt-org/ears/pkg/plugins/trace"
@@ -93,7 +94,7 @@ func ProvidePluginManager(in PluginIn) (PluginOut, error) {
 		},
 		{
 			name:   "s3",
-			plugin: toArr(sqs.NewPluginVersion("s3", "", ""))[0].(pkgplugin.Pluginer),
+			plugin: toArr(s3.NewPluginVersion("s3", "", ""))[0].(pkgplugin.Pluginer),
 		},
 		{
 			name:   "kinesis",

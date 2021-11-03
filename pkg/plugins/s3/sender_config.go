@@ -65,7 +65,7 @@ const senderSchema = `
                 },
                 "filePath": {
                     "type": "string"
-                },
+                }
             },
             "required": [
                 "bucket", "region"
