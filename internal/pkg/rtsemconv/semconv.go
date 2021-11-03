@@ -71,6 +71,7 @@ const (
 	KafkaGroupIdLabel      = "kafka.groupId"
 	RedisChannelLabel      = "redis.channel"
 	SQSQueueUrlLabel       = "sqs.QueueUrl"
+	S3Bucket               = "s3.Bucket"
 	KinesisStreamNameLabel = "kinesis.StreamName"
 	HostnameLabel          = "hostname"
 
