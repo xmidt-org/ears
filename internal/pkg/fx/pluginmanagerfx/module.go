@@ -92,6 +92,10 @@ func ProvidePluginManager(in PluginIn) (PluginOut, error) {
 			plugin: toArr(sqs.NewPluginVersion("sqs", "", ""))[0].(pkgplugin.Pluginer),
 		},
 		{
+			name:   "s3",
+			plugin: toArr(sqs.NewPluginVersion("s3", "", ""))[0].(pkgplugin.Pluginer),
+		},
+		{
 			name:   "kinesis",
 			plugin: toArr(kinesis.NewPluginVersion("kinesis", "", ""))[0].(pkgplugin.Pluginer),
 		},
