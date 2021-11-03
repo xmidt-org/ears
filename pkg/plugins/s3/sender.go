@@ -32,6 +32,7 @@ import (
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/global"
 	"go.opentelemetry.io/otel/metric/unit"
+	"path/filepath"
 	"strings"
 	"time"
 )
@@ -156,10 +157,19 @@ func (s *Sender) Send(evt event.Event) {
 	s.eventBytesCounter.Add(evt.Context(), int64(len(buf)))
 	s.eventProcessingTime.Record(evt.Context(), time.Since(evt.Created()).Milliseconds())
 	start := time.Now()
+	fileName := s.config.FileName
+	if fileName == "" {
+		v, _, _ := evt.GetPathValue(s.config.FilePath)
+		str, ok := v.(string)
+		if ok {
+			fileName = str
+		}
+	}
+	path := filepath.Join(s.config.Path, fileName)
 	uploader := s3manager.NewUploader(s.session)
 	_, err = uploader.Upload(&s3manager.UploadInput{
 		Bucket: aws.String(s.config.Bucket),
-		Key:    aws.String(s.config.Path),
+		Key:    aws.String(path),
 		Body:   strings.NewReader(string(buf)),
 	})
 	s.eventSendOutTime.Record(evt.Context(), time.Since(start).Milliseconds())

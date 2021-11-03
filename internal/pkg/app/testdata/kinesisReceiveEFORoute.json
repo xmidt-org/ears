@@ -1,10 +1,10 @@
 {
   "id": "kinesis103",
   "userId": "boris",
-  "name": "kinesisReceiverRoute",
+  "name": "kinesisEFOReceiverRoute",
   "receiver": {
     "plugin": "kinesis",
-    "name": "kinesisReceiverRouteReceiver",
+    "name": "kinesisEFOReceiverRouteReceiver",
     "config": {
       "streamName": "bw-ears-demo",
       "enhancedFanOut": true,
@@ -14,7 +14,7 @@
   },
   "sender": {
     "plugin": "debug",
-    "name": "kinesisReceiverRouteSender",
+    "name": "kinesisEFOReceiverRouteSender",
     "config": {
       "destination": "stdout",
       "maxHistory": 100
