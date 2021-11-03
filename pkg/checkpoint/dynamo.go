@@ -142,10 +142,6 @@ func (cm *DynamoCheckpointManager) SetCheckpoint(Id string, sequenceNumber strin
 	return nil
 }
 
-func (cm *DynamoCheckpointManager) GetId(pluginHash, consumerName, streamName, shardID string) string {
-	return cm.Env + "-" + pluginHash + "-" + consumerName + "-" + streamName + "-" + shardID
-}
-
 func (cm *DynamoCheckpointManager) ensureTable() error {
 	describe := &dynamodb.DescribeTableInput{
 		TableName: aws.String(cm.Table),

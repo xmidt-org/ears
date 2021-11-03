@@ -26,7 +26,3 @@ func (cm *InMemoryCheckpointManager) SetCheckpoint(Id string, sequenceNumber str
 	cm.checkpoints[Id] = sequenceNumber
 	return nil
 }
-
-func (cm *InMemoryCheckpointManager) GetId(pluginHash, consumerName, streamName, shardID string) string {
-	return cm.Env + "-" + pluginHash + "-" + consumerName + "-" + streamName + "-" + shardID
-}

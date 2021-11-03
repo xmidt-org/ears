@@ -143,6 +143,10 @@ func (r *Receiver) stopShardReceiver(shardIdx int) {
 	}
 }
 
+func (r *Receiver) getCheckpointId(shardID int) string {
+	return r.name + "-" + r.config.ConsumerName + "-" + r.config.StreamName + "-" + strconv.Itoa(shardID)
+}
+
 func (r *Receiver) shardMonitor(svc *kinesis.Kinesis, distributor sharder.ShardDistributor) {
 	go func() {
 		defer func() {
@@ -240,7 +244,7 @@ func (r *Receiver) startShardReceiverEFO(svc *kinesis.Kinesis, stream *kinesis.D
 			r.logger.Error().Str("op", "Kinesis.receiveWorkerEFO").Str("stream", *r.stream.StreamDescription.StreamName).Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Int("shardIdx", shardIdx).Msg("checkpoint error: " + err.Error())
 			return
 		}
-		checkpointId := checkpoint.GetId(r.name, r.config.ConsumerName, r.config.StreamName, strconv.Itoa(shardIdx))
+		checkpointId := r.getCheckpointId(shardIdx)
 		// note, there may be dead parent shards in the mix
 		shard := stream.StreamDescription.Shards[shardIdx]
 		params := &kinesis.SubscribeToShardInput{
@@ -384,7 +388,7 @@ func (r *Receiver) startShardReceiver(svc *kinesis.Kinesis, stream *kinesis.Desc
 			r.logger.Error().Str("op", "Kinesis.receiveWorkerEFO").Str("stream", *r.stream.StreamDescription.StreamName).Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Int("shardIdx", shardIdx).Msg("checkpoint error: " + err.Error())
 			return
 		}
-		checkpointId := checkpoint.GetId(r.name, r.config.ConsumerName, r.config.StreamName, strconv.Itoa(shardIdx))
+		checkpointId := r.getCheckpointId(shardIdx)
 		// receive messages
 		for {
 			// this is a normal receiver
