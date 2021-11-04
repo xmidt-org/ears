@@ -68,7 +68,7 @@ func (c *SimpleHashDistributor) nodeMonitor() {
 			case <-c.stopChan:
 				c.logger.Info().Str("op", "sharder.nodeMonitor").Msg("stopping sharder node monitor")
 				return
-			case <-time.After(time.Duration(rand.Intn(5)+5) * time.Second):
+			case <-time.After(time.Duration(rand.Intn(10)) * time.Second):
 			}
 			aliveNodes, err := c.nodeManager.GetActiveNodes()
 			if err != nil || aliveNodes == nil {
