@@ -30,7 +30,7 @@ type dynamoDBNodeManager struct {
 	// logger
 	logger *zerolog.Logger
 	//
-	stopped bool
+	stopChan chan bool
 	// cached nodes
 	activeNodes []string
 	// last update time
@@ -44,7 +44,7 @@ func newDynamoDBNodeManager(identity string, configData StorageConfig) (*dynamoD
 		logger:         event.GetEventLogger(),
 		config:         configData,
 		identity:       identity,
-		stopped:        false,
+		stopChan:       make(chan bool),
 		activeNodes:    make([]string, 0),
 		lastUpdateTime: time.Now(),
 	}
@@ -148,14 +148,6 @@ func (d *dynamoDBNodeManager) updateState() {
 			}
 		}()
 		for {
-			d.Lock()
-			s := d.stopped
-			d.Unlock()
-			if s {
-				d.logger.Info().Str("op", "sharder.updateState").Str("identity", d.identity).Msg("stopping node state manager")
-				defaultNodeStateManager = nil
-				return
-			}
 			input := &dynamodb.UpdateItemInput{
 				ExpressionAttributeValues: map[string]*dynamodb.AttributeValue{
 					":u": {
@@ -178,7 +170,13 @@ func (d *dynamoDBNodeManager) updateState() {
 			if err != nil {
 				d.logger.Error().Str("op", "sharder.updateState").Str("identity", d.identity).Msg(err.Error())
 			}
-			time.Sleep(time.Duration(d.config.UpdateFrequencySeconds) * time.Second)
+			select {
+			case <-d.stopChan:
+				d.logger.Info().Str("op", "sharder.updateState").Str("identity", d.identity).Msg("stopping node state manager")
+				defaultNodeStateManager = nil
+				return
+			case <-time.After(time.Duration(d.config.UpdateFrequencySeconds) * time.Second):
+			}
 		}
 	}()
 }
@@ -189,10 +187,8 @@ func (d *dynamoDBNodeManager) RemoveNode() {
 }
 
 func (d *dynamoDBNodeManager) Stop() {
-	d.Lock()
-	d.stopped = true
+	d.stopChan <- true
 	d.RemoveNode()
-	d.Unlock()
 }
 
 // delete stale record, not care if success of not
