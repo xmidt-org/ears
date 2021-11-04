@@ -16,6 +16,7 @@ func init() {
 func newSimpleHashDistributor(identity string, numShards int, configData StorageConfig) (*SimpleHashDistributor, error) {
 	hashDistributor := &SimpleHashDistributor{
 		updateChan: make(ShardUpdater),
+		stopChan:   make(chan bool),
 		logger:     event.GetEventLogger(),
 		ShardConfig: ShardConfig{
 			NumShards: numShards,
@@ -33,6 +34,7 @@ func newSimpleHashDistributor(identity string, numShards int, configData Storage
 
 // Stop releases any resources
 func (c *SimpleHashDistributor) Stop() {
+	c.stopChan <- true
 }
 
 // Updates returns the channel that SimpleHashDistributor will send ShardConfig updates on
@@ -62,7 +64,12 @@ func (c *SimpleHashDistributor) nodeMonitor() {
 			}
 		}()
 		for {
-			time.Sleep(time.Duration(rand.Intn(10)) * time.Second)
+			select {
+			case <-c.stopChan:
+				c.logger.Info().Str("op", "sharder.nodeMonitor").Msg("stopping sharder node monitor")
+				return
+			case <-time.After(time.Duration(rand.Intn(5)+5) * time.Second):
+			}
 			aliveNodes, err := c.nodeManager.GetActiveNodes()
 			if err != nil || aliveNodes == nil {
 				continue
