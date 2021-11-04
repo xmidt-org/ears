@@ -618,12 +618,12 @@ func (r *Receiver) Receive(next receiver.NextFn) error {
 		}
 	}
 	sharderConfig := sharder.DefaultControllerConfig()
-	shardDistributor, err := sharder.GetDefaultHashDistributor(sharderConfig.NodeName, len(r.stream.StreamDescription.Shards), sharderConfig.StorageConfig)
+	r.shardDistributor, err = sharder.GetDefaultHashDistributor(sharderConfig.NodeName, len(r.stream.StreamDescription.Shards), sharderConfig.StorageConfig)
 	if err != nil {
 		return err
 	}
-	r.shardUpdateListener(shardDistributor)
-	r.shardMonitor(r.svc, shardDistributor)
+	r.shardUpdateListener(r.shardDistributor)
+	r.shardMonitor(r.svc, r.shardDistributor)
 	r.logger.Info().Str("op", "Kinesis.Receive").Str("stream", *r.stream.StreamDescription.StreamName).Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Msg("waiting for receive done")
 	<-r.done
 	r.Lock()
@@ -652,6 +652,7 @@ func (r *Receiver) StopReceiving(ctx context.Context) error {
 		r.shardMonitorStopChannel <- true
 		r.shardUpdateListenerStopChannel <- true
 		r.stopShardReceiver(-1)
+		r.shardDistributor.Stop()
 		r.eventSuccessCounter.Unbind()
 		r.eventFailureCounter.Unbind()
 		r.eventBytesCounter.Unbind()

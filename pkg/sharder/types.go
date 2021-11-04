@@ -64,6 +64,7 @@ type SimpleHashDistributor struct {
 	nodeManager NodeStateManager
 	nodes       []string
 	updateChan  chan ShardConfig
+	stopChan    chan bool
 	logger      *zerolog.Logger
 	sync.Mutex
 }

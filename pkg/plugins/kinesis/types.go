@@ -93,6 +93,7 @@ type Receiver struct {
 	stopChannelMap                 map[int]chan bool
 	shardMonitorStopChannel        chan bool
 	shardUpdateListenerStopChannel chan bool
+	shardDistributor               sharder.ShardDistributor
 	config                         ReceiverConfig
 	name                           string
 	plugin                         string
