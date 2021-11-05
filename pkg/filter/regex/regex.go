@@ -59,10 +59,19 @@ func (f *Filter) Filter(evt event.Event) []event.Event {
 		evt.Nack(errors.New("nil object at path " + f.config.FromPath))
 		return []event.Event{}
 	}
-	buf, err := json.Marshal(obj)
-	if err != nil {
-		evt.Nack(err)
-		return []event.Event{}
+	objAsStr := ""
+	switch t := obj.(type) {
+	case string:
+		objAsStr = t
+	case []byte:
+		objAsStr = string(t)
+	default:
+		buf, err := json.Marshal(obj)
+		if err != nil {
+			evt.Nack(err)
+			return []event.Event{}
+		}
+		objAsStr = string(buf)
 	}
 	r, err := regexp.Compile(f.config.Regex)
 	if err != nil {
@@ -71,15 +80,9 @@ func (f *Filter) Filter(evt event.Event) []event.Event {
 	}
 	var output string
 	if f.config.ReplaceAllString != nil {
-		output = r.ReplaceAllString(string(buf), *f.config.ReplaceAllString)
-		// to get rid of extra quotes, why?
-		err = json.Unmarshal([]byte(output), &output)
-		if err != nil {
-			evt.Nack(err)
-			return []event.Event{}
-		}
+		output = r.ReplaceAllString(objAsStr, *f.config.ReplaceAllString)
 	} else {
-		output = r.FindString(string(buf))
+		output = r.FindString(objAsStr)
 	}
 	path := f.config.FromPath
 	if f.config.ToPath != "" {
