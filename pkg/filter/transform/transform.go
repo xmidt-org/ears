@@ -15,6 +15,7 @@
 package transform
 
 import (
+	"encoding/json"
 	"fmt"
 	"github.com/mohae/deepcopy"
 	"github.com/rs/zerolog/log"
@@ -82,7 +83,30 @@ func transform(evt event.Event, t interface{}, parent interface{}, key string, i
 			transform(evt, st, t, "", idx)
 		}
 	case string:
-		if strings.HasPrefix(t, "{") && strings.HasSuffix(t, "}") {
+		for {
+			si := strings.Index(t, "{")
+			ei := strings.Index(t, "}")
+			if si < 0 || ei < 0 {
+				break
+			}
+			path := t[si+1 : ei]
+			v, _, _ := evt.GetPathValue(path)
+			switch vt := v.(type) {
+			case string:
+				t = t[0:si] + vt + t[ei+1:]
+			default:
+				sv, _ := json.Marshal(vt)
+				t = t[0:si] + string(sv) + t[ei+1:]
+			}
+			if parent != nil {
+				if key != "" {
+					parent.(map[string]interface{})[key] = t
+				} else if idx >= 0 {
+					parent.([]interface{})[idx] = t
+				}
+			}
+		}
+		/*if strings.HasPrefix(t, "{") && strings.HasSuffix(t, "}") {
 			repl, _, _ := evt.GetPathValue(t[1 : len(t)-1])
 			if parent != nil {
 				if key != "" {
@@ -91,7 +115,7 @@ func transform(evt event.Event, t interface{}, parent interface{}, key string, i
 					parent.([]interface{})[idx] = repl
 				}
 			}
-		}
+		}*/
 	}
 }
 
