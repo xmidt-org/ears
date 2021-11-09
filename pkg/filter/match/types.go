@@ -52,6 +52,7 @@ type Config struct {
 	Matcher         MatcherType `json:"matcher,omitempty"`
 	Pattern         interface{} `json:"pattern,omitempty"`
 	ExactArrayMatch *bool       `json:"exactArrayMatch,omitempty"`
+	MatchMetadata   *bool       `json:"matchMetadata,omitempty"`
 }
 
 var DefaultConfig = Config{
@@ -59,6 +60,7 @@ var DefaultConfig = Config{
 	Matcher:         MatcherRegex,
 	Pattern:         `^.*$`,
 	ExactArrayMatch: pointer.Bool(true),
+	MatchMetadata:   pointer.Bool(false),
 }
 
 type Filter struct {

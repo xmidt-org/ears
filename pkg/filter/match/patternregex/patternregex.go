@@ -20,19 +20,24 @@ import (
 )
 
 type Matcher struct {
-	pattern interface{}
+	pattern         interface{}
 	exactArrayMatch bool
+	matchMetadata   bool
 }
 
-func NewMatcher(pattern interface{}, exactArrayMatch bool) (*Matcher, error) {
-	return &Matcher{pattern: pattern, exactArrayMatch: exactArrayMatch}, nil
+func NewMatcher(pattern interface{}, exactArrayMatch bool, matchMetadata bool) (*Matcher, error) {
+	return &Matcher{pattern: pattern, exactArrayMatch: exactArrayMatch, matchMetadata: matchMetadata}, nil
 }
 
 func (m *Matcher) Match(event event.Event) bool {
 	if m == nil || m.pattern == nil || event == nil {
 		return false
 	}
-	return m.contains(event.Payload(), m.pattern)
+	if m.matchMetadata {
+		return m.contains(event.Metadata(), m.pattern)
+	} else {
+		return m.contains(event.Payload(), m.pattern)
+	}
 }
 
 // contains is a helper function to check if b is contained in a (if b is a partial of a)
