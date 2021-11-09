@@ -27,6 +27,10 @@ func init() {
 	rand.Seed(time.Now().UnixNano())
 }
 
+const (
+	nodeMonitorDelaySec = 5
+)
+
 func newSimpleHashDistributor(identity string, numShards int, configData StorageConfig) (*SimpleHashDistributor, error) {
 	hashDistributor := &SimpleHashDistributor{
 		updateChan: make(ShardUpdater),
@@ -82,7 +86,7 @@ func (c *SimpleHashDistributor) nodeMonitor() {
 			case <-c.stopChan:
 				c.logger.Info().Str("op", "sharder.nodeMonitor").Msg("stopping sharder node monitor")
 				return
-			case <-time.After(time.Duration(rand.Intn(10)) * time.Second):
+			case <-time.After(time.Duration(rand.Intn(nodeMonitorDelaySec)) * time.Second):
 			}
 			aliveNodes, err := c.nodeManager.GetActiveNodes()
 			if err != nil || aliveNodes == nil {
