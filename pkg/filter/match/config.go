@@ -47,6 +47,9 @@ func (c Config) WithDefaults() *Config {
 	if c.ExactArrayMatch == nil {
 		cfg.ExactArrayMatch = DefaultConfig.ExactArrayMatch
 	}
+	if c.MatchMetadata == nil {
+		cfg.MatchMetadata = DefaultConfig.MatchMetadata
+	}
 	return &cfg
 }
 
