@@ -55,6 +55,20 @@ func NewMux(a *APIManager, middleware []func(next http.Handler) http.Handler) (h
 	return a.muxRouter, nil
 }
 
+func SetupCheckpointManager(lifecycle fx.Lifecycle, checkpointManager checkpoint.CheckpointManager, config config.Config, logger *zerolog.Logger) error {
+	lifecycle.Append(
+		fx.Hook{
+			OnStart: func(context.Context) error {
+				return nil
+			},
+			OnStop: func(ctx context.Context) error {
+				return nil
+			},
+		},
+	)
+	return nil
+}
+
 func SetupNodeStateManager(lifecycle fx.Lifecycle, nodeStateManager sharder.NodeStateManager, config config.Config, logger *zerolog.Logger) error {
 	lifecycle.Append(
 		fx.Hook{
@@ -183,8 +197,6 @@ func SetupAPIServer(lifecycle fx.Lifecycle, config config.Config, logger *zerolo
 		otel.SetTextMapPropagator(propagator)
 		logger.Info().Str("telemetryexporter", "stdout").Msg("started")
 	}
-
-	checkpoint.GetDefaultCheckpointManager(config)
 
 	lifecycle.Append(
 		fx.Hook{
