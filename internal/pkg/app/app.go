@@ -55,6 +55,21 @@ func NewMux(a *APIManager, middleware []func(next http.Handler) http.Handler) (h
 	return a.muxRouter, nil
 }
 
+func SetupNodeStateManager(lifecycle fx.Lifecycle, nodeStateManager sharder.NodeStateManager, config config.Config, logger *zerolog.Logger) error {
+	lifecycle.Append(
+		fx.Hook{
+			OnStart: func(context.Context) error {
+				return nil
+			},
+			OnStop: func(ctx context.Context) error {
+				nodeStateManager.Stop()
+				return nil
+			},
+		},
+	)
+	return nil
+}
+
 func SetupAPIServer(lifecycle fx.Lifecycle, config config.Config, logger *zerolog.Logger, mux http.Handler) error {
 	port := config.GetInt("ears.api.port")
 	if port < 1 {
@@ -68,8 +83,6 @@ func SetupAPIServer(lifecycle fx.Lifecycle, config config.Config, logger *zerolo
 		Handler: mux,
 	}
 
-	sharder.InitDistributorConfigs(config)
-
 	//var ls launcher.Launcher
 	var traceProvider *sdktrace.TracerProvider
 	var metricsPusher *controller.Controller
@@ -80,14 +93,7 @@ func SetupAPIServer(lifecycle fx.Lifecycle, config config.Config, logger *zerolo
 
 	// setup telemetry stuff
 
-	if config.GetBool("ears.opentelemetry.lightstep.active") {
-		//ls = launcher.ConfigureOpentelemetry(
-		//	launcher.WithServiceName(rtsemconv.EARSServiceName),
-		//	launcher.WithAccessToken(config.GetString("ears.opentelemetry.lightstep.accessToken")),
-		//	launcher.WithServiceVersion("1.0"),
-		//)
-		//logger.Info().Str("telemetryexporter", "lightstep").Msg("started")
-	} else if config.GetBool("ears.opentelemetry.otel-collector.active") {
+	if config.GetBool("ears.opentelemetry.otel-collector.active") {
 		// setup tracing
 		// grpc does not allow a uri path which makes it hard to set this up behind a proxy or load balancer
 		traceExporter, err := otlptracegrpc.New(
@@ -178,16 +184,6 @@ func SetupAPIServer(lifecycle fx.Lifecycle, config config.Config, logger *zerolo
 		logger.Info().Str("telemetryexporter", "stdout").Msg("started")
 	}
 
-	var nodeStateManager sharder.NodeStateManager
-	if config.GetBool("ears.sharder.active") {
-		sharderConfig := sharder.DefaultControllerConfig()
-		var err error
-		nodeStateManager, err = sharder.GetDefaultNodeStateManager(sharderConfig.Identity, sharderConfig.StorageConfig)
-		if err != nil {
-			return err
-		}
-	}
-
 	checkpoint.GetDefaultCheckpointManager(config)
 
 	lifecycle.Append(
@@ -198,19 +194,12 @@ func SetupAPIServer(lifecycle fx.Lifecycle, config config.Config, logger *zerolo
 				return nil
 			},
 			OnStop: func(ctx context.Context) error {
-				if nodeStateManager != nil {
-					nodeStateManager.Stop()
-				}
 				err := server.Shutdown(ctx)
 				if err != nil {
 					logger.Error().Str("op", "SetupAPIServer.OnStop").Msg(err.Error())
 				} else {
 					logger.Info().Msg("API Server Stopped")
 				}
-				//if config.GetBool("ears.opentelemetry.lightstep.active") {
-				//	ls.Shutdown()
-				//	logger.Info().Msg("lightstep exporter stopped")
-				//}
 				if config.GetBool("ears.opentelemetry.otel-collector.active") || config.GetBool("ears.opentelemetry.stdout.active") {
 					err := traceProvider.Shutdown(ctx)
 					if err != nil {
