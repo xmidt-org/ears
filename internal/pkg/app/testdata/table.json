@@ -1,6 +1,6 @@
 {
   "sharePluginsAcrossTests": false,
-  "testToRunAllIfBlank": "simpleFilterTransformArraySelectRoute",
+  "testToRunAllIfBlank": "",
   "numInstances": 3,
   "storageType": "",
   "table": {
@@ -462,7 +462,7 @@
       ]
     },
     "simpleFilterTransformArraySelectRoute": {
-      "seq": 26,
+      "seq": 27,
       "disabled": false,
       "routeFiles": [
         "simpleFilterTransformArraySelectRoute"
@@ -474,6 +474,22 @@
           "expectedEventCount": 5,
           "expectedEventIndex": 0,
           "expectedEventPayloadFile": "event19"
+        }
+      ]
+    },
+    "simpleFilterTransformArraySelect2Route": {
+      "seq": 28,
+      "disabled": false,
+      "routeFiles": [
+        "simpleFilterTransformArraySelect2Route"
+      ],
+      "waitMs": 1000,
+      "events": [
+        {
+          "senderRouteFiles": "simpleFilterTransformArraySelect2Route",
+          "expectedEventCount": 5,
+          "expectedEventIndex": 0,
+          "expectedEventPayloadFile": "event20"
         }
       ]
     }

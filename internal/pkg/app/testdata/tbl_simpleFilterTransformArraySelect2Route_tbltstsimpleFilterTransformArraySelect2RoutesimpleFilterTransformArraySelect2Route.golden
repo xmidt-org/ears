@@ -10,15 +10,15 @@
         "config": {
           "transformation": {
             "account": "{.content.accountId}",
-            "payload": "{.content.values[2]}"
+            "payload": "{.content.values[name=name2].foo}"
           }
         },
-        "name": "simpleFilterTransformArraySelectTransformer",
+        "name": "simpleFilterTransformArraySelect2Transformer",
         "plugin": "transform"
       }
     ],
-    "id": "transform110",
-    "name": "tbltstsimpleFilterTransformArraySelectRoutesimpleFilterTransformArraySelectRoute",
+    "id": "transform111",
+    "name": "tbltstsimpleFilterTransformArraySelect2RoutesimpleFilterTransformArraySelect2Route",
     "receiver": {
       "config": {
         "intervalMs": 10,
@@ -33,16 +33,25 @@
             "title": "title",
             "type": "type",
             "values": [
-              "name1",
-              "name2",
-              "name3"
+              {
+                "foo": "foo1",
+                "name": "name1"
+              },
+              {
+                "foo": "foo2",
+                "name": "name2"
+              },
+              {
+                "foo": "foo3",
+                "name": "name3"
+              }
             ]
           },
           "topic": "mytopic"
         },
         "rounds": 5
       },
-      "name": "tbltstsimpleFilterTransformArraySelectRoutesimpleFilterTransformArraySelectReceiver",
+      "name": "tbltstsimpleFilterTransformArraySelect2RoutesimpleFilterTransformArraySelect2Receiver",
       "plugin": "debug"
     },
     "sender": {
@@ -50,7 +59,7 @@
         "destination": "stdout",
         "maxHistory": 100
       },
-      "name": "tbltstsimpleFilterTransformArraySelectRoutesimpleFilterTransformArraySelectSender",
+      "name": "tbltstsimpleFilterTransformArraySelect2RoutesimpleFilterTransformArraySelect2Sender",
       "plugin": "debug"
     },
     "tenant": {
