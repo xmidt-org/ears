@@ -15,9 +15,12 @@
 package kinesis
 
 import (
+	"github.com/aws/aws-sdk-go/aws/endpoints"
 	"github.com/aws/aws-sdk-go/service/kinesis"
 	"github.com/rs/zerolog"
 	"github.com/xmidt-org/ears/pkg/event"
+	"github.com/xmidt-org/ears/pkg/secret"
+	"github.com/xmidt-org/ears/pkg/sharder"
 	"github.com/xmidt-org/ears/pkg/tenant"
 	"github.com/xorcare/pointer"
 	"go.opentelemetry.io/otel/metric"
@@ -54,49 +57,77 @@ func NewPluginVersion(name string, version string, commitID string) (*pkgplugin.
 }
 
 var DefaultReceiverConfig = ReceiverConfig{
-	StreamName:         "",
-	ReceiverPoolSize:   pointer.Int(1),
-	AcknowledgeTimeout: pointer.Int(5),
-	ShardIteratorType:  "LATEST",
-	TracePayloadOnNack: pointer.Bool(false),
+	StreamName:              "",
+	AcknowledgeTimeout:      pointer.Int(5),
+	ShardIteratorType:       kinesis.ShardIteratorTypeLatest, // AT_SEQUENCE_NUMBER, AFTER_SEQUENCE_NUMBER, LATEST, AT_TIMESTAMP, TRIM_HORIZON
+	TracePayloadOnNack:      pointer.Bool(false),
+	EnhancedFanOut:          pointer.Bool(false),
+	ConsumerName:            "",
+	AWSRoleARN:              "",
+	AWSSecretAccessKey:      "",
+	AWSAccessKeyId:          "",
+	AWSRegion:               endpoints.UsWest2RegionID,
+	MaxCheckpointAgeSeconds: pointer.Int(86400),
+	UseCheckpoint:           pointer.Bool(true),
 }
 
 type ReceiverConfig struct {
-	StreamName         string `json:"streamName,omitempty"`
-	ReceiverPoolSize   *int   `json:"receiverPoolSize,omitempty"`
-	AcknowledgeTimeout *int   `json:"acknowledgeTimeout,omitempty"`
-	ShardIteratorType  string `json:"shardIteratorType,omitempty"`
-	TracePayloadOnNack *bool  `json:"tracePayloadOnNack,omitempty"`
+	StreamName              string `json:"streamName,omitempty"`
+	AcknowledgeTimeout      *int   `json:"acknowledgeTimeout,omitempty"`
+	ShardIteratorType       string `json:"shardIteratorType,omitempty"`
+	TracePayloadOnNack      *bool  `json:"tracePayloadOnNack,omitempty"`
+	EnhancedFanOut          *bool  `json:"enhancedFanOut,omitempty"`
+	ConsumerName            string `json:"consumerName,omitempty"` // enhanced fan-out only
+	AWSRoleARN              string `json:"awsRoleARN,omitempty"`
+	AWSAccessKeyId          string `json:"awsAccessKeyId,omitempty"`
+	AWSSecretAccessKey      string `json:"awsSecretAccessKey,omitempty"`
+	AWSRegion               string `json:"awsRegion,omitempty"`
+	UseCheckpoint           *bool  `json:"useCheckpoint,omitempty"`
+	MaxCheckpointAgeSeconds *int   `json:"maxCheckpointAgeSeconds,omitempty"`
 }
 
 type Receiver struct {
 	sync.Mutex
-	done                chan struct{}
-	stopped             bool
-	config              ReceiverConfig
-	name                string
-	plugin              string
-	tid                 tenant.Id
-	next                receiver.NextFn
-	logger              *zerolog.Logger
-	receiveCount        int
-	deleteCount         int
-	startTime           time.Time
-	eventSuccessCounter metric.BoundInt64Counter
-	eventFailureCounter metric.BoundInt64Counter
-	eventBytesCounter   metric.BoundInt64Counter
+	done                           chan struct{}
+	stopped                        bool
+	stopChannelMap                 map[int]chan bool
+	shardMonitorStopChannel        chan bool
+	shardUpdateListenerStopChannel chan bool
+	shardDistributor               sharder.ShardDistributor
+	config                         ReceiverConfig
+	name                           string
+	plugin                         string
+	tid                            tenant.Id
+	next                           receiver.NextFn
+	logger                         *zerolog.Logger
+	receiveCount                   int
+	deleteCount                    int
+	shardConfig                    sharder.ShardConfig
+	svc                            *kinesis.Kinesis
+	consumer                       *kinesis.DescribeStreamConsumerOutput
+	stream                         *kinesis.DescribeStreamOutput
+	startTime                      time.Time
+	secrets                        secret.Vault
+	eventSuccessCounter            metric.BoundInt64Counter
+	eventFailureCounter            metric.BoundInt64Counter
+	eventBytesCounter              metric.BoundInt64Counter
+	eventLagMillis                 metric.BoundInt64Histogram
 }
 
 var DefaultSenderConfig = SenderConfig{
 	StreamName:          "",
 	MaxNumberOfMessages: pointer.Int(1),
 	SendTimeout:         pointer.Int(1),
+	PartitionKey:        "",
+	PartitionKeyPath:    "",
 }
 
 type SenderConfig struct {
 	StreamName          string `json:"streamName,omitempty"`
 	MaxNumberOfMessages *int   `json:"maxNumberOfMessages,omitempty"`
 	SendTimeout         *int   `json:"sendTimeout,omitempty"`
+	PartitionKey        string `json:"partitionKey,omitempty"`
+	PartitionKeyPath    string `json:"partitionKeyPath,omitempty"`
 }
 
 type Sender struct {

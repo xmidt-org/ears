@@ -12,18 +12,16 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package kinesis
+package s3
 
 import (
 	"context"
 	"encoding/json"
 	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/endpoints"
 	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/aws/aws-sdk-go/service/kinesis"
+	"github.com/aws/aws-sdk-go/service/s3"
+	"github.com/aws/aws-sdk-go/service/s3/s3manager"
 	"github.com/goccy/go-yaml"
-	"github.com/google/uuid"
-	"github.com/rs/zerolog/log"
 	"github.com/xmidt-org/ears/internal/pkg/rtsemconv"
 	"github.com/xmidt-org/ears/pkg/event"
 	pkgplugin "github.com/xmidt-org/ears/pkg/plugin"
@@ -34,6 +32,8 @@ import (
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/global"
 	"go.opentelemetry.io/otel/metric/unit"
+	"path/filepath"
+	"strings"
 	"time"
 )
 
@@ -71,11 +71,11 @@ func NewSender(tid tenant.Id, plugin string, name string, config interface{}, se
 	// metric recorders
 	meter := global.Meter(rtsemconv.EARSMeterName)
 	commonLabels := []attribute.KeyValue{
-		attribute.String(rtsemconv.EARSPluginTypeLabel, rtsemconv.EARSPluginTypeKinesisSender),
+		attribute.String(rtsemconv.EARSPluginTypeLabel, rtsemconv.EARSPluginTypeSQSSender),
 		attribute.String(rtsemconv.EARSPluginNameLabel, s.Name()),
 		attribute.String(rtsemconv.EARSAppIdLabel, s.tid.AppId),
 		attribute.String(rtsemconv.EARSOrgIdLabel, s.tid.OrgId),
-		attribute.String(rtsemconv.KinesisStreamNameLabel, s.config.StreamName),
+		attribute.String(rtsemconv.S3Bucket, s.config.Bucket),
 	}
 	s.eventSuccessCounter = metric.Must(meter).
 		NewInt64Counter(
@@ -111,47 +111,20 @@ func NewSender(tid tenant.Id, plugin string, name string, config interface{}, se
 func (s *Sender) initPlugin() error {
 	s.Lock()
 	defer s.Unlock()
-	sess, err := session.NewSession(&aws.Config{
-		Region: aws.String(endpoints.UsWest2RegionID),
+	var err error
+	s.session, err = session.NewSession(&aws.Config{
+		Region: aws.String(s.config.Region),
 	})
 	if nil != err {
 		return err
 	}
-	_, err = sess.Config.Credentials.Get()
+	_, err = s.session.Config.Credentials.Get()
 	if nil != err {
 		return err
 	}
-	s.kinesisService = kinesis.New(sess)
-	_, err = s.kinesisService.DescribeStream(&kinesis.DescribeStreamInput{StreamName: aws.String(s.config.StreamName)})
-	if err != nil {
-		return err
-	}
+	s.s3Service = s3.New(s.session)
 	s.done = make(chan struct{})
-	s.startTimedSender()
 	return nil
-}
-
-func (s *Sender) startTimedSender() {
-	go func() {
-		for {
-			select {
-			case <-s.done:
-				s.logger.Info().Str("op", "Kinesis.timedSender").Str("name", s.Name()).Str("tid", s.Tenant().ToString()).Int("sendCount", s.count).Msg("stopping kinesis sender")
-				return
-			case <-time.After(time.Duration(*s.config.SendTimeout) * time.Second):
-			}
-			s.Lock()
-			if s.eventBatch == nil {
-				s.eventBatch = make([]event.Event, 0)
-			}
-			evtBatch := s.eventBatch
-			s.eventBatch = make([]event.Event, 0)
-			s.Unlock()
-			if len(evtBatch) > 0 {
-				s.send(evtBatch)
-			}
-		}
-	}()
 }
 
 func (s *Sender) Count() int {
@@ -174,82 +147,41 @@ func (s *Sender) StopSending(ctx context.Context) {
 	s.Unlock()
 }
 
-func (s *Sender) send(events []event.Event) {
-	if len(events) == 0 {
+func (s *Sender) Send(evt event.Event) {
+	buf, err := json.Marshal(evt.Payload())
+	if err != nil {
+		s.eventFailureCounter.Add(evt.Context(), 1)
+		evt.Nack(err)
 		return
 	}
-	batchReqs := []*kinesis.PutRecordsRequestEntry{}
-	for idx, evt := range events {
-		if idx == 0 {
-			log.Ctx(evt.Context()).Debug().Str("op", "Kinesis.sendWorker").Str("name", s.Name()).Str("tid", s.Tenant().ToString()).Int("eventIdx", idx).Int("batchSize", len(events)).Int("sendCount", s.count).Msg("send message batch")
-		}
-		buf, err := json.Marshal(evt.Payload())
-		if err != nil {
-			continue
-		}
-		partitionKey := s.config.PartitionKey
-		if s.config.PartitionKeyPath != "" {
-			pv, _, _ := evt.GetPathValue(s.config.PartitionKeyPath)
-			pvstr, ok := pv.(string)
-			if ok && pvstr != "" {
-				partitionKey = pvstr
-			}
-		}
-		if partitionKey == "" {
-			partitionKey = uuid.New().String()
-		}
-		putReq := kinesis.PutRecordsRequestEntry{
-			Data:         buf,
-			PartitionKey: aws.String(partitionKey),
-		}
-		batchReqs = append(batchReqs, &putReq)
-		s.eventBytesCounter.Add(evt.Context(), int64(len(buf)))
-		s.eventProcessingTime.Record(evt.Context(), time.Since(evt.Created()).Milliseconds())
-	}
-	batchPut := kinesis.PutRecordsInput{
-		Records:    batchReqs,
-		StreamName: aws.String(s.config.StreamName),
-	}
+	s.eventBytesCounter.Add(evt.Context(), int64(len(buf)))
+	s.eventProcessingTime.Record(evt.Context(), time.Since(evt.Created()).Milliseconds())
 	start := time.Now()
-	putResults, err := s.kinesisService.PutRecordsWithContext(events[0].Context(), &batchPut)
-	s.eventSendOutTime.Record(events[0].Context(), time.Since(start).Milliseconds())
-	successCount := 0
+	fileName := s.config.FileName
+	if fileName == "" {
+		v, _, _ := evt.GetPathValue(s.config.FilePath)
+		str, ok := v.(string)
+		if ok {
+			fileName = str
+		}
+	}
+	path := filepath.Join(s.config.Path, fileName)
+	uploader := s3manager.NewUploader(s.session)
+	_, err = uploader.Upload(&s3manager.UploadInput{
+		Bucket: aws.String(s.config.Bucket),
+		Key:    aws.String(path),
+		Body:   strings.NewReader(string(buf)),
+	})
+	s.eventSendOutTime.Record(evt.Context(), time.Since(start).Milliseconds())
 	if err != nil {
-		log.Ctx(events[0].Context()).Error().Str("op", "Kinesis.sendWorker").Str("name", s.Name()).Str("tid", s.Tenant().ToString()).Int("batchSize", len(events)).Msg("batch send error: " + err.Error())
-		for idx := range events {
-			s.eventFailureCounter.Add(events[idx].Context(), 1)
-			events[idx].Nack(err)
-		}
+		s.eventFailureCounter.Add(evt.Context(), 1)
+		evt.Nack(err)
 	} else {
-		for idx, putResult := range putResults.Records {
-			if putResult.ErrorCode == nil {
-				s.eventSuccessCounter.Add(events[idx].Context(), 1)
-				successCount++
-				events[idx].Ack()
-			} else {
-				s.eventFailureCounter.Add(events[idx].Context(), 1)
-				events[idx].Nack(err)
-			}
-		}
-	}
-	s.Lock()
-	s.count += successCount
-	s.Unlock()
-}
-
-func (s *Sender) Send(e event.Event) {
-	s.Lock()
-	if s.eventBatch == nil {
-		s.eventBatch = make([]event.Event, 0)
-	}
-	s.eventBatch = append(s.eventBatch, e)
-	if len(s.eventBatch) >= *s.config.MaxNumberOfMessages {
-		eventBatch := s.eventBatch
-		s.eventBatch = make([]event.Event, 0)
+		s.Lock()
+		s.count++
 		s.Unlock()
-		s.send(eventBatch)
-	} else {
-		s.Unlock()
+		s.eventSuccessCounter.Add(evt.Context(), 1)
+		evt.Ack()
 	}
 }
 

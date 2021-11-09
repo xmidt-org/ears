@@ -1,4 +1,4 @@
-// Copyright 2020 Comcast Cable Communications Management, LLC
+// Copyright 2021 Comcast Cable Communications Management, LLC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,26 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package transform
+package nodestatemanagerfx
 
-import "github.com/xmidt-org/ears/pkg/tenant"
-
-// Config can be passed into NewFilter() in order to configure
-// the behavior of the sender.
-type Config struct {
-	Transformation interface{} `json:"transformation,omitempty"`
-	ToPath         string      `json:"toPath,omitempty"`
+type UnsupportedNodeStateStorageError struct {
+	storageType string
 }
 
-var empty interface{}
-var DefaultConfig = Config{
-	Transformation: empty,
-	ToPath:         "",
-}
-
-type Filter struct {
-	config Config
-	name   string
-	plugin string
-	tid    tenant.Id
+func (e *UnsupportedNodeStateStorageError) Error() string {
+	return "UnsupportedStorageError: (storageType=" + e.storageType + ")"
 }

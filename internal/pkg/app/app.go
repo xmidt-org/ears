@@ -24,7 +24,9 @@ import (
 	"github.com/xmidt-org/ears/internal/pkg/config"
 	"github.com/xmidt-org/ears/internal/pkg/rtsemconv"
 	"github.com/xmidt-org/ears/pkg/app"
+	"github.com/xmidt-org/ears/pkg/checkpoint"
 	"github.com/xmidt-org/ears/pkg/event"
+	"github.com/xmidt-org/ears/pkg/sharder"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc"
@@ -53,6 +55,35 @@ func NewMux(a *APIManager, middleware []func(next http.Handler) http.Handler) (h
 	return a.muxRouter, nil
 }
 
+func SetupCheckpointManager(lifecycle fx.Lifecycle, checkpointManager checkpoint.CheckpointManager, config config.Config, logger *zerolog.Logger) error {
+	lifecycle.Append(
+		fx.Hook{
+			OnStart: func(context.Context) error {
+				return nil
+			},
+			OnStop: func(ctx context.Context) error {
+				return nil
+			},
+		},
+	)
+	return nil
+}
+
+func SetupNodeStateManager(lifecycle fx.Lifecycle, nodeStateManager sharder.NodeStateManager, config config.Config, logger *zerolog.Logger) error {
+	lifecycle.Append(
+		fx.Hook{
+			OnStart: func(context.Context) error {
+				return nil
+			},
+			OnStop: func(ctx context.Context) error {
+				nodeStateManager.Stop()
+				return nil
+			},
+		},
+	)
+	return nil
+}
+
 func SetupAPIServer(lifecycle fx.Lifecycle, config config.Config, logger *zerolog.Logger, mux http.Handler) error {
 	port := config.GetInt("ears.api.port")
 	if port < 1 {
@@ -76,14 +107,7 @@ func SetupAPIServer(lifecycle fx.Lifecycle, config config.Config, logger *zerolo
 
 	// setup telemetry stuff
 
-	if config.GetBool("ears.opentelemetry.lightstep.active") {
-		//ls = launcher.ConfigureOpentelemetry(
-		//	launcher.WithServiceName(rtsemconv.EARSServiceName),
-		//	launcher.WithAccessToken(config.GetString("ears.opentelemetry.lightstep.accessToken")),
-		//	launcher.WithServiceVersion("1.0"),
-		//)
-		//logger.Info().Str("telemetryexporter", "lightstep").Msg("started")
-	} else if config.GetBool("ears.opentelemetry.otel-collector.active") {
+	if config.GetBool("ears.opentelemetry.otel-collector.active") {
 		// setup tracing
 		// grpc does not allow a uri path which makes it hard to set this up behind a proxy or load balancer
 		traceExporter, err := otlptracegrpc.New(
@@ -188,10 +212,6 @@ func SetupAPIServer(lifecycle fx.Lifecycle, config config.Config, logger *zerolo
 				} else {
 					logger.Info().Msg("API Server Stopped")
 				}
-				//if config.GetBool("ears.opentelemetry.lightstep.active") {
-				//	ls.Shutdown()
-				//	logger.Info().Msg("lightstep exporter stopped")
-				//}
 				if config.GetBool("ears.opentelemetry.otel-collector.active") || config.GetBool("ears.opentelemetry.stdout.active") {
 					err := traceProvider.Shutdown(ctx)
 					if err != nil {

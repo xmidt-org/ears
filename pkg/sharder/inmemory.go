@@ -12,28 +12,26 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package regex
+package sharder
 
-import "github.com/xmidt-org/ears/pkg/tenant"
-
-// Config can be passed into NewFilter() in order to configure
-// the behavior of the sender.
-type Config struct {
-	FromPath         string  `json:"fromPath,omitempty"`
-	ToPath           string  `json:"toPath,omitempty"`
-	Regex            string  `json:"regex,omitempty"`
-	ReplaceAllString *string `json:"replaceAllString,omitempty"`
+// trivial in memory node manager that always has one active node (itself)
+type inmemoryNodeManager struct {
+	identity string
 }
 
-var DefaultConfig = Config{
-	FromPath: "",
-	ToPath:   "",
-	Regex:    "^.*$",
+func newInMemoryNodeManager(identity string, config StorageConfig) (*inmemoryNodeManager, error) {
+	nodeManager := inmemoryNodeManager{
+		identity: identity,
+	}
+	return &nodeManager, nil
 }
 
-type Filter struct {
-	config Config
-	name   string
-	plugin string
-	tid    tenant.Id
+func (d *inmemoryNodeManager) GetActiveNodes() ([]string, error) {
+	return []string{"localhost"}, nil
+}
+
+func (d *inmemoryNodeManager) RemoveNode() {
+}
+
+func (d *inmemoryNodeManager) Stop() {
 }

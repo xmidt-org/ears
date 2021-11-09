@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package kinesis
+package s3
 
 import (
 	"fmt"
@@ -27,23 +27,8 @@ func (rc *ReceiverConfig) WithDefaults() ReceiverConfig {
 	if cfg.AcknowledgeTimeout == nil {
 		cfg.AcknowledgeTimeout = DefaultReceiverConfig.AcknowledgeTimeout
 	}
-	if cfg.ShardIteratorType == "" {
-		cfg.ShardIteratorType = DefaultReceiverConfig.ShardIteratorType
-	}
-	if cfg.TracePayloadOnNack == nil {
-		cfg.TracePayloadOnNack = DefaultReceiverConfig.TracePayloadOnNack
-	}
-	if cfg.EnhancedFanOut == nil {
-		cfg.EnhancedFanOut = DefaultReceiverConfig.EnhancedFanOut
-	}
-	if cfg.AWSRegion == "" {
-		cfg.AWSRegion = DefaultReceiverConfig.AWSRegion
-	}
-	if cfg.UseCheckpoint == nil {
-		cfg.UseCheckpoint = DefaultReceiverConfig.UseCheckpoint
-	}
-	if cfg.MaxCheckpointAgeSeconds == nil {
-		cfg.MaxCheckpointAgeSeconds = DefaultReceiverConfig.MaxCheckpointAgeSeconds
+	if cfg.Region == "" {
+		cfg.Region = DefaultReceiverConfig.Region
 	}
 	return cfg
 }
@@ -59,9 +44,6 @@ func (rc *ReceiverConfig) Validate() error {
 	if !result.Valid() {
 		return fmt.Errorf(fmt.Sprintf("%+v", result.Errors()))
 	}
-	if *rc.EnhancedFanOut && rc.ConsumerName == "" {
-		return fmt.Errorf("must provide consumer name with enhanced fan-out option")
-	}
 	return nil
 }
 
@@ -74,51 +56,21 @@ const receiverSchema = `
             "type": "object",
             "additionalProperties": false,
             "properties": {
-                "streamName": {
+                "bucket": {
                     "type": "string"
                 },
-                "consumerName": {
+                "path": {
                     "type": "string"
                 },
-				"awsRoleARN": {
-                    "type": "string"
-				},
-				"awsAccessKeyId": {
-                    "type": "string"
-				},
-				"awsSecretAccessKey": {
-                    "type": "string"
-				},
-				"awsRegion": {
-                    "type": "string"
-				},
-                "shardIteratorType": {
+                "region": {
                     "type": "string"
                 },
-				"acknowledgeTimeout": {
-                    "type": "integer", 
-					"minimum": 1,
-					"maximum": 60
-				},
-				"tracePayloadOnNack" : {
-					"type": "boolean",
-					"default": false
-				},
-				"enhancedFanOut" : {
-					"type": "boolean",
-					"default": false
-				},
-				"useCheckpoint" : {
-					"type": "boolean",
-					"default": true
-				},
-				"maxCheckpointAgeSeconds" : {
-                    "type": "integer", 
-					"minimum": 0
-				}
+                "acknowledgeTimeout": {
+                    "type": "integer"
+                }
             },
             "required": [
-                "streamName"
+                "bucket", "region"
             ],
             "title": "ReceiverConfig"
         }

@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package kinesis
+package s3
 
 import (
 	"fmt"
@@ -22,11 +22,8 @@ import (
 // WithDefaults
 func (sc SenderConfig) WithDefaults() SenderConfig {
 	cfg := sc
-	if cfg.MaxNumberOfMessages == nil {
-		cfg.MaxNumberOfMessages = DefaultSenderConfig.MaxNumberOfMessages
-	}
-	if cfg.SendTimeout == nil {
-		cfg.SendTimeout = DefaultSenderConfig.SendTimeout
+	if cfg.Region == "" {
+		cfg.Region = DefaultSenderConfig.Region
 	}
 	return cfg
 }
@@ -54,28 +51,24 @@ const senderSchema = `
             "type": "object",
             "additionalProperties": false,
             "properties": {
-                "streamName": {
+                "bucket": {
                     "type": "string"
                 },
-                "partitionKey": {
+                "path": {
                     "type": "string"
                 },
-                "partitionKeyPath": {
+                "region": {
                     "type": "string"
                 },
-				"maxNumberOfMessages": {
-                    "type": "integer", 
-					"minimum": 1,
-					"maximum": 500
-				},
-				"sendTimeout": {
-                    "type": "integer", 
-					"minimum": 1,
-					"maximum": 60
-				}
+                "fileName": {
+                    "type": "string"
+                },
+                "filePath": {
+                    "type": "string"
+                }
             },
             "required": [
-                "streamName"
+                "bucket", "region"
             ],
             "title": "SenderConfig"
         }
