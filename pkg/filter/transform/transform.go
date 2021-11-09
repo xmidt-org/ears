@@ -15,6 +15,7 @@
 package transform
 
 import (
+	"encoding/json"
 	"fmt"
 	"github.com/mohae/deepcopy"
 	"github.com/rs/zerolog/log"
@@ -72,23 +73,41 @@ func transform(evt event.Event, t interface{}, parent interface{}, key string, i
 	if evt == nil || t == nil {
 		return
 	}
-	switch t := t.(type) {
+	switch tt := t.(type) {
 	case map[string]interface{}:
-		for key, st := range t {
-			transform(evt, st, t, key, -1)
+		for key, st := range tt {
+			transform(evt, st, tt, key, -1)
 		}
 	case []interface{}:
-		for idx, st := range t {
-			transform(evt, st, t, "", idx)
+		for idx, st := range tt {
+			transform(evt, st, tt, "", idx)
 		}
 	case string:
-		if strings.HasPrefix(t, "{") && strings.HasSuffix(t, "}") {
-			repl, _, _ := evt.GetPathValue(t[1 : len(t)-1])
+		for {
+			si := strings.Index(tt, "{")
+			ei := strings.Index(tt, "}")
+			if si < 0 || ei < 0 {
+				break
+			}
+			path := tt[si+1 : ei]
+			v, _, _ := evt.GetPathValue(path)
+			if !(si == 0 && ei == len(tt)-1) {
+				switch vt := v.(type) {
+				case string:
+					tt = tt[0:si] + vt + tt[ei+1:]
+				default:
+					sv, _ := json.Marshal(vt)
+					tt = tt[0:si] + string(sv) + tt[ei+1:]
+				}
+				v = tt
+			} else {
+				tt = ""
+			}
 			if parent != nil {
 				if key != "" {
-					parent.(map[string]interface{})[key] = repl
+					parent.(map[string]interface{})[key] = v
 				} else if idx >= 0 {
-					parent.([]interface{})[idx] = repl
+					parent.([]interface{})[idx] = v
 				}
 			}
 		}

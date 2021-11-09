@@ -22,6 +22,8 @@ import (
 	"github.com/xmidt-org/ears/internal/pkg/app"
 	"github.com/xmidt-org/ears/internal/pkg/appsecret"
 	"github.com/xmidt-org/ears/internal/pkg/config"
+	"github.com/xmidt-org/ears/internal/pkg/fx/checkpointmanagerfx"
+	"github.com/xmidt-org/ears/internal/pkg/fx/nodestatemanagerfx"
 	"github.com/xmidt-org/ears/internal/pkg/fx/pluginmanagerfx"
 	"github.com/xmidt-org/ears/internal/pkg/fx/quotamanagerfx"
 	"github.com/xmidt-org/ears/internal/pkg/fx/routestorerfx"
@@ -63,6 +65,8 @@ var runCmd = &cobra.Command{
 			syncerfx.Module,
 			tenantstorerfx.Module,
 			quotamanagerfx.Module,
+			nodestatemanagerfx.Module,
+			checkpointmanagerfx.Module,
 			fx.Provide(
 				AppConfig,
 				appsecret.NewConfigVault,
@@ -77,6 +81,8 @@ var runCmd = &cobra.Command{
 			fx.Invoke(tablemgr.SetupRoutingManager),
 			fx.Invoke(quotamanagerfx.SetupQuotaManager),
 			fx.Invoke(app.SetupAPIServer),
+			fx.Invoke(app.SetupNodeStateManager),
+			fx.Invoke(app.SetupCheckpointManager),
 		)
 		earsApp.Run()
 	},

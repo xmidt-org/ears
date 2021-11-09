@@ -12,28 +12,26 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package regex
+package main
 
-import "github.com/xmidt-org/ears/pkg/tenant"
+import (
+	"github.com/xmidt-org/ears/pkg/plugins/s3"
+)
 
-// Config can be passed into NewFilter() in order to configure
-// the behavior of the sender.
-type Config struct {
-	FromPath         string  `json:"fromPath,omitempty"`
-	ToPath           string  `json:"toPath,omitempty"`
-	Regex            string  `json:"regex,omitempty"`
-	ReplaceAllString *string `json:"replaceAllString,omitempty"`
+func main() {
+	// required for `go build` to not fail
 }
 
-var DefaultConfig = Config{
-	FromPath: "",
-	ToPath:   "",
-	Regex:    "^.*$",
-}
+//go:generate ../../../../script/build-plugin.sh
 
-type Filter struct {
-	config Config
-	name   string
-	plugin string
-	tid    tenant.Id
-}
+var (
+	Name       = "s3"
+	GitVersion = "v0.0.0"
+	GitCommit  = ""
+)
+
+var Plugin, PluginErr = s3.NewPluginVersion(Name, GitVersion, GitCommit)
+
+// for golangci-lint
+var _ = Plugin
+var _ = PluginErr

@@ -18,9 +18,16 @@
     "plugin": "kinesis",
     "name": "kinesisFill1000RouteSender",
     "config": {
-      "streamName": "bw-ears-demo"
+      "streamName": "bw-ears-demo",
+      "maxNumberOfMessages": 25
     }
   },
+  "filterChain" : [
+    {
+      "plugin" : "log",
+      "name" : "kinesisFill1000RouteLogFilter"
+    }
+  ],
   "deliveryMode": "atLeastOnce"
 }
 

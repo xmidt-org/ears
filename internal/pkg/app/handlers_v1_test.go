@@ -51,6 +51,7 @@ import (
 	"github.com/xmidt-org/ears/pkg/plugins/pass"
 	goredis "github.com/xmidt-org/ears/pkg/plugins/redis"
 	"github.com/xmidt-org/ears/pkg/plugins/regex"
+	"github.com/xmidt-org/ears/pkg/plugins/s3"
 	"github.com/xmidt-org/ears/pkg/plugins/split"
 	"github.com/xmidt-org/ears/pkg/plugins/sqs"
 	"github.com/xmidt-org/ears/pkg/plugins/trace"
@@ -407,7 +408,7 @@ func getConfig() (config.Config, error) {
 	return config, nil
 }
 
-// if storageType is blank choose storag elayer specified in ears.yaml
+// if storageType is blank choose storage layer specified in ears.yaml
 func getStorageLayer(t *testing.T, config config.Config, storageType string) (route.RouteStorer, error) {
 	if storageType == "" {
 		storageType = config.GetString("ears.storage.route.type")
@@ -486,6 +487,10 @@ func setupRestApi(config config.Config, storageMgr route.RouteStorer, setupQuota
 		{
 			name:   "sqs",
 			plugin: toArr(sqs.NewPluginVersion("sqs", "", ""))[0].(pkgplugin.Pluginer),
+		},
+		{
+			name:   "s3",
+			plugin: toArr(s3.NewPluginVersion("s3", "", ""))[0].(pkgplugin.Pluginer),
 		},
 		{
 			name:   "kinesis",

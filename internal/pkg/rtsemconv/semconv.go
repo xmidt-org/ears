@@ -51,6 +51,7 @@ const (
 	EARSMetricAddRouteFailure     = "ears.addRouteFailure"
 	EARSMetricRemoveRouteSuccess  = "ears.removeRouteSuccess"
 	EARSMetricRemoveRouteFailure  = "ears.removeRouteFailure"
+	EARSMetricMillisBehindLatest  = "ears.millisBehindLatest"
 
 	EARSRouteId = attribute.Key("ears.routeId")
 
@@ -70,6 +71,7 @@ const (
 	KafkaGroupIdLabel      = "kafka.groupId"
 	RedisChannelLabel      = "redis.channel"
 	SQSQueueUrlLabel       = "sqs.QueueUrl"
+	S3Bucket               = "s3.Bucket"
 	KinesisStreamNameLabel = "kinesis.StreamName"
 	HostnameLabel          = "hostname"
 
