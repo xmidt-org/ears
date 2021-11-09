@@ -47,6 +47,7 @@ import (
 	"github.com/xmidt-org/ears/pkg/plugins/kafka"
 	"github.com/xmidt-org/ears/pkg/plugins/kinesis"
 	plog "github.com/xmidt-org/ears/pkg/plugins/log"
+	"github.com/xmidt-org/ears/pkg/plugins/mapping"
 	"github.com/xmidt-org/ears/pkg/plugins/match"
 	"github.com/xmidt-org/ears/pkg/plugins/pass"
 	goredis "github.com/xmidt-org/ears/pkg/plugins/redis"
@@ -507,6 +508,10 @@ func setupRestApi(config config.Config, storageMgr route.RouteStorer, setupQuota
 		{
 			name:   "match",
 			plugin: toArr(match.NewPluginVersion("match", "", ""))[0].(pkgplugin.Pluginer),
+		},
+		{
+			name:   "mapping",
+			plugin: toArr(mapping.NewPluginVersion("mapping", "", ""))[0].(pkgplugin.Pluginer),
 		},
 		{
 			name:   "pass",
