@@ -235,7 +235,7 @@ func (e *event) evalArrayPath(path string, curr interface{}) interface{} {
 		if c == '.' && !inArr && pos > last {
 			segments = append(segments, path[(last+1):pos])
 			last = pos
-		} else if pos == len(path)-1 && pos-(last) > 0 {
+		} else if pos == len(path)-1 && pos-last > 0 {
 			segments = append(segments, path[last+1:])
 		}
 	}
@@ -362,7 +362,7 @@ func (e *event) GetPathValue(path string) (interface{}, interface{}, string) {
 		return nil, nil, ""
 	}
 	if strings.Contains(path, "[") && strings.Contains(path, "]") {
-		return e.evalArrayPath(path[strings.Index(path, ".")+1:], obj), nil, ""
+		return e.evalArrayPath(path[strings.Index(path, "."):], obj), nil, ""
 	}
 	var parent interface{}
 	var key string
