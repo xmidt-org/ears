@@ -1,0 +1,50 @@
+{
+  "id" : "transform109",
+  "userId" : "boris",
+  "name" : "simpleFilterTransformArraySelectRoute",
+  "receiver" : {
+    "plugin" : "debug",
+    "name" : "simpleFilterTransformArraySelectReceiver",
+    "config" :
+    {
+      "rounds" : 5,
+      "intervalMs" : 10,
+      "payload" : {
+        "topic": "mytopic",
+        "content": {
+          "eventId": "123",
+          "accountId": "123",
+          "adapterId": "123",
+          "type": "type",
+          "values": [ "name1", "name2", "name3" ],
+          "timestamp": 1428352877944,
+          "name": "name",
+          "title": "title",
+          "description": "operation"
+        }
+      }
+    }
+  },
+  "sender" : {
+    "plugin" : "debug",
+    "name" : "simpleFilterTransformArraySelectSender",
+    "config" : {
+      "destination" : "stdout",
+      "maxHistory": 100
+    }
+  },
+  "filterChain" : [
+    {
+      "plugin" : "transform",
+      "name" : "simpleFilterTransformArraySelectTransformer",
+      "config" : {
+        "transformation" : {
+          "payload" : "{.content.values[2]}",
+          "account" : "{.content.accountId}"
+        }
+      }
+    }
+  ],
+  "deliveryMode" : "whoCares"
+}
+

@@ -1,6 +1,6 @@
 {
   "sharePluginsAcrossTests": false,
-  "testToRunAllIfBlank": "",
+  "testToRunAllIfBlank": "simpleFilterTransformArraySelectRoute",
   "numInstances": 3,
   "storageType": "",
   "table": {
@@ -458,6 +458,22 @@
           "expectedEventCount": 5,
           "expectedEventIndex": 0,
           "expectedEventPayloadFile": "event17"
+        }
+      ]
+    },
+    "simpleFilterTransformArraySelectRoute": {
+      "seq": 26,
+      "disabled": false,
+      "routeFiles": [
+        "simpleFilterTransformArraySelectRoute"
+      ],
+      "waitMs": 1000,
+      "events": [
+        {
+          "senderRouteFiles": "simpleFilterTransformArraySelectRoute",
+          "expectedEventCount": 5,
+          "expectedEventIndex": 0,
+          "expectedEventPayloadFile": "event19"
         }
       ]
     }
