@@ -43,6 +43,13 @@ import (
 	"time"
 )
 
+const (
+	errorTimeoutSecShort   = 1
+	errorTimeoutSecLong    = 5
+	monitorTimeoutSecShort = 10
+	monitorTimeoutSecLong  = 30
+)
+
 func NewReceiver(tid tenant.Id, plugin string, name string, config interface{}, secrets secret.Vault) (receiver.Receiver, error) {
 	var cfg ReceiverConfig
 	var err error
@@ -162,7 +169,7 @@ func (r *Receiver) shardMonitor(svc *kinesis.Kinesis, distributor sharder.ShardD
 			case <-r.shardMonitorStopChannel:
 				r.logger.Info().Str("op", "Kinesis.shardMonitor").Str("stream", *r.stream.StreamDescription.StreamName).Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Msg("stopping shard monitor")
 				return
-			case <-time.After(10 * time.Second):
+			case <-time.After(monitorTimeoutSecShort * time.Second):
 			}
 			stream, err := svc.DescribeStream(&kinesis.DescribeStreamInput{
 				StreamName: &r.config.StreamName,
@@ -217,7 +224,7 @@ func (r *Receiver) registerStreamConsumer(svc *kinesis.Kinesis, streamName, cons
 	for i := 0; i < 10; i++ {
 		streamConsumer, err := svc.DescribeStreamConsumer(descParams)
 		if err != nil || aws.StringValue(streamConsumer.ConsumerDescription.ConsumerStatus) != kinesis.ConsumerStatusActive {
-			time.Sleep(time.Second * 30)
+			time.Sleep(time.Second * monitorTimeoutSecLong)
 			continue
 		}
 		return streamConsumer, nil
@@ -282,7 +289,7 @@ func (r *Receiver) startShardReceiverEFO(svc *kinesis.Kinesis, stream *kinesis.D
 			if err != nil {
 				r.logger.Error().Str("op", "Kinesis.receiveWorkerEFO").Str("stream", *r.stream.StreamDescription.StreamName).Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Int("shardIdx", shardIdx).Msg("subscribe error: " + err.Error())
 				// a fully processed parent shard will cause errors here until its decommission
-				time.Sleep(10 * time.Second)
+				time.Sleep(errorTimeoutSecLong * time.Second)
 				continue
 				//return
 			}
@@ -315,7 +322,7 @@ func (r *Receiver) startShardReceiverEFO(svc *kinesis.Kinesis, stream *kinesis.D
 								delete(r.stopChannelMap, shardIdx)
 								r.Unlock()
 								return
-							case <-time.After(5 * time.Second):
+							case <-time.After(monitorTimeoutSecShort * time.Second):
 								r.logger.Info().Str("op", "Kinesis.receiveWorker").Str("stream", *r.stream.StreamDescription.StreamName).Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Int("shardIdx", shardIdx).Msg("waiting for decommission")
 							}
 						}
@@ -414,7 +421,7 @@ func (r *Receiver) startShardReceiver(svc *kinesis.Kinesis, stream *kinesis.Desc
 			iteratorOutput, err := svc.GetShardIterator(shardIteratorInput)
 			if err != nil {
 				r.logger.Error().Str("op", "Kinesis.receiveWorker").Str("stream", *r.stream.StreamDescription.StreamName).Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Int("shardIdx", shardIdx).Msg(err.Error())
-				time.Sleep(1 * time.Second)
+				time.Sleep(errorTimeoutSecShort * time.Second)
 				continue
 			}
 			shardIterator := iteratorOutput.ShardIterator
@@ -434,7 +441,7 @@ func (r *Receiver) startShardReceiver(svc *kinesis.Kinesis, stream *kinesis.Desc
 				})
 				if err != nil {
 					r.logger.Error().Str("op", "Kinesis.receiveWorker").Str("stream", *r.stream.StreamDescription.StreamName).Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Int("shardIdx", shardIdx).Msg(err.Error())
-					time.Sleep(1 * time.Second)
+					time.Sleep(errorTimeoutSecShort * time.Second)
 					continue
 				}
 				records := getRecordsOutput.Records
@@ -493,7 +500,7 @@ func (r *Receiver) startShardReceiver(svc *kinesis.Kinesis, stream *kinesis.Desc
 							delete(r.stopChannelMap, shardIdx)
 							r.Unlock()
 							return
-						case <-time.After(5 * time.Second):
+						case <-time.After(monitorTimeoutSecShort * time.Second):
 							r.logger.Info().Str("op", "Kinesis.receiveWorker").Str("stream", *r.stream.StreamDescription.StreamName).Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Int("shardIdx", shardIdx).Msg("waiting for decommission")
 						}
 					}
