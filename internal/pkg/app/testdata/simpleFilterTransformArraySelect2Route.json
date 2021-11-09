@@ -1,10 +1,10 @@
 {
-  "id" : "transform110",
+  "id" : "transform111",
   "userId" : "boris",
-  "name" : "simpleFilterTransformArraySelectRoute",
+  "name" : "simpleFilterTransformArraySelect2Route",
   "receiver" : {
     "plugin" : "debug",
-    "name" : "simpleFilterTransformArraySelectReceiver",
+    "name" : "simpleFilterTransformArraySelect2Receiver",
     "config" :
     {
       "rounds" : 5,
@@ -16,7 +16,20 @@
           "accountId": "123",
           "adapterId": "123",
           "type": "type",
-          "values": [ "name1", "name2", "name3" ],
+          "values": [
+            {
+              "name" : "name1",
+              "foo" : "foo1"
+            },
+            {
+              "name" : "name2",
+              "foo" : "foo2"
+            },
+            {
+              "name" : "name3",
+              "foo" : "foo3"
+            }
+          ],
           "timestamp": 1428352877944,
           "name": "name",
           "title": "title",
@@ -27,7 +40,7 @@
   },
   "sender" : {
     "plugin" : "debug",
-    "name" : "simpleFilterTransformArraySelectSender",
+    "name" : "simpleFilterTransformArraySelect2Sender",
     "config" : {
       "destination" : "stdout",
       "maxHistory": 100
@@ -36,10 +49,10 @@
   "filterChain" : [
     {
       "plugin" : "transform",
-      "name" : "simpleFilterTransformArraySelectTransformer",
+      "name" : "simpleFilterTransformArraySelect2Transformer",
       "config" : {
         "transformation" : {
-          "payload" : "{.content.values[2]}",
+          "payload" : "{.content.values[name=name2].foo}",
           "account" : "{.content.accountId}"
         }
       }
