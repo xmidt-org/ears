@@ -492,6 +492,22 @@
           "expectedEventPayloadFile": "event20"
         }
       ]
+    },
+    "simpleFilterMappingRoute": {
+      "seq": 29,
+      "disabled": false,
+      "routeFiles": [
+        "simpleFilterMappingRoute"
+      ],
+      "waitMs": 1000,
+      "events": [
+        {
+          "senderRouteFiles": "simpleFilterMappingRoute",
+          "expectedEventCount": 1,
+          "expectedEventIndex": 0,
+          "expectedEventPayloadFile": "event21"
+        }
+      ]
     }
   }
 }
