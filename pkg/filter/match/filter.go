@@ -19,6 +19,7 @@ import (
 	"github.com/rs/zerolog/log"
 	"github.com/xmidt-org/ears/pkg/event"
 	"github.com/xmidt-org/ears/pkg/filter"
+	"github.com/xmidt-org/ears/pkg/filter/match/comparison"
 	"github.com/xmidt-org/ears/pkg/filter/match/pattern"
 	"github.com/xmidt-org/ears/pkg/filter/match/patternregex"
 	"github.com/xmidt-org/ears/pkg/filter/match/regex"
@@ -59,6 +60,13 @@ func NewFilter(tid tenant.Id, plugin string, name string, config interface{}, se
 		}
 	case MatcherPatternRegex:
 		matcher, err = patternregex.NewMatcher(cfg.Pattern, *cfg.ExactArrayMatch, *cfg.MatchMetadata)
+		if err != nil {
+			return nil, &filter.InvalidConfigError{
+				Err: err,
+			}
+		}
+	case MatcherComparison:
+		matcher, err = comparison.NewMatcher(cfg.Comparison)
 		if err != nil {
 			return nil, &filter.InvalidConfigError{
 				Err: err,
