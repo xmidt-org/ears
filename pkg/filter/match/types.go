@@ -16,6 +16,7 @@ package match
 
 import (
 	"github.com/xmidt-org/ears/pkg/event"
+	"github.com/xmidt-org/ears/pkg/filter/match/comparison"
 	"github.com/xmidt-org/ears/pkg/tenant"
 	"github.com/xorcare/pointer"
 )
@@ -43,16 +44,18 @@ const (
 	MatcherRegex                           // regex
 	MatcherPattern                         // pattern
 	MatcherPatternRegex                    // patternregex
+	MatcherComparison                      // comparison
 )
 
 // Config can be passed into NewFilter() in order to configure
 // the behavior of the sender.
 type Config struct {
-	Mode            ModeType    `json:"mode,omitempty"`
-	Matcher         MatcherType `json:"matcher,omitempty"`
-	Pattern         interface{} `json:"pattern,omitempty"`
-	ExactArrayMatch *bool       `json:"exactArrayMatch,omitempty"`
-	MatchMetadata   *bool       `json:"matchMetadata,omitempty"`
+	Mode            ModeType               `json:"mode,omitempty"`
+	Matcher         MatcherType            `json:"matcher,omitempty"`
+	Pattern         interface{}            `json:"pattern,omitempty"`
+	ExactArrayMatch *bool                  `json:"exactArrayMatch,omitempty"`
+	MatchMetadata   *bool                  `json:"matchMetadata,omitempty"`
+	Comparison      *comparison.Comparison `json:"comparison,omitempty"`
 }
 
 var DefaultConfig = Config{
