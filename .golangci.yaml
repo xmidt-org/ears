@@ -53,6 +53,9 @@ issues:
     - path: pkg/filter/js/goja\.go
       linters:
         - funlen
+    - path: pkg/event/event\.go
+      linters:
+        - funlen
     - path: pkg/filter/hash/hash\.go
       linters:
         - funlen

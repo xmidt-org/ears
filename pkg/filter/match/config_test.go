@@ -44,10 +44,11 @@ func TestConfigWithDefault(t *testing.T) {
 				Mode: match.ModeAllow,
 			},
 			expected: match.Config{
-				Mode:    match.ModeAllow,
-				Matcher: match.DefaultConfig.Matcher,
-				Pattern: match.DefaultConfig.Pattern,
+				Mode:            match.ModeAllow,
+				Matcher:         match.DefaultConfig.Matcher,
+				Pattern:         match.DefaultConfig.Pattern,
 				ExactArrayMatch: pointer.Bool(true),
+				MatchMetadata:   pointer.Bool(false),
 			},
 		},
 
@@ -57,10 +58,11 @@ func TestConfigWithDefault(t *testing.T) {
 				Mode: match.ModeDeny,
 			},
 			expected: match.Config{
-				Mode:    match.ModeDeny,
-				Matcher: match.DefaultConfig.Matcher,
-				Pattern: match.DefaultConfig.Pattern,
+				Mode:            match.ModeDeny,
+				Matcher:         match.DefaultConfig.Matcher,
+				Pattern:         match.DefaultConfig.Pattern,
 				ExactArrayMatch: pointer.Bool(true),
+				MatchMetadata:   pointer.Bool(false),
 			},
 		},
 
@@ -70,10 +72,11 @@ func TestConfigWithDefault(t *testing.T) {
 				Matcher: match.MatcherRegex,
 			},
 			expected: match.Config{
-				Mode:    match.DefaultConfig.Mode,
-				Matcher: match.MatcherRegex,
-				Pattern: match.DefaultConfig.Pattern,
+				Mode:            match.DefaultConfig.Mode,
+				Matcher:         match.MatcherRegex,
+				Pattern:         match.DefaultConfig.Pattern,
 				ExactArrayMatch: pointer.Bool(true),
+				MatchMetadata:   pointer.Bool(false),
 			},
 		},
 
@@ -83,10 +86,11 @@ func TestConfigWithDefault(t *testing.T) {
 				Pattern: pointer.String("mypattern"),
 			},
 			expected: match.Config{
-				Mode:    match.DefaultConfig.Mode,
-				Matcher: match.DefaultConfig.Matcher,
-				Pattern: pointer.String("mypattern"),
+				Mode:            match.DefaultConfig.Mode,
+				Matcher:         match.DefaultConfig.Matcher,
+				Pattern:         pointer.String("mypattern"),
 				ExactArrayMatch: pointer.Bool(true),
+				MatchMetadata:   pointer.Bool(false),
 			},
 		},
 	}
@@ -232,9 +236,10 @@ func TestConfigSerialization(t *testing.T) {
 		{
 			name: "full",
 			config: match.Config{
-				Mode:    match.ModeAllow,
-				Matcher: match.MatcherRegex,
-				Pattern: pointer.String(`^[[:alnum:]]{4,12}`),
+				Mode:          match.ModeAllow,
+				Matcher:       match.MatcherRegex,
+				Pattern:       pointer.String(`^[[:alnum:]]{4,12}`),
+				MatchMetadata: pointer.Bool(false),
 			},
 		},
 	}

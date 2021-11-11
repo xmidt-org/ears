@@ -32,6 +32,7 @@ import (
 	"github.com/xmidt-org/ears/pkg/plugins/kafka"
 	"github.com/xmidt-org/ears/pkg/plugins/kinesis"
 	"github.com/xmidt-org/ears/pkg/plugins/log"
+	"github.com/xmidt-org/ears/pkg/plugins/mapping"
 	"github.com/xmidt-org/ears/pkg/plugins/match"
 	"github.com/xmidt-org/ears/pkg/plugins/pass"
 	"github.com/xmidt-org/ears/pkg/plugins/redis"
@@ -111,6 +112,10 @@ func ProvidePluginManager(in PluginIn) (PluginOut, error) {
 		{
 			name:   "match",
 			plugin: toArr(match.NewPluginVersion("match", "", ""))[0].(pkgplugin.Pluginer),
+		},
+		{
+			name:   "mapping",
+			plugin: toArr(mapping.NewPluginVersion("mapping", "", ""))[0].(pkgplugin.Pluginer),
 		},
 		{
 			name:   "pass",

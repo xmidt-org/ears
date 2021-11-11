@@ -17,7 +17,6 @@ package event_test
 import (
 	"context"
 	"errors"
-	"fmt"
 	"github.com/xmidt-org/ears/internal/pkg/ack"
 	"github.com/xmidt-org/ears/pkg/event"
 	"reflect"
@@ -58,6 +57,77 @@ func TestEventBasic(t *testing.T) {
 	}
 	if !reflect.DeepEqual(e.Payload(), payload2) {
 		t.Errorf("Fail to match payload +%v +%v\n", e.Payload(), payload2)
+	}
+}
+
+func TestEventGetPath(t *testing.T) {
+	ctx := context.Background()
+	payload := map[string]interface{}{
+		"field1": "abcd",
+		"field2": 1234,
+		"field3": []interface{}{"a", "b", "c"},
+		"field4": []interface{}{map[string]interface{}{"a": "aa", "b": "bb", "c": "cc"}},
+		"field5": []interface{}{[]interface{}{"a", "b", "c"}},
+	}
+	e, err := event.New(ctx, payload)
+	if err != nil {
+		t.Errorf("Fail to create new event %s\n", err.Error())
+	}
+	if e.Context() == nil {
+		t.Errorf("Fail to get context")
+	}
+	if !reflect.DeepEqual(e.Payload(), payload) {
+		t.Errorf("Fail to match payload +%v +%v\n", e.Payload(), payload)
+	}
+	//
+	path := ".field1"
+	v, p, k := e.GetPathValue(path)
+	if v.(string) != "abcd" {
+		t.Errorf("bad path value %s\n", path)
+	}
+	if k != "field1" {
+		t.Errorf("bad path key %s\n", path)
+	}
+	if !reflect.DeepEqual(p, e.Payload()) {
+		t.Errorf("bad path parent %s\n", path)
+	}
+	//
+	path = ".field3[1]"
+	v, p, k = e.GetPathValue(path)
+	if v.(string) != "b" {
+		t.Errorf("bad path value %s\n", path)
+	}
+	if k != "field3" {
+		t.Errorf("bad path key %s\n", path)
+	}
+	if !reflect.DeepEqual(p, e.Payload()) {
+		t.Errorf("bad path parent %s\n", path)
+	}
+	//
+	path = ".field4[a=aa].b"
+	v, p, k = e.GetPathValue(path)
+	if v.(string) != "bb" {
+		t.Errorf("bad path value %s\n", path)
+	}
+	if k != "b" {
+		t.Errorf("bad path key %s\n", path)
+	}
+	expected := e.Payload().(map[string]interface{})["field4"].([]interface{})[0]
+	if !reflect.DeepEqual(p, expected) {
+		t.Errorf("bad path parent %s\n", path)
+	}
+	//
+	path = ".field5[0].[0]"
+	v, _, _ = e.GetPathValue(path)
+	if v.(string) != "a" {
+		t.Errorf("bad path value %s\n", path)
+	}
+	//
+	e.SetPathValue(".field6", "foo", true)
+	path = ".field6"
+	v, _, _ = e.GetPathValue(path)
+	if v.(string) != "foo" {
+		t.Errorf("bad path value %s\n", path)
 	}
 }
 
@@ -131,8 +201,6 @@ func TestEventAck(t *testing.T) {
 			if !reflect.DeepEqual(payload, evt.Payload()) {
 				t.Errorf("Event payload does not match")
 			}
-
-			fmt.Println("success")
 			done <- true
 		},
 		func(evt event.Event, err error) {

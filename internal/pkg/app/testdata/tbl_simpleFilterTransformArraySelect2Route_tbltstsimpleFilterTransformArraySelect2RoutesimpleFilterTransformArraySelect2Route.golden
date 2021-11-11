@@ -1,0 +1,71 @@
+{
+  "status": {
+    "code": 200,
+    "message": "OK"
+  },
+  "item": {
+    "deliveryMode": "whoCares",
+    "filterChain": [
+      {
+        "config": {
+          "transformation": {
+            "account": "{.content.accountId}",
+            "payload": "{.content.values[name=name2].foo}"
+          }
+        },
+        "name": "simpleFilterTransformArraySelect2Transformer",
+        "plugin": "transform"
+      }
+    ],
+    "id": "transform111",
+    "name": "tbltstsimpleFilterTransformArraySelect2RoutesimpleFilterTransformArraySelect2Route",
+    "receiver": {
+      "config": {
+        "intervalMs": 10,
+        "payload": {
+          "content": {
+            "accountId": "123",
+            "adapterId": "123",
+            "description": "operation",
+            "eventId": "123",
+            "name": "name",
+            "timestamp": 1428352877944,
+            "title": "title",
+            "type": "type",
+            "values": [
+              {
+                "foo": "foo1",
+                "name": "name1"
+              },
+              {
+                "foo": "foo2",
+                "name": "name2"
+              },
+              {
+                "foo": "foo3",
+                "name": "name3"
+              }
+            ]
+          },
+          "topic": "mytopic"
+        },
+        "rounds": 5
+      },
+      "name": "tbltstsimpleFilterTransformArraySelect2RoutesimpleFilterTransformArraySelect2Receiver",
+      "plugin": "debug"
+    },
+    "sender": {
+      "config": {
+        "destination": "stdout",
+        "maxHistory": 100
+      },
+      "name": "tbltstsimpleFilterTransformArraySelect2RoutesimpleFilterTransformArraySelect2Sender",
+      "plugin": "debug"
+    },
+    "tenant": {
+      "appId": "myapp",
+      "orgId": "myorg"
+    },
+    "userId": "boris"
+  }
+}

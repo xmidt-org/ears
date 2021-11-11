@@ -2,5 +2,6 @@
   "mode": "allow",
   "matcher": "regex",
   "pattern": "^.*$",
-  "exactArrayMatch": true
+  "exactArrayMatch": true,
+  "matchMetadata": false
 }

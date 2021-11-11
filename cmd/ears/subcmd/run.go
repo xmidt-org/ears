@@ -80,6 +80,7 @@ var runCmd = &cobra.Command{
 			fx.Invoke(syncerfx.SetupDeltaSyncer),
 			fx.Invoke(tablemgr.SetupRoutingManager),
 			fx.Invoke(quotamanagerfx.SetupQuotaManager),
+			fx.Invoke(app.SetupOpenTelemetry),
 			fx.Invoke(app.SetupAPIServer),
 			fx.Invoke(app.SetupNodeStateManager),
 			fx.Invoke(app.SetupCheckpointManager),

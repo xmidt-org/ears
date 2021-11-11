@@ -30,6 +30,7 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/trace"
+	"strconv"
 	"strings"
 	"sync/atomic"
 	"time"
@@ -221,6 +222,121 @@ func (e *event) Tenant() tenant.Id {
 	return e.tid
 }
 
+func (e *event) evalArrayPath(path string, curr interface{}) (interface{}, interface{}, string, int) {
+	inArr := false
+	last := 0
+	segments := make([]string, 0)
+	for pos, c := range path {
+		if c == '[' {
+			inArr = true
+		} else if c == ']' {
+			inArr = false
+		}
+		if c == '.' && !inArr && pos > last {
+			segments = append(segments, path[(last+1):pos])
+			last = pos
+		} else if pos == len(path)-1 && pos-last > 0 {
+			segments = append(segments, path[last+1:])
+		}
+	}
+	var parent interface{}
+	key := ""
+	idx := -1
+	for i := 0; i < len(segments); i++ {
+		if curr == nil {
+			return nil, nil, "", -1
+		}
+		elem := strings.TrimSpace(segments[i])
+		if elem == "" {
+			continue
+		}
+		curr, parent, key, idx = e.getChildElement(curr, elem)
+	}
+	return curr, parent, key, idx
+}
+
+func (e *event) getChildElement(curr interface{}, segment string) (interface{}, interface{}, string, int) {
+	if curr == nil {
+		return nil, nil, "", -1
+	}
+	if !strings.HasSuffix(segment, "]") {
+		// map element
+		switch curr := curr.(type) {
+		case map[string]interface{}:
+			return curr[segment], curr, segment, -1
+		}
+	} else {
+		switch curr.(type) {
+		case map[string]interface{}:
+			// array element
+			key := segment[:strings.Index(segment, "[")]
+			switch curr.(map[string]interface{})[key].(type) {
+			case []interface{}:
+				idxStr := segment[strings.Index(segment, "[")+1 : len(segment)-1]
+				if strings.Contains(idxStr, "=") {
+					// array element by key selector
+					kv := strings.Split(idxStr, "=")
+					if len(kv) != 2 {
+						return nil, nil, "", -1
+					}
+					k := strings.TrimSpace(kv[0])
+					v := strings.TrimSpace(kv[1])
+					for idx, ae := range curr.(map[string]interface{})[key].([]interface{}) {
+						switch ae := ae.(type) {
+						case map[string]interface{}:
+							if ae[k] == v {
+								return ae, curr, key, idx
+							}
+						}
+					}
+				} else {
+					// array element by index
+					idx, err := strconv.Atoi(idxStr)
+					if err != nil {
+						return nil, nil, "", -1
+					}
+					if idx >= len(curr.(map[string]interface{})[key].([]interface{})) {
+						//ctx.Log().Error("error_type", "parser", "cause", "array_length_error", "path", path)
+						return nil, nil, "", -1
+					}
+					return curr.(map[string]interface{})[key].([]interface{})[idx], curr, key, idx
+				}
+			}
+		case []interface{}:
+			idxStr := segment[strings.Index(segment, "[")+1 : len(segment)-1]
+			if strings.Contains(idxStr, "=") {
+				// array element by key selector
+				kv := strings.Split(idxStr, "=")
+				if len(kv) != 2 {
+					return nil, nil, "", -1
+				}
+				k := strings.TrimSpace(kv[0])
+				v := strings.TrimSpace(kv[1])
+				for idx, ae := range curr.([]interface{}) {
+					switch ae := ae.(type) {
+					case map[string]interface{}:
+						if ae[k] == v {
+							return ae, curr, "", idx
+						}
+					}
+				}
+			} else {
+				// array element by index
+				idx, err := strconv.Atoi(idxStr)
+				if err != nil {
+					return nil, nil, "", -1
+				}
+				if idx >= len(curr.([]interface{})) {
+					//ctx.Log().Error("error_type", "parser", "cause", "array_length_error", "path", path)
+					return nil, nil, "", -1
+				}
+				return curr.([]interface{})[idx], curr, "", idx
+			}
+		}
+	}
+	return nil, nil, "", -1
+}
+
 func (e *event) GetPathValue(path string) (interface{}, interface{}, string) {
 	if path == TRACE+".id" {
 		traceId := trace.SpanFromContext(e.ctx).SpanContext().TraceID().String()
@@ -247,6 +363,10 @@ func (e *event) GetPathValue(path string) (interface{}, interface{}, string) {
 	}
 	if !strings.HasPrefix(path, PAYLOAD+".") && !strings.HasPrefix(path, METADATA+".") {
 		return nil, nil, ""
+	}
+	if strings.Contains(path, "[") && strings.Contains(path, "]") {
+		v, p, k, _ := e.evalArrayPath(path[strings.Index(path, "."):], obj)
+		return v, p, k
 	}
 	var parent interface{}
 	var key string
