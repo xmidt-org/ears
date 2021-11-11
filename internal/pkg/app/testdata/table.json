@@ -460,6 +460,54 @@
           "expectedEventPayloadFile": "event17"
         }
       ]
+    },
+    "simpleFilterTransformArraySelectRoute": {
+      "seq": 27,
+      "disabled": false,
+      "routeFiles": [
+        "simpleFilterTransformArraySelectRoute"
+      ],
+      "waitMs": 1000,
+      "events": [
+        {
+          "senderRouteFiles": "simpleFilterTransformArraySelectRoute",
+          "expectedEventCount": 5,
+          "expectedEventIndex": 0,
+          "expectedEventPayloadFile": "event19"
+        }
+      ]
+    },
+    "simpleFilterTransformArraySelect2Route": {
+      "seq": 28,
+      "disabled": false,
+      "routeFiles": [
+        "simpleFilterTransformArraySelect2Route"
+      ],
+      "waitMs": 1000,
+      "events": [
+        {
+          "senderRouteFiles": "simpleFilterTransformArraySelect2Route",
+          "expectedEventCount": 5,
+          "expectedEventIndex": 0,
+          "expectedEventPayloadFile": "event20"
+        }
+      ]
+    },
+    "simpleFilterMappingRoute": {
+      "seq": 29,
+      "disabled": false,
+      "routeFiles": [
+        "simpleFilterMappingRoute"
+      ],
+      "waitMs": 1000,
+      "events": [
+        {
+          "senderRouteFiles": "simpleFilterMappingRoute",
+          "expectedEventCount": 1,
+          "expectedEventIndex": 0,
+          "expectedEventPayloadFile": "event21"
+        }
+      ]
     }
   }
 }

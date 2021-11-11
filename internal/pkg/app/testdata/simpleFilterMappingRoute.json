@@ -1,0 +1,72 @@
+{
+  "id" : "mapper101",
+  "userId" : "boris",
+  "name" : "simpleFilterMappingRoute",
+  "receiver" : {
+    "plugin" : "debug",
+    "name" : "simpleFilterMappingRouteReceiver",
+    "config" :
+    {
+      "rounds" : 1,
+      "payload" : {
+        "topic": "mytopic",
+        "content": {
+          "eventId": "123",
+          "accountId": "123",
+          "adapterId": "123",
+          "type": "type",
+          "values": [
+            {
+              "name" : "name1",
+              "foo" : "foo1"
+            },
+            {
+              "name" : "name2",
+              "foo" : "foo2"
+            },
+            {
+              "name" : "name3",
+              "foo" : "foo3"
+            }
+          ],
+          "timestamp": 1428352877944,
+          "name": "name",
+          "title": "title",
+          "description": "operation"
+        }
+      }
+    }
+  },
+  "sender" : {
+    "plugin" : "debug",
+    "name" : "simpleFilterMappingRouteSender",
+    "config" : {
+      "destination" : "stdout",
+      "maxHistory": 100
+    }
+  },
+  "filterChain" : [
+    {
+      "plugin" : "mapping",
+      "name" : "simpleFilterMappingRouteMapper",
+      "config" : {
+        "paths" : [
+          ".content.name",
+          ".content.title"
+        ],
+        "map" :  [
+          {
+            "from" : "name",
+            "to" : { "name" : "myname" }
+          },
+          {
+            "from" : "title",
+            "to" : { "title" : "mytitle" }
+          }
+        ]
+      }
+    }
+  ],
+  "deliveryMode" : "whoCares"
+}
+

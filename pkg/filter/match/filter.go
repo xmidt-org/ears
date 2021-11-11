@@ -19,6 +19,7 @@ import (
 	"github.com/rs/zerolog/log"
 	"github.com/xmidt-org/ears/pkg/event"
 	"github.com/xmidt-org/ears/pkg/filter"
+	"github.com/xmidt-org/ears/pkg/filter/match/comparison"
 	"github.com/xmidt-org/ears/pkg/filter/match/pattern"
 	"github.com/xmidt-org/ears/pkg/filter/match/patternregex"
 	"github.com/xmidt-org/ears/pkg/filter/match/regex"
@@ -44,21 +45,28 @@ func NewFilter(tid tenant.Id, plugin string, name string, config interface{}, se
 	var matcher Matcher
 	switch cfg.Matcher {
 	case MatcherRegex:
-		matcher, err = regex.NewMatcher(cfg.Pattern)
+		matcher, err = regex.NewMatcher(cfg.Pattern, *cfg.MatchMetadata)
 		if err != nil {
 			return nil, &filter.InvalidConfigError{
 				Err: err,
 			}
 		}
 	case MatcherPattern:
-		matcher, err = pattern.NewMatcher(cfg.Pattern, *cfg.ExactArrayMatch)
+		matcher, err = pattern.NewMatcher(cfg.Pattern, *cfg.ExactArrayMatch, *cfg.MatchMetadata)
 		if err != nil {
 			return nil, &filter.InvalidConfigError{
 				Err: err,
 			}
 		}
 	case MatcherPatternRegex:
-		matcher, err = patternregex.NewMatcher(cfg.Pattern, *cfg.ExactArrayMatch)
+		matcher, err = patternregex.NewMatcher(cfg.Pattern, *cfg.ExactArrayMatch, *cfg.MatchMetadata)
+		if err != nil {
+			return nil, &filter.InvalidConfigError{
+				Err: err,
+			}
+		}
+	case MatcherComparison:
+		matcher, err = comparison.NewMatcher(cfg.Comparison)
 		if err != nil {
 			return nil, &filter.InvalidConfigError{
 				Err: err,

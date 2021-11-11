@@ -12,10 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package match
+package mapping
 
 import (
-	validation "github.com/go-ozzo/ozzo-validation/v4"
 	"github.com/xmidt-org/ears/pkg/config"
 	pkgconfig "github.com/xmidt-org/ears/pkg/config"
 	"github.com/xmidt-org/ears/pkg/errs"
@@ -35,56 +34,18 @@ func NewConfig(config interface{}) (*Config, error) {
 
 func (c Config) WithDefaults() *Config {
 	cfg := c
-	if c.Mode == ModeUnknown {
-		cfg.Mode = DefaultConfig.Mode
+	if c.Map == nil {
+		cfg.Map = DefaultConfig.Map
 	}
-	if c.Matcher == MatcherUnknown {
-		cfg.Matcher = DefaultConfig.Matcher
-	}
-	if c.Pattern == nil {
-		cfg.Pattern = DefaultConfig.Pattern
-	}
-	if c.ExactArrayMatch == nil {
-		cfg.ExactArrayMatch = DefaultConfig.ExactArrayMatch
-	}
-	if c.MatchMetadata == nil {
-		cfg.MatchMetadata = DefaultConfig.MatchMetadata
+	if c.Paths == nil {
+		cfg.Paths = DefaultConfig.Paths
 	}
 	return &cfg
 }
 
 func (c *Config) Validate() error {
-	s := *c
-	// Allow this list to easily expand over time
-	validModes := []interface{}{}
-	for _, t := range ModeTypeValues() {
-		if t != ModeUnknown {
-			validModes = append(validModes, t)
-		}
-	}
-	validMatchers := []interface{}{}
-	for _, t := range MatcherTypeValues() {
-		if t != MatcherUnknown {
-			validMatchers = append(validMatchers, t)
-		}
-	}
-	return validation.ValidateStruct(&s,
-		validation.Field(&s.Mode,
-			validation.Required,
-			validation.In(validModes...),
-		),
-		validation.Field(&s.Matcher,
-			validation.Required,
-			validation.In(validMatchers...),
-		),
-		validation.Field(&s.Pattern,
-			validation.NotNil,
-		),
-	)
-
+	return nil
 }
-
-// Exporter interface
 
 func (c *Config) String() string {
 	s, err := c.YAML()
