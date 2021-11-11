@@ -84,6 +84,127 @@ func SetupNodeStateManager(lifecycle fx.Lifecycle, nodeStateManager sharder.Node
 	return nil
 }
 
+func SetupOpenTelemetry(lifecycle fx.Lifecycle, config config.Config, logger *zerolog.Logger) error {
+
+	var traceProvider *sdktrace.TracerProvider
+	var metricsPusher *controller.Controller
+	ctx := context.Background() // long lived context
+
+	lifecycle.Append(
+		fx.Hook{
+			OnStart: func(context.Context) error {
+
+				if config.GetBool("ears.opentelemetry.otel-collector.active") {
+					// setup tracing
+					// grpc does not allow a uri path which makes it hard to set this up behind a proxy or load balancer
+					traceExporter, err := otlptracegrpc.New(
+						ctx,
+						otlptracegrpc.WithEndpoint(config.GetString("ears.opentelemetry.otel-collector.endpoint")),
+						otlptracegrpc.WithInsecure(),
+					)
+					if err != nil {
+						return err
+					}
+					var hostname, _ = os.Hostname()
+
+					traceProvider = sdktrace.NewTracerProvider(
+						sdktrace.WithBatcher(traceExporter),
+						sdktrace.WithResource(
+							resource.NewSchemaless(
+								semconv.ServiceNameKey.String(rtsemconv.EARSServiceName),
+								semconv.ServiceVersionKey.String(app.Version),
+								semconv.NetHostNameKey.String(hostname),
+							),
+						),
+					)
+					// setup metrics
+					metricExporter, err := otlpmetric.New(
+						ctx,
+						otlpmetricgrpc.NewClient(
+							otlpmetricgrpc.WithEndpoint(config.GetString("ears.opentelemetry.otel-collector.endpoint")),
+							otlpmetricgrpc.WithInsecure(),
+						),
+						otlpmetric.WithMetricExportKindSelector(sdkmetric.DeltaExportKindSelector()),
+					)
+					if err != nil {
+						return err
+					}
+					metricsPusher = controller.New(
+						processor.New(
+							simple.NewWithExactDistribution(),
+							metricExporter,
+						),
+						controller.WithExporter(metricExporter),
+						controller.WithCollectPeriod(5*time.Second),
+					)
+					err = metricsPusher.Start(ctx)
+					if err != nil {
+						return err
+					}
+					// global settings
+					otel.SetTracerProvider(traceProvider)
+					global.SetMeterProvider(metricsPusher.MeterProvider())
+					propagator := propagation.NewCompositeTextMapPropagator(propagation.Baggage{}, propagation.TraceContext{})
+					otel.SetTextMapPropagator(propagator)
+					logger.Info().Str("telemetryexporter", "otel").
+						Str("endpoint", config.GetString("ears.opentelemetry.otel-collector.endpoint")).
+						Str("urlPath", config.GetString("ears.opentelemetry.otel-collector.urlPath")).
+						Str("protocol", config.GetString("ears.opentelemetry.otel-collector.protocol")).
+						Msg("started")
+				} else if config.GetBool("ears.opentelemetry.stdout.active") {
+					// setup tracing
+					traceExporter, err := stdouttrace.New(stdouttrace.WithPrettyPrint())
+					if err != nil {
+						return err
+					}
+					traceProvider = sdktrace.NewTracerProvider(sdktrace.WithBatcher(traceExporter))
+
+					// setup metrics
+					metricExporter, err := stdoutmetric.New(stdoutmetric.WithPrettyPrint())
+					if err != nil {
+						return err
+					}
+
+					metricsPusher = controller.New(
+						processor.New(
+							simple.NewWithExactDistribution(),
+							metricExporter,
+						),
+						controller.WithExporter(metricExporter),
+						controller.WithCollectPeriod(5*time.Second),
+					)
+					err = metricsPusher.Start(ctx)
+					if err != nil {
+						return err
+					}
+					// global settings
+					otel.SetTracerProvider(traceProvider)
+					global.SetMeterProvider(metricsPusher.MeterProvider())
+					propagator := propagation.NewCompositeTextMapPropagator(propagation.Baggage{}, propagation.TraceContext{})
+					otel.SetTextMapPropagator(propagator)
+					logger.Info().Str("telemetryexporter", "stdout").Msg("started")
+				}
+				return nil
+			},
+			OnStop: func(ctx context.Context) error {
+				if config.GetBool("ears.opentelemetry.otel-collector.active") || config.GetBool("ears.opentelemetry.stdout.active") {
+					err := traceProvider.Shutdown(ctx)
+					if err != nil {
+						logger.Error().Str("error", err.Error()).Msg("fail to stop traceProvider")
+					}
+					err = metricsPusher.Stop(ctx)
+					if err != nil {
+						logger.Error().Str("error", err.Error()).Msg("fail to stop metricsPusher")
+					}
+					logger.Info().Msg("otel exporter stopped")
+				}
+				return nil
+			},
+		},
+	)
+	return nil
+}
+
 func SetupAPIServer(lifecycle fx.Lifecycle, config config.Config, logger *zerolog.Logger, mux http.Handler) error {
 	port := config.GetInt("ears.api.port")
 	if port < 1 {
@@ -97,106 +218,8 @@ func SetupAPIServer(lifecycle fx.Lifecycle, config config.Config, logger *zerolo
 		Handler: mux,
 	}
 
-	//var ls launcher.Launcher
-	var traceProvider *sdktrace.TracerProvider
-	var metricsPusher *controller.Controller
-	ctx := context.Background() // long lived context
-
-	//initialize event logger
+	// initialize event logger
 	event.SetEventLogger(logger)
-
-	// setup telemetry stuff
-
-	if config.GetBool("ears.opentelemetry.otel-collector.active") {
-		// setup tracing
-		// grpc does not allow a uri path which makes it hard to set this up behind a proxy or load balancer
-		traceExporter, err := otlptracegrpc.New(
-			ctx,
-			otlptracegrpc.WithEndpoint(config.GetString("ears.opentelemetry.otel-collector.endpoint")),
-			otlptracegrpc.WithInsecure(),
-		)
-		if err != nil {
-			return err
-		}
-		var hostname, _ = os.Hostname()
-
-		traceProvider = sdktrace.NewTracerProvider(
-			sdktrace.WithBatcher(traceExporter),
-			sdktrace.WithResource(
-				resource.NewSchemaless(
-					semconv.ServiceNameKey.String(rtsemconv.EARSServiceName),
-					semconv.ServiceVersionKey.String(app.Version),
-					semconv.NetHostNameKey.String(hostname),
-				),
-			),
-		)
-		// setup metrics
-		metricExporter, err := otlpmetric.New(
-			ctx,
-			otlpmetricgrpc.NewClient(
-				otlpmetricgrpc.WithEndpoint(config.GetString("ears.opentelemetry.otel-collector.endpoint")),
-				otlpmetricgrpc.WithInsecure(),
-			),
-			otlpmetric.WithMetricExportKindSelector(sdkmetric.DeltaExportKindSelector()),
-		)
-		if err != nil {
-			return err
-		}
-		metricsPusher = controller.New(
-			processor.New(
-				simple.NewWithExactDistribution(),
-				metricExporter,
-			),
-			controller.WithExporter(metricExporter),
-			controller.WithCollectPeriod(5*time.Second),
-		)
-		err = metricsPusher.Start(ctx)
-		if err != nil {
-			return err
-		}
-		// global settings
-		otel.SetTracerProvider(traceProvider)
-		global.SetMeterProvider(metricsPusher.MeterProvider())
-		propagator := propagation.NewCompositeTextMapPropagator(propagation.Baggage{}, propagation.TraceContext{})
-		otel.SetTextMapPropagator(propagator)
-		logger.Info().Str("telemetryexporter", "otel").
-			Str("endpoint", config.GetString("ears.opentelemetry.otel-collector.endpoint")).
-			Str("urlPath", config.GetString("ears.opentelemetry.otel-collector.urlPath")).
-			Str("protocol", config.GetString("ears.opentelemetry.otel-collector.protocol")).
-			Msg("started")
-	} else if config.GetBool("ears.opentelemetry.stdout.active") {
-		// setup tracing
-		traceExporter, err := stdouttrace.New(stdouttrace.WithPrettyPrint())
-		if err != nil {
-			return err
-		}
-		traceProvider = sdktrace.NewTracerProvider(sdktrace.WithBatcher(traceExporter))
-
-		// setup metrics
-		metricExporter, err := stdoutmetric.New(stdoutmetric.WithPrettyPrint())
-		if err != nil {
-			return err
-		}
-
-		metricsPusher = controller.New(
-			processor.New(
-				simple.NewWithExactDistribution(),
-				metricExporter,
-			),
-			controller.WithExporter(metricExporter),
-			controller.WithCollectPeriod(5*time.Second),
-		)
-		err = metricsPusher.Start(ctx)
-		if err != nil {
-			return err
-		}
-		// global settings
-		otel.SetTracerProvider(traceProvider)
-		global.SetMeterProvider(metricsPusher.MeterProvider())
-		propagator := propagation.NewCompositeTextMapPropagator(propagation.Baggage{}, propagation.TraceContext{})
-		otel.SetTextMapPropagator(propagator)
-		logger.Info().Str("telemetryexporter", "stdout").Msg("started")
-	}
 
 	lifecycle.Append(
 		fx.Hook{
@@ -211,17 +234,6 @@ func SetupAPIServer(lifecycle fx.Lifecycle, config config.Config, logger *zerolo
 					logger.Error().Str("op", "SetupAPIServer.OnStop").Msg(err.Error())
 				} else {
 					logger.Info().Msg("API Server Stopped")
-				}
-				if config.GetBool("ears.opentelemetry.otel-collector.active") || config.GetBool("ears.opentelemetry.stdout.active") {
-					err := traceProvider.Shutdown(ctx)
-					if err != nil {
-						logger.Error().Str("error", err.Error()).Msg("fail to stop traceProvider")
-					}
-					err = metricsPusher.Stop(ctx)
-					if err != nil {
-						logger.Error().Str("error", err.Error()).Msg("fail to stop metricsPusher")
-					}
-					logger.Info().Msg("otel exporter stopped")
 				}
 				return nil
 			},
