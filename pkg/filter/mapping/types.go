@@ -19,8 +19,9 @@ import "github.com/xmidt-org/ears/pkg/tenant"
 // Config can be passed into NewFilter() in order to configure
 // the behavior of the sender.
 type Config struct {
-	Map   []FromTo `json:"map,omitempty"`
-	Paths []string `json:"paths,omitempty"`
+	Map          []FromTo    `json:"map,omitempty"`
+	Paths        []string    `json:"paths,omitempty"`
+	DefaultValue interface{} `json:"defaultValue,omitempty"`
 }
 
 type FromTo struct {
