@@ -16,6 +16,7 @@ package mapping
 
 import (
 	"fmt"
+	"github.com/mohae/deepcopy"
 	"github.com/rs/zerolog/log"
 	"github.com/xmidt-org/ears/pkg/event"
 	"github.com/xmidt-org/ears/pkg/filter"
@@ -58,10 +59,15 @@ func (f *Filter) Filter(evt event.Event) []event.Event {
 		if obj == nil {
 			continue
 		}
+		mapped := false
 		for _, m := range f.config.Map {
 			if reflect.DeepEqual(obj, m.From) {
-				evt.SetPathValue(path, m.To, false)
+				evt.SetPathValue(path, deepcopy.Copy(m.To), false)
+				mapped = true
 			}
+		}
+		if !mapped && f.config.DefaultValue != nil {
+			evt.SetPathValue(path, deepcopy.Copy(f.config.DefaultValue), false)
 		}
 	}
 	return []event.Event{evt}
