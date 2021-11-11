@@ -222,7 +222,7 @@ func (e *event) Tenant() tenant.Id {
 	return e.tid
 }
 
-func (e *event) evalArrayPath(path string, curr interface{}) interface{} {
+func (e *event) evalArrayPath(path string, curr interface{}) (interface{}, interface{}, string, int) {
 	inArr := false
 	last := 0
 	segments := make([]string, 0)
@@ -239,28 +239,31 @@ func (e *event) evalArrayPath(path string, curr interface{}) interface{} {
 			segments = append(segments, path[last+1:])
 		}
 	}
+	var parent interface{}
+	key := ""
+	idx := -1
 	for i := 0; i < len(segments); i++ {
 		if curr == nil {
-			return nil
+			return nil, nil, "", -1
 		}
 		elem := strings.TrimSpace(segments[i])
 		if elem == "" {
 			continue
 		}
-		curr = e.getChildElement(curr, elem, path)
+		curr, parent, key, idx = e.getChildElement(curr, elem)
 	}
-	return curr
+	return curr, parent, key, idx
 }
 
-func (e *event) getChildElement(curr interface{}, segment string, path string) interface{} {
+func (e *event) getChildElement(curr interface{}, segment string) (interface{}, interface{}, string, int) {
 	if curr == nil {
-		return nil
+		return nil, nil, "", -1
 	}
 	if !strings.HasSuffix(segment, "]") {
 		// map element
 		switch curr := curr.(type) {
 		case map[string]interface{}:
-			return curr[segment]
+			return curr[segment], curr, segment, -1
 		}
 	} else {
 		switch curr.(type) {
@@ -274,15 +277,15 @@ func (e *event) getChildElement(curr interface{}, segment string, path string) i
 					// array element by key selector
 					kv := strings.Split(idxStr, "=")
 					if len(kv) != 2 {
-						return nil
+						return nil, nil, "", -1
 					}
 					k := strings.TrimSpace(kv[0])
 					v := strings.TrimSpace(kv[1])
-					for _, ae := range curr.(map[string]interface{})[key].([]interface{}) {
+					for idx, ae := range curr.(map[string]interface{})[key].([]interface{}) {
 						switch ae := ae.(type) {
 						case map[string]interface{}:
 							if ae[k] == v {
-								return ae
+								return ae, curr, key, idx
 							}
 						}
 					}
@@ -290,13 +293,13 @@ func (e *event) getChildElement(curr interface{}, segment string, path string) i
 					// array element by index
 					idx, err := strconv.Atoi(idxStr)
 					if err != nil {
-						return nil
+						return nil, nil, "", -1
 					}
 					if idx >= len(curr.(map[string]interface{})[key].([]interface{})) {
 						//ctx.Log().Error("error_type", "parser", "cause", "array_length_error", "path", path)
-						return nil
+						return nil, nil, "", -1
 					}
-					return curr.(map[string]interface{})[key].([]interface{})[idx]
+					return curr.(map[string]interface{})[key].([]interface{})[idx], curr, key, idx
 				}
 			}
 		case []interface{}:
@@ -305,15 +308,15 @@ func (e *event) getChildElement(curr interface{}, segment string, path string) i
 				// array element by key selector
 				kv := strings.Split(idxStr, "=")
 				if len(kv) != 2 {
-					return nil
+					return nil, nil, "", -1
 				}
 				k := strings.TrimSpace(kv[0])
 				v := strings.TrimSpace(kv[1])
-				for _, ae := range curr.([]interface{}) {
+				for idx, ae := range curr.([]interface{}) {
 					switch ae := ae.(type) {
 					case map[string]interface{}:
 						if ae[k] == v {
-							return ae
+							return ae, curr, "", idx
 						}
 					}
 				}
@@ -321,17 +324,17 @@ func (e *event) getChildElement(curr interface{}, segment string, path string) i
 				// array element by index
 				idx, err := strconv.Atoi(idxStr)
 				if err != nil {
-					return nil
+					return nil, nil, "", -1
 				}
 				if idx >= len(curr.([]interface{})) {
 					//ctx.Log().Error("error_type", "parser", "cause", "array_length_error", "path", path)
-					return nil
+					return nil, nil, "", -1
 				}
-				return curr.([]interface{})[idx]
+				return curr.([]interface{})[idx], curr, "", idx
 			}
 		}
 	}
-	return nil
+	return nil, nil, "", -1
 }
 
 func (e *event) GetPathValue(path string) (interface{}, interface{}, string) {
@@ -362,7 +365,8 @@ func (e *event) GetPathValue(path string) (interface{}, interface{}, string) {
 		return nil, nil, ""
 	}
 	if strings.Contains(path, "[") && strings.Contains(path, "]") {
-		return e.evalArrayPath(path[strings.Index(path, "."):], obj), nil, ""
+		v, p, k, _ := e.evalArrayPath(path[strings.Index(path, "."):], obj)
+		return v, p, k
 	}
 	var parent interface{}
 	var key string
