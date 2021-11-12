@@ -52,14 +52,14 @@ func NewFilter(tid tenant.Id, plugin string, name string, config interface{}, se
 			}
 		}
 	case MatcherPattern:
-		matcher, err = pattern.NewMatcher(cfg.Pattern, *cfg.ExactArrayMatch, cfg.Path)
+		matcher, err = pattern.NewMatcher(cfg.Pattern, cfg.Patterns, cfg.PatternsLogic, *cfg.ExactArrayMatch, cfg.Path)
 		if err != nil {
 			return nil, &filter.InvalidConfigError{
 				Err: err,
 			}
 		}
 	case MatcherPatternRegex:
-		matcher, err = patternregex.NewMatcher(cfg.Pattern, *cfg.ExactArrayMatch, cfg.Path)
+		matcher, err = patternregex.NewMatcher(cfg.Pattern, cfg.Patterns, cfg.PatternsLogic, *cfg.ExactArrayMatch, cfg.Path)
 		if err != nil {
 			return nil, &filter.InvalidConfigError{
 				Err: err,
