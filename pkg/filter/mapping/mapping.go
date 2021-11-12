@@ -56,13 +56,13 @@ func (f *Filter) Filter(evt event.Event) []event.Event {
 	log.Ctx(evt.Context()).Debug().Str("op", "filter").Str("filterType", "mapping").Str("name", f.Name()).Msg("mapping")
 	for _, path := range f.config.Paths {
 		obj, _, _ := evt.GetPathValue(path)
-		if obj == nil {
+		/*if obj == nil {
 			continue
-		}
+		}*/
 		mapped := false
 		for _, m := range f.config.Map {
 			if reflect.DeepEqual(obj, m.From) {
-				evt.SetPathValue(path, deepcopy.Copy(m.To), false)
+				evt.SetPathValue(path, deepcopy.Copy(m.To), true)
 				mapped = true
 			}
 		}
