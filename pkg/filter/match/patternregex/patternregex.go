@@ -22,22 +22,19 @@ import (
 type Matcher struct {
 	pattern         interface{}
 	exactArrayMatch bool
-	matchMetadata   bool
+	path            string
 }
 
-func NewMatcher(pattern interface{}, exactArrayMatch bool, matchMetadata bool) (*Matcher, error) {
-	return &Matcher{pattern: pattern, exactArrayMatch: exactArrayMatch, matchMetadata: matchMetadata}, nil
+func NewMatcher(pattern interface{}, exactArrayMatch bool, path string) (*Matcher, error) {
+	return &Matcher{pattern: pattern, exactArrayMatch: exactArrayMatch, path: path}, nil
 }
 
 func (m *Matcher) Match(event event.Event) bool {
 	if m == nil || m.pattern == nil || event == nil {
 		return false
 	}
-	if m.matchMetadata {
-		return m.contains(event.Metadata(), m.pattern)
-	} else {
-		return m.contains(event.Payload(), m.pattern)
-	}
+	obj, _, _ := event.GetPathValue(m.path)
+	return m.contains(obj, m.pattern)
 }
 
 // contains is a helper function to check if b is contained in a (if b is a partial of a)
