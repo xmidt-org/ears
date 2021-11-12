@@ -20,12 +20,14 @@ import (
 
 type Matcher struct {
 	pattern         interface{}
+	patterns        []interface{}
+	patternsLogic   string
 	exactArrayMatch bool
 	path            string
 }
 
-func NewMatcher(p interface{}, exactArrayMatch bool, path string) (*Matcher, error) {
-	return &Matcher{pattern: p, exactArrayMatch: exactArrayMatch, path: path}, nil
+func NewMatcher(pattern interface{}, patterns []interface{}, patternsLogic string, exactArrayMatch bool, path string) (*Matcher, error) {
+	return &Matcher{pattern: pattern, patterns: patterns, patternsLogic: patternsLogic, exactArrayMatch: exactArrayMatch, path: path}, nil
 }
 
 func (m *Matcher) Match(event event.Event) bool {
@@ -33,7 +35,29 @@ func (m *Matcher) Match(event event.Event) bool {
 		return false
 	}
 	obj, _, _ := event.GetPathValue(m.path)
-	return m.contains(obj, m.pattern)
+	if len(m.patterns) > 0 {
+		andLogic := true
+		if m.patternsLogic == "or" || m.patternsLogic == "OR" {
+			andLogic = false
+		}
+		found := false
+		for _, pattern := range m.patterns {
+			found = m.contains(obj, pattern)
+			if andLogic && !found {
+				return false
+			}
+			if !andLogic && found {
+				return true
+			}
+		}
+		if found {
+			return true
+		} else {
+			return false
+		}
+	} else {
+		return m.contains(obj, m.pattern)
+	}
 }
 
 // contains is a helper function to check if b is contained in a (if b is a partial of a)
