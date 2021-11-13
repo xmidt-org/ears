@@ -36,7 +36,7 @@ func TestRegexPatternError(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.pattern, func(t *testing.T) {
 			a := NewWithT(t)
-			m, err := regex.NewMatcher(tc.pattern, false)
+			m, err := regex.NewMatcher(tc.pattern, "")
 			a.Expect(m).To(BeNil())
 			a.Expect(err).ToNot(BeNil())
 		})
@@ -70,7 +70,7 @@ func TestRegexMatchError(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			a := NewWithT(t)
-			m, err := regex.NewMatcher(".*", false)
+			m, err := regex.NewMatcher(".*", "")
 			a.Expect(m).ToNot(BeNil())
 			a.Expect(err).To(BeNil())
 
@@ -124,7 +124,7 @@ func TestMatcherRegex(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			a := NewWithT(t)
 
-			m, err := regex.NewMatcher(tc.pattern, false)
+			m, err := regex.NewMatcher(tc.pattern, "")
 			a.Expect(err).To(BeNil())
 
 			for _, in := range tc.succeed {
