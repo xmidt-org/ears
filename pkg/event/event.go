@@ -445,7 +445,18 @@ func (e *event) SetPathValue(path string, val interface{}, createPath bool) (int
 			}
 		}
 	}
-	obj.(map[string]interface{})[key] = val
+	switch obj := obj.(type) {
+	case map[string]interface{}:
+		if strings.Contains(key, "[") && strings.Contains(key, "]") {
+			idx, _ := strconv.Atoi(key[strings.Index(key, "[")+1 : strings.Index(key, "]")])
+			key = key[:strings.Index(key, "[")]
+			if idx >= 0 && idx < len(obj) {
+				obj[key].([]interface{})[idx] = val
+			}
+		} else {
+			obj[key] = val
+		}
+	}
 	return parent, key
 }
 
