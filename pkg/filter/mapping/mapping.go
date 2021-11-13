@@ -23,6 +23,7 @@ import (
 	"github.com/xmidt-org/ears/pkg/secret"
 	"github.com/xmidt-org/ears/pkg/tenant"
 	"reflect"
+	"strings"
 )
 
 func NewFilter(tid tenant.Id, plugin string, name string, config interface{}, secrets secret.Vault) (*Filter, error) {
@@ -61,8 +62,26 @@ func (f *Filter) Filter(evt event.Event) []event.Event {
 		}*/
 		mapped := false
 		for _, m := range f.config.Map {
-			if reflect.DeepEqual(obj, m.From) {
-				evt.SetPathValue(path, deepcopy.Copy(m.To), true)
+			from := m.From
+			to := m.To
+			switch fromStr := from.(type) {
+			case string:
+				{
+					if strings.HasSuffix(fromStr, "}") && strings.HasPrefix(fromStr, "{") {
+						from, _, _ = evt.GetPathValue(fromStr[1 : len(fromStr)-1])
+					}
+				}
+			}
+			switch toStr := to.(type) {
+			case string:
+				{
+					if strings.HasSuffix(toStr, "}") && strings.HasPrefix(toStr, "{") {
+						to, _, _ = evt.GetPathValue(toStr[1 : len(toStr)-1])
+					}
+				}
+			}
+			if reflect.DeepEqual(obj, from) {
+				evt.SetPathValue(path, deepcopy.Copy(to), true)
 				mapped = true
 			}
 		}
