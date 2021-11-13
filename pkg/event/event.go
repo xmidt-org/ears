@@ -451,6 +451,9 @@ func (e *event) SetPathValue(path string, val interface{}, createPath bool) (int
 			idx, _ := strconv.Atoi(key[strings.Index(key, "[")+1 : strings.Index(key, "]")])
 			key = key[:strings.Index(key, "[")]
 			if idx >= 0 && idx < len(obj) {
+				if obj[key] == nil && createPath {
+					obj[key] = make([]interface{}, idx+1)
+				}
 				obj[key].([]interface{})[idx] = val
 			}
 		} else {
