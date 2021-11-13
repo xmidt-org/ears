@@ -61,7 +61,7 @@
           },
           {
             "from" : "title",
-            "to" : { "title" : "mytitle" }
+            "to" : "{.content.eventId}"
           }
         ]
       }
