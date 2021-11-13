@@ -57,9 +57,6 @@ func (f *Filter) Filter(evt event.Event) []event.Event {
 	log.Ctx(evt.Context()).Debug().Str("op", "filter").Str("filterType", "mapping").Str("name", f.Name()).Msg("mapping")
 	for _, path := range f.config.Paths {
 		obj, _, _ := evt.GetPathValue(path)
-		/*if obj == nil {
-			continue
-		}*/
 		mapped := false
 		for _, m := range f.config.Map {
 			from := m.From
@@ -80,7 +77,7 @@ func (f *Filter) Filter(evt event.Event) []event.Event {
 					}
 				}
 			}
-			if reflect.DeepEqual(obj, from) {
+			if reflect.DeepEqual(obj, from) && f.compare(evt, m.Comparison) {
 				evt.SetPathValue(path, deepcopy.Copy(to), true)
 				mapped = true
 			}
@@ -91,6 +88,52 @@ func (f *Filter) Filter(evt event.Event) []event.Event {
 	}
 	return []event.Event{evt}
 }
+
+func (f *Filter) compare(evt event.Event, cmp *Comparison) bool {
+	if evt == nil || cmp == nil {
+		return true
+	}
+	for _, eq := range cmp.Equal {
+		for b, a := range eq {
+			var aObj, bObj interface{}
+			aObj = a
+			bObj = b
+			switch aT := a.(type) {
+			case string:
+				if strings.HasPrefix(aT, "{") && strings.HasSuffix(aT, "}") {
+					aObj, _, _ = evt.GetPathValue(aT[1 : len(aT)-1])
+				}
+			}
+			if strings.HasPrefix(b, "{") && strings.HasSuffix(b, "}") {
+				bObj, _, _ = evt.GetPathValue(b[1 : len(b)-1])
+			}
+			if !reflect.DeepEqual(aObj, bObj) {
+				return false
+			}
+		}
+	}
+	for _, neq := range cmp.NotEqual {
+		for b, a := range neq {
+			var aObj, bObj interface{}
+			aObj = a
+			bObj = b
+			switch aT := a.(type) {
+			case string:
+				if strings.HasPrefix(aT, "{") && strings.HasSuffix(aT, "}") {
+					aObj, _, _ = evt.GetPathValue(aT[1 : len(aT)-1])
+				}
+			}
+			if strings.HasPrefix(b, "{") && strings.HasSuffix(b, "}") {
+				bObj, _, _ = evt.GetPathValue(b[1 : len(b)-1])
+			}
+			if reflect.DeepEqual(aObj, bObj) {
+				return false
+			}
+		}
+	}
+	return true
+}
+
 func (f *Filter) Config() interface{} {
 	if f == nil {
 		return Config{}

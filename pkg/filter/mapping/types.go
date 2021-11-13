@@ -25,8 +25,16 @@ type Config struct {
 }
 
 type FromTo struct {
-	From interface{} `json:"from,omitempty"`
-	To   interface{} `json:"to,omitempty"`
+	From       interface{} `json:"from,omitempty"`
+	To         interface{} `json:"to,omitempty"`
+	Comparison *Comparison `json:"comparison,omitempty"`
+}
+
+type Comparison struct {
+	Equal    []map[string]interface{} `json:"equal,omitempty"`
+	NotEqual []map[string]interface{} `json:"notEqual,omitempty"`
+	//GreaterThan []map[string]interface{} `json:"greaterThan,omitempty"`
+	//LessThan    []map[string]interface{} `json:"lessThan,omitempty"`
 }
 
 var DefaultConfig = Config{
