@@ -57,33 +57,50 @@ func (f *Filter) Filter(evt event.Event) []event.Event {
 	log.Ctx(evt.Context()).Debug().Str("op", "filter").Str("filterType", "mapping").Str("name", f.Name()).Msg("mapping")
 	for _, path := range f.config.Paths {
 		obj, _, _ := evt.GetPathValue(path)
-		mapped := false
-		for _, m := range f.config.Map {
-			from := m.From
-			to := m.To
-			switch fromStr := from.(type) {
-			case string:
-				{
-					if strings.HasSuffix(fromStr, "}") && strings.HasPrefix(fromStr, "{") {
-						from, _, _ = evt.GetPathValue(fromStr[1 : len(fromStr)-1])
-					}
-				}
-			}
-			switch toStr := to.(type) {
-			case string:
-				{
-					if strings.HasSuffix(toStr, "}") && strings.HasPrefix(toStr, "{") {
-						to, _, _ = evt.GetPathValue(toStr[1 : len(toStr)-1])
-					}
-				}
-			}
-			if reflect.DeepEqual(obj, from) && f.compare(evt, m.Comparison) {
-				evt.SetPathValue(path, deepcopy.Copy(to), true)
-				mapped = true
-			}
+		isArray := false
+		iterator := []interface{}{obj}
+		switch obj.(type) {
+		case []interface{}:
+			iterator = obj.([]interface{})
+			isArray = true
 		}
-		if !mapped && f.config.DefaultValue != nil {
-			evt.SetPathValue(path, deepcopy.Copy(f.config.DefaultValue), false)
+		for idx, arrayElem := range iterator {
+			mapped := false
+			for _, m := range f.config.Map {
+				from := m.From
+				to := m.To
+				switch fromStr := from.(type) {
+				case string:
+					{
+						if strings.HasSuffix(fromStr, "}") && strings.HasPrefix(fromStr, "{") {
+							from, _, _ = evt.GetPathValue(fromStr[1 : len(fromStr)-1])
+						}
+					}
+				}
+				switch toStr := to.(type) {
+				case string:
+					{
+						if strings.HasSuffix(toStr, "}") && strings.HasPrefix(toStr, "{") {
+							to, _, _ = evt.GetPathValue(toStr[1 : len(toStr)-1])
+						}
+					}
+				}
+				if reflect.DeepEqual(arrayElem, from) && f.compare(evt, m.Comparison) {
+					if isArray {
+						evt.SetPathValue(path+fmt.Sprintf("[%d]", idx), deepcopy.Copy(to), true)
+					} else {
+						evt.SetPathValue(path, deepcopy.Copy(to), true)
+					}
+					mapped = true
+				}
+			}
+			if !mapped && f.config.DefaultValue != nil {
+				if isArray {
+					evt.SetPathValue(path+fmt.Sprintf("[%d]", idx), deepcopy.Copy(f.config.DefaultValue), true)
+				} else {
+					evt.SetPathValue(path, deepcopy.Copy(f.config.DefaultValue), true)
+				}
+			}
 		}
 	}
 	return []event.Event{evt}
