@@ -59,9 +59,9 @@ func (f *Filter) Filter(evt event.Event) []event.Event {
 		obj, _, _ := evt.GetPathValue(path)
 		isArray := false
 		iterator := []interface{}{obj}
-		switch obj.(type) {
+		switch obj := obj.(type) {
 		case []interface{}:
-			iterator = obj.([]interface{})
+			iterator = obj
 			isArray = true
 		}
 		for idx, arrayElem := range iterator {
