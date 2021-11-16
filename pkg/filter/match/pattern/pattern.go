@@ -20,22 +20,43 @@ import (
 
 type Matcher struct {
 	pattern         interface{}
+	patterns        []interface{}
+	patternsLogic   string
 	exactArrayMatch bool
-	matchMetadata   bool
+	path            string
 }
 
-func NewMatcher(p interface{}, exactArrayMatch bool, matchMetadata bool) (*Matcher, error) {
-	return &Matcher{pattern: p, exactArrayMatch: exactArrayMatch, matchMetadata: matchMetadata}, nil
+func NewMatcher(pattern interface{}, patterns []interface{}, patternsLogic string, exactArrayMatch bool, path string) (*Matcher, error) {
+	return &Matcher{pattern: pattern, patterns: patterns, patternsLogic: patternsLogic, exactArrayMatch: exactArrayMatch, path: path}, nil
 }
 
 func (m *Matcher) Match(event event.Event) bool {
 	if m == nil || m.pattern == nil || event == nil {
 		return false
 	}
-	if m.matchMetadata {
-		return m.contains(event.Metadata(), m.pattern)
+	obj, _, _ := event.GetPathValue(m.path)
+	if len(m.patterns) > 0 {
+		andLogic := true
+		if m.patternsLogic == "or" || m.patternsLogic == "OR" {
+			andLogic = false
+		}
+		found := false
+		for _, pattern := range m.patterns {
+			found = m.contains(obj, pattern)
+			if andLogic && !found {
+				return false
+			}
+			if !andLogic && found {
+				return true
+			}
+		}
+		if found {
+			return true
+		} else {
+			return false
+		}
 	} else {
-		return m.contains(event.Payload(), m.pattern)
+		return m.contains(obj, m.pattern)
 	}
 }
 

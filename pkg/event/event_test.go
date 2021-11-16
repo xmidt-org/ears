@@ -129,6 +129,20 @@ func TestEventGetPath(t *testing.T) {
 	if v.(string) != "foo" {
 		t.Errorf("bad path value %s\n", path)
 	}
+	//
+	e.SetPathValue(".field3[1]", "baz", false)
+	path = ".field3[1]"
+	v, _, _ = e.GetPathValue(path)
+	if v.(string) != "baz" {
+		t.Errorf("bad path value %s\n", path)
+	}
+	//
+	e.SetPathValue(".field7[0]", "x", true)
+	path = ".field7[0]"
+	v, _, _ = e.GetPathValue(path)
+	if v.(string) != "x" {
+		t.Errorf("bad path value %s\n", path)
+	}
 }
 
 func TestCloneEvent(t *testing.T) {

@@ -23,12 +23,12 @@ import (
 )
 
 type Matcher struct {
-	r             *regexp.Regexp
-	matchMetadata bool
+	r    *regexp.Regexp
+	path string
 }
 
 // TODO: Possibly add POSIX option to pattern
-func NewMatcher(pattern interface{}, matchMetadata bool) (*Matcher, error) {
+func NewMatcher(pattern interface{}, path string) (*Matcher, error) {
 	p, ok := pattern.(string)
 	if !ok {
 		pp, ok := pattern.(*string)
@@ -42,17 +42,14 @@ func NewMatcher(pattern interface{}, matchMetadata bool) (*Matcher, error) {
 		return nil, err
 	}
 
-	return &Matcher{r: r, matchMetadata: matchMetadata}, nil
+	return &Matcher{r: r, path: path}, nil
 }
 
 func (m *Matcher) Match(event event.Event) bool {
 	if m == nil || m.r == nil || event == nil {
 		return false
 	}
-	obj := event.Payload()
-	if m.matchMetadata {
-		obj = event.Metadata()
-	}
+	obj, _, _ := event.GetPathValue(m.path)
 	eventString := ""
 	switch obj := obj.(type) {
 	case string:

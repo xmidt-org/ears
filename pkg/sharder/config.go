@@ -90,22 +90,25 @@ func DefaultControllerConfig() *ControllerConfig {
 		},
 		StorageConfig: DefaultStorageConfig,
 	}
-	cc.NodeName = os.Getenv("HOSTNAME")
-	if "" == cc.NodeName {
+	cc.NodeName, _ = os.Hostname()
+	if cc.NodeName == "" {
 		address, err := net.InterfaceAddrs()
-		if err != nil {
-			panic(err)
-		}
-		for _, addr := range address {
-			if ipnet, ok := addr.(*net.IPNet); ok && !ipnet.IP.IsLoopback() {
-				if ipnet.IP.To4() != nil {
-					cc.NodeName = ipnet.IP.String()
-					cc.Identity = cc.NodeName
-					break
+		if err == nil {
+			for _, addr := range address {
+				if ipnet, ok := addr.(*net.IPNet); ok && !ipnet.IP.IsLoopback() {
+					if ipnet.IP.To4() != nil {
+						cc.NodeName = ipnet.IP.String()
+						cc.Identity = cc.NodeName
+						break
+					}
 				}
 			}
 		}
 	}
+	if cc.NodeName == "" {
+		cc.NodeName = "unknown"
+	}
+	cc.ShardConfig.Identity = cc.NodeName
 	return &cc
 }
 

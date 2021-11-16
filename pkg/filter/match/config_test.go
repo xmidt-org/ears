@@ -48,7 +48,7 @@ func TestConfigWithDefault(t *testing.T) {
 				Matcher:         match.DefaultConfig.Matcher,
 				Pattern:         match.DefaultConfig.Pattern,
 				ExactArrayMatch: pointer.Bool(true),
-				MatchMetadata:   pointer.Bool(false),
+				Path:            "",
 			},
 		},
 
@@ -62,7 +62,7 @@ func TestConfigWithDefault(t *testing.T) {
 				Matcher:         match.DefaultConfig.Matcher,
 				Pattern:         match.DefaultConfig.Pattern,
 				ExactArrayMatch: pointer.Bool(true),
-				MatchMetadata:   pointer.Bool(false),
+				Path:            "",
 			},
 		},
 
@@ -76,7 +76,7 @@ func TestConfigWithDefault(t *testing.T) {
 				Matcher:         match.MatcherRegex,
 				Pattern:         match.DefaultConfig.Pattern,
 				ExactArrayMatch: pointer.Bool(true),
-				MatchMetadata:   pointer.Bool(false),
+				Path:            "",
 			},
 		},
 
@@ -90,7 +90,7 @@ func TestConfigWithDefault(t *testing.T) {
 				Matcher:         match.DefaultConfig.Matcher,
 				Pattern:         pointer.String("mypattern"),
 				ExactArrayMatch: pointer.Bool(true),
-				MatchMetadata:   pointer.Bool(false),
+				Path:            "",
 			},
 		},
 	}
@@ -236,10 +236,10 @@ func TestConfigSerialization(t *testing.T) {
 		{
 			name: "full",
 			config: match.Config{
-				Mode:          match.ModeAllow,
-				Matcher:       match.MatcherRegex,
-				Pattern:       pointer.String(`^[[:alnum:]]{4,12}`),
-				MatchMetadata: pointer.Bool(false),
+				Mode:    match.ModeAllow,
+				Matcher: match.MatcherRegex,
+				Pattern: pointer.String(`^[[:alnum:]]{4,12}`),
+				Path:    "",
 			},
 		},
 	}

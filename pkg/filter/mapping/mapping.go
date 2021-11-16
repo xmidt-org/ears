@@ -23,6 +23,7 @@ import (
 	"github.com/xmidt-org/ears/pkg/secret"
 	"github.com/xmidt-org/ears/pkg/tenant"
 	"reflect"
+	"strings"
 )
 
 func NewFilter(tid tenant.Id, plugin string, name string, config interface{}, secrets secret.Vault) (*Filter, error) {
@@ -54,24 +55,121 @@ func (f *Filter) Filter(evt event.Event) []event.Event {
 		return nil
 	}
 	log.Ctx(evt.Context()).Debug().Str("op", "filter").Str("filterType", "mapping").Str("name", f.Name()).Msg("mapping")
-	for _, path := range f.config.Paths {
-		obj, _, _ := evt.GetPathValue(path)
-		if obj == nil {
-			continue
+	isArray := false
+	elem, _, _ := evt.GetPathValue(f.config.ArrayPath)
+	iterator := []interface{}{elem}
+	switch elem := elem.(type) {
+	case []interface{}:
+		iterator = elem
+		isArray = true
+	}
+	for idx, aElem := range iterator {
+		currEvent := evt
+		if isArray {
+			var err error
+			currEvent, err = event.New(evt.Context(), aElem, event.WithMetadata(evt.Metadata()))
+			if err != nil {
+				evt.Nack(err)
+				return []event.Event{}
+			}
 		}
+		obj, _, _ := currEvent.GetPathValue(f.config.Path)
 		mapped := false
 		for _, m := range f.config.Map {
-			if reflect.DeepEqual(obj, m.From) {
-				evt.SetPathValue(path, deepcopy.Copy(m.To), false)
+			from := m.From
+			to := m.To
+			switch fromStr := from.(type) {
+			case string:
+				{
+					if strings.HasSuffix(fromStr, "}") && strings.HasPrefix(fromStr, "{") {
+						from, _, _ = currEvent.GetPathValue(fromStr[1 : len(fromStr)-1])
+					}
+				}
+			}
+			switch toStr := to.(type) {
+			case string:
+				{
+					if strings.HasSuffix(toStr, "}") && strings.HasPrefix(toStr, "{") {
+						to, _, _ = currEvent.GetPathValue(toStr[1 : len(toStr)-1])
+					}
+				}
+			}
+			if reflect.DeepEqual(obj, from) && f.compare(currEvent, m.Comparison) {
+				if isArray {
+					currEvent.SetPathValue(f.config.Path, deepcopy.Copy(to), true)
+					evt.SetPathValue(f.config.ArrayPath+fmt.Sprintf("[%d]", idx), currEvent.Payload(), true)
+				} else {
+					evt.SetPathValue(f.config.Path, deepcopy.Copy(to), true)
+				}
 				mapped = true
 			}
 		}
 		if !mapped && f.config.DefaultValue != nil {
-			evt.SetPathValue(path, deepcopy.Copy(f.config.DefaultValue), false)
+			defVal := f.config.DefaultValue
+			switch defStr := f.config.DefaultValue.(type) {
+			case string:
+				{
+					if strings.HasSuffix(defStr, "}") && strings.HasPrefix(defStr, "{") {
+						defVal, _, _ = currEvent.GetPathValue(defStr[1 : len(defStr)-1])
+					}
+				}
+			}
+			if isArray {
+				currEvent.SetPathValue(f.config.Path, deepcopy.Copy(defVal), true)
+				evt.SetPathValue(f.config.ArrayPath+fmt.Sprintf("[%d]", idx), currEvent.Payload(), true)
+			} else {
+				evt.SetPathValue(f.config.Path, deepcopy.Copy(defVal), true)
+			}
 		}
 	}
 	return []event.Event{evt}
 }
+
+func (f *Filter) compare(evt event.Event, cmp *Comparison) bool {
+	if evt == nil || cmp == nil {
+		return true
+	}
+	for _, eq := range cmp.Equal {
+		for b, a := range eq {
+			var aObj, bObj interface{}
+			aObj = a
+			bObj = b
+			switch aT := a.(type) {
+			case string:
+				if strings.HasPrefix(aT, "{") && strings.HasSuffix(aT, "}") {
+					aObj, _, _ = evt.GetPathValue(aT[1 : len(aT)-1])
+				}
+			}
+			if strings.HasPrefix(b, "{") && strings.HasSuffix(b, "}") {
+				bObj, _, _ = evt.GetPathValue(b[1 : len(b)-1])
+			}
+			if !reflect.DeepEqual(aObj, bObj) {
+				return false
+			}
+		}
+	}
+	for _, neq := range cmp.NotEqual {
+		for b, a := range neq {
+			var aObj, bObj interface{}
+			aObj = a
+			bObj = b
+			switch aT := a.(type) {
+			case string:
+				if strings.HasPrefix(aT, "{") && strings.HasSuffix(aT, "}") {
+					aObj, _, _ = evt.GetPathValue(aT[1 : len(aT)-1])
+				}
+			}
+			if strings.HasPrefix(b, "{") && strings.HasSuffix(b, "}") {
+				bObj, _, _ = evt.GetPathValue(b[1 : len(b)-1])
+			}
+			if reflect.DeepEqual(aObj, bObj) {
+				return false
+			}
+		}
+	}
+	return true
+}
+
 func (f *Filter) Config() interface{} {
 	if f == nil {
 		return Config{}
