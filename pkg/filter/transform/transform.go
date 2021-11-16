@@ -91,6 +91,7 @@ func transform(evt event.Event, t interface{}, parent interface{}, key string, i
 			}
 			path := tt[si+1 : ei]
 			v, _, _ := evt.GetPathValue(path)
+			v = deepcopy.Copy(v)
 			if !(si == 0 && ei == len(tt)-1) {
 				switch vt := v.(type) {
 				case string:

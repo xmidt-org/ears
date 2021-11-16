@@ -50,10 +50,7 @@
       "plugin" : "mapping",
       "name" : "simpleFilterMappingRouteMapper",
       "config" : {
-        "paths" : [
-          ".content.name",
-          ".content.title"
-        ],
+        "path" : ".content.name",
         "map" :  [
           {
             "from" : "name",
@@ -61,7 +58,24 @@
           },
           {
             "from" : "title",
-            "to" : { "title" : "mytitle" }
+            "to" : "{.content.eventId}"
+          }
+        ]
+      }
+    },
+    {
+      "plugin" : "mapping",
+      "name" : "simpleFilterMappingRouteMapper2",
+      "config" : {
+        "path" : ".content.title",
+        "map" :  [
+          {
+            "from" : "name",
+            "to" : { "name" : "myname" }
+          },
+          {
+            "from" : "title",
+            "to" : "{.content.eventId}"
           }
         ]
       }

@@ -37,9 +37,6 @@ func (c Config) WithDefaults() *Config {
 	if c.Map == nil {
 		cfg.Map = DefaultConfig.Map
 	}
-	if c.Paths == nil {
-		cfg.Paths = DefaultConfig.Paths
-	}
 	return &cfg
 }
 

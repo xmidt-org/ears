@@ -53,8 +53,10 @@ type Config struct {
 	Mode            ModeType               `json:"mode,omitempty"`
 	Matcher         MatcherType            `json:"matcher,omitempty"`
 	Pattern         interface{}            `json:"pattern,omitempty"`
+	Patterns        []interface{}          `json:"patterns,omitempty"`
+	PatternsLogic   string                 `json:"patternsLogic,omitempty"` // AND, OR
+	Path            string                 `json:"path,omitempty"`          // path to match pattern against, if omitted uses payload as default
 	ExactArrayMatch *bool                  `json:"exactArrayMatch,omitempty"`
-	MatchMetadata   *bool                  `json:"matchMetadata,omitempty"`
 	Comparison      *comparison.Comparison `json:"comparison,omitempty"`
 }
 
@@ -63,7 +65,6 @@ var DefaultConfig = Config{
 	Matcher:         MatcherRegex,
 	Pattern:         `^.*$`,
 	ExactArrayMatch: pointer.Bool(true),
-	MatchMetadata:   pointer.Bool(false),
 }
 
 type Filter struct {

@@ -17,17 +17,31 @@
             },
             {
               "from": "title",
-              "to": {
-                "title": "mytitle"
-              }
+              "to": "{.content.eventId}"
             }
           ],
-          "paths": [
-            ".content.name",
-            ".content.title"
-          ]
+          "path": ".content.name"
         },
         "name": "simpleFilterMappingRouteMapper",
+        "plugin": "mapping"
+      },
+      {
+        "config": {
+          "map": [
+            {
+              "from": "name",
+              "to": {
+                "name": "myname"
+              }
+            },
+            {
+              "from": "title",
+              "to": "{.content.eventId}"
+            }
+          ],
+          "path": ".content.title"
+        },
+        "name": "simpleFilterMappingRouteMapper2",
         "plugin": "mapping"
       }
     ],

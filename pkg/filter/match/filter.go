@@ -45,21 +45,21 @@ func NewFilter(tid tenant.Id, plugin string, name string, config interface{}, se
 	var matcher Matcher
 	switch cfg.Matcher {
 	case MatcherRegex:
-		matcher, err = regex.NewMatcher(cfg.Pattern, *cfg.MatchMetadata)
+		matcher, err = regex.NewMatcher(cfg.Pattern, cfg.Path)
 		if err != nil {
 			return nil, &filter.InvalidConfigError{
 				Err: err,
 			}
 		}
 	case MatcherPattern:
-		matcher, err = pattern.NewMatcher(cfg.Pattern, *cfg.ExactArrayMatch, *cfg.MatchMetadata)
+		matcher, err = pattern.NewMatcher(cfg.Pattern, cfg.Patterns, cfg.PatternsLogic, *cfg.ExactArrayMatch, cfg.Path)
 		if err != nil {
 			return nil, &filter.InvalidConfigError{
 				Err: err,
 			}
 		}
 	case MatcherPatternRegex:
-		matcher, err = patternregex.NewMatcher(cfg.Pattern, *cfg.ExactArrayMatch, *cfg.MatchMetadata)
+		matcher, err = patternregex.NewMatcher(cfg.Pattern, cfg.Patterns, cfg.PatternsLogic, *cfg.ExactArrayMatch, cfg.Path)
 		if err != nil {
 			return nil, &filter.InvalidConfigError{
 				Err: err,
