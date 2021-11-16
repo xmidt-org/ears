@@ -20,7 +20,8 @@ import "github.com/xmidt-org/ears/pkg/tenant"
 // the behavior of the sender.
 type Config struct {
 	Map          []FromTo    `json:"map,omitempty"`
-	Paths        []string    `json:"paths,omitempty"`
+	Path         string      `json:"path,omitempty"`
+	ArrayPath    string      `json:"arrayPath,omitempty"` // if arrayPath points to array, iterate over all elements and apply from and to paths relatively
 	DefaultValue interface{} `json:"defaultValue,omitempty"`
 }
 
@@ -38,8 +39,7 @@ type Comparison struct {
 }
 
 var DefaultConfig = Config{
-	Map:   []FromTo{},
-	Paths: []string{},
+	Map: []FromTo{},
 }
 
 type Filter struct {
