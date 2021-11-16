@@ -105,11 +105,20 @@ func (f *Filter) Filter(evt event.Event) []event.Event {
 			}
 		}
 		if !mapped && f.config.DefaultValue != nil {
+			defVal := f.config.DefaultValue
+			switch defStr := f.config.DefaultValue.(type) {
+			case string:
+				{
+					if strings.HasSuffix(defStr, "}") && strings.HasPrefix(defStr, "{") {
+						defVal, _, _ = currEvent.GetPathValue(defStr[1 : len(defStr)-1])
+					}
+				}
+			}
 			if isArray {
-				currEvent.SetPathValue(f.config.Path, deepcopy.Copy(f.config.DefaultValue), true)
+				currEvent.SetPathValue(f.config.Path, deepcopy.Copy(defVal), true)
 				evt.SetPathValue(f.config.ArrayPath+fmt.Sprintf("[%d]", idx), currEvent.Payload(), true)
 			} else {
-				evt.SetPathValue(f.config.Path, deepcopy.Copy(f.config.DefaultValue), true)
+				evt.SetPathValue(f.config.Path, deepcopy.Copy(defVal), true)
 			}
 		}
 	}
