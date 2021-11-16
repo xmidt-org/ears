@@ -55,51 +55,61 @@ func (f *Filter) Filter(evt event.Event) []event.Event {
 		return nil
 	}
 	log.Ctx(evt.Context()).Debug().Str("op", "filter").Str("filterType", "mapping").Str("name", f.Name()).Msg("mapping")
-	for _, path := range f.config.Paths {
-		obj, _, _ := evt.GetPathValue(path)
-		isArray := false
-		iterator := []interface{}{obj}
-		switch obj := obj.(type) {
-		case []interface{}:
-			iterator = obj
-			isArray = true
+	isArray := false
+	elem, _, _ := evt.GetPathValue(f.config.ArrayPath)
+	iterator := []interface{}{elem}
+	switch elem := elem.(type) {
+	case []interface{}:
+		iterator = elem
+		isArray = true
+	}
+	for idx, aElem := range iterator {
+		currEvent := evt
+		if isArray {
+			var err error
+			currEvent, err = event.New(evt.Context(), aElem, event.WithMetadata(evt.Metadata()))
+			if err != nil {
+				evt.Nack(err)
+				return []event.Event{}
+			}
 		}
-		for idx, arrayElem := range iterator {
-			mapped := false
-			for _, m := range f.config.Map {
-				from := m.From
-				to := m.To
-				switch fromStr := from.(type) {
-				case string:
-					{
-						if strings.HasSuffix(fromStr, "}") && strings.HasPrefix(fromStr, "{") {
-							from, _, _ = evt.GetPathValue(fromStr[1 : len(fromStr)-1])
-						}
+		obj, _, _ := currEvent.GetPathValue(f.config.Path)
+		mapped := false
+		for _, m := range f.config.Map {
+			from := m.From
+			to := m.To
+			switch fromStr := from.(type) {
+			case string:
+				{
+					if strings.HasSuffix(fromStr, "}") && strings.HasPrefix(fromStr, "{") {
+						from, _, _ = currEvent.GetPathValue(fromStr[1 : len(fromStr)-1])
 					}
-				}
-				switch toStr := to.(type) {
-				case string:
-					{
-						if strings.HasSuffix(toStr, "}") && strings.HasPrefix(toStr, "{") {
-							to, _, _ = evt.GetPathValue(toStr[1 : len(toStr)-1])
-						}
-					}
-				}
-				if reflect.DeepEqual(arrayElem, from) && f.compare(evt, m.Comparison) {
-					if isArray {
-						evt.SetPathValue(path+fmt.Sprintf("[%d]", idx), deepcopy.Copy(to), true)
-					} else {
-						evt.SetPathValue(path, deepcopy.Copy(to), true)
-					}
-					mapped = true
 				}
 			}
-			if !mapped && f.config.DefaultValue != nil {
-				if isArray {
-					evt.SetPathValue(path+fmt.Sprintf("[%d]", idx), deepcopy.Copy(f.config.DefaultValue), true)
-				} else {
-					evt.SetPathValue(path, deepcopy.Copy(f.config.DefaultValue), true)
+			switch toStr := to.(type) {
+			case string:
+				{
+					if strings.HasSuffix(toStr, "}") && strings.HasPrefix(toStr, "{") {
+						to, _, _ = currEvent.GetPathValue(toStr[1 : len(toStr)-1])
+					}
 				}
+			}
+			if reflect.DeepEqual(obj, from) && f.compare(currEvent, m.Comparison) {
+				if isArray {
+					currEvent.SetPathValue(f.config.Path, deepcopy.Copy(to), true)
+					evt.SetPathValue(f.config.ArrayPath+fmt.Sprintf("[%d]", idx), currEvent.Payload(), true)
+				} else {
+					evt.SetPathValue(f.config.Path, deepcopy.Copy(to), true)
+				}
+				mapped = true
+			}
+		}
+		if !mapped && f.config.DefaultValue != nil {
+			if isArray {
+				currEvent.SetPathValue(f.config.Path, deepcopy.Copy(f.config.DefaultValue), true)
+				evt.SetPathValue(f.config.ArrayPath+fmt.Sprintf("[%d]", idx), currEvent.Payload(), true)
+			} else {
+				evt.SetPathValue(f.config.Path, deepcopy.Copy(f.config.DefaultValue), true)
 			}
 		}
 	}
