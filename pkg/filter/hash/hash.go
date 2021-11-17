@@ -69,10 +69,19 @@ func (f *Filter) Filter(evt event.Event) []event.Event {
 		evt.Nack(errors.New("cannot hash nil object at path " + f.config.FromPath))
 		return []event.Event{}
 	}
-	buf, err := json.Marshal(obj)
-	if err != nil {
-		evt.Nack(err)
-		return []event.Event{}
+	var buf []byte
+	var err error
+	switch obj := obj.(type) {
+	case string:
+		buf = []byte(obj)
+	case []byte:
+		buf = obj
+	default:
+		buf, err = json.Marshal(obj)
+		if err != nil {
+			evt.Nack(err)
+			return []event.Event{}
+		}
 	}
 	var output interface{}
 	switch f.config.HashAlgorithm {
@@ -83,13 +92,13 @@ func (f *Filter) Filter(evt event.Event) []event.Event {
 		output = fnvHash
 	case "md5":
 		md5Hash := md5.Sum(buf)
-		output = md5Hash[:]
+		output = fmt.Sprintf("%x", md5Hash)
 	case "sha1":
 		sha1Hash := sha1.Sum(buf)
-		output = sha1Hash[:]
+		output = fmt.Sprintf("%x", sha1Hash)
 	case "sha256":
 		sha256Hash := sha256.Sum256(buf)
-		output = sha256Hash[:]
+		output = fmt.Sprintf("%x", sha256Hash)
 	case "hmac-md5":
 		if f.config.Key == "" {
 			evt.Nack(errors.New("key required for hmac"))
