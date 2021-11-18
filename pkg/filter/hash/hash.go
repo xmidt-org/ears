@@ -92,13 +92,13 @@ func (f *Filter) Filter(evt event.Event) []event.Event {
 		output = fnvHash
 	case "md5":
 		md5Hash := md5.Sum(buf)
-		output = fmt.Sprintf("%x", md5Hash)
+		output = md5Hash[:]
 	case "sha1":
 		sha1Hash := sha1.Sum(buf)
-		output = fmt.Sprintf("%x", sha1Hash)
+		output = sha1Hash[:]
 	case "sha256":
 		sha256Hash := sha256.Sum256(buf)
-		output = fmt.Sprintf("%x", sha256Hash)
+		output = sha256Hash[:]
 	case "hmac-md5":
 		if f.config.Key == "" {
 			evt.Nack(errors.New("key required for hmac"))
@@ -107,7 +107,7 @@ func (f *Filter) Filter(evt event.Event) []event.Event {
 		h := hmac.New(md5.New, []byte(f.config.Key))
 		h.Write(buf)
 		md5Hash := h.Sum(nil)
-		output = fmt.Sprintf("%x", md5Hash)
+		output = md5Hash[:]
 	case "hmac-sha1":
 		if f.config.Key == "" {
 			evt.Nack(errors.New("key required for hmac"))
@@ -117,7 +117,6 @@ func (f *Filter) Filter(evt event.Event) []event.Event {
 		h.Write(buf)
 		sha1Hash := h.Sum(nil)
 		output = sha1Hash[:]
-		output = fmt.Sprintf("%x", sha1Hash)
 	case "hmac-sha256":
 		if f.config.Key == "" {
 			evt.Nack(errors.New("key required for hmac"))
@@ -126,7 +125,7 @@ func (f *Filter) Filter(evt event.Event) []event.Event {
 		h := hmac.New(sha256.New, []byte(f.config.Key))
 		h.Write(buf)
 		sha256Hash := h.Sum(nil)
-		output = fmt.Sprintf("%x", sha256Hash)
+		output = sha256Hash[:]
 	default:
 		evt.Nack(errors.New("unsupported hashing algorithm " + f.config.HashAlgorithm))
 		return []event.Event{}

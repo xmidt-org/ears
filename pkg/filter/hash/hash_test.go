@@ -30,7 +30,7 @@ func TestFilterHashBasic(t *testing.T) {
 		FromPath:      ".foo",
 		ToPath:        ".hash",
 		HashAlgorithm: "sha1",
-		Encoding:      "none",
+		Encoding:      "hex",
 	}, nil)
 	if err != nil {
 		t.Fatalf("hash test failed: %s\n", err.Error())
