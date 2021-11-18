@@ -456,6 +456,14 @@ func (e *event) SetPathValue(path string, val interface{}, createPath bool) (int
 				}
 				if idx < len(obj[key].([]interface{})) {
 					obj[key].([]interface{})[idx] = val
+				} else {
+					// increase array size
+					newArr := make([]interface{}, idx+1)
+					for i := 0; i < idx; i++ {
+						newArr[i] = obj[key].([]interface{})[i]
+					}
+					newArr[idx] = val
+					obj[key] = newArr
 				}
 			}
 		} else {
