@@ -66,7 +66,7 @@ func NewFilter(tid tenant.Id, plugin string, name string, config interface{}, se
 			}
 		}
 	case MatcherComparison:
-		matcher, err = comparison.NewMatcher(cfg.Comparison)
+		matcher, err = comparison.NewMatcher(cfg.Comparison, cfg.PatternsLogic)
 		if err != nil {
 			return nil, &filter.InvalidConfigError{
 				Err: err,
