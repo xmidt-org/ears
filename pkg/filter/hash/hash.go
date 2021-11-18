@@ -69,10 +69,19 @@ func (f *Filter) Filter(evt event.Event) []event.Event {
 		evt.Nack(errors.New("cannot hash nil object at path " + f.config.FromPath))
 		return []event.Event{}
 	}
-	buf, err := json.Marshal(obj)
-	if err != nil {
-		evt.Nack(err)
-		return []event.Event{}
+	var buf []byte
+	var err error
+	switch obj := obj.(type) {
+	case string:
+		buf = []byte(obj)
+	case []byte:
+		buf = obj
+	default:
+		buf, err = json.Marshal(obj)
+		if err != nil {
+			evt.Nack(err)
+			return []event.Event{}
+		}
 	}
 	var output interface{}
 	switch f.config.HashAlgorithm {
