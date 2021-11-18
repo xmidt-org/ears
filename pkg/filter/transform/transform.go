@@ -59,9 +59,28 @@ func (f *Filter) Filter(evt event.Event) []event.Event {
 	if f.config.Transformation == nil {
 		events = append(events, evt)
 	} else {
-		thisTransform := deepcopy.Copy(f.config.Transformation)
-		transform(evt, thisTransform, nil, "", -1)
-		evt.SetPathValue(f.config.ToPath, thisTransform, true)
+		obj, _, _ := evt.GetPathValue(f.config.FromPath)
+		a := []interface{}{obj}
+		isArray := false
+		switch obj := obj.(type) {
+		case []interface{}:
+			a = obj
+			isArray = true
+		}
+		for idx, elem := range a {
+			subEvt, err := event.New(evt.Context(), elem, event.WithMetadata(evt.Metadata()))
+			if err != nil {
+				evt.Nack(err)
+				return events
+			}
+			thisTransform := deepcopy.Copy(f.config.Transformation)
+			transform(subEvt, thisTransform, nil, "", -1)
+			if isArray {
+				evt.SetPathValue(fmt.Sprintf("%s[%d]", f.config.ToPath, idx), thisTransform, true)
+			} else {
+				evt.SetPathValue(f.config.ToPath, thisTransform, true)
+			}
+		}
 		events = append(events, evt)
 	}
 	log.Ctx(evt.Context()).Debug().Str("op", "filter").Str("filterType", "transform").Str("name", f.Name()).Int("eventCount", len(events)).Msg("transform")
