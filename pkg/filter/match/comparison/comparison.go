@@ -21,7 +21,8 @@ import (
 )
 
 type Matcher struct {
-	comparison *Comparison
+	comparison    *Comparison
+	patternsLogic string
 }
 
 // so far only Equals is supported but in combination with deny this can also be used as NotEqual
@@ -32,8 +33,8 @@ type Comparison struct {
 	//LessThan    []map[string]interface{} `json:"lessThan,omitempty"`
 }
 
-func NewMatcher(comparison *Comparison) (*Matcher, error) {
-	return &Matcher{comparison: comparison}, nil
+func NewMatcher(comparison *Comparison, patternsLogic string) (*Matcher, error) {
+	return &Matcher{comparison: comparison, patternsLogic: patternsLogic}, nil
 }
 
 func (m *Matcher) Match(event event.Event) bool {
@@ -47,6 +48,11 @@ func (m *Matcher) compare(evt event.Event, cmp *Comparison) bool {
 	if evt == nil || cmp == nil {
 		return true
 	}
+	andLogic := true
+	if m.patternsLogic == "or" || m.patternsLogic == "OR" {
+		andLogic = false
+	}
+	foundOneEqual := false
 	for _, eq := range cmp.Equal {
 		for b, a := range eq {
 			var aObj, bObj interface{}
@@ -61,10 +67,20 @@ func (m *Matcher) compare(evt event.Event, cmp *Comparison) bool {
 			if strings.HasPrefix(b, "{") && strings.HasSuffix(b, "}") {
 				bObj, _, _ = evt.GetPathValue(b[1 : len(b)-1])
 			}
-			if !reflect.DeepEqual(aObj, bObj) {
-				return false
+			if reflect.DeepEqual(aObj, bObj) {
+				foundOneEqual = true
+				if !andLogic {
+					return true
+				}
+			} else {
+				if andLogic {
+					return false
+				}
 			}
 		}
 	}
-	return true
+	if foundOneEqual || len(cmp.Equal) == 0 {
+		return true
+	}
+	return false
 }

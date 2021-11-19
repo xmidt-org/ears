@@ -59,7 +59,7 @@ func (f *Filter) Filter(evt event.Event) []event.Event {
 		evt.Nack(errors.New("nil object at path " + f.config.Path))
 		return []event.Event{}
 	}
-	evtTs, ok := obj.(uint64)
+	evtTs, ok := obj.(float64)
 	if !ok {
 		evt.Nack(errors.New("not a uint64 at path " + f.config.Path))
 		return []event.Event{}
