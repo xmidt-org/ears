@@ -8,20 +8,20 @@ ears:
   storage:
     route:
       type: inmemory
-      #      type: redis
-      endpoint: localhost:6379
+      #type: redis
+      #endpoint: localhost:6379
     tenant:
       type: inmemory
 
   synchronization:
     type: inmemory
-#    type: redis
-    endpoint: localhost:6379
+    #type: redis
+    #endpoint: localhost:6379
     active: yes
 
   ratelimiter:
     type: inmemory
-    endpiont: localhost:6379
+    #endpoint: localhost:6379
 
   opentelemetry:
     lightstep:

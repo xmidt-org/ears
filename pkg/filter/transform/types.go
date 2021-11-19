@@ -21,6 +21,7 @@ import "github.com/xmidt-org/ears/pkg/tenant"
 type Config struct {
 	Transformation interface{} `json:"transformation,omitempty"`
 	ToPath         string      `json:"toPath,omitempty"`
+	FromPath       string      `json:"fromPath,omitempty"` // optional, if present apply transformation to sub event at path, if sub event is array apply transformation to all elements of array
 }
 
 var empty interface{}

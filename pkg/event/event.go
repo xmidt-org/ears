@@ -450,11 +450,21 @@ func (e *event) SetPathValue(path string, val interface{}, createPath bool) (int
 		if strings.Contains(key, "[") && strings.Contains(key, "]") {
 			idx, _ := strconv.Atoi(key[strings.Index(key, "[")+1 : strings.Index(key, "]")])
 			key = key[:strings.Index(key, "[")]
-			if idx >= 0 && idx < len(obj) {
+			if idx >= 0 {
 				if obj[key] == nil && createPath {
 					obj[key] = make([]interface{}, idx+1)
 				}
-				obj[key].([]interface{})[idx] = val
+				if idx < len(obj[key].([]interface{})) {
+					obj[key].([]interface{})[idx] = val
+				} else {
+					// increase array size
+					newArr := make([]interface{}, idx+1)
+					for i := 0; i < idx; i++ {
+						newArr[i] = obj[key].([]interface{})[i]
+					}
+					newArr[idx] = val
+					obj[key] = newArr
+				}
 			}
 		} else {
 			obj[key] = val
