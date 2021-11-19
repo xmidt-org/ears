@@ -145,6 +145,8 @@ type SenderConfig struct {
 	TLSEnable           bool                 `json:"tlsEnable,omitempty"`
 	SenderPoolSize      *int                 `json:"senderPoolSize,omitempty"`
 	DynamicMetricLabels []DynamicMetricLabel `json:"dynamicMetricLabel,omitempty"`
+	CompressionMethod   string               `json:"compressionMethod,omitempty"`
+	CompressionLevel    *int                 `json:"compressionLevel,omitempty"`
 }
 
 type DynamicMetricLabel struct {
