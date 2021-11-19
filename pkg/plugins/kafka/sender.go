@@ -267,6 +267,8 @@ func (s *Sender) NewSyncProducers(count int) ([]sarama.SyncProducer, sarama.Clie
 	brokers := strings.Split(s.config.Brokers, ",")
 	config := sarama.NewConfig()
 	config.Producer.Partitioner = NewManualHashPartitioner
+	config.Producer.Compression = sarama.CompressionZSTD
+	config.Producer.CompressionLevel = 1
 	config.Producer.RequiredAcks = sarama.WaitForLocal //as long as one broker gets it
 	config.Producer.Return.Successes = true
 	if err := s.setConfig(config); nil != err {
