@@ -115,7 +115,13 @@ const senderSchema = `
 				},
 				"dynamicMetricLabel": {
                     "type": "array"
-				}
+				},
+                "compressionMethod": {
+                    "type": "string"
+                },
+                "compressionLevel": {
+                    "type": "integer"
+                }
             },
             "required": [
                 "brokers", "topic"

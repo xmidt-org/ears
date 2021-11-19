@@ -268,6 +268,19 @@ func (s *Sender) NewSyncProducers(count int) ([]sarama.SyncProducer, sarama.Clie
 	config := sarama.NewConfig()
 	config.Producer.Partitioner = NewManualHashPartitioner
 	config.Producer.RequiredAcks = sarama.WaitForLocal //as long as one broker gets it
+	switch s.config.CompressionMethod {
+	case "ZSTD":
+		config.Producer.Compression = sarama.CompressionZSTD
+	case "Snappy":
+		config.Producer.Compression = sarama.CompressionSnappy
+	case "GZIP":
+		config.Producer.Compression = sarama.CompressionGZIP
+	case "LZ4":
+		config.Producer.Compression = sarama.CompressionLZ4
+	}
+	if s.config.CompressionLevel != nil {
+		config.Producer.CompressionLevel = *s.config.CompressionLevel
+	}
 	config.Producer.Return.Successes = true
 	if err := s.setConfig(config); nil != err {
 		return nil, nil, err
