@@ -59,6 +59,9 @@ issues:
     - path: pkg/filter/hash/hash\.go
       linters:
         - funlen
+    - path: pkg/filter/mapping/mapping\.go
+      linters:
+        - funlen
     - path: pkg/plugin/manager/manager\.go
       linters:
         - funlen
