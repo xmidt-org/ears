@@ -30,10 +30,11 @@ import (
 // prefixes for json path expressions
 
 const (
-	PAYLOAD  = "payload"
-	METADATA = "metadata"
-	TRACE    = "trace"
-	TENANT   = "tenant"
+	PAYLOAD   = "payload"
+	METADATA  = "metadata"
+	TRACE     = "trace"
+	TENANT    = "tenant"
+	TIMESTAMP = "timestamp"
 )
 
 type Event interface {
