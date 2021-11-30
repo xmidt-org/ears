@@ -44,6 +44,7 @@ import (
 	"github.com/xmidt-org/ears/pkg/plugins/transform"
 	"github.com/xmidt-org/ears/pkg/plugins/ttl"
 	"github.com/xmidt-org/ears/pkg/plugins/unwrap"
+	"github.com/xmidt-org/ears/pkg/plugins/ws"
 	"github.com/xmidt-org/ears/pkg/secret"
 
 	pkgplugin "github.com/xmidt-org/ears/pkg/plugin"
@@ -128,6 +129,10 @@ func ProvidePluginManager(in PluginIn) (PluginOut, error) {
 		{
 			name:   "js",
 			plugin: toArr(js.NewPluginVersion("js", "", ""))[0].(pkgplugin.Pluginer),
+		},
+		{
+			name:   "ws",
+			plugin: toArr(ws.NewPluginVersion("ws", "", ""))[0].(pkgplugin.Pluginer),
 		},
 		{
 			name:   "dedup",
