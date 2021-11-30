@@ -59,6 +59,7 @@ import (
 	"github.com/xmidt-org/ears/pkg/plugins/transform"
 	"github.com/xmidt-org/ears/pkg/plugins/ttl"
 	"github.com/xmidt-org/ears/pkg/plugins/unwrap"
+	"github.com/xmidt-org/ears/pkg/plugins/ws"
 	"github.com/xmidt-org/ears/pkg/route"
 	"github.com/xmidt-org/ears/pkg/tenant"
 	"io/ioutil"
@@ -524,6 +525,10 @@ func setupRestApi(config config.Config, storageMgr route.RouteStorer, setupQuota
 		{
 			name:   "js",
 			plugin: toArr(js.NewPluginVersion("js", "", ""))[0].(pkgplugin.Pluginer),
+		},
+		{
+			name:   "ws",
+			plugin: toArr(ws.NewPluginVersion("ws", "", ""))[0].(pkgplugin.Pluginer),
 		},
 		{
 			name:   "dedup",
