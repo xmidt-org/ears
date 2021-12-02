@@ -48,6 +48,62 @@ var fragmentTestCases = []FragmentTestCase{
 		}
 		`,
 	},
+	FragmentTestCase{
+		tenant.Id{
+			OrgId: "myOrg",
+			AppId: "myApp",
+		},
+		"mySqsSender",
+		`
+		{
+		  "plugin": "sqs",
+		  "name": "mySqsSender",
+		  "config": { "foo" : "bar" }
+		}
+		`,
+	},
+	FragmentTestCase{
+		tenant.Id{
+			OrgId: "yourOrg",
+			AppId: "yourApp",
+		},
+		"mySqsSender",
+		`
+		{
+		  "plugin": "sqs",
+		  "name": "mySqsSender",
+		  "config": { }
+		}
+		`,
+	},
+	FragmentTestCase{
+		tenant.Id{
+			OrgId: "yourOrg",
+			AppId: "yourApp",
+		},
+		"yourSqsSender",
+		`
+		{
+		  "plugin": "sqs",
+		  "name": "yourSqsSender",
+		  "config": { }
+		}
+		`,
+	},
+	FragmentTestCase{
+		tenant.Id{
+			OrgId: "yourOrg",
+			AppId: "yourApp",
+		},
+		"herSqsSender",
+		`
+		{
+		  "plugin": "sqs",
+		  "name": "herSqsSender",
+		  "config": { }
+		}
+		`,
+	},
 }
 
 func testFragmentStorer(s fragments.FragmentStorer, t *testing.T) {
@@ -63,7 +119,7 @@ func testFragmentStorer(s fragments.FragmentStorer, t *testing.T) {
 	time.Sleep(500 * time.Millisecond)
 
 	//Test Case: tenant does not exist
-	r, err := s.GetFragment(ctx, tenant.Id{OrgId: "myOrg", AppId: "myApp"}, "does_not_exist")
+	f, err := s.GetFragment(ctx, tenant.Id{OrgId: "myOrg", AppId: "myApp"}, "does_not_exist")
 	if err == nil {
 		t.Fatalf("Expect an error but instead get no error")
 	}
@@ -84,208 +140,114 @@ func testFragmentStorer(s fragments.FragmentStorer, t *testing.T) {
 		t.Fatalf("SetFragment error: %s\n", err.Error())
 	}
 
-	r, err = s.GetFragment(ctx, fragmentTestCases[0].tenantId, config.Name)
+	f, err = s.GetFragment(ctx, fragmentTestCases[0].tenantId, config.Name)
 	if err != nil {
 		t.Fatalf("GetFragment test error: %s\n", err.Error())
 	}
 	g := goldie.New(t)
 
-	g.AssertJson(t, "fragment", r)
+	g.AssertJson(t, "fragment", f)
 
 	//Test Case: route does not exist
-	/*r, err = s.GetRoute(ctx, tenant.Id{OrgId: "myOrg", AppId: "myApp"}, "does_not_exist")
+	f, err = s.GetFragment(ctx, tenant.Id{OrgId: "myOrg", AppId: "myApp"}, "does_not_exist")
 	if err == nil {
 		t.Fatalf("Expect an error but instead get no error")
 	}
-	var routeNotFoundErr *route.RouteNotFoundError
-	if !errors.As(err, &routeNotFoundErr) {
-		t.Fatalf("GetRoute does_not_exist unexpected error: %s\n", err.Error())
+	var fragmentNotFoundErr *fragments.FragmentNotFoundError
+	if !errors.As(err, &fragmentNotFoundErr) {
+		t.Fatalf("GetFragment does_not_exist unexpected error: %s\n", err.Error())
 	}
 
 	//TestCase: update route
-	err = json.Unmarshal([]byte(testCases[1].routeConfig), &config)
+	err = json.Unmarshal([]byte(fragmentTestCases[1].fragmentConfig), &config)
 	if err != nil {
 		t.Fatalf("Unmarshal error: %s\n", err.Error())
 	}
-	config.Id = testCases[1].routeId
-	config.TenantId = testCases[1].tenantId
 
 	//sleep for two seconds and then update route again (to generate different create vs modified time)
 	time.Sleep(2 * time.Second)
 
-	err = s.SetRoute(ctx, config)
+	err = s.SetFragment(ctx, fragmentTestCases[1].tenantId, config)
 	if err != nil {
-		t.Fatalf("SetRoute error: %s\n", err.Error())
+		t.Fatalf("SetFragment error: %s\n", err.Error())
 	}
 
-	r, err = s.GetRoute(ctx, config.TenantId, config.Id)
+	f, err = s.GetFragment(ctx, fragmentTestCases[1].tenantId, config.Name)
 	if err != nil {
-		t.Fatalf("GetRoute test error: %s\n", err.Error())
+		t.Fatalf("GetFragment test error: %s\n", err.Error())
 	}
 
-	//confirm create and modified time are set and they are different now
-	if r.Created == 0 || r.Created == r.Modified {
-		t.Fatalf("Unexpected create and/or modified time %d %d\n", r.Created, r.Modified)
-	}
-
-	//remove create and modified time so we can assert with goldie
-	r.Created = 0
-	r.Modified = 0
-	g.AssertJson(t, "route_updated", r)
+	g.AssertJson(t, "fragment_updated", f)
 
 	//TestCase: set and get on a different tenant
-	err = json.Unmarshal([]byte(testCases[2].routeConfig), &config)
+	err = json.Unmarshal([]byte(fragmentTestCases[2].fragmentConfig), &config)
 	if err != nil {
 		t.Fatalf("Unmarshal error: %s\n", err.Error())
 	}
-	config.Id = testCases[2].routeId
-	config.TenantId = testCases[2].tenantId
-
-	err = s.SetRoute(ctx, config)
+	err = s.SetFragment(ctx, fragmentTestCases[2].tenantId, config)
 	if err != nil {
-		t.Fatalf("SetRoute error: %s\n", err.Error())
+		t.Fatalf("SetFragment error: %s\n", err.Error())
 	}
 
-	routes, err := s.GetAllRoutes(ctx)
+	fragments, err := s.GetAllFragments(ctx)
 	if err != nil {
-		t.Fatalf("GetAllRoutes error: %s\n", err.Error())
+		t.Fatalf("GetAllFragments error: %s\n", err.Error())
 	}
-	if len(routes) != 2 {
-		t.Fatalf("Expect 2 routes but get %d instead\n", len(routes))
-	}
-
-	//remove create and modified time so we can assert with goldie
-	for i := 0; i < len(routes); i++ {
-		routes[i].Created = 0
-		routes[i].Modified = 0
-	}
-	sort.SliceStable(routes, func(i int, j int) bool {
-		return routes[i].Id < routes[j].Id
-	})
-	g.AssertJson(t, "allroutes", routes)
-
-	//Test Case: try to get route on a different tenant
-	r, err = s.GetRoute(ctx, tenant.Id{OrgId: "myOrg", AppId: "myApp"}, config.Id)
-	if err == nil {
-		t.Fatalf("Expect an error but instead get no error")
-	}
-	if !errors.As(err, &routeNotFoundErr) {
-		t.Fatalf("GetRoute does_not_exist unexpected error: %s\n", err.Error())
+	if len(fragments) != 2 {
+		t.Fatalf("Expect 2 fragments but got %d instead\n", len(fragments))
 	}
 
 	//Test Case: bulk updates
-	configs := make([]route.Config, 3)
-	err = json.Unmarshal([]byte(testCases[3].routeConfig), &config)
+	configs := make([]route.PluginConfig, 2)
+	err = json.Unmarshal([]byte(fragmentTestCases[3].fragmentConfig), &config)
 	if err != nil {
 		t.Fatalf("Unmarshal error: %s\n", err.Error())
 	}
-	config.Id = testCases[3].routeId
-	config.TenantId = testCases[3].tenantId
 	configs[0] = config
 
-	err = json.Unmarshal([]byte(testCases[4].routeConfig), &config)
+	err = json.Unmarshal([]byte(fragmentTestCases[4].fragmentConfig), &config)
 	if err != nil {
 		t.Fatalf("Unmarshal error: %s\n", err.Error())
 	}
-	config.Id = testCases[4].routeId
-	config.TenantId = testCases[4].tenantId
 	configs[1] = config
 
-	err = json.Unmarshal([]byte(testCases[5].routeConfig), &config)
+	err = s.SetFragments(ctx, fragmentTestCases[3].tenantId, configs)
 	if err != nil {
-		t.Fatalf("Unmarshal error: %s\n", err.Error())
-	}
-	config.Id = testCases[5].routeId
-	config.TenantId = testCases[5].tenantId
-	configs[2] = config
-
-	err = s.SetRoutes(ctx, configs)
-	if err != nil {
-		t.Fatalf("SetRoutes error: %s\n", err.Error())
+		t.Fatalf("SetFragments error: %s\n", err.Error())
 	}
 
-	routes, err = s.GetAllRoutes(ctx)
+	fragments, err = s.GetAllFragments(ctx)
 	if err != nil {
-		t.Fatalf("GetAllRoutes error: %s\n", err.Error())
+		t.Fatalf("GetAllFragments error: %s\n", err.Error())
 	}
-	if len(routes) != 4 {
-		t.Fatalf("Expect 4 routes but get %d instead\n", len(routes))
+	if len(fragments) != 4 {
+		t.Fatalf("Expect 4 routes but get %d instead\n", len(fragments))
 	}
-
-	//remove create and modified time so we can assert with goldie
-	for i := 0; i < len(routes); i++ {
-		routes[i].Created = 0
-		routes[i].Modified = 0
-	}
-	sort.SliceStable(routes, func(i int, j int) bool {
-		return routes[i].Id < routes[j].Id
-	})
-	g.AssertJson(t, "allroutes2", routes)
 
 	//Test case: delete some routes
-	err = s.DeleteRoute(ctx, testCases[0].tenantId, testCases[0].routeId)
+	err = s.DeleteFragment(ctx, fragmentTestCases[0].tenantId, fragmentTestCases[0].fragmentId)
 	if err != nil {
-		t.Fatalf("DeleteRoutes error: %s\n", err.Error())
+		t.Fatalf("DeleteFragment error: %s\n", err.Error())
 	}
 
-	err = s.DeleteRoute(ctx, testCases[2].tenantId, testCases[2].routeId)
+	err = s.DeleteFragment(ctx, fragmentTestCases[2].tenantId, fragmentTestCases[2].fragmentId)
 	if err != nil {
-		t.Fatalf("DeleteRoutes error: %s\n", err.Error())
+		t.Fatalf("DeleteFRagment error: %s\n", err.Error())
 	}
 
-	r, err = s.GetRoute(ctx, testCases[2].tenantId, testCases[2].routeId)
+	f, err = s.GetFragment(ctx, fragmentTestCases[2].tenantId, fragmentTestCases[2].fragmentId)
 	if err == nil {
-		t.Fatalf("GetRoute Expect an error but instead get no error")
+		t.Fatalf("GetFragment expect an error but instead get no error")
 	}
-	if !errors.As(err, &routeNotFoundErr) {
-		t.Fatalf("GetRoute unexpected error: %s\n", err.Error())
+	if !errors.As(err, &fragmentNotFoundErr) {
+		t.Fatalf("GetFragment unexpected error: %s\n", err.Error())
 	}
 
-	routes, err = s.GetAllRoutes(ctx)
+	fragments, err = s.GetAllFragments(ctx)
 	if err != nil {
-		t.Fatalf("GetAllRoutes error: %s\n", err.Error())
+		t.Fatalf("GetAllFragments error: %s\n", err.Error())
 	}
-	if len(routes) != 2 {
-		t.Fatalf("Expect 2 routes but get %d instead\n", len(routes))
+	if len(fragments) != 2 {
+		t.Fatalf("Expect 2 fragments but get %d instead\n", len(fragments))
 	}
-
-	//remove create and modified time so we can assert with goldie
-	for i := 0; i < len(routes); i++ {
-		routes[i].Created = 0
-		routes[i].Modified = 0
-	}
-	sort.SliceStable(routes, func(i int, j int) bool {
-		return routes[i].Id < routes[j].Id
-	})
-	g.AssertJson(t, "allroutes3", routes)
-
-	routes, err = s.GetAllTenantRoutes(ctx, testCases[4].tenantId)
-	if err != nil {
-		t.Fatalf("GetAllTenantRoutes error: %s\n", err.Error())
-	}
-	if len(routes) != 2 {
-		t.Fatalf("Expect 2 routes but get %d instead\n", len(routes))
-	}
-	//remove create and modified time so we can assert with goldie
-	for i := 0; i < len(routes); i++ {
-		routes[i].Created = 0
-		routes[i].Modified = 0
-	}
-	sort.SliceStable(routes, func(i int, j int) bool {
-		return routes[i].Id < routes[j].Id
-	})
-	g.AssertJson(t, "allroutes4", routes)
-
-	err = s.DeleteRoutes(ctx, testCases[4].tenantId, []string{testCases[4].routeId, testCases[5].routeId})
-	if err != nil {
-		t.Fatalf("DeleteRoute error: %s\n", err.Error())
-	}
-
-	routes, err = s.GetAllRoutes(ctx)
-	if err != nil {
-		t.Fatalf("GetAllRoutes error: %s\n", err.Error())
-	}
-	if len(routes) != 0 {
-		t.Fatalf("Expect 0 routes but get %d instead\n", len(routes))
-	}*/
 }
