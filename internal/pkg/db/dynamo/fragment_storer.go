@@ -40,7 +40,7 @@ type fragmentItem struct {
 	Config   route.PluginConfig `json:"pluginConfig"`
 }
 
-func NewDynamoDbFragmentStorer(config config.Config) (*DynamoDbStorer, error) {
+func NewDynamoDbFragmentStorer(config config.Config) (*DynamoDbFragmentStorer, error) {
 	region := config.GetString("ears.storage.fragment.region")
 	if region == "" {
 		return nil, &MissingConfigError{"ears.storage.fragment.region"}
@@ -49,7 +49,7 @@ func NewDynamoDbFragmentStorer(config config.Config) (*DynamoDbStorer, error) {
 	if tableName == "" {
 		return nil, &MissingConfigError{"ears.storage.fragment.tableName"}
 	}
-	return &DynamoDbStorer{
+	return &DynamoDbFragmentStorer{
 		region:    region,
 		tableName: tableName,
 	}, nil
@@ -99,7 +99,7 @@ func (d *DynamoDbFragmentStorer) GetFragment(ctx context.Context, tid tenant.Id,
 }
 
 func (d *DynamoDbFragmentStorer) GetAllFragments(ctx context.Context) ([]route.PluginConfig, error) {
-	ctx, span := db.CreateSpan(ctx, "getFragments", semconv.DBSystemDynamoDB, rtsemconv.DBTable.String(d.tableName))
+	ctx, span := db.CreateSpan(ctx, "getAllFragments", semconv.DBSystemDynamoDB, rtsemconv.DBTable.String(d.tableName))
 	defer span.End()
 	sess, err := session.NewSession(&aws.Config{
 		Region: aws.String(d.region),
@@ -134,28 +134,48 @@ func (d *DynamoDbFragmentStorer) GetAllFragments(ctx context.Context) ([]route.P
 }
 
 func (d *DynamoDbFragmentStorer) GetAllTenantFragments(ctx context.Context, tid tenant.Id) ([]route.PluginConfig, error) {
-	ctx, span := db.CreateSpan(ctx, "getTenantFragments", semconv.DBSystemDynamoDB, rtsemconv.DBTable.String(d.tableName))
+	ctx, span := db.CreateSpan(ctx, "getAllTenantFragments", semconv.DBSystemDynamoDB, rtsemconv.DBTable.String(d.tableName))
 	defer span.End()
-	fragments, err := d.GetAllFragments(ctx)
+	sess, err := session.NewSession(&aws.Config{
+		Region: aws.String(d.region),
+	})
 	if err != nil {
-		return nil, err
+		return nil, &DynamoDbNewSessionError{err}
 	}
-	/*filterFragments := make([]route.PluginConfig, 0)
-	for _, fragment := range fragments {
-		if fragment.TenantId.Equal(tid) {
-			filterFragments = append(filterFragments, fragment)
+	svc := dynamodb.New(sess)
+	input := &dynamodb.ScanInput{
+		TableName: aws.String(d.tableName),
+	}
+	fragments := make([]route.PluginConfig, 0)
+	for {
+		result, err := svc.ScanWithContext(ctx, input)
+		if err != nil {
+			return nil, &DynamoDbGetItemError{err}
 		}
-	}*/
+		for _, item := range result.Items {
+			var f fragmentItem
+			err = dynamodbattribute.UnmarshalMap(item, &f)
+			if err != nil {
+				return nil, &DynamoDbMarshalError{err}
+			}
+			if tid.Equal(f.TenantId) {
+				fragments = append(fragments, f.Config)
+			}
+		}
+		if result.LastEvaluatedKey == nil {
+			break
+		}
+		input.ExclusiveStartKey = result.LastEvaluatedKey
+	}
 	return fragments, nil
 }
 
 func (d *DynamoDbFragmentStorer) setFragment(ctx context.Context, tid tenant.Id, f route.PluginConfig, svc *dynamodb.DynamoDB) error {
 	fragment := fragmentItem{
-		KeyId:    f.Name,
+		KeyId:    tid.KeyWithRoute(f.Name),
 		Config:   f,
 		TenantId: tid,
 	}
-	//item, err := dynamodbattribute.MarshalMap(route)
 	av, err := dynamodbattribute.NewEncoder(func(e *dynamodbattribute.Encoder) {
 		e.NullEmptyString = false
 		e.NullEmptyByteSlice = false
@@ -189,7 +209,7 @@ func (d *DynamoDbFragmentStorer) SetFragment(ctx context.Context, tid tenant.Id,
 }
 
 func (d *DynamoDbFragmentStorer) SetFragments(ctx context.Context, tid tenant.Id, fragments []route.PluginConfig) error {
-	ctx, span := db.CreateSpan(ctx, "storeRoutes", semconv.DBSystemDynamoDB, rtsemconv.DBTable.String(d.tableName))
+	ctx, span := db.CreateSpan(ctx, "storeFragments", semconv.DBSystemDynamoDB, rtsemconv.DBTable.String(d.tableName))
 	defer span.End()
 	sess, err := session.NewSession(&aws.Config{
 		Region: aws.String(d.region),
