@@ -140,13 +140,13 @@ func (d *DynamoDbFragmentStorer) GetAllTenantFragments(ctx context.Context, tid 
 	if err != nil {
 		return nil, err
 	}
-	filterFragments := make([]route.PluginConfig, 0)
+	/*filterFragments := make([]route.PluginConfig, 0)
 	for _, fragment := range fragments {
-		//if fragment.TenantId.Equal(tid) {
-		filterFragments = append(filterFragments, fragment)
-		//}
-	}
-	return filterFragments, nil
+		if fragment.TenantId.Equal(tid) {
+			filterFragments = append(filterFragments, fragment)
+		}
+	}*/
+	return fragments, nil
 }
 
 func (d *DynamoDbFragmentStorer) setFragment(ctx context.Context, tid tenant.Id, f route.PluginConfig, svc *dynamodb.DynamoDB) error {
