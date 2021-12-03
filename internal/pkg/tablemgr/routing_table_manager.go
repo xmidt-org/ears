@@ -207,6 +207,36 @@ func (r *DefaultRoutingTableManager) AddRoute(ctx context.Context, routeConfig *
 	if routeConfig == nil {
 		return errors.New("missing route config")
 	}
+	// inflate fragments if any are present
+	if routeConfig.Sender.Name != "" && routeConfig.Sender.Config == nil {
+		fragment, err := r.fragmentMgr.GetFragment(ctx, routeConfig.TenantId, routeConfig.Sender.Name)
+		if err == nil && fragment.Name != "" && fragment.Plugin != "" && fragment.Config != nil {
+			if routeConfig.Sender.Plugin != "" && routeConfig.Sender.Plugin != fragment.Plugin {
+				return errors.New("fragment type mismatch " + routeConfig.Sender.Plugin + " vs " + fragment.Plugin)
+			}
+			routeConfig.Sender = fragment
+		}
+	}
+	if routeConfig.Receiver.Name != "" && routeConfig.Receiver.Config == nil {
+		fragment, err := r.fragmentMgr.GetFragment(ctx, routeConfig.TenantId, routeConfig.Receiver.Name)
+		if err == nil && fragment.Name != "" && fragment.Plugin != "" && fragment.Config != nil {
+			if routeConfig.Receiver.Plugin != "" && routeConfig.Receiver.Plugin != fragment.Plugin {
+				return errors.New("fragment type mismatch " + routeConfig.Receiver.Plugin + " vs " + fragment.Plugin)
+			}
+			routeConfig.Sender = fragment
+		}
+	}
+	for idx, filter := range routeConfig.FilterChain {
+		if filter.Name != "" && filter.Config == nil {
+			fragment, err := r.fragmentMgr.GetFragment(ctx, routeConfig.TenantId, filter.Name)
+			if err == nil && fragment.Name != "" && fragment.Plugin != "" && fragment.Config != nil {
+				if filter.Plugin != "" && filter.Plugin != fragment.Plugin {
+					return errors.New("fragment type mismatch " + filter.Plugin + " vs " + fragment.Plugin)
+				}
+				routeConfig.FilterChain[idx] = fragment
+			}
+		}
+	}
 	// use hashed ID if none is provided - this ID will be returned by the AddRoute REST API
 	routeHash := routeConfig.Hash(ctx)
 	if routeConfig.Id == "" {
