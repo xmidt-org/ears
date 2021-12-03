@@ -273,8 +273,28 @@ func (r *DefaultRoutingTableManager) GetAllFiltersStatus(ctx context.Context) (m
 	return filterers, nil
 }
 
+func (r *DefaultRoutingTableManager) AddFragment(ctx context.Context, tid tenant.Id, fragmentConfig route.PluginConfig) error {
+	err := r.fragmentMgr.SetFragment(ctx, tid, fragmentConfig)
+	return err
+}
+
+func (r *DefaultRoutingTableManager) RemoveFragment(ctx context.Context, tid tenant.Id, fragmentId string) error {
+	err := r.fragmentMgr.DeleteFragment(ctx, tid, fragmentId)
+	return err
+}
+
+func (r *DefaultRoutingTableManager) GetFragment(ctx context.Context, tid tenant.Id, fragmentId string) (route.PluginConfig, error) {
+	fragment, err := r.fragmentMgr.GetFragment(ctx, tid, fragmentId)
+	return fragment, err
+}
+
 func (r *DefaultRoutingTableManager) GetAllFragments(ctx context.Context) ([]route.PluginConfig, error) {
 	fragments, err := r.fragmentMgr.GetAllFragments(ctx)
+	return fragments, err
+}
+
+func (r *DefaultRoutingTableManager) GetAllTenantFragments(ctx context.Context, tid tenant.Id) ([]route.PluginConfig, error) {
+	fragments, err := r.fragmentMgr.GetAllTenantFragments(ctx, tid)
 	return fragments, err
 }
 

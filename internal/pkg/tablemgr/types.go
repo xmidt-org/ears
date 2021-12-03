@@ -46,6 +46,14 @@ type (
 		GetAllFiltersStatus(ctx context.Context) (map[string]plugin.FilterStatus, error)
 		// GetAllFragments gets all fragments currently present in the system
 		GetAllFragments(ctx context.Context) ([]route.PluginConfig, error)
+		// GetAllTenantFragments gets all fragments for a tenant
+		GetAllTenantFragments(ctx context.Context, tenantId tenant.Id) ([]route.PluginConfig, error)
+		// GetFragment gets a single fragment
+		GetFragment(ctx context.Context, tenantId tenant.Id, fragmentId string) (route.PluginConfig, error)
+		// DeleteFragment delete a fragment by its name
+		RemoveFragment(ctx context.Context, tenantId tenant.Id, fragmentId string) error
+		// AddFragment adds a new fragment
+		AddFragment(ctx context.Context, tid tenant.Id, fragmentConfig route.PluginConfig) error
 	}
 
 	RoutingTableGlobalSyncer interface {
