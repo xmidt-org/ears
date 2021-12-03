@@ -76,6 +76,7 @@ func NewAPIManager(routingMgr tablemgr.RoutingTableManager, tenantStorer tenant.
 	api.muxRouter.HandleFunc("/ears/v1/senders", api.getAllSendersHandler).Methods(http.MethodGet)
 	api.muxRouter.HandleFunc("/ears/v1/receivers", api.getAllReceiversHandler).Methods(http.MethodGet)
 	api.muxRouter.HandleFunc("/ears/v1/filters", api.getAllFiltersHandler).Methods(http.MethodGet)
+	api.muxRouter.HandleFunc("/ears/v1/fragments", api.getAllFragmentsHandler).Methods(http.MethodGet)
 	// metrics
 	// where should meters live (api manager, uberfx, global variables,...)?
 	meter := global.Meter(rtsemconv.EARSMeterName)
@@ -339,6 +340,20 @@ func (a *APIManager) getAllFiltersHandler(w http.ResponseWriter, r *http.Request
 	}
 	trace.SpanFromContext(ctx).SetAttributes(attribute.Int("filterCount", len(allFilters)))
 	resp := ItemsResponse(allFilters)
+	resp.Respond(ctx, w)
+}
+
+func (a *APIManager) getAllFragmentsHandler(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	allFragments, err := a.routingTableMgr.GetAllFragments(ctx)
+	if err != nil {
+		log.Ctx(ctx).Error().Str("op", "getAllFragmentsHandler").Msg(err.Error())
+		resp := ErrorResponse(convertToApiError(ctx, err))
+		resp.Respond(ctx, w)
+		return
+	}
+	trace.SpanFromContext(ctx).SetAttributes(attribute.Int("fragmentCount", len(allFragments)))
+	resp := ItemsResponse(allFragments)
 	resp.Respond(ctx, w)
 }
 

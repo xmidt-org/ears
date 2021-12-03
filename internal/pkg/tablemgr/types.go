@@ -44,6 +44,8 @@ type (
 		GetAllReceiversStatus(ctx context.Context) (map[string]plugin.ReceiverStatus, error)
 		// GetAllFilters gets all filters currently present in the system
 		GetAllFiltersStatus(ctx context.Context) (map[string]plugin.FilterStatus, error)
+		// GetAllFragments gets all fragments currently present in the system
+		GetAllFragments(ctx context.Context) ([]route.PluginConfig, error)
 	}
 
 	RoutingTableGlobalSyncer interface {

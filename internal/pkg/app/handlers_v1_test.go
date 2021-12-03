@@ -593,7 +593,7 @@ func setupRestApi(config config.Config, storageMgr route.RouteStorer, setupQuota
 	if err != nil {
 		return &EarsRuntime{config, nil, nil, storageMgr, nil, nil}, err
 	}
-	routingMgr := tablemgr.NewRoutingTableManager(pluginMgr, storageMgr, tableSyncer, &log.Logger, config)
+	routingMgr := tablemgr.NewRoutingTableManager(pluginMgr, storageMgr, nil, tableSyncer, &log.Logger, config)
 	tenantStorer := db.NewTenantInmemoryStorer()
 	ctx := context.Background()
 	ctx = log.Logger.WithContext(ctx)

@@ -24,6 +24,7 @@ import (
 	"github.com/xmidt-org/ears/internal/pkg/plugin"
 	"github.com/xmidt-org/ears/internal/pkg/rtsemconv"
 	"github.com/xmidt-org/ears/internal/pkg/syncer"
+	"github.com/xmidt-org/ears/pkg/fragments"
 	"github.com/xmidt-org/ears/pkg/route"
 	"github.com/xmidt-org/ears/pkg/tenant"
 	"go.opentelemetry.io/otel"
@@ -36,6 +37,7 @@ type DefaultRoutingTableManager struct {
 	sync.Mutex
 	pluginMgr    plugin.Manager
 	storageMgr   route.RouteStorer
+	fragmentMgr  fragments.FragmentStorer
 	rtSyncer     syncer.DeltaSyncer
 	liveRouteMap map[string]*LiveRouteWrapper // references to live routes by route ID
 	routeHashMap map[string]*LiveRouteWrapper // references to live routes by hash
@@ -73,13 +75,14 @@ func SetupRoutingManager(lifecycle fx.Lifecycle, logger *zerolog.Logger, routing
 	return nil
 }
 
-func NewRoutingTableManager(pluginMgr plugin.Manager, storageMgr route.RouteStorer, tableSyncer syncer.DeltaSyncer, logger *zerolog.Logger, config config.Config) RoutingTableManager {
+func NewRoutingTableManager(pluginMgr plugin.Manager, storageMgr route.RouteStorer, fragmentMgr fragments.FragmentStorer, tableSyncer syncer.DeltaSyncer, logger *zerolog.Logger, config config.Config) RoutingTableManager {
 	rtm := &DefaultRoutingTableManager{
-		pluginMgr:  pluginMgr,
-		storageMgr: storageMgr,
-		rtSyncer:   tableSyncer,
-		logger:     logger,
-		config:     config}
+		pluginMgr:   pluginMgr,
+		storageMgr:  storageMgr,
+		fragmentMgr: fragmentMgr,
+		rtSyncer:    tableSyncer,
+		logger:      logger,
+		config:      config}
 	rtm.Lock()
 	defer rtm.Unlock()
 	rtm.liveRouteMap = make(map[string]*LiveRouteWrapper)
@@ -268,6 +271,11 @@ func (r *DefaultRoutingTableManager) GetAllReceiversStatus(ctx context.Context) 
 func (r *DefaultRoutingTableManager) GetAllFiltersStatus(ctx context.Context) (map[string]plugin.FilterStatus, error) {
 	filterers := r.pluginMgr.FiltersStatus()
 	return filterers, nil
+}
+
+func (r *DefaultRoutingTableManager) GetAllFragments(ctx context.Context) ([]route.PluginConfig, error) {
+	fragments, err := r.fragmentMgr.GetAllFragments(ctx)
+	return fragments, err
 }
 
 func (r *DefaultRoutingTableManager) SyncItem(ctx context.Context, tid tenant.Id, routeId string, add bool) error {
