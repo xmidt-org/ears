@@ -1,0 +1,49 @@
+{
+  "item": {
+    "deliveryMode": "atLeastOnce",
+    "filterChain": [
+      {
+        "config": {
+          "fromPath": ".content",
+          "regex": "[0-9]+",
+          "toPath": ".regexedContent"
+        },
+        "name": "simpleRegexFilterRouteFilter",
+        "plugin": "regex"
+      }
+    ],
+    "id": "fragment101",
+    "name": "simpleRegexFilterRoute",
+    "receiver": {
+      "config": {
+        "intervalMs": 10,
+        "maxHistory": 100,
+        "payload": {
+          "content": "bar-4242.baz",
+          "timestamp": 1428352877944,
+          "topic": "foo"
+        },
+        "rounds": 5
+      },
+      "name": "debugFoobarReceiver",
+      "plugin": "debug"
+    },
+    "sender": {
+      "config": {
+        "destination": "stdout",
+        "maxHistory": 100
+      },
+      "name": "debugSender",
+      "plugin": "debug"
+    },
+    "tenant": {
+      "appId": "myapp",
+      "orgId": "myorg"
+    },
+    "userId": "boris"
+  },
+  "status": {
+    "code": 200,
+    "message": "OK"
+  }
+}

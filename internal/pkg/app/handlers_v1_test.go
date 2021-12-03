@@ -1510,3 +1510,53 @@ func TestTenantConfig(t *testing.T) {
 		}
 	}
 }
+
+func TestRestGetRouteWithFragmentsHandler(t *testing.T) {
+	runtime := setupSimpleApi(t, "inmemory")
+	// load fragments
+	fragmentFileName := "testdata/fragments/debugSender.json"
+	simpleFragmentReader, err := os.Open(fragmentFileName)
+	if err != nil {
+		t.Fatalf("cannot read file: %s", err.Error())
+	}
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest(http.MethodPost, "/ears/v1"+tenantPath+"/fragments", simpleFragmentReader)
+	runtime.apiManager.muxRouter.ServeHTTP(w, r)
+	fragmentFileName = "testdata/fragments/debugFoobarReceiver.json"
+	simpleFragmentReader, err = os.Open(fragmentFileName)
+	if err != nil {
+		t.Fatalf("cannot read file: %s", err.Error())
+	}
+	w = httptest.NewRecorder()
+	r = httptest.NewRequest(http.MethodPost, "/ears/v1"+tenantPath+"/fragments", simpleFragmentReader)
+	runtime.apiManager.muxRouter.ServeHTTP(w, r)
+	// add route
+	routeFileName := "testdata/fragments/route.json"
+	simpleRouteReader, err := os.Open(routeFileName)
+	if err != nil {
+		t.Fatalf("cannot read file: %s", err.Error())
+	}
+	w = httptest.NewRecorder()
+	r = httptest.NewRequest(http.MethodPost, "/ears/v1"+tenantPath+"/routes", simpleRouteReader)
+	runtime.apiManager.muxRouter.ServeHTTP(w, r)
+	// get route
+	w = httptest.NewRecorder()
+	r = httptest.NewRequest(http.MethodGet, "/ears/v1"+tenantPath+"/routes/fragment101", nil)
+	runtime.apiManager.muxRouter.ServeHTTP(w, r)
+	g := goldie.New(t)
+	var data map[string]interface{}
+	err = json.Unmarshal(w.Body.Bytes(), &data)
+	if err != nil {
+		t.Fatalf("cannot unmarshal response %s into json %s", w.Body.String(), err.Error())
+	}
+	item := data["item"].(map[string]interface{})
+	delete(item, "created")
+	delete(item, "modified")
+	g.AssertJson(t, "getfragmentroute", data)
+	// delete routes
+	rtId := "fragment101"
+	r = httptest.NewRequest(http.MethodDelete, "/ears/v1"+tenantPath+"/routes/"+rtId, nil)
+	w = httptest.NewRecorder()
+	runtime.apiManager.muxRouter.ServeHTTP(w, r)
+	t.Logf("deleted route with id: %s", rtId)
+}
