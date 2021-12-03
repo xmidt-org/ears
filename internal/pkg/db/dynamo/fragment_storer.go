@@ -59,7 +59,7 @@ func (d *DynamoDbFragmentStorer) getFragment(ctx context.Context, tid tenant.Id,
 	input := &dynamodb.GetItemInput{
 		Key: map[string]*dynamodb.AttributeValue{
 			"id": {
-				S: aws.String(tid.KeyWithRoute(fragmentName)),
+				S: aws.String(tid.KeyWithFragment(fragmentName)),
 			},
 		},
 		TableName: aws.String(d.tableName),
@@ -172,7 +172,7 @@ func (d *DynamoDbFragmentStorer) GetAllTenantFragments(ctx context.Context, tid 
 
 func (d *DynamoDbFragmentStorer) setFragment(ctx context.Context, tid tenant.Id, f route.PluginConfig, svc *dynamodb.DynamoDB) error {
 	fragment := fragmentItem{
-		KeyId:    tid.KeyWithRoute(f.Name),
+		KeyId:    tid.KeyWithFragment(f.Name),
 		Config:   f,
 		TenantId: tid,
 	}
@@ -231,7 +231,7 @@ func (d *DynamoDbFragmentStorer) deleteFragment(ctx context.Context, tid tenant.
 	input := &dynamodb.DeleteItemInput{
 		Key: map[string]*dynamodb.AttributeValue{
 			"id": {
-				S: aws.String(tid.KeyWithRoute(id)),
+				S: aws.String(tid.KeyWithFragment(id)),
 			},
 		},
 		TableName: aws.String(d.tableName),
