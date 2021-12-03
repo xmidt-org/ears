@@ -63,15 +63,24 @@ func NewAPIManager(routingMgr tablemgr.RoutingTableManager, tenantStorer tenant.
 		http.FileServer(http.FS(WebsiteFS)),
 	)
 	api.muxRouter.HandleFunc("/ears/version", api.versionHandler).Methods(http.MethodGet)
+
 	api.muxRouter.HandleFunc("/ears/v1/orgs/{orgId}/applications/{appId}/routes/{routeId}", api.addRouteHandler).Methods(http.MethodPut)
 	api.muxRouter.HandleFunc("/ears/v1/orgs/{orgId}/applications/{appId}/routes", api.addRouteHandler).Methods(http.MethodPost)
 	api.muxRouter.HandleFunc("/ears/v1/orgs/{orgId}/applications/{appId}/routes/{routeId}", api.removeRouteHandler).Methods(http.MethodDelete)
 	api.muxRouter.HandleFunc("/ears/v1/orgs/{orgId}/applications/{appId}/routes/{routeId}", api.getRouteHandler).Methods(http.MethodGet)
 	api.muxRouter.HandleFunc("/ears/v1/orgs/{orgId}/applications/{appId}/routes", api.getAllTenantRoutesHandler).Methods(http.MethodGet)
+
+	api.muxRouter.HandleFunc("/ears/v1/orgs/{orgId}/applications/{appId}/fragments/{fragmentId}", api.addFragmentHandler).Methods(http.MethodPut)
+	api.muxRouter.HandleFunc("/ears/v1/orgs/{orgId}/applications/{appId}/fragments", api.addFragmentHandler).Methods(http.MethodPost)
+	api.muxRouter.HandleFunc("/ears/v1/orgs/{orgId}/applications/{appId}/fragments/{fragmentId}", api.removeFragmentHandler).Methods(http.MethodDelete)
+	api.muxRouter.HandleFunc("/ears/v1/orgs/{orgId}/applications/{appId}/fragments/{fragmentId}", api.getFragmentHandler).Methods(http.MethodGet)
+	api.muxRouter.HandleFunc("/ears/v1/orgs/{orgId}/applications/{appId}/fragments", api.getAllTenantFragmentsHandler).Methods(http.MethodGet)
+
 	api.muxRouter.HandleFunc("/ears/v1/orgs/{orgId}/applications/{appId}/config", api.getTenantConfigHandler).Methods(http.MethodGet)
 	api.muxRouter.HandleFunc("/ears/v1/orgs/{orgId}/applications/{appId}/config", api.setTenantConfigHandler).Methods(http.MethodPut)
 	api.muxRouter.HandleFunc("/ears/v1/orgs/{orgId}/applications/{appId}/config", api.deleteTenantConfigHandler).Methods(http.MethodDelete)
 	api.muxRouter.HandleFunc("/ears/v1/routes", api.getAllRoutesHandler).Methods(http.MethodGet)
+
 	api.muxRouter.HandleFunc("/ears/v1/tenants", api.getAllTenantConfigsHandler).Methods(http.MethodGet)
 	api.muxRouter.HandleFunc("/ears/v1/senders", api.getAllSendersHandler).Methods(http.MethodGet)
 	api.muxRouter.HandleFunc("/ears/v1/receivers", api.getAllReceiversHandler).Methods(http.MethodGet)
@@ -145,7 +154,7 @@ func (a *APIManager) addRouteHandler(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	tid, apiErr := getTenant(ctx, vars)
 	if apiErr != nil {
-		log.Ctx(ctx).Error().Str("op", "AddRouteHandler").Str("error", apiErr.Error()).Msg("orgId or appId empty")
+		log.Ctx(ctx).Error().Str("op", "addRouteHandler").Str("error", apiErr.Error()).Msg("orgId or appId empty")
 		a.addRouteFailureRecorder.Add(ctx, 1.0)
 		resp := ErrorResponse(apiErr)
 		resp.Respond(ctx, w)
@@ -153,7 +162,7 @@ func (a *APIManager) addRouteHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	_, err := a.tenantStorer.GetConfig(ctx, *tid)
 	if err != nil {
-		log.Ctx(ctx).Error().Str("op", "getTenantConfigHandler").Str("error", err.Error()).Msg("error getting tenant config")
+		log.Ctx(ctx).Error().Str("op", "addRouteHandler").Str("error", err.Error()).Msg("error getting tenant config")
 		resp := ErrorResponse(convertToApiError(ctx, err))
 		resp.Respond(ctx, w)
 		return
@@ -281,7 +290,7 @@ func (a *APIManager) getAllRoutesHandler(w http.ResponseWriter, r *http.Request)
 	allRouteConfigs := make([]route.Config, 0)
 	configs, err := a.tenantStorer.GetAllConfigs(ctx)
 	if err != nil {
-		log.Ctx(ctx).Error().Str("op", "GetAllTenantRoutes").Str("error", err.Error()).Msg("tenant configs read error")
+		log.Ctx(ctx).Error().Str("op", "GetAllRoutes").Str("error", err.Error()).Msg("tenant configs read error")
 		resp := ErrorResponse(convertToApiError(ctx, err))
 		resp.Respond(ctx, w)
 		return
@@ -298,6 +307,28 @@ func (a *APIManager) getAllRoutesHandler(w http.ResponseWriter, r *http.Request)
 	}
 	trace.SpanFromContext(ctx).SetAttributes(attribute.Int("routeCount", len(allRouteConfigs)))
 	resp := ItemsResponse(allRouteConfigs)
+	resp.Respond(ctx, w)
+}
+
+func (a *APIManager) getAllTenantFragmentsHandler(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	vars := mux.Vars(r)
+	tid, apiErr := getTenant(ctx, vars)
+	if apiErr != nil {
+		log.Ctx(ctx).Error().Str("op", "GetAllTenantFragments").Str("error", apiErr.Error()).Msg("orgId or appId empty")
+		resp := ErrorResponse(apiErr)
+		resp.Respond(ctx, w)
+		return
+	}
+	allFragments, err := a.routingTableMgr.GetAllTenantFragments(ctx, *tid)
+	if err != nil {
+		log.Ctx(ctx).Error().Str("op", "GetAllTenantFragments").Msg(err.Error())
+		resp := ErrorResponse(convertToApiError(ctx, err))
+		resp.Respond(ctx, w)
+		return
+	}
+	trace.SpanFromContext(ctx).SetAttributes(attribute.Int("routeCount", len(allFragments)))
+	resp := ItemsResponse(allFragments)
 	resp.Respond(ctx, w)
 }
 
@@ -354,6 +385,120 @@ func (a *APIManager) getAllFragmentsHandler(w http.ResponseWriter, r *http.Reque
 	}
 	trace.SpanFromContext(ctx).SetAttributes(attribute.Int("fragmentCount", len(allFragments)))
 	resp := ItemsResponse(allFragments)
+	resp.Respond(ctx, w)
+}
+
+func (a *APIManager) getFragmentHandler(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	vars := mux.Vars(r)
+	tid, apiErr := getTenant(ctx, vars)
+	if apiErr != nil {
+		log.Ctx(ctx).Error().Str("op", "getFragmentHandler").Str("error", apiErr.Error()).Msg("orgId or appId empty")
+		resp := ErrorResponse(apiErr)
+		resp.Respond(ctx, w)
+		return
+	}
+	fragmentId := vars["fragmentId"]
+	trace.SpanFromContext(ctx).SetAttributes(rtsemconv.EARSFragmentId.String(fragmentId))
+	fragmentConfig, err := a.routingTableMgr.GetFragment(ctx, *tid, fragmentId)
+	if err != nil {
+		log.Ctx(ctx).Error().Str("op", "getFragmentHandler").Msg(err.Error())
+		resp := ErrorResponse(convertToApiError(ctx, err))
+		resp.Respond(ctx, w)
+		return
+	}
+	resp := ItemResponse(fragmentConfig)
+	resp.Respond(ctx, w)
+}
+
+func (a *APIManager) removeFragmentHandler(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	vars := mux.Vars(r)
+	tid, apiErr := getTenant(ctx, vars)
+	if apiErr != nil {
+		log.Ctx(ctx).Error().Str("op", "removeFragmentHandler").Str("error", apiErr.Error()).Msg("orgId or appId empty")
+		a.removeRouteFailureRecorder.Add(ctx, 1.0)
+		resp := ErrorResponse(apiErr)
+		resp.Respond(ctx, w)
+		return
+	}
+	fragmentId := vars["fragmentId"]
+	trace.SpanFromContext(ctx).SetAttributes(rtsemconv.EARSFragmentId.String(fragmentId))
+	err := a.routingTableMgr.RemoveFragment(ctx, *tid, fragmentId)
+	if err != nil {
+		log.Ctx(ctx).Error().Str("op", "removeFragmentHandler").Msg(err.Error())
+		a.removeRouteFailureRecorder.Add(ctx, 1.0)
+		resp := ErrorResponse(convertToApiError(ctx, err))
+		resp.Respond(ctx, w)
+		return
+	} else {
+		a.removeRouteSuccessRecorder.Add(ctx, 1.0)
+	}
+	resp := ItemResponse(fragmentId)
+	resp.Respond(ctx, w)
+}
+
+func (a *APIManager) addFragmentHandler(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	vars := mux.Vars(r)
+	tid, apiErr := getTenant(ctx, vars)
+	if apiErr != nil {
+		log.Ctx(ctx).Error().Str("op", "addFragmentHandler").Str("error", apiErr.Error()).Msg("orgId or appId empty")
+		a.addRouteFailureRecorder.Add(ctx, 1.0)
+		resp := ErrorResponse(apiErr)
+		resp.Respond(ctx, w)
+		return
+	}
+	_, err := a.tenantStorer.GetConfig(ctx, *tid)
+	if err != nil {
+		log.Ctx(ctx).Error().Str("op", "addFragmentHandler").Str("error", err.Error()).Msg("error getting tenant config")
+		resp := ErrorResponse(convertToApiError(ctx, err))
+		resp.Respond(ctx, w)
+		return
+	}
+	fragmentId := vars["fragmentId"]
+	body, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		log.Ctx(ctx).Error().Str("op", "addFragmentHandler").Msg(err.Error())
+		a.addRouteFailureRecorder.Add(ctx, 1.0)
+		resp := ErrorResponse(&InternalServerError{err})
+		resp.Respond(ctx, w)
+		return
+	}
+	var fragmentConfig route.PluginConfig
+	err = yaml.Unmarshal(body, &fragmentConfig)
+	if err != nil {
+		log.Ctx(ctx).Error().Str("op", "addFragmentHandler").Msg(err.Error())
+		resp := ErrorResponse(&BadRequestError{"Cannot unmarshal request body", err})
+		resp.Respond(ctx, w)
+		return
+	}
+	if fragmentId != "" && fragmentConfig.Name != "" && fragmentId != fragmentConfig.Name {
+		err := &BadRequestError{"fragment name mismatch " + fragmentId + " vs " + fragmentConfig.Name, nil}
+		log.Ctx(ctx).Error().Str("op", "addFragmentHandler").Msg(err.Error())
+		resp := ErrorResponse(err)
+		resp.Respond(ctx, w)
+		return
+	}
+	if fragmentId != "" && fragmentConfig.Name == "" {
+		fragmentConfig.Name = fragmentId
+	}
+	if fragmentConfig.Name == "" {
+		err := &BadRequestError{"missing fragment name", nil}
+		log.Ctx(ctx).Error().Str("op", "addFragmentHandler").Msg(err.Error())
+		resp := ErrorResponse(err)
+		resp.Respond(ctx, w)
+		return
+	}
+	trace.SpanFromContext(ctx).SetAttributes(rtsemconv.EARSFragmentId.String(fragmentId))
+	err = a.routingTableMgr.AddFragment(ctx, *tid, fragmentConfig)
+	if err != nil {
+		log.Ctx(ctx).Error().Str("op", "addFragmentHandler").Msg(err.Error())
+		resp := ErrorResponse(convertToApiError(ctx, err))
+		resp.Respond(ctx, w)
+		return
+	}
+	resp := ItemResponse(fragmentConfig)
 	resp.Respond(ctx, w)
 }
 
