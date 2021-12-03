@@ -24,6 +24,12 @@ echo "add quota"
 
 curl -X PUT http://localhost:3000/ears/v1/orgs/myorg/applications/myapp/config --data-binary @quota.json | jq .
 
+echo "add fragments"
+
+curl -X POST http://localhost:3000/ears/v1/orgs/myorg/applications/myapp/fragments --data-binary @debugSender.json | jq .
+
+curl -X POST http://localhost:3000/ears/v1/orgs/myorg/applications/myapp/fragments --data-binary @debugFoobarReceiver.json | jq .
+
 echo "add routes"
 
 curl -X POST http://localhost:3000/ears/v1/orgs/myorg/applications/myapp/routes --data-binary @simpleRoute.json | jq .
