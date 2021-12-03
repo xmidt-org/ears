@@ -1,4 +1,8 @@
 {
     "plugin": "debug",
-    "name": "debugSender"
+    "name": "debugSender",
+    "config" : {
+        "destination" : "stdout",
+        "maxHistory": 100
+    }
 }

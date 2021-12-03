@@ -223,7 +223,7 @@ func (r *DefaultRoutingTableManager) AddRoute(ctx context.Context, routeConfig *
 			if routeConfig.Receiver.Plugin != "" && routeConfig.Receiver.Plugin != fragment.Plugin {
 				return errors.New("fragment type mismatch " + routeConfig.Receiver.Plugin + " vs " + fragment.Plugin)
 			}
-			routeConfig.Sender = fragment
+			routeConfig.Receiver = fragment
 		}
 	}
 	for idx, filter := range routeConfig.FilterChain {

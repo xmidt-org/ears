@@ -1,0 +1,40 @@
+{
+  "id" : "regex101",
+  "userId" : "boris",
+  "name" : "simpleRegexFilterRoute",
+  "receiver" : {
+    "plugin" : "debug",
+    "name" : "simpleRegexFilterRouteReceiver",
+    "config" :
+    {
+      "rounds" : 5,
+      "intervalMs" : 10,
+      "payload" : {
+        "topic": "foo",
+        "content": "bar-4242.baz",
+        "timestamp": 1428352877944
+      },
+      "maxHistory": 100
+    }
+  },
+  "sender" : {
+    "plugin" : "debug",
+    "name" : "simpleRegexFilterRouteSender",
+    "config" : {
+      "destination" : "stdout",
+      "maxHistory": 100
+    }
+  },
+  "filterChain" : [
+    {
+      "plugin" : "regex",
+      "name" : "simpleRegexFilterRouteFilter",
+      "config" : {
+        "fromPath" : ".content",
+        "toPath" : ".regexedContent",
+        "regex" : "[0-9]+"
+      }
+    }
+  ],
+  "deliveryMode" : "atLeastOnce"
+}

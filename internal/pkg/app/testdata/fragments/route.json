@@ -1,0 +1,25 @@
+{
+  "id" : "regex101",
+  "userId" : "boris",
+  "name" : "simpleRegexFilterRoute",
+  "receiver" : {
+    "plugin" : "debug",
+    "name" : "debugFoobarReceiver"
+  },
+  "sender" : {
+    "plugin" : "debug",
+    "name" : "debugSender"
+  },
+  "filterChain" : [
+    {
+      "plugin" : "regex",
+      "name" : "simpleRegexFilterRouteFilter",
+      "config" : {
+        "fromPath" : ".content",
+        "toPath" : ".regexedContent",
+        "regex" : "[0-9]+"
+      }
+    }
+  ],
+  "deliveryMode" : "atLeastOnce"
+}
