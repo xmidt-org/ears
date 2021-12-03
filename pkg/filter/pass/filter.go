@@ -48,7 +48,7 @@ func (f *Filter) Config() interface{} {
 	if f == nil {
 		return Config{}
 	}
-	return f.Config()
+	return nil
 }
 
 func (f *Filter) Name() string {

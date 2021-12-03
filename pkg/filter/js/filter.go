@@ -70,7 +70,7 @@ func (f *Filter) Config() interface{} {
 	if f == nil {
 		return Config{}
 	}
-	return f.Config()
+	return f.config
 }
 
 func (f *Filter) Name() string {
