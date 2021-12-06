@@ -26,7 +26,6 @@ type Config struct {
 	AsString *bool  `json:"asString,omitempty"`
 }
 
-var empty interface{}
 var DefaultConfig = Config{
 	Path:     "",
 	AsString: pointer.Bool(false),
