@@ -27,17 +27,24 @@ import (
 var _ filter.Filterer = (*Filter)(nil)
 
 func NewFilter(tid tenant.Id, plugin string, name string, config interface{}, secrets secret.Vault) (*Filter, error) {
-	return &Filter{
+	cfg, err := NewConfig(config)
+	if err != nil {
+		return nil, &filter.InvalidConfigError{
+			Err: err,
+		}
+	}
+	cfg = cfg.WithDefaults()
+	err = cfg.Validate()
+	if err != nil {
+		return nil, err
+	}
+	f := &Filter{
+		config: *cfg,
 		name:   name,
 		plugin: plugin,
 		tid:    tid,
-	}, nil
-}
-
-type Filter struct {
-	name   string
-	plugin string
-	tid    tenant.Id
+	}
+	return f, nil
 }
 
 // Filter log event and pass it on
@@ -48,14 +55,27 @@ func (f *Filter) Filter(evt event.Event) []event.Event {
 		})
 		return nil
 	}
-	m := make(map[string]interface{})
-	m["payload"] = evt.Payload()
-	m["metadata"] = evt.Metadata()
-	buf, err := json.Marshal(m)
+	var obj interface{}
+	if f.config.Path == "" {
+		m := map[string]interface{}{}
+		pl, _, _ := evt.GetPathValue("payload")
+		md, _, _ := evt.GetPathValue("metadata")
+		m["payload"] = pl
+		m["metadata"] = md
+		obj = m
+	} else {
+		obj, _, _ = evt.GetPathValue(f.config.Path)
+	}
+	buf, err := json.Marshal(obj)
 	if err != nil {
 		log.Ctx(evt.Context()).Error().Str("op", "log.Filter").Msg(err.Error())
+	} else {
+		if *f.config.AsString {
+			log.Ctx(evt.Context()).Info().Str("op", "filter").Str("filterType", "log").Str("name", f.Name()).Str("event", string(buf)).Msg("log")
+		} else {
+			log.Ctx(evt.Context()).Info().Str("op", "filter").Str("filterType", "log").Str("name", f.Name()).RawJSON("event", buf).Msg("log")
+		}
 	}
-	log.Ctx(evt.Context()).Info().Str("op", "filter").Str("filterType", "log").Str("name", f.Name()).RawJSON("event", buf).Msg("log")
 	return []event.Event{evt}
 }
 
