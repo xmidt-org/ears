@@ -66,6 +66,12 @@ func (f *Filter) Filter(evt event.Event) []event.Event {
 		})
 		return nil
 	}
+	if *f.config.EmptyPathValueRequired {
+		pv, _, _ := evt.GetPathValue(f.config.Path)
+		if pv != nil {
+			return []event.Event{evt}
+		}
+	}
 	// execute http request
 	res, _, err := hitEndpoint(evt.Context(), evalStr(evt, f.config.Url), evalStr(evt, f.config.Body), evalStr(evt, f.config.Method), f.config.Headers, map[string]string{})
 	if err != nil {
