@@ -26,7 +26,7 @@ import (
 
 func TestFilterTraceBasic(t *testing.T) {
 	ctx := context.Background()
-	f, err := trace.NewFilter(tenant.Id{AppId: "myapp", OrgId: "myorg"}, "match", "mymatch", trace.Config{
+	f, err := trace.NewFilter(tenant.Id{AppId: "myapp", OrgId: "myorg"}, "trace", "mytrace", trace.Config{
 		Path: ".traceId",
 	}, nil)
 	if err != nil {

@@ -26,7 +26,7 @@ import (
 
 func TestFilterPassBasic(t *testing.T) {
 	ctx := context.Background()
-	f, err := pass.NewFilter(tenant.Id{AppId: "myapp", OrgId: "myorg"}, "match", "mymatch", pass.Config{}, nil)
+	f, err := pass.NewFilter(tenant.Id{AppId: "myapp", OrgId: "myorg"}, "pass", "mypass", pass.Config{}, nil)
 	if err != nil {
 		t.Fatalf("pass test failed: %s\n", err.Error())
 	}

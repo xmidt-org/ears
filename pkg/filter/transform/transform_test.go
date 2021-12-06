@@ -26,7 +26,7 @@ import (
 
 func TestFilterTransformBasic(t *testing.T) {
 	ctx := context.Background()
-	f, err := transform.NewFilter(tenant.Id{AppId: "myapp", OrgId: "myorg"}, "match", "mymatch", transform.Config{
+	f, err := transform.NewFilter(tenant.Id{AppId: "myapp", OrgId: "myorg"}, "transfomr", "mytransform", transform.Config{
 		ToPath:         ".",
 		Transformation: map[string]interface{}{"bar": "{.foo}"},
 	}, nil)

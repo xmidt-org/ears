@@ -27,7 +27,7 @@ import (
 
 func TestFilterBatchBasic(t *testing.T) {
 	ctx := context.Background()
-	f, err := batch.NewFilter(tenant.Id{AppId: "myapp", OrgId: "myorg"}, "match", "mymatch", batch.Config{
+	f, err := batch.NewFilter(tenant.Id{AppId: "myapp", OrgId: "myorg"}, "batch", "mybatch", batch.Config{
 		BatchSize: pointer.Int(2),
 	}, nil)
 	if err != nil {
