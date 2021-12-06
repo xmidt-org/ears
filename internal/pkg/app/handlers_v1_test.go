@@ -53,6 +53,7 @@ import (
 	goredis "github.com/xmidt-org/ears/pkg/plugins/redis"
 	"github.com/xmidt-org/ears/pkg/plugins/regex"
 	"github.com/xmidt-org/ears/pkg/plugins/s3"
+	"github.com/xmidt-org/ears/pkg/plugins/sample"
 	"github.com/xmidt-org/ears/pkg/plugins/split"
 	"github.com/xmidt-org/ears/pkg/plugins/sqs"
 	"github.com/xmidt-org/ears/pkg/plugins/trace"
@@ -529,6 +530,10 @@ func setupRestApi(config config.Config, storageMgr route.RouteStorer, setupQuota
 		{
 			name:   "ws",
 			plugin: toArr(ws.NewPluginVersion("ws", "", ""))[0].(pkgplugin.Pluginer),
+		},
+		{
+			name:   "sample",
+			plugin: toArr(sample.NewPluginVersion("sample", "", ""))[0].(pkgplugin.Pluginer),
 		},
 		{
 			name:   "dedup",
