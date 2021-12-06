@@ -26,7 +26,7 @@ import (
 
 func TestFilterSplitBasic(t *testing.T) {
 	ctx := context.Background()
-	f, err := split.NewFilter(tenant.Id{AppId: "myapp", OrgId: "myorg"}, "match", "mymatch", split.Config{
+	f, err := split.NewFilter(tenant.Id{AppId: "myapp", OrgId: "myorg"}, "split", "mysplit", split.Config{
 		Path: ".foo",
 	}, nil)
 	if err != nil {

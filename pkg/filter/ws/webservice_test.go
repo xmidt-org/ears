@@ -26,7 +26,7 @@ import (
 
 func TestFilterWsBasic(t *testing.T) {
 	ctx := context.Background()
-	f, err := ws.NewFilter(tenant.Id{AppId: "myapp", OrgId: "myorg"}, "match", "mymatch", ws.Config{
+	f, err := ws.NewFilter(tenant.Id{AppId: "myapp", OrgId: "myorg"}, "ws", "myws", ws.Config{
 		FromPath: ".",
 		ToPath:   ".value",
 		Url:      "http://echo.jsontest.com/key/value/one/two",
