@@ -15,12 +15,10 @@
 package ws
 
 import (
-	"errors"
 	"github.com/xmidt-org/ears/pkg/config"
 	pkgconfig "github.com/xmidt-org/ears/pkg/config"
 	"github.com/xmidt-org/ears/pkg/errs"
 	"github.com/xmidt-org/ears/pkg/filter"
-	"net/url"
 )
 
 func NewConfig(config interface{}) (*Config, error) {
@@ -36,11 +34,8 @@ func NewConfig(config interface{}) (*Config, error) {
 
 func (c Config) WithDefaults() *Config {
 	cfg := c
-	if c.FromPath == "" {
-		cfg.FromPath = DefaultConfig.FromPath
-	}
-	if c.ToPath == "" {
-		cfg.ToPath = DefaultConfig.ToPath
+	if c.Path == "" {
+		cfg.Path = DefaultConfig.Path
 	}
 	if c.Method == "" {
 		cfg.Method = DefaultConfig.Method
@@ -58,7 +53,7 @@ func (c Config) WithDefaults() *Config {
 }
 
 func (c *Config) Validate() error {
-	_, err := url.ParseRequestURI(c.Url)
+	/*_, err := url.ParseRequestURI(c.Url)
 	if err != nil {
 		return err
 	}
@@ -69,7 +64,7 @@ func (c *Config) Validate() error {
 	case "DELETE":
 	default:
 		return errors.New("unknown method " + c.Method)
-	}
+	}*/
 	return nil
 }
 

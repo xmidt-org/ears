@@ -27,10 +27,9 @@ import (
 func TestFilterWsBasic(t *testing.T) {
 	ctx := context.Background()
 	f, err := ws.NewFilter(tenant.Id{AppId: "myapp", OrgId: "myorg"}, "ws", "myws", ws.Config{
-		FromPath: ".",
-		ToPath:   ".value",
-		Url:      "http://echo.jsontest.com/key/value/one/two",
-		Method:   "GET",
+		Path:   ".value",
+		Url:    "http://echo.jsontest.com/key/value/one/two",
+		Method: "GET",
 	}, nil)
 	if err != nil {
 		t.Fatalf("encode test failed: %s\n", err.Error())
@@ -50,6 +49,42 @@ func TestFilterWsBasic(t *testing.T) {
 		t.Fatalf("wrong number of encoded events: %d\n", len(evts))
 	}
 	expectedEventStr := `{ "foo" : "bar", "value": { "one": "two", "key": "value" } }`
+	var res interface{}
+	err = json.Unmarshal([]byte(expectedEventStr), &res)
+	if err != nil {
+		t.Fatalf("encode test failed: %s\n", err.Error())
+	}
+	if !reflect.DeepEqual(evts[0].Payload(), res) {
+		pl, _ := json.MarshalIndent(evts[0].Payload(), "", "\t")
+		t.Fatalf("wrong payload in encoded event: %s\n", pl)
+	}
+}
+
+func TestFilterWsUrlEval(t *testing.T) {
+	ctx := context.Background()
+	f, err := ws.NewFilter(tenant.Id{AppId: "myapp", OrgId: "myorg"}, "ws", "myws", ws.Config{
+		Path:   ".value",
+		Url:    "{.url}",
+		Method: "GET",
+	}, nil)
+	if err != nil {
+		t.Fatalf("encode test failed: %s\n", err.Error())
+	}
+	eventStr := `{"foo":"bar", "url":"http://echo.jsontest.com/key/value/one/two"}`
+	var obj interface{}
+	err = json.Unmarshal([]byte(eventStr), &obj)
+	if err != nil {
+		t.Fatalf("encode test failed: %s\n", err.Error())
+	}
+	e, err := event.New(ctx, obj, event.FailOnNack(t))
+	if err != nil {
+		t.Fatalf("encode test failed: %s\n", err.Error())
+	}
+	evts := f.Filter(e)
+	if len(evts) != 1 {
+		t.Fatalf("wrong number of encoded events: %d\n", len(evts))
+	}
+	expectedEventStr := `{ "foo" : "bar", "url":"http://echo.jsontest.com/key/value/one/two", "value": { "one": "two", "key": "value" } }`
 	var res interface{}
 	err = json.Unmarshal([]byte(expectedEventStr), &res)
 	if err != nil {
