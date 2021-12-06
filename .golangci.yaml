@@ -150,6 +150,10 @@ issues:
       text: "G404: Use of weak random number generator"
       linters:
         - gosec
+    - path: pkg/filter/sample/sample\.go
+      text: "G404: Use of weak random number generator"
+      linters:
+        - gosec
     - path: internal/pkg/aws/s3/client\.go
       text: "type assertion on error"
       linters:
