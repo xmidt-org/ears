@@ -14,24 +14,29 @@
 
 package ws
 
-import "github.com/xmidt-org/ears/pkg/tenant"
+import (
+	"github.com/xmidt-org/ears/pkg/tenant"
+	"github.com/xorcare/pointer"
+)
 
 // Config can be passed into NewFilter() in order to configure
 // the behavior of the sender.
 type Config struct {
-	Path    string            `json:"path,omitempty"`
-	Url     string            `json:"url,omitempty"`
-	Method  string            `json:"method,omitempty"`
-	Body    string            `json:"body,omitempty"`
-	Headers map[string]string `json:"headers,omitempty"`
+	Path                   string            `json:"path,omitempty"`
+	Url                    string            `json:"url,omitempty"`
+	Method                 string            `json:"method,omitempty"`
+	Body                   string            `json:"body,omitempty"`
+	Headers                map[string]string `json:"headers,omitempty"`
+	EmptyPathValueRequired *bool             `json:"emptyPathValueRequired,omitempty"`
 }
 
 var DefaultConfig = Config{
-	Path:    "",
-	Url:     "",
-	Method:  "GET",
-	Body:    "",
-	Headers: map[string]string{},
+	Path:                   "",
+	Url:                    "",
+	Method:                 "GET",
+	Body:                   "",
+	Headers:                map[string]string{},
+	EmptyPathValueRequired: pointer.Bool(false),
 }
 
 type Filter struct {

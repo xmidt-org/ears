@@ -49,6 +49,9 @@ func (c Config) WithDefaults() *Config {
 	if c.Headers == nil {
 		cfg.Headers = DefaultConfig.Headers
 	}
+	if c.EmptyPathValueRequired == nil {
+		cfg.EmptyPathValueRequired = DefaultConfig.EmptyPathValueRequired
+	}
 	return &cfg
 }
 
