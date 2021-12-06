@@ -18,8 +18,8 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
+	"github.com/mohae/deepcopy"
 	"github.com/rs/zerolog/log"
 	"github.com/xmidt-org/ears/pkg/event"
 	"github.com/xmidt-org/ears/pkg/filter"
@@ -29,6 +29,7 @@ import (
 	"io/ioutil"
 	"net"
 	"net/http"
+	"strings"
 	"time"
 )
 
@@ -66,7 +67,7 @@ func (f *Filter) Filter(evt event.Event) []event.Event {
 		return nil
 	}
 	// execute http request
-	res, _, err := hitEndpoint(evt.Context(), f.config.Url, f.config.Body, f.config.Method, f.config.Headers, map[string]string{})
+	res, _, err := hitEndpoint(evt.Context(), evalStr(evt, f.config.Url), evalStr(evt, f.config.Body), evalStr(evt, f.config.Method), f.config.Headers, map[string]string{})
 	if err != nil {
 		evt.Nack(err)
 		return []event.Event{}
@@ -77,16 +78,7 @@ func (f *Filter) Filter(evt event.Event) []event.Event {
 		evt.Nack(err)
 		return []event.Event{}
 	}
-	obj, _, _ := evt.GetPathValue(f.config.FromPath)
-	if obj == nil {
-		evt.Nack(errors.New("nil object at path " + f.config.FromPath))
-		return []event.Event{}
-	}
-	path := f.config.FromPath
-	if f.config.ToPath != "" {
-		path = f.config.ToPath
-	}
-	evt.SetPathValue(path, resObj, true)
+	evt.SetPathValue(f.config.Path, resObj, true)
 	log.Ctx(evt.Context()).Debug().Str("op", "filter").Str("filterType", "ws").Str("name", f.Name()).Msg("ws")
 	return []event.Event{evt}
 }
@@ -108,6 +100,37 @@ func (f *Filter) Plugin() string {
 
 func (f *Filter) Tenant() tenant.Id {
 	return f.tid
+}
+
+func evalStr(evt event.Event, tt string) string {
+	for {
+		si := strings.Index(tt, "{")
+		ei := strings.Index(tt, "}")
+		if si < 0 || ei < 0 {
+			break
+		}
+		path := tt[si+1 : ei]
+		v, _, _ := evt.GetPathValue(path)
+		v = deepcopy.Copy(v)
+		if !(si == 0 && ei == len(tt)-1) {
+			switch vt := v.(type) {
+			case string:
+				tt = tt[0:si] + vt + tt[ei+1:]
+			default:
+				sv, _ := json.Marshal(vt)
+				tt = tt[0:si] + string(sv) + tt[ei+1:]
+			}
+		} else {
+			switch vt := v.(type) {
+			case string:
+				return vt
+			default:
+				sv, _ := json.Marshal(vt)
+				return string(sv)
+			}
+		}
+	}
+	return tt
 }
 
 func hitEndpoint(ctx context.Context, url string, payload string, verb string, headers map[string]string, auth map[string]string) (string, int, error) {
