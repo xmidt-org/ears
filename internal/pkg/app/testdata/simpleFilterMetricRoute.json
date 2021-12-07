@@ -1,0 +1,48 @@
+{
+  "id" : "metric100",
+  "userId" : "boris",
+  "name" : "simpleFilterMetricRoute",
+  "receiver" : {
+    "plugin" : "debug",
+    "name" : "simpleFilterMetricRouteReceiver",
+    "config" :
+    {
+      "rounds" : 1000,
+      "intervalMs" : 500,
+      "payload" : {
+        "foo" : "bar",
+        "baz" : "baz"
+      },
+      "maxHistory": 100
+    }
+  },
+  "sender" : {
+    "plugin" : "debug",
+    "name" : "simpleFilterMetricRouteSender",
+    "config" : {
+      "destination" : "stdout",
+      "maxHistory": 100
+    }
+  },
+  "filterChain" : [
+    {
+      "plugin" : "match",
+      "name" : "simpleFilterMetricRouteMatcher",
+      "config" : {
+        "mode" : "allow",
+        "matcher" : "pattern",
+        "pattern" : {
+          "foo" : "bar"
+        }
+      }
+    },
+    {
+      "plugin" : "metric",
+      "name" : "simpleFilterMetricRouteMetric",
+      "config" : {
+        "name" : "bwlocal"
+      }
+    }
+  ],
+  "deliveryMode" : "whoCares"
+}
