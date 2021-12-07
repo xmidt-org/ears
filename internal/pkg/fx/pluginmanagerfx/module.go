@@ -34,6 +34,7 @@ import (
 	"github.com/xmidt-org/ears/pkg/plugins/log"
 	"github.com/xmidt-org/ears/pkg/plugins/mapping"
 	"github.com/xmidt-org/ears/pkg/plugins/match"
+	"github.com/xmidt-org/ears/pkg/plugins/metric"
 	"github.com/xmidt-org/ears/pkg/plugins/pass"
 	"github.com/xmidt-org/ears/pkg/plugins/redis"
 	"github.com/xmidt-org/ears/pkg/plugins/regex"
@@ -138,6 +139,10 @@ func ProvidePluginManager(in PluginIn) (PluginOut, error) {
 		{
 			name:   "sample",
 			plugin: toArr(sample.NewPluginVersion("sample", "", ""))[0].(pkgplugin.Pluginer),
+		},
+		{
+			name:   "metric",
+			plugin: toArr(metric.NewPluginVersion("metric", "", ""))[0].(pkgplugin.Pluginer),
 		},
 		{
 			name:   "dedup",

@@ -34,6 +34,8 @@ const (
 	EARSPluginTypeHttpSender    = "httpSender"
 	EARSPluginTypeRedisSender   = "redisSender"
 
+	EARSPluginTypeMetricFilter = "metricFilter"
+
 	EARSPluginTypeDebugReceiver   = "debugReceiver"
 	EARSPluginTypeSQSReceiver     = "sqsReceiver"
 	EARSPluginTypeKinesisReceiver = "kinesisReceiver"
