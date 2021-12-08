@@ -187,13 +187,15 @@ func (s *Sender) send(events []event.Event) {
 		if err != nil {
 			continue
 		}
+		attributes := make(map[string]*sqs.MessageAttributeValue)
 		entry := &sqs.SendMessageBatchRequestEntry{
-			Id:                aws.String(uuid.New().String()),
-			MessageBody:       aws.String(string(buf)),
-			MessageAttributes: make(map[string]*sqs.MessageAttributeValue),
+			Id:          aws.String(uuid.New().String()),
+			MessageBody: aws.String(string(buf)),
 		}
-		otel.GetTextMapPropagator().Inject(evt.Context(), NewSqsMessageAttributeCarrier(entry.MessageAttributes))
-
+		otel.GetTextMapPropagator().Inject(evt.Context(), NewSqsMessageAttributeCarrier(attributes))
+		if len(attributes) > 0 {
+			entry.MessageAttributes = attributes
+		}
 		if *s.config.DelaySeconds > 0 {
 			entry.DelaySeconds = aws.Int64(int64(*s.config.DelaySeconds))
 		}
