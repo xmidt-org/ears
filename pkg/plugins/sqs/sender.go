@@ -17,6 +17,7 @@ package sqs
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/endpoints"
 	"github.com/aws/aws-sdk-go/aws/session"
@@ -187,9 +188,10 @@ func (s *Sender) send(events []event.Event) {
 		if err != nil {
 			continue
 		}
+		evt.SetId(uuid.New().String())
 		attributes := make(map[string]*sqs.MessageAttributeValue)
 		entry := &sqs.SendMessageBatchRequestEntry{
-			Id:          aws.String(uuid.New().String()),
+			Id:          aws.String(evt.Id()),
 			MessageBody: aws.String(string(buf)),
 		}
 		otel.GetTextMapPropagator().Inject(evt.Context(), NewSqsMessageAttributeCarrier(attributes))
@@ -208,26 +210,35 @@ func (s *Sender) send(events []event.Event) {
 		QueueUrl: aws.String(s.config.QueueUrl),
 	}
 	start := time.Now()
-	_, err := s.sqsService.SendMessageBatch(sqsSendBatchParams)
+	output, err := s.sqsService.SendMessageBatch(sqsSendBatchParams)
 	s.eventSendOutTime.Record(events[0].Context(), time.Since(start).Milliseconds())
 	if err != nil {
-		for idx, evt := range events {
-			if idx == 0 {
-				log.Ctx(evt.Context()).Error().Str("op", "SQS.sendWorker").Str("name", s.Name()).Str("tid", s.Tenant().ToString()).Int("eventIdx", idx).Int("batchSize", len(events)).Msg("batch send error: " + err.Error())
-			}
-		}
-	} else {
-		s.Lock()
-		s.count += len(events)
-		s.Unlock()
-	}
-	for _, evt := range events {
-		if err != nil {
+		for _, evt := range events {
 			s.eventFailureCounter.Add(evt.Context(), 1)
 			evt.Nack(err)
-		} else {
-			s.eventSuccessCounter.Add(evt.Context(), 1)
-			evt.Ack()
+			break
+		}
+	} else {
+		for _, failEvent := range output.Failed {
+			for _, evt := range events {
+				if evt.Id() == *failEvent.Id {
+					s.eventFailureCounter.Add(evt.Context(), 1)
+					evt.Nack(errors.New(*failEvent.Message))
+					break
+				}
+			}
+		}
+		for _, successEvent := range output.Successful {
+			for _, evt := range events {
+				if evt.Id() == *successEvent.Id {
+					s.eventSuccessCounter.Add(evt.Context(), 1)
+					evt.Ack()
+					s.Lock()
+					s.count++
+					s.Unlock()
+					break
+				}
+			}
 		}
 	}
 }
