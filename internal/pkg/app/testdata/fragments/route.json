@@ -4,11 +4,11 @@
   "name" : "simpleRegexFilterRoute",
   "receiver" : {
     "plugin" : "debug",
-    "name" : "debugFoobarReceiver"
+    "fragmentName" : "debugFoobarReceiver"
   },
   "sender" : {
     "plugin" : "debug",
-    "name" : "debugSender"
+    "fragmentName" : "debugSender"
   },
   "filterChain" : [
     {

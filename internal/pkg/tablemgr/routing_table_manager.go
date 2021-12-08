@@ -208,33 +208,63 @@ func (r *DefaultRoutingTableManager) AddRoute(ctx context.Context, routeConfig *
 		return errors.New("missing route config")
 	}
 	// inflate fragments if any are present
-	if routeConfig.Sender.Name != "" && routeConfig.Sender.Config == nil {
-		fragment, err := r.fragmentMgr.GetFragment(ctx, routeConfig.TenantId, routeConfig.Sender.Name)
-		if err == nil && fragment.Name != "" && fragment.Plugin != "" && fragment.Config != nil {
-			if routeConfig.Sender.Plugin != "" && routeConfig.Sender.Plugin != fragment.Plugin {
-				return errors.New("fragment type mismatch " + routeConfig.Sender.Plugin + " vs " + fragment.Plugin)
-			}
-			routeConfig.Sender = fragment
+	if routeConfig.Sender.FragmentName != "" {
+		fragment, err := r.fragmentMgr.GetFragment(ctx, routeConfig.TenantId, routeConfig.Sender.FragmentName)
+		if err != nil {
+			return err
 		}
+		if fragment.Plugin == "" {
+			return errors.New("fragment " + routeConfig.Sender.FragmentName + " has no plugin type")
+		}
+		if fragment.Config == nil {
+			return errors.New("fragment " + routeConfig.Sender.FragmentName + " has no config")
+		}
+		if routeConfig.Sender.Plugin != "" && routeConfig.Sender.Plugin != fragment.Plugin {
+			return errors.New("fragment type mismatch " + routeConfig.Sender.Plugin + " vs " + fragment.Plugin)
+		}
+		if routeConfig.Sender.Name != "" {
+			fragment.Name = routeConfig.Sender.Name
+		}
+		routeConfig.Sender = fragment
 	}
-	if routeConfig.Receiver.Name != "" && routeConfig.Receiver.Config == nil {
-		fragment, err := r.fragmentMgr.GetFragment(ctx, routeConfig.TenantId, routeConfig.Receiver.Name)
-		if err == nil && fragment.Name != "" && fragment.Plugin != "" && fragment.Config != nil {
-			if routeConfig.Receiver.Plugin != "" && routeConfig.Receiver.Plugin != fragment.Plugin {
-				return errors.New("fragment type mismatch " + routeConfig.Receiver.Plugin + " vs " + fragment.Plugin)
-			}
-			routeConfig.Receiver = fragment
+	if routeConfig.Receiver.FragmentName != "" {
+		fragment, err := r.fragmentMgr.GetFragment(ctx, routeConfig.TenantId, routeConfig.Receiver.FragmentName)
+		if err != nil {
+			return err
 		}
+		if fragment.Plugin == "" {
+			return errors.New("fragment " + routeConfig.Receiver.FragmentName + " has no plugin type")
+		}
+		if fragment.Config == nil {
+			return errors.New("fragment " + routeConfig.Receiver.FragmentName + " has no config")
+		}
+		if routeConfig.Receiver.Plugin != "" && routeConfig.Receiver.Plugin != fragment.Plugin {
+			return errors.New("fragment type mismatch " + routeConfig.Receiver.Plugin + " vs " + fragment.Plugin)
+		}
+		if routeConfig.Receiver.Name != "" {
+			fragment.Name = routeConfig.Receiver.Name
+		}
+		routeConfig.Receiver = fragment
 	}
 	for idx, filter := range routeConfig.FilterChain {
-		if filter.Name != "" && filter.Config == nil {
-			fragment, err := r.fragmentMgr.GetFragment(ctx, routeConfig.TenantId, filter.Name)
-			if err == nil && fragment.Name != "" && fragment.Plugin != "" && fragment.Config != nil {
-				if filter.Plugin != "" && filter.Plugin != fragment.Plugin {
-					return errors.New("fragment type mismatch " + filter.Plugin + " vs " + fragment.Plugin)
-				}
-				routeConfig.FilterChain[idx] = fragment
+		if filter.FragmentName != "" {
+			fragment, err := r.fragmentMgr.GetFragment(ctx, routeConfig.TenantId, filter.FragmentName)
+			if err != nil {
+				return err
 			}
+			if fragment.Plugin == "" {
+				return errors.New("fragment " + filter.FragmentName + " has no plugin type")
+			}
+			if fragment.Config == nil {
+				return errors.New("fragment " + filter.FragmentName + " has no config")
+			}
+			if filter.Plugin != "" && filter.Plugin != fragment.Plugin {
+				return errors.New("fragment type mismatch " + filter.Plugin + " vs " + fragment.Plugin)
+			}
+			if filter.Name != "" {
+				fragment.Name = filter.Name
+			}
+			routeConfig.FilterChain[idx] = fragment
 		}
 	}
 	// use hashed ID if none is provided - this ID will be returned by the AddRoute REST API

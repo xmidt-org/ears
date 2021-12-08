@@ -1,6 +1,6 @@
 {
     "plugin": "debug",
-    "name": "debugSender",
+    "fragmentName": "debugSender",
     "config" : {
         "destination" : "stdout",
         "maxHistory": 100

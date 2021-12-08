@@ -95,7 +95,7 @@ func (s *InMemoryFragmentStorer) setFragment(tid tenant.Id, f route.PluginConfig
 	} else {
 		tenant = t
 	}
-	tenant[f.Name] = &f
+	tenant[f.FragmentName] = &f
 }
 
 func (s *InMemoryFragmentStorer) SetFragment(ctx context.Context, tid tenant.Id, r route.PluginConfig) error {

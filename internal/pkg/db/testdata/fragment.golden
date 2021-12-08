@@ -1,5 +1,5 @@
 {
   "plugin": "sqs",
-  "name": "mySqsSender",
-  "config": {}
+  "config": {},
+  "fragmentName": "mySqsSender"
 }
