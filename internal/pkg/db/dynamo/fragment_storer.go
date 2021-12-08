@@ -172,7 +172,7 @@ func (d *DynamoDbFragmentStorer) GetAllTenantFragments(ctx context.Context, tid 
 
 func (d *DynamoDbFragmentStorer) setFragment(ctx context.Context, tid tenant.Id, f route.PluginConfig, svc *dynamodb.DynamoDB) error {
 	fragment := fragmentItem{
-		KeyId:    tid.KeyWithFragment(f.Name),
+		KeyId:    tid.KeyWithFragment(f.FragmentName),
 		Config:   f,
 		TenantId: tid,
 	}

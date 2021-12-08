@@ -43,7 +43,7 @@ var fragmentTestCases = []FragmentTestCase{
 		`
 		{
 		  "plugin": "sqs",
-		  "name": "mySqsSender",
+		  "fragmentName": "mySqsSender",
 		  "config": {}
 		}
 		`,
@@ -57,7 +57,7 @@ var fragmentTestCases = []FragmentTestCase{
 		`
 		{
 		  "plugin": "sqs",
-		  "name": "mySqsSender",
+		  "fragmentName": "mySqsSender",
 		  "config": { "foo" : "bar" }
 		}
 		`,
@@ -71,7 +71,7 @@ var fragmentTestCases = []FragmentTestCase{
 		`
 		{
 		  "plugin": "sqs",
-		  "name": "mySqsSender",
+		  "fragmentName": "mySqsSender",
 		  "config": { }
 		}
 		`,
@@ -85,7 +85,7 @@ var fragmentTestCases = []FragmentTestCase{
 		`
 		{
 		  "plugin": "sqs",
-		  "name": "yourSqsSender",
+		  "fragmentName": "yourSqsSender",
 		  "config": { }
 		}
 		`,
@@ -99,7 +99,7 @@ var fragmentTestCases = []FragmentTestCase{
 		`
 		{
 		  "plugin": "sqs",
-		  "name": "herSqsSender",
+		  "fragmentName": "herSqsSender",
 		  "config": { }
 		}
 		`,
@@ -140,7 +140,7 @@ func testFragmentStorer(s fragments.FragmentStorer, t *testing.T) {
 		t.Fatalf("SetFragment error: %s\n", err.Error())
 	}
 
-	f, err = s.GetFragment(ctx, fragmentTestCases[0].tenantId, config.Name)
+	f, err = s.GetFragment(ctx, fragmentTestCases[0].tenantId, config.FragmentName)
 	if err != nil {
 		t.Fatalf("GetFragment test error: %s\n", err.Error())
 	}
@@ -172,7 +172,7 @@ func testFragmentStorer(s fragments.FragmentStorer, t *testing.T) {
 		t.Fatalf("SetFragment error: %s\n", err.Error())
 	}
 
-	f, err = s.GetFragment(ctx, fragmentTestCases[1].tenantId, config.Name)
+	f, err = s.GetFragment(ctx, fragmentTestCases[1].tenantId, config.FragmentName)
 	if err != nil {
 		t.Fatalf("GetFragment test error: %s\n", err.Error())
 	}

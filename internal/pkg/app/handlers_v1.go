@@ -473,17 +473,17 @@ func (a *APIManager) addFragmentHandler(w http.ResponseWriter, r *http.Request) 
 		resp.Respond(ctx, w)
 		return
 	}
-	if fragmentId != "" && fragmentConfig.Name != "" && fragmentId != fragmentConfig.Name {
+	if fragmentId != "" && fragmentConfig.FragmentName != "" && fragmentId != fragmentConfig.FragmentName {
 		err := &BadRequestError{"fragment name mismatch " + fragmentId + " vs " + fragmentConfig.Name, nil}
 		log.Ctx(ctx).Error().Str("op", "addFragmentHandler").Msg(err.Error())
 		resp := ErrorResponse(err)
 		resp.Respond(ctx, w)
 		return
 	}
-	if fragmentId != "" && fragmentConfig.Name == "" {
-		fragmentConfig.Name = fragmentId
+	if fragmentId != "" && fragmentConfig.FragmentName == "" {
+		fragmentConfig.FragmentName = fragmentId
 	}
-	if fragmentConfig.Name == "" {
+	if fragmentConfig.FragmentName == "" {
 		err := &BadRequestError{"missing fragment name", nil}
 		log.Ctx(ctx).Error().Str("op", "addFragmentHandler").Msg(err.Error())
 		resp := ErrorResponse(err)

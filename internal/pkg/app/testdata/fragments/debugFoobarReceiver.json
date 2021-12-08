@@ -1,6 +1,6 @@
 {
   "plugin": "debug",
-  "name": "debugFoobarReceiver",
+  "fragmentName": "debugFoobarReceiver",
   "config": {
     "rounds": 5,
     "intervalMs": 10,
