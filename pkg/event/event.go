@@ -44,6 +44,7 @@ type event struct {
 	ctx                context.Context
 	ack                ack.SubTree
 	tid                tenant.Id
+	eid                string
 	spanName           string
 	span               trace.Span //Only valid in the root event
 	tracePayloadOnNack bool
@@ -158,6 +159,13 @@ func WithTracePayloadOnNack(tracePayloadOnNack bool) EventOption {
 	}
 }
 
+func WithId(eid string) EventOption {
+	return func(e *event) error {
+		e.SetId(eid)
+		return nil
+	}
+}
+
 func WithMetadata(metadata map[string]interface{}) EventOption {
 	return func(e *event) error {
 		e.SetMetadata(metadata)
@@ -192,6 +200,18 @@ func WithOtelTracing(spanName string) EventOption {
 
 func (e *event) Created() time.Time {
 	return e.created
+}
+
+func (e *event) Id() string {
+	return e.eid
+}
+
+func (e *event) SetId(eid string) error {
+	if e.ack != nil && e.ack.IsAcked() {
+		return &ack.AlreadyAckedError{}
+	}
+	e.eid = eid
+	return nil
 }
 
 func (e *event) Payload() interface{} {
@@ -517,6 +537,7 @@ func (e *event) Clone(ctx context.Context) (Event, error) {
 		metadata: newMetadtaCopy,
 		ctx:      ctx,
 		ack:      subTree,
+		eid:      e.eid,
 		tid:      e.tid,
 		created:  e.created,
 	}, nil
