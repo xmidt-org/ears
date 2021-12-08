@@ -40,6 +40,9 @@ type Event interface {
 	//Get the event payload
 	Payload() interface{}
 
+	//Get event id
+	Id() string
+
 	//Get the event metadata
 	Metadata() map[string]interface{}
 
@@ -55,6 +58,9 @@ type Event interface {
 	//Set the event payload
 	//Will return an error if the event is done
 	SetPayload(payload interface{}) error
+
+	//Set event id
+	SetId(eid string) error
 
 	//Set the event metadata
 	//Will return an error if the event is done

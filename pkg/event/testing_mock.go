@@ -35,6 +35,9 @@ var _ Event = &EventMock{}
 // 			GetPathValueFunc: func(path string) (interface{}, interface{}, string) {
 // 				panic("mock out the GetPathValue method")
 // 			},
+// 			IdFunc: func() string {
+// 				panic("mock out the Id method")
+// 			},
 // 			MetadataFunc: func() map[string]interface{} {
 // 				panic("mock out the Metadata method")
 // 			},
@@ -46,6 +49,9 @@ var _ Event = &EventMock{}
 // 			},
 // 			SetContextFunc: func(ctx context.Context) error {
 // 				panic("mock out the SetContext method")
+// 			},
+// 			SetIdFunc: func(eid string) error {
+// 				panic("mock out the SetId method")
 // 			},
 // 			SetMetadataFunc: func(metadata map[string]interface{}) error {
 // 				panic("mock out the SetMetadata method")
@@ -81,6 +87,9 @@ type EventMock struct {
 	// GetPathValueFunc mocks the GetPathValue method.
 	GetPathValueFunc func(path string) (interface{}, interface{}, string)
 
+	// IdFunc mocks the Id method.
+	IdFunc func() string
+
 	// MetadataFunc mocks the Metadata method.
 	MetadataFunc func() map[string]interface{}
 
@@ -92,6 +101,9 @@ type EventMock struct {
 
 	// SetContextFunc mocks the SetContext method.
 	SetContextFunc func(ctx context.Context) error
+
+	// SetIdFunc mocks the SetId method.
+	SetIdFunc func(eid string) error
 
 	// SetMetadataFunc mocks the SetMetadata method.
 	SetMetadataFunc func(metadata map[string]interface{}) error
@@ -126,6 +138,9 @@ type EventMock struct {
 			// Path is the path argument value.
 			Path string
 		}
+		// Id holds details about calls to the Id method.
+		Id []struct {
+		}
 		// Metadata holds details about calls to the Metadata method.
 		Metadata []struct {
 		}
@@ -141,6 +156,11 @@ type EventMock struct {
 		SetContext []struct {
 			// Ctx is the ctx argument value.
 			Ctx context.Context
+		}
+		// SetId holds details about calls to the SetId method.
+		SetId []struct {
+			// Eid is the eid argument value.
+			Eid string
 		}
 		// SetMetadata holds details about calls to the SetMetadata method.
 		SetMetadata []struct {
@@ -170,10 +190,12 @@ type EventMock struct {
 	lockContext      sync.RWMutex
 	lockCreated      sync.RWMutex
 	lockGetPathValue sync.RWMutex
+	lockId           sync.RWMutex
 	lockMetadata     sync.RWMutex
 	lockNack         sync.RWMutex
 	lockPayload      sync.RWMutex
 	lockSetContext   sync.RWMutex
+	lockSetId        sync.RWMutex
 	lockSetMetadata  sync.RWMutex
 	lockSetPathValue sync.RWMutex
 	lockSetPayload   sync.RWMutex
@@ -320,6 +342,32 @@ func (mock *EventMock) GetPathValueCalls() []struct {
 	return calls
 }
 
+// Id calls IdFunc.
+func (mock *EventMock) Id() string {
+	if mock.IdFunc == nil {
+		panic("EventMock.IdFunc: method is nil but Event.Id was just called")
+	}
+	callInfo := struct {
+	}{}
+	mock.lockId.Lock()
+	mock.calls.Id = append(mock.calls.Id, callInfo)
+	mock.lockId.Unlock()
+	return mock.IdFunc()
+}
+
+// IdCalls gets all the calls that were made to Id.
+// Check the length with:
+//     len(mockedEvent.IdCalls())
+func (mock *EventMock) IdCalls() []struct {
+} {
+	var calls []struct {
+	}
+	mock.lockId.RLock()
+	calls = mock.calls.Id
+	mock.lockId.RUnlock()
+	return calls
+}
+
 // Metadata calls MetadataFunc.
 func (mock *EventMock) Metadata() map[string]interface{} {
 	if mock.MetadataFunc == nil {
@@ -431,6 +479,37 @@ func (mock *EventMock) SetContextCalls() []struct {
 	mock.lockSetContext.RLock()
 	calls = mock.calls.SetContext
 	mock.lockSetContext.RUnlock()
+	return calls
+}
+
+// SetId calls SetIdFunc.
+func (mock *EventMock) SetId(eid string) error {
+	if mock.SetIdFunc == nil {
+		panic("EventMock.SetIdFunc: method is nil but Event.SetId was just called")
+	}
+	callInfo := struct {
+		Eid string
+	}{
+		Eid: eid,
+	}
+	mock.lockSetId.Lock()
+	mock.calls.SetId = append(mock.calls.SetId, callInfo)
+	mock.lockSetId.Unlock()
+	return mock.SetIdFunc(eid)
+}
+
+// SetIdCalls gets all the calls that were made to SetId.
+// Check the length with:
+//     len(mockedEvent.SetIdCalls())
+func (mock *EventMock) SetIdCalls() []struct {
+	Eid string
+} {
+	var calls []struct {
+		Eid string
+	}
+	mock.lockSetId.RLock()
+	calls = mock.calls.SetId
+	mock.lockSetId.RUnlock()
 	return calls
 }
 
