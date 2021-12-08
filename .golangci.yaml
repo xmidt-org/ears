@@ -170,3 +170,6 @@ issues:
       text: "SA1029"
       linters:
         - staticcheck
+    - path: internal/pkg/tablemgr/routing_table_manager\.go
+      linters:
+        - funlen
