@@ -35,6 +35,9 @@ var _ Event = &EventMock{}
 // 			GetPathValueFunc: func(path string) (interface{}, interface{}, string) {
 // 				panic("mock out the GetPathValue method")
 // 			},
+// 			IdFunc: func() string {
+// 				panic("mock out the Id method")
+// 			},
 // 			MetadataFunc: func() map[string]interface{} {
 // 				panic("mock out the Metadata method")
 // 			},
@@ -81,6 +84,9 @@ type EventMock struct {
 	// GetPathValueFunc mocks the GetPathValue method.
 	GetPathValueFunc func(path string) (interface{}, interface{}, string)
 
+	// IdFunc mocks the Id method.
+	IdFunc func() string
+
 	// MetadataFunc mocks the Metadata method.
 	MetadataFunc func() map[string]interface{}
 
@@ -126,6 +132,9 @@ type EventMock struct {
 			// Path is the path argument value.
 			Path string
 		}
+		// Id holds details about calls to the Id method.
+		Id []struct {
+		}
 		// Metadata holds details about calls to the Metadata method.
 		Metadata []struct {
 		}
@@ -170,6 +179,7 @@ type EventMock struct {
 	lockContext      sync.RWMutex
 	lockCreated      sync.RWMutex
 	lockGetPathValue sync.RWMutex
+	lockId           sync.RWMutex
 	lockMetadata     sync.RWMutex
 	lockNack         sync.RWMutex
 	lockPayload      sync.RWMutex
@@ -317,6 +327,32 @@ func (mock *EventMock) GetPathValueCalls() []struct {
 	mock.lockGetPathValue.RLock()
 	calls = mock.calls.GetPathValue
 	mock.lockGetPathValue.RUnlock()
+	return calls
+}
+
+// Id calls IdFunc.
+func (mock *EventMock) Id() string {
+	if mock.IdFunc == nil {
+		panic("EventMock.IdFunc: method is nil but Event.Id was just called")
+	}
+	callInfo := struct {
+	}{}
+	mock.lockId.Lock()
+	mock.calls.Id = append(mock.calls.Id, callInfo)
+	mock.lockId.Unlock()
+	return mock.IdFunc()
+}
+
+// IdCalls gets all the calls that were made to Id.
+// Check the length with:
+//     len(mockedEvent.IdCalls())
+func (mock *EventMock) IdCalls() []struct {
+} {
+	var calls []struct {
+	}
+	mock.lockId.RLock()
+	calls = mock.calls.Id
+	mock.lockId.RUnlock()
 	return calls
 }
 
