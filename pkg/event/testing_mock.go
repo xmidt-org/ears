@@ -50,9 +50,6 @@ var _ Event = &EventMock{}
 // 			SetContextFunc: func(ctx context.Context) error {
 // 				panic("mock out the SetContext method")
 // 			},
-// 			SetIdFunc: func(eid string) error {
-// 				panic("mock out the SetId method")
-// 			},
 // 			SetMetadataFunc: func(metadata map[string]interface{}) error {
 // 				panic("mock out the SetMetadata method")
 // 			},
@@ -101,9 +98,6 @@ type EventMock struct {
 
 	// SetContextFunc mocks the SetContext method.
 	SetContextFunc func(ctx context.Context) error
-
-	// SetIdFunc mocks the SetId method.
-	SetIdFunc func(eid string) error
 
 	// SetMetadataFunc mocks the SetMetadata method.
 	SetMetadataFunc func(metadata map[string]interface{}) error
@@ -157,11 +151,6 @@ type EventMock struct {
 			// Ctx is the ctx argument value.
 			Ctx context.Context
 		}
-		// SetId holds details about calls to the SetId method.
-		SetId []struct {
-			// Eid is the eid argument value.
-			Eid string
-		}
 		// SetMetadata holds details about calls to the SetMetadata method.
 		SetMetadata []struct {
 			// Metadata is the metadata argument value.
@@ -195,7 +184,6 @@ type EventMock struct {
 	lockNack         sync.RWMutex
 	lockPayload      sync.RWMutex
 	lockSetContext   sync.RWMutex
-	lockSetId        sync.RWMutex
 	lockSetMetadata  sync.RWMutex
 	lockSetPathValue sync.RWMutex
 	lockSetPayload   sync.RWMutex
@@ -479,37 +467,6 @@ func (mock *EventMock) SetContextCalls() []struct {
 	mock.lockSetContext.RLock()
 	calls = mock.calls.SetContext
 	mock.lockSetContext.RUnlock()
-	return calls
-}
-
-// SetId calls SetIdFunc.
-func (mock *EventMock) SetId(eid string) error {
-	if mock.SetIdFunc == nil {
-		panic("EventMock.SetIdFunc: method is nil but Event.SetId was just called")
-	}
-	callInfo := struct {
-		Eid string
-	}{
-		Eid: eid,
-	}
-	mock.lockSetId.Lock()
-	mock.calls.SetId = append(mock.calls.SetId, callInfo)
-	mock.lockSetId.Unlock()
-	return mock.SetIdFunc(eid)
-}
-
-// SetIdCalls gets all the calls that were made to SetId.
-// Check the length with:
-//     len(mockedEvent.SetIdCalls())
-func (mock *EventMock) SetIdCalls() []struct {
-	Eid string
-} {
-	var calls []struct {
-		Eid string
-	}
-	mock.lockSetId.RLock()
-	calls = mock.calls.SetId
-	mock.lockSetId.RUnlock()
 	return calls
 }
 
