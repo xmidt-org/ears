@@ -40,6 +40,9 @@ type Event interface {
 	//Get the event payload
 	Payload() interface{}
 
+	//Get event id
+	Id() string
+
 	//Get the event metadata
 	Metadata() map[string]interface{}
 
