@@ -59,9 +59,6 @@ type Event interface {
 	//Will return an error if the event is done
 	SetPayload(payload interface{}) error
 
-	//Set event id
-	SetId(eid string) error
-
 	//Set the event metadata
 	//Will return an error if the event is done
 	SetMetadata(metadata map[string]interface{}) error

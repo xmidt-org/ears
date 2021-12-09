@@ -76,6 +76,7 @@ func New(ctx context.Context, payload interface{}, options ...EventOption) (Even
 		ack:     nil,
 		tid:     tenant.Id{OrgId: "", AppId: ""},
 		created: time.Now(),
+		eid:     uuid.New().String(),
 	}
 	for _, option := range options {
 		err := option(e)
@@ -161,7 +162,7 @@ func WithTracePayloadOnNack(tracePayloadOnNack bool) EventOption {
 
 func WithId(eid string) EventOption {
 	return func(e *event) error {
-		e.SetId(eid)
+		e.eid = eid
 		return nil
 	}
 }
@@ -204,14 +205,6 @@ func (e *event) Created() time.Time {
 
 func (e *event) Id() string {
 	return e.eid
-}
-
-func (e *event) SetId(eid string) error {
-	if e.ack != nil && e.ack.IsAcked() {
-		return &ack.AlreadyAckedError{}
-	}
-	e.eid = eid
-	return nil
 }
 
 func (e *event) Payload() interface{} {

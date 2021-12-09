@@ -23,7 +23,6 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/sqs"
 	"github.com/goccy/go-yaml"
-	"github.com/google/uuid"
 	"github.com/rs/zerolog/log"
 	"github.com/xmidt-org/ears/internal/pkg/rtsemconv"
 	"github.com/xmidt-org/ears/pkg/event"
@@ -188,7 +187,6 @@ func (s *Sender) send(events []event.Event) {
 		if err != nil {
 			continue
 		}
-		evt.SetId(uuid.New().String())
 		attributes := make(map[string]*sqs.MessageAttributeValue)
 		entry := &sqs.SendMessageBatchRequestEntry{
 			Id:          aws.String(evt.Id()),
