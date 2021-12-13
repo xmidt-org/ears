@@ -140,7 +140,7 @@ func evalStr(evt event.Event, tt string) string {
 }
 
 func hitEndpoint(ctx context.Context, url string, payload string, verb string, headers map[string]string, auth map[string]string) (string, int, error) {
-	req, err := http.NewRequest(verb, url, bytes.NewBuffer([]byte(payload)))
+	req, err := http.NewRequestWithContext(ctx, verb, url, bytes.NewBuffer([]byte(payload)))
 	if err != nil {
 		return "", 0, err
 	}
