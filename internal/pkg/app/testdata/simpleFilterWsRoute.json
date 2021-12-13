@@ -1,0 +1,44 @@
+{
+  "id" : "f110",
+  "userId" : "boris",
+  "name" : "simpleFilterWsRoute",
+  "receiver" : {
+    "plugin" : "debug",
+    "name" : "simpleFilterUnwrapRouteReceiver",
+    "config" :
+    {
+      "rounds" : 5,
+      "intervalMs" : 10,
+      "payload" : {
+        "foo": "bar"
+      },
+      "maxHistory": 100
+    }
+  },
+  "sender" : {
+    "plugin" : "debug",
+    "name" : "simpleFilterWsRouteSender",
+    "config" : {
+      "destination" : "stdout",
+      "maxHistory": 100
+    }
+  },
+  "filterChain" : [
+    {
+      "plugin" : "ws",
+      "name" : "simpleFilterWsRouteWser",
+      "config" : {
+        "url" : "http://echo.jsontest.com/key/value/one/two",
+        "method" : "GET",
+        "path" : ".value",
+        "auth" : {
+          "type" : "basic",
+          "username" : "mysuer",
+          "password" : "secret://mypassword"
+        }
+      }
+    }
+  ],
+  "deliveryMode" : "atLeastOnce"
+}
+
