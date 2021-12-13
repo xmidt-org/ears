@@ -52,6 +52,9 @@ func (c Config) WithDefaults() *Config {
 	if c.EmptyPathValueRequired == nil {
 		cfg.EmptyPathValueRequired = DefaultConfig.EmptyPathValueRequired
 	}
+	if c.Auth == nil {
+		cfg.Auth = DefaultConfig.Auth
+	}
 	return &cfg
 }
 
