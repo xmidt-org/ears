@@ -46,6 +46,20 @@ func NewFilter(tid tenant.Id, plugin string, name string, config interface{}, se
 		plugin: plugin,
 		tid:    tid,
 	}
+	meter := global.Meter(rtsemconv.EARSMeterName)
+	commonLabels := []attribute.KeyValue{
+		attribute.String(rtsemconv.EARSPluginTypeLabel, rtsemconv.EARSPluginTypeMetricFilter),
+		attribute.String(rtsemconv.EARSPluginNameLabel, f.Name()),
+		attribute.String(rtsemconv.EARSAppIdLabel, f.tid.AppId),
+		attribute.String(rtsemconv.EARSOrgIdLabel, f.tid.OrgId),
+	}
+	metricName := f.config.Prefix + f.config.Name
+	m := metric.Must(meter).
+		NewInt64Counter(
+			metricName,
+			metric.WithDescription("measures custom metric"),
+		).Bind(commonLabels...)
+	f.metric = &m
 	return f, nil
 }
 
@@ -56,22 +70,6 @@ func (f *Filter) Filter(evt event.Event) []event.Event {
 			Err: fmt.Errorf("<nil> pointer filter"),
 		})
 		return nil
-	}
-	if f.metric == nil {
-		meter := global.Meter(rtsemconv.EARSMeterName)
-		commonLabels := []attribute.KeyValue{
-			attribute.String(rtsemconv.EARSPluginTypeLabel, rtsemconv.EARSPluginTypeMetricFilter),
-			attribute.String(rtsemconv.EARSPluginNameLabel, f.Name()),
-			attribute.String(rtsemconv.EARSAppIdLabel, f.tid.AppId),
-			attribute.String(rtsemconv.EARSOrgIdLabel, f.tid.OrgId),
-		}
-		metricName := f.config.Prefix + f.config.Name
-		m := metric.Must(meter).
-			NewInt64Counter(
-				metricName,
-				metric.WithDescription("measures custom metric"),
-			).Bind(commonLabels...)
-		f.metric = &m
 	}
 	f.metric.Add(evt.Context(), 1)
 	return []event.Event{evt}
