@@ -15,6 +15,7 @@
 package ws
 
 import (
+	"github.com/xmidt-org/ears/pkg/secret"
 	"github.com/xmidt-org/ears/pkg/tenant"
 	"github.com/xorcare/pointer"
 )
@@ -28,6 +29,13 @@ type Config struct {
 	Body                   string            `json:"body,omitempty"`
 	Headers                map[string]string `json:"headers,omitempty"`
 	EmptyPathValueRequired *bool             `json:"emptyPathValueRequired,omitempty"`
+	Auth                   *Auth             `json:"auth,omitempty"`
+}
+
+type Auth struct {
+	Type     string `json:"type,omitempty"`
+	Username string `json:"username,omitempty"`
+	Password string `json:"password,omitempty"`
 }
 
 var DefaultConfig = Config{
@@ -37,11 +45,13 @@ var DefaultConfig = Config{
 	Body:                   "",
 	Headers:                map[string]string{},
 	EmptyPathValueRequired: pointer.Bool(false),
+	Auth:                   &Auth{},
 }
 
 type Filter struct {
-	config Config
-	name   string
-	plugin string
-	tid    tenant.Id
+	config  Config
+	name    string
+	plugin  string
+	tid     tenant.Id
+	secrets secret.Vault
 }

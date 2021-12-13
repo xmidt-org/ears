@@ -38,6 +38,10 @@ var (
 	client *http.Client
 )
 
+const (
+	HTTP_AUTH_TYPE_BASIC = "basic"
+)
+
 func NewFilter(tid tenant.Id, plugin string, name string, config interface{}, secrets secret.Vault) (*Filter, error) {
 	cfg, err := NewConfig(config)
 	if err != nil {
@@ -51,10 +55,11 @@ func NewFilter(tid tenant.Id, plugin string, name string, config interface{}, se
 		return nil, err
 	}
 	f := &Filter{
-		config: *cfg,
-		name:   name,
-		plugin: plugin,
-		tid:    tid,
+		config:  *cfg,
+		name:    name,
+		plugin:  plugin,
+		tid:     tid,
+		secrets: secrets,
 	}
 	return f, nil
 }
@@ -73,7 +78,7 @@ func (f *Filter) Filter(evt event.Event) []event.Event {
 		}
 	}
 	// execute http request
-	res, _, err := hitEndpoint(evt.Context(), evalStr(evt, f.config.Url), evalStr(evt, f.config.Body), evalStr(evt, f.config.Method), f.config.Headers, map[string]string{})
+	res, _, err := f.hitEndpoint(evt.Context(), evt)
 	if err != nil {
 		evt.Nack(err)
 		return []event.Event{}
@@ -108,7 +113,7 @@ func (f *Filter) Tenant() tenant.Id {
 	return f.tid
 }
 
-func evalStr(evt event.Event, tt string) string {
+func (f *Filter) evalStr(evt event.Event, tt string) string {
 	for {
 		si := strings.Index(tt, "{")
 		ei := strings.Index(tt, "}")
@@ -139,7 +144,11 @@ func evalStr(evt event.Event, tt string) string {
 	return tt
 }
 
-func hitEndpoint(ctx context.Context, url string, payload string, verb string, headers map[string]string, auth map[string]string) (string, int, error) {
+func (f *Filter) hitEndpoint(ctx context.Context, evt event.Event) (string, int, error) {
+	url := f.evalStr(evt, f.config.Url)
+	payload := f.evalStr(evt, f.config.Body)
+	verb := f.evalStr(evt, f.config.Method)
+	headers := f.config.Headers
 	req, err := http.NewRequestWithContext(ctx, verb, url, bytes.NewBuffer([]byte(payload)))
 	if err != nil {
 		return "", 0, err
@@ -154,10 +163,10 @@ func hitEndpoint(ctx context.Context, url string, payload string, verb string, h
 	for hk, hv := range headers {
 		req.Header.Set(hk, hv)
 	}
-	if auth != nil {
-		if auth["type"] == "basic" {
-			req.SetBasicAuth(auth["username"], auth["password"])
-		}
+	//TODO: support SAT and OAuth
+	if f.config.Auth.Type == HTTP_AUTH_TYPE_BASIC {
+		password := f.secrets.Secret(f.config.Auth.Password)
+		req.SetBasicAuth(f.config.Auth.Username, password)
 	}
 	// send request
 	resp, err := client.Do(req)
