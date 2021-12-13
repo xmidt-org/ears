@@ -28,8 +28,8 @@ ears:
       region: us-west-2
       tableName: bw.ears.routes
     fragment:
-      #type: inmemory
-      type: dynamodb
+      #type: dynamodb
+      type: inmemory
       region: us-west-2
       tableName: dev.ears.fragments
     tenant:
