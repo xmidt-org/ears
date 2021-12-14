@@ -21,5 +21,10 @@
       "maxHistory": 1000
     }
   },
+  "filterChain": [
+    {
+      "plugin": "log"
+    }
+  ],
   "deliveryMode": "atLeastOnce"
 }

@@ -126,6 +126,15 @@ func (h *Receiver) Receive(next receiver.NextFn) error {
 		h.eventBytesCounter.Add(ctx, int64(len(b)))
 		var wg sync.WaitGroup
 		wg.Add(1)
+		name := h.name
+		if name == "" {
+			name = "http"
+		}
+		metadata := map[string]interface{}{name: map[string]interface{}{
+			"path":         r.URL.Path,
+			"relativePath": r.URL.Path[len(h.config.Path):],
+			"method":       r.Method,
+		}}
 		event, err := event.New(ctx, body,
 			event.WithAck(
 				func(e event.Event) {
@@ -166,6 +175,7 @@ func (h *Receiver) Receive(next receiver.NextFn) error {
 			event.WithTenant(h.Tenant()),
 			event.WithOtelTracing(h.Name()),
 			event.WithTracePayloadOnNack(*h.config.TracePayloadOnNack),
+			event.WithMetadata(metadata),
 		)
 		if err != nil {
 			h.logger.Error().Str("error", err.Error()).Msg("error creating event")
