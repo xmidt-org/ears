@@ -77,8 +77,9 @@ type ReceiverConfig struct {
 }
 
 var DefaultReceiverConfig = ReceiverConfig{
-	SuccessStatus: pointer.Int(200),
-	FailureStatus: pointer.Int(400),
+	SuccessStatus:      pointer.Int(200),
+	FailureStatus:      pointer.Int(400),
+	TracePayloadOnNack: pointer.Bool(false),
 }
 
 type Receiver struct {
