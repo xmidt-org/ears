@@ -28,6 +28,9 @@ linters:
 
 issues:
   exclude-rules:
+    - path: internal/pkg/db/dynamo/fragment_storer\.go
+      linters:
+        - dupl
     - path: _test\.go
       linters:
         - dupl
@@ -147,6 +150,10 @@ issues:
       text: "G404: Use of weak random number generator"
       linters:
         - gosec
+    - path: pkg/filter/sample/sample\.go
+      text: "G404: Use of weak random number generator"
+      linters:
+        - gosec
     - path: internal/pkg/aws/s3/client\.go
       text: "type assertion on error"
       linters:
@@ -163,3 +170,6 @@ issues:
       text: "SA1029"
       linters:
         - staticcheck
+    - path: internal/pkg/tablemgr/routing_table_manager\.go
+      linters:
+        - funlen

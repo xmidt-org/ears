@@ -34,6 +34,8 @@ const (
 	EARSPluginTypeHttpSender    = "httpSender"
 	EARSPluginTypeRedisSender   = "redisSender"
 
+	EARSPluginTypeMetricFilter = "metricFilter"
+
 	EARSPluginTypeDebugReceiver   = "debugReceiver"
 	EARSPluginTypeSQSReceiver     = "sqsReceiver"
 	EARSPluginTypeKinesisReceiver = "kinesisReceiver"
@@ -53,7 +55,8 @@ const (
 	EARSMetricRemoveRouteFailure  = "ears.removeRouteFailure"
 	EARSMetricMillisBehindLatest  = "ears.millisBehindLatest"
 
-	EARSRouteId = attribute.Key("ears.routeId")
+	EARSRouteId    = attribute.Key("ears.routeId")
+	EARSFragmentId = attribute.Key("ears.fragmentId")
 
 	EARSAppId = attribute.Key("ears.appId")
 	EARSOrgId = attribute.Key("ears.orgId")

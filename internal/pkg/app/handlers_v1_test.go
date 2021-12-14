@@ -49,16 +49,19 @@ import (
 	plog "github.com/xmidt-org/ears/pkg/plugins/log"
 	"github.com/xmidt-org/ears/pkg/plugins/mapping"
 	"github.com/xmidt-org/ears/pkg/plugins/match"
+	"github.com/xmidt-org/ears/pkg/plugins/metric"
 	"github.com/xmidt-org/ears/pkg/plugins/pass"
 	goredis "github.com/xmidt-org/ears/pkg/plugins/redis"
 	"github.com/xmidt-org/ears/pkg/plugins/regex"
 	"github.com/xmidt-org/ears/pkg/plugins/s3"
+	"github.com/xmidt-org/ears/pkg/plugins/sample"
 	"github.com/xmidt-org/ears/pkg/plugins/split"
 	"github.com/xmidt-org/ears/pkg/plugins/sqs"
 	"github.com/xmidt-org/ears/pkg/plugins/trace"
 	"github.com/xmidt-org/ears/pkg/plugins/transform"
 	"github.com/xmidt-org/ears/pkg/plugins/ttl"
 	"github.com/xmidt-org/ears/pkg/plugins/unwrap"
+	"github.com/xmidt-org/ears/pkg/plugins/ws"
 	"github.com/xmidt-org/ears/pkg/route"
 	"github.com/xmidt-org/ears/pkg/tenant"
 	"io/ioutil"
@@ -526,6 +529,18 @@ func setupRestApi(config config.Config, storageMgr route.RouteStorer, setupQuota
 			plugin: toArr(js.NewPluginVersion("js", "", ""))[0].(pkgplugin.Pluginer),
 		},
 		{
+			name:   "ws",
+			plugin: toArr(ws.NewPluginVersion("ws", "", ""))[0].(pkgplugin.Pluginer),
+		},
+		{
+			name:   "sample",
+			plugin: toArr(sample.NewPluginVersion("sample", "", ""))[0].(pkgplugin.Pluginer),
+		},
+		{
+			name:   "metric",
+			plugin: toArr(metric.NewPluginVersion("metric", "", ""))[0].(pkgplugin.Pluginer),
+		},
+		{
 			name:   "dedup",
 			plugin: toArr(dedup.NewPluginVersion("dedup", "", ""))[0].(pkgplugin.Pluginer),
 		},
@@ -588,7 +603,7 @@ func setupRestApi(config config.Config, storageMgr route.RouteStorer, setupQuota
 	if err != nil {
 		return &EarsRuntime{config, nil, nil, storageMgr, nil, nil}, err
 	}
-	routingMgr := tablemgr.NewRoutingTableManager(pluginMgr, storageMgr, tableSyncer, &log.Logger, config)
+	routingMgr := tablemgr.NewRoutingTableManager(pluginMgr, storageMgr, db.NewInMemoryFragmentStorer(config), tableSyncer, &log.Logger, config)
 	tenantStorer := db.NewTenantInmemoryStorer()
 	ctx := context.Background()
 	ctx = log.Logger.WithContext(ctx)
@@ -1504,4 +1519,54 @@ func TestTenantConfig(t *testing.T) {
 			return
 		}
 	}
+}
+
+func TestRestGetRouteWithFragmentsHandler(t *testing.T) {
+	runtime := setupSimpleApi(t, "inmemory")
+	// load fragments
+	fragmentFileName := "testdata/fragments/debugSender.json"
+	simpleFragmentReader, err := os.Open(fragmentFileName)
+	if err != nil {
+		t.Fatalf("cannot read file: %s", err.Error())
+	}
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest(http.MethodPost, "/ears/v1"+tenantPath+"/fragments", simpleFragmentReader)
+	runtime.apiManager.muxRouter.ServeHTTP(w, r)
+	fragmentFileName = "testdata/fragments/debugFoobarReceiver.json"
+	simpleFragmentReader, err = os.Open(fragmentFileName)
+	if err != nil {
+		t.Fatalf("cannot read file: %s", err.Error())
+	}
+	w = httptest.NewRecorder()
+	r = httptest.NewRequest(http.MethodPost, "/ears/v1"+tenantPath+"/fragments", simpleFragmentReader)
+	runtime.apiManager.muxRouter.ServeHTTP(w, r)
+	// add route
+	routeFileName := "testdata/fragments/route.json"
+	simpleRouteReader, err := os.Open(routeFileName)
+	if err != nil {
+		t.Fatalf("cannot read file: %s", err.Error())
+	}
+	w = httptest.NewRecorder()
+	r = httptest.NewRequest(http.MethodPost, "/ears/v1"+tenantPath+"/routes", simpleRouteReader)
+	runtime.apiManager.muxRouter.ServeHTTP(w, r)
+	// get route
+	w = httptest.NewRecorder()
+	r = httptest.NewRequest(http.MethodGet, "/ears/v1"+tenantPath+"/routes/fragment101", nil)
+	runtime.apiManager.muxRouter.ServeHTTP(w, r)
+	g := goldie.New(t)
+	var data map[string]interface{}
+	err = json.Unmarshal(w.Body.Bytes(), &data)
+	if err != nil {
+		t.Fatalf("cannot unmarshal response %s into json %s", w.Body.String(), err.Error())
+	}
+	item := data["item"].(map[string]interface{})
+	delete(item, "created")
+	delete(item, "modified")
+	g.AssertJson(t, "getfragmentroute", data)
+	// delete routes
+	rtId := "fragment101"
+	r = httptest.NewRequest(http.MethodDelete, "/ears/v1"+tenantPath+"/routes/"+rtId, nil)
+	w = httptest.NewRecorder()
+	runtime.apiManager.muxRouter.ServeHTTP(w, r)
+	t.Logf("deleted route with id: %s", rtId)
 }

@@ -26,7 +26,7 @@ import (
 
 func TestFilterHashBasic(t *testing.T) {
 	ctx := context.Background()
-	f, err := regex.NewFilter(tenant.Id{AppId: "myapp", OrgId: "myorg"}, "match", "mymatch", regex.Config{
+	f, err := regex.NewFilter(tenant.Id{AppId: "myapp", OrgId: "myorg"}, "regex", "myregex", regex.Config{
 		FromPath: ".foo",
 		ToPath:   ".regex",
 		Regex:    "[\\w]+$",

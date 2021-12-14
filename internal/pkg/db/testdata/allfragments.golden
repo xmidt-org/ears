@@ -1,0 +1,14 @@
+[
+  {
+    "plugin": "sqs",
+    "name": "mySqsSender",
+    "config": {
+      "foo": "bar"
+    }
+  },
+  {
+    "plugin": "sqs",
+    "name": "mySqsSender",
+    "config": {}
+  }
+]

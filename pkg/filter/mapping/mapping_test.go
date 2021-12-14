@@ -26,7 +26,7 @@ import (
 
 func TestFilterMappingBasic(t *testing.T) {
 	ctx := context.Background()
-	f, err := mapping.NewFilter(tenant.Id{AppId: "myapp", OrgId: "myorg"}, "match", "mymatch", mapping.Config{
+	f, err := mapping.NewFilter(tenant.Id{AppId: "myapp", OrgId: "myorg"}, "mapping", "mymapping", mapping.Config{
 		Path:         ".foo",
 		ArrayPath:    "",
 		Map:          []mapping.FromTo{mapping.FromTo{From: "bar", To: true}},

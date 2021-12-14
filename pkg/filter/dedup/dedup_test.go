@@ -26,7 +26,7 @@ import (
 
 func TestFilterDedupBasic(t *testing.T) {
 	ctx := context.Background()
-	f, err := dedup.NewFilter(tenant.Id{AppId: "myapp", OrgId: "myorg"}, "match", "mymatch", dedup.Config{}, nil)
+	f, err := dedup.NewFilter(tenant.Id{AppId: "myapp", OrgId: "myorg"}, "dedup", "mydedup", dedup.Config{}, nil)
 	if err != nil {
 		t.Fatalf("dedup test failed: %s\n", err.Error())
 	}

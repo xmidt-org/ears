@@ -26,7 +26,7 @@ import (
 
 func TestFilterDecodeBasic(t *testing.T) {
 	ctx := context.Background()
-	f, err := decode.NewFilter(tenant.Id{AppId: "myapp", OrgId: "myorg"}, "match", "mymatch", decode.Config{
+	f, err := decode.NewFilter(tenant.Id{AppId: "myapp", OrgId: "myorg"}, "decode", "mydecode", decode.Config{
 		FromPath: ".value",
 		ToPath:   ".",
 	}, nil)

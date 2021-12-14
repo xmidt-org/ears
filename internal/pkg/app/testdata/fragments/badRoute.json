@@ -1,0 +1,25 @@
+{
+  "id" : "fragment102",
+  "userId" : "boris",
+  "name" : "simpleRegexFilterRoute",
+  "receiver" : {
+    "plugin" : "debug",
+    "fragmentName" : "doesNotExist"
+  },
+  "sender" : {
+    "plugin" : "debug",
+    "fragmentName" : "debugSender"
+  },
+  "filterChain" : [
+    {
+      "plugin" : "regex",
+      "name" : "simpleRegexFilterRouteFilter",
+      "config" : {
+        "fromPath" : ".content",
+        "toPath" : ".regexedContent",
+        "regex" : "[0-9]+"
+      }
+    }
+  ],
+  "deliveryMode" : "atLeastOnce"
+}

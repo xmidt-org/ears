@@ -26,7 +26,7 @@ import (
 
 func TestFilterHashBasic(t *testing.T) {
 	ctx := context.Background()
-	f, err := hash.NewFilter(tenant.Id{AppId: "myapp", OrgId: "myorg"}, "match", "mymatch", hash.Config{
+	f, err := hash.NewFilter(tenant.Id{AppId: "myapp", OrgId: "myorg"}, "hash", "myhash", hash.Config{
 		FromPath:      ".foo",
 		ToPath:        ".hash",
 		HashAlgorithm: "sha1",
