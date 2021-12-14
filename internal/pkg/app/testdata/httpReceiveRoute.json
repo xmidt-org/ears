@@ -8,7 +8,7 @@
     "plugin": "http",
     "name": "myHttpReceiver",
     "config": {
-      "path": "/ears/v1/webhook",
+      "path": "/ears/v1/webhook/",
       "method": "POST",
       "port": 8888
     }
