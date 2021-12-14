@@ -28,6 +28,9 @@ func (rc *ReceiverConfig) WithDefaults() ReceiverConfig {
 	if cfg.FailureStatus == nil {
 		cfg.FailureStatus = DefaultReceiverConfig.FailureStatus
 	}
+	if cfg.TracePayloadOnNack == nil {
+		cfg.TracePayloadOnNack = DefaultReceiverConfig.TracePayloadOnNack
+	}
 	return cfg
 }
 
@@ -68,6 +71,16 @@ const receiverSchema = `
 				"tracePayloadOnNack" : {
 					"type": "boolean",
 					"default": false
+				},
+				"successStatus": {
+                    "type": "integer", 
+					"minimum": 200,
+					"maximum": 599
+				},
+				"failureStatus": {
+                    "type": "integer", 
+					"minimum": 200,
+					"maximum": 599
 				}
             },
             "required": [

@@ -33,6 +33,9 @@ import (
 	"go.opentelemetry.io/otel/trace"
 	"io/ioutil"
 	"net/http"
+	"strings"
+	"sync"
+	"time"
 )
 
 func NewReceiver(tid tenant.Id, plugin string, name string, config interface{}, secrets secret.Vault) (receiver.Receiver, error) {
@@ -100,9 +103,13 @@ func (h *Receiver) GetTraceId(r *http.Request) string {
 func (h *Receiver) Receive(next receiver.NextFn) error {
 	mux := http.NewServeMux()
 	port := *h.config.Port
-	h.logger.Info().Int("port", port).Msg("starting http receiver")
+	h.logger.Info().Int("port", port).Str("path", h.config.Path).Msg("starting http receiver")
 	h.srv = &http.Server{Addr: fmt.Sprintf(":%d", port), Handler: mux}
 	mux.HandleFunc(h.config.Path, func(w http.ResponseWriter, r *http.Request) {
+		if h.config.Method != "" && !strings.EqualFold(h.config.Method, strings.ToLower(r.Method)) {
+			h.logger.Error().Str("method", r.Method).Msg("unexpected method error")
+			return
+		}
 		b, err := ioutil.ReadAll(r.Body)
 		defer r.Body.Close()
 		if err != nil {
@@ -115,14 +122,16 @@ func (h *Receiver) Receive(next receiver.NextFn) error {
 			h.logger.Error().Str("error", err.Error()).Msg("error unmarshalling body")
 			return
 		}
-		ctx := context.Background() // acknowledge timeout?
+		ctx, cancel := context.WithTimeout(context.Background(), time.Duration(5)*time.Second)
 		h.eventBytesCounter.Add(ctx, int64(len(b)))
+		var wg sync.WaitGroup
+		wg.Add(1)
 		event, err := event.New(ctx, body,
 			event.WithAck(
 				func(e event.Event) {
-					w.WriteHeader(*h.config.SuccessStatus)
 					w.Header().Set("Content-Type", "application/json")
 					w.Header().Set("User-Agent", "ears")
+					w.WriteHeader(*h.config.SuccessStatus)
 					resp := Response{
 						Status: &Status{
 							Code: *h.config.SuccessStatus,
@@ -131,13 +140,14 @@ func (h *Receiver) Receive(next receiver.NextFn) error {
 							TraceId: trace.SpanFromContext(ctx).SpanContext().TraceID().String(),
 						},
 					}
-					buf, _ := json.Marshal(resp)
-					fmt.Fprintf(w, "%s", string(buf))
+					json.NewEncoder(w).Encode(resp)
+					wg.Done()
 					h.eventSuccessCounter.Add(ctx, 1)
+					cancel()
 				}, func(e event.Event, err error) {
-					w.WriteHeader(*h.config.FailureStatus)
 					w.Header().Set("Content-Type", "application/json")
 					w.Header().Set("User-Agent", "ears")
+					w.WriteHeader(*h.config.FailureStatus)
 					resp := Response{
 						Status: &Status{
 							Code: *h.config.FailureStatus,
@@ -146,10 +156,11 @@ func (h *Receiver) Receive(next receiver.NextFn) error {
 							TraceId: trace.SpanFromContext(ctx).SpanContext().TraceID().String(),
 						},
 					}
-					buf, _ := json.Marshal(resp)
-					fmt.Fprintf(w, "%s", string(buf))
+					json.NewEncoder(w).Encode(resp)
+					wg.Done()
 					log.Ctx(e.Context()).Error().Str("error", err.Error()).Msg("nack handling events")
 					h.eventFailureCounter.Add(ctx, 1)
+					cancel()
 				},
 			),
 			event.WithTenant(h.Tenant()),
@@ -165,6 +176,7 @@ func (h *Receiver) Receive(next receiver.NextFn) error {
 			event.SetContext(subCtx)
 		}
 		next(event)
+		wg.Wait()
 	})
 	return h.srv.ListenAndServe()
 }
