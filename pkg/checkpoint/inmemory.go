@@ -22,6 +22,7 @@ import (
 func newInMemoryCheckpointManager(config StorageConfig) CheckpointManager {
 	cm := new(InMemoryCheckpointManager)
 	cm.StorageConfig = config
+	cm.checkpoints = map[string]string{}
 	return cm
 }
 

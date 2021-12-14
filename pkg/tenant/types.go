@@ -43,6 +43,10 @@ func (id Id) KeyWithRoute(routeId string) string {
 	return id.Key() + delimiter + base64.StdEncoding.EncodeToString([]byte(routeId))
 }
 
+func (id Id) KeyWithFragment(fragmentId string) string {
+	return id.OrgId + delimiter + id.AppId + delimiter + fragmentId
+}
+
 func (id Id) ToString() string {
 	return "OrgId=" + id.OrgId + " AppId=" + id.AppId
 }

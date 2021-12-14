@@ -22,6 +22,7 @@ import (
 	"github.com/xmidt-org/ears/internal/pkg/app"
 	"github.com/xmidt-org/ears/internal/pkg/appsecret"
 	"github.com/xmidt-org/ears/internal/pkg/config"
+	"github.com/xmidt-org/ears/internal/pkg/fx/fragmentstorerfx"
 	"github.com/xmidt-org/ears/internal/pkg/fx/pluginmanagerfx"
 	"github.com/xmidt-org/ears/internal/pkg/fx/quotamanagerfx"
 	"github.com/xmidt-org/ears/internal/pkg/fx/routestorerfx"
@@ -40,6 +41,7 @@ func AppConfig() config.Config {
 	v.Set("ears.logLevel", "info")
 	v.Set("ears.api.port", 8080)
 	v.Set("ears.storage.route.type", "inmemory")
+	v.Set("ears.storage.fragment.type", "inmemory")
 	v.Set("ears.storage.tenant.type", "inmemory")
 	v.Set("ears.synchronization.type", "inmemory")
 	v.Set("ears.ratelimiter.type", "inmemory")
@@ -51,6 +53,7 @@ func BadConfig() config.Config {
 	v.Set("ears.logLevel", "info")
 	v.Set("ears.api.port", 0)
 	v.Set("ears.storage.route.type", "inmemory")
+	v.Set("ears.storage.fragment.type", "inmemory")
 	v.Set("ears.storage.tenant.type", "inmemory")
 	v.Set("ears.synchronization.type", "inmemory")
 	v.Set("ears.ratelimiter.type", "inmemory")
@@ -93,6 +96,7 @@ func TestAppRunSuccess(t *testing.T) {
 	earsApp := fx.New(
 		pluginmanagerfx.Module,
 		routestorerfx.Module,
+		fragmentstorerfx.Module,
 		syncerfx.Module,
 		tenantstorerfx.Module,
 		quotamanagerfx.Module,

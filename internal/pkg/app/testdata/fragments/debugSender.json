@@ -1,0 +1,8 @@
+{
+    "plugin": "debug",
+    "fragmentName": "debugSender",
+    "config" : {
+        "destination" : "stdout",
+        "maxHistory": 100
+    }
+}

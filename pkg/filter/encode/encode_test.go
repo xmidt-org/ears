@@ -26,7 +26,7 @@ import (
 
 func TestFilterEncodeBasic(t *testing.T) {
 	ctx := context.Background()
-	f, err := encode.NewFilter(tenant.Id{AppId: "myapp", OrgId: "myorg"}, "match", "mymatch", encode.Config{
+	f, err := encode.NewFilter(tenant.Id{AppId: "myapp", OrgId: "myorg"}, "encode", "myencode", encode.Config{
 		FromPath: ".",
 		ToPath:   ".value",
 	}, nil)

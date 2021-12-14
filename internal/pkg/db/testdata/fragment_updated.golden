@@ -1,0 +1,7 @@
+{
+  "plugin": "sqs",
+  "config": {
+    "foo": "bar"
+  },
+  "fragmentName": "mySqsSender"
+}

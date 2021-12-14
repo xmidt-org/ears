@@ -16,17 +16,36 @@ package log
 
 import (
 	"github.com/xmidt-org/ears/pkg/config"
+	pkgconfig "github.com/xmidt-org/ears/pkg/config"
 	"github.com/xmidt-org/ears/pkg/errs"
+	"github.com/xmidt-org/ears/pkg/filter"
 )
 
 var _ config.Exporter = (*Config)(nil)
 var _ config.Importer = (*Config)(nil)
 
 func NewConfig(config interface{}) (*Config, error) {
-	return &Config{}, nil
+	var cfg Config
+	err := pkgconfig.NewConfig(config, &cfg)
+	if err != nil {
+		return nil, &filter.InvalidConfigError{
+			Err: err,
+		}
+	}
+	return &cfg, nil
 }
 
-type Config struct{}
+// WithDefaults will set default values
+func (c Config) WithDefaults() *Config {
+	cfg := c
+	if c.Path == "" {
+		cfg.Path = DefaultConfig.Path
+	}
+	if c.AsString == nil {
+		cfg.AsString = DefaultConfig.AsString
+	}
+	return &cfg
+}
 
 func (c *Config) String() string {
 	s, err := c.YAML()

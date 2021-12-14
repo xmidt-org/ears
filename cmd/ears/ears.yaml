@@ -27,6 +27,11 @@ ears:
       #type: dynamodb
       region: us-west-2
       tableName: bw.ears.routes
+    fragment:
+      #type: dynamodb
+      type: inmemory
+      region: us-west-2
+      tableName: dev.ears.fragments
     tenant:
       type: inmemory
       #type: dynamodb

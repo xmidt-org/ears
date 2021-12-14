@@ -361,6 +361,9 @@ func (e *event) GetPathValue(path string) (interface{}, interface{}, string) {
 	if path == TENANT+".orgId" {
 		return e.Tenant().OrgId, nil, ""
 	}
+	if path == TIMESTAMP {
+		return strconv.Itoa(int(time.Now().UnixNano() / 1e6)), nil, ""
+	}
 	obj := e.Payload()
 	if strings.HasPrefix(path, METADATA+".") || path == METADATA {
 		obj = e.Metadata()

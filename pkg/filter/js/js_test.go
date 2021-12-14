@@ -26,7 +26,7 @@ import (
 
 func TestFilterJsBasic(t *testing.T) {
 	ctx := context.Background()
-	f, err := js.NewFilter(tenant.Id{AppId: "myapp", OrgId: "myorg"}, "match", "mymatch", js.Config{
+	f, err := js.NewFilter(tenant.Id{AppId: "myapp", OrgId: "myorg"}, "js", "myjs", js.Config{
 		Source: `var event = {};
         event.payload = _.event.payload;
         event.metadata =  _.event.metadata;

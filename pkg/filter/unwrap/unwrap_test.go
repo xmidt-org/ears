@@ -26,7 +26,7 @@ import (
 
 func TestFilterUnwrapBasic(t *testing.T) {
 	ctx := context.Background()
-	f, err := unwrap.NewFilter(tenant.Id{AppId: "myapp", OrgId: "myorg"}, "match", "mymatch", unwrap.Config{
+	f, err := unwrap.NewFilter(tenant.Id{AppId: "myapp", OrgId: "myorg"}, "unwrap", "myunwrap", unwrap.Config{
 		Path: ".foo",
 	}, nil)
 	if err != nil {

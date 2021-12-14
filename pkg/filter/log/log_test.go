@@ -26,7 +26,7 @@ import (
 
 func TestFilterLogBasic(t *testing.T) {
 	ctx := context.Background()
-	f, err := log.NewFilter(tenant.Id{AppId: "myapp", OrgId: "myorg"}, "match", "mymatch", log.Config{}, nil)
+	f, err := log.NewFilter(tenant.Id{AppId: "myapp", OrgId: "myorg"}, "log", "mylog", log.Config{}, nil)
 	if err != nil {
 		t.Fatalf("log test failed: %s\n", err.Error())
 	}

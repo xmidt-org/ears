@@ -24,6 +24,7 @@ import (
 	"github.com/xmidt-org/ears/internal/pkg/plugin"
 	"github.com/xmidt-org/ears/internal/pkg/rtsemconv"
 	"github.com/xmidt-org/ears/internal/pkg/syncer"
+	"github.com/xmidt-org/ears/pkg/fragments"
 	"github.com/xmidt-org/ears/pkg/route"
 	"github.com/xmidt-org/ears/pkg/tenant"
 	"go.opentelemetry.io/otel"
@@ -36,6 +37,7 @@ type DefaultRoutingTableManager struct {
 	sync.Mutex
 	pluginMgr    plugin.Manager
 	storageMgr   route.RouteStorer
+	fragmentMgr  fragments.FragmentStorer
 	rtSyncer     syncer.DeltaSyncer
 	liveRouteMap map[string]*LiveRouteWrapper // references to live routes by route ID
 	routeHashMap map[string]*LiveRouteWrapper // references to live routes by hash
@@ -73,13 +75,14 @@ func SetupRoutingManager(lifecycle fx.Lifecycle, logger *zerolog.Logger, routing
 	return nil
 }
 
-func NewRoutingTableManager(pluginMgr plugin.Manager, storageMgr route.RouteStorer, tableSyncer syncer.DeltaSyncer, logger *zerolog.Logger, config config.Config) RoutingTableManager {
+func NewRoutingTableManager(pluginMgr plugin.Manager, storageMgr route.RouteStorer, fragmentMgr fragments.FragmentStorer, tableSyncer syncer.DeltaSyncer, logger *zerolog.Logger, config config.Config) RoutingTableManager {
 	rtm := &DefaultRoutingTableManager{
-		pluginMgr:  pluginMgr,
-		storageMgr: storageMgr,
-		rtSyncer:   tableSyncer,
-		logger:     logger,
-		config:     config}
+		pluginMgr:   pluginMgr,
+		storageMgr:  storageMgr,
+		fragmentMgr: fragmentMgr,
+		rtSyncer:    tableSyncer,
+		logger:      logger,
+		config:      config}
 	rtm.Lock()
 	defer rtm.Unlock()
 	rtm.liveRouteMap = make(map[string]*LiveRouteWrapper)
@@ -204,6 +207,66 @@ func (r *DefaultRoutingTableManager) AddRoute(ctx context.Context, routeConfig *
 	if routeConfig == nil {
 		return errors.New("missing route config")
 	}
+	// inflate fragments if any are present
+	if routeConfig.Sender.FragmentName != "" {
+		fragment, err := r.fragmentMgr.GetFragment(ctx, routeConfig.TenantId, routeConfig.Sender.FragmentName)
+		if err != nil {
+			return err
+		}
+		if fragment.Plugin == "" {
+			return errors.New("fragment " + routeConfig.Sender.FragmentName + " has no plugin type")
+		}
+		if fragment.Config == nil {
+			return errors.New("fragment " + routeConfig.Sender.FragmentName + " has no config")
+		}
+		if routeConfig.Sender.Plugin != "" && routeConfig.Sender.Plugin != fragment.Plugin {
+			return errors.New("fragment type mismatch " + routeConfig.Sender.Plugin + " vs " + fragment.Plugin)
+		}
+		if routeConfig.Sender.Name != "" {
+			fragment.Name = routeConfig.Sender.Name
+		}
+		routeConfig.Sender = fragment
+	}
+	if routeConfig.Receiver.FragmentName != "" {
+		fragment, err := r.fragmentMgr.GetFragment(ctx, routeConfig.TenantId, routeConfig.Receiver.FragmentName)
+		if err != nil {
+			return err
+		}
+		if fragment.Plugin == "" {
+			return errors.New("fragment " + routeConfig.Receiver.FragmentName + " has no plugin type")
+		}
+		if fragment.Config == nil {
+			return errors.New("fragment " + routeConfig.Receiver.FragmentName + " has no config")
+		}
+		if routeConfig.Receiver.Plugin != "" && routeConfig.Receiver.Plugin != fragment.Plugin {
+			return errors.New("fragment type mismatch " + routeConfig.Receiver.Plugin + " vs " + fragment.Plugin)
+		}
+		if routeConfig.Receiver.Name != "" {
+			fragment.Name = routeConfig.Receiver.Name
+		}
+		routeConfig.Receiver = fragment
+	}
+	for idx, filter := range routeConfig.FilterChain {
+		if filter.FragmentName != "" {
+			fragment, err := r.fragmentMgr.GetFragment(ctx, routeConfig.TenantId, filter.FragmentName)
+			if err != nil {
+				return err
+			}
+			if fragment.Plugin == "" {
+				return errors.New("fragment " + filter.FragmentName + " has no plugin type")
+			}
+			if fragment.Config == nil {
+				return errors.New("fragment " + filter.FragmentName + " has no config")
+			}
+			if filter.Plugin != "" && filter.Plugin != fragment.Plugin {
+				return errors.New("fragment type mismatch " + filter.Plugin + " vs " + fragment.Plugin)
+			}
+			if filter.Name != "" {
+				fragment.Name = filter.Name
+			}
+			routeConfig.FilterChain[idx] = fragment
+		}
+	}
 	// use hashed ID if none is provided - this ID will be returned by the AddRoute REST API
 	routeHash := routeConfig.Hash(ctx)
 	if routeConfig.Id == "" {
@@ -268,6 +331,31 @@ func (r *DefaultRoutingTableManager) GetAllReceiversStatus(ctx context.Context) 
 func (r *DefaultRoutingTableManager) GetAllFiltersStatus(ctx context.Context) (map[string]plugin.FilterStatus, error) {
 	filterers := r.pluginMgr.FiltersStatus()
 	return filterers, nil
+}
+
+func (r *DefaultRoutingTableManager) AddFragment(ctx context.Context, tid tenant.Id, fragmentConfig route.PluginConfig) error {
+	err := r.fragmentMgr.SetFragment(ctx, tid, fragmentConfig)
+	return err
+}
+
+func (r *DefaultRoutingTableManager) RemoveFragment(ctx context.Context, tid tenant.Id, fragmentId string) error {
+	err := r.fragmentMgr.DeleteFragment(ctx, tid, fragmentId)
+	return err
+}
+
+func (r *DefaultRoutingTableManager) GetFragment(ctx context.Context, tid tenant.Id, fragmentId string) (route.PluginConfig, error) {
+	fragment, err := r.fragmentMgr.GetFragment(ctx, tid, fragmentId)
+	return fragment, err
+}
+
+func (r *DefaultRoutingTableManager) GetAllFragments(ctx context.Context) ([]route.PluginConfig, error) {
+	fragments, err := r.fragmentMgr.GetAllFragments(ctx)
+	return fragments, err
+}
+
+func (r *DefaultRoutingTableManager) GetAllTenantFragments(ctx context.Context, tid tenant.Id) ([]route.PluginConfig, error) {
+	fragments, err := r.fragmentMgr.GetAllTenantFragments(ctx, tid)
+	return fragments, err
 }
 
 func (r *DefaultRoutingTableManager) SyncItem(ctx context.Context, tid tenant.Id, routeId string, add bool) error {

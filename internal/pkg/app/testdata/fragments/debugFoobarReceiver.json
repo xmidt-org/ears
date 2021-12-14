@@ -1,0 +1,14 @@
+{
+  "plugin": "debug",
+  "fragmentName": "debugFoobarReceiver",
+  "config": {
+    "rounds": 5,
+    "intervalMs": 10,
+    "payload": {
+      "topic": "foo",
+      "content": "bar-4242.baz",
+      "timestamp": 1428352877944
+    },
+    "maxHistory": 100
+  }
+}

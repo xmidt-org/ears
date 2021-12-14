@@ -29,7 +29,7 @@ import (
 
 func TestFilterTtlBasic(t *testing.T) {
 	ctx := context.Background()
-	f, err := ttl.NewFilter(tenant.Id{AppId: "myapp", OrgId: "myorg"}, "match", "mymatch", ttl.Config{
+	f, err := ttl.NewFilter(tenant.Id{AppId: "myapp", OrgId: "myorg"}, "ttl", "myttl", ttl.Config{
 		Path:       ".ts",
 		NanoFactor: pointer.Int(1),
 		Ttl:        pointer.Int(300000),

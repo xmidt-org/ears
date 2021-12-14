@@ -34,16 +34,19 @@ import (
 	"github.com/xmidt-org/ears/pkg/plugins/log"
 	"github.com/xmidt-org/ears/pkg/plugins/mapping"
 	"github.com/xmidt-org/ears/pkg/plugins/match"
+	"github.com/xmidt-org/ears/pkg/plugins/metric"
 	"github.com/xmidt-org/ears/pkg/plugins/pass"
 	"github.com/xmidt-org/ears/pkg/plugins/redis"
 	"github.com/xmidt-org/ears/pkg/plugins/regex"
 	"github.com/xmidt-org/ears/pkg/plugins/s3"
+	"github.com/xmidt-org/ears/pkg/plugins/sample"
 	"github.com/xmidt-org/ears/pkg/plugins/split"
 	"github.com/xmidt-org/ears/pkg/plugins/sqs"
 	"github.com/xmidt-org/ears/pkg/plugins/trace"
 	"github.com/xmidt-org/ears/pkg/plugins/transform"
 	"github.com/xmidt-org/ears/pkg/plugins/ttl"
 	"github.com/xmidt-org/ears/pkg/plugins/unwrap"
+	"github.com/xmidt-org/ears/pkg/plugins/ws"
 	"github.com/xmidt-org/ears/pkg/secret"
 
 	pkgplugin "github.com/xmidt-org/ears/pkg/plugin"
@@ -128,6 +131,18 @@ func ProvidePluginManager(in PluginIn) (PluginOut, error) {
 		{
 			name:   "js",
 			plugin: toArr(js.NewPluginVersion("js", "", ""))[0].(pkgplugin.Pluginer),
+		},
+		{
+			name:   "ws",
+			plugin: toArr(ws.NewPluginVersion("ws", "", ""))[0].(pkgplugin.Pluginer),
+		},
+		{
+			name:   "sample",
+			plugin: toArr(sample.NewPluginVersion("sample", "", ""))[0].(pkgplugin.Pluginer),
+		},
+		{
+			name:   "metric",
+			plugin: toArr(metric.NewPluginVersion("metric", "", ""))[0].(pkgplugin.Pluginer),
 		},
 		{
 			name:   "dedup",
