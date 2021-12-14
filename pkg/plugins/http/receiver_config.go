@@ -19,6 +19,18 @@ import (
 	"github.com/xeipuuv/gojsonschema"
 )
 
+// WithDefaults
+func (rc *ReceiverConfig) WithDefaults() ReceiverConfig {
+	cfg := *rc
+	if cfg.SuccessStatus == nil {
+		cfg.SuccessStatus = DefaultReceiverConfig.SuccessStatus
+	}
+	if cfg.FailureStatus == nil {
+		cfg.FailureStatus = DefaultReceiverConfig.FailureStatus
+	}
+	return cfg
+}
+
 // Validate returns an error upon validation failure
 func (rc *ReceiverConfig) Validate() error {
 	schema := gojsonschema.NewStringLoader(receiverSchema)

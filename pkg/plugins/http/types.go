@@ -21,6 +21,7 @@ import (
 	"github.com/xmidt-org/ears/pkg/receiver"
 	"github.com/xmidt-org/ears/pkg/sender"
 	"github.com/xmidt-org/ears/pkg/tenant"
+	"github.com/xorcare/pointer"
 	"go.opentelemetry.io/otel/metric"
 	"net/http"
 )
@@ -48,11 +49,36 @@ func NewPluginVersion(name string, version string, commitID string) (*pkgplugin.
 	)
 }
 
+type Status struct {
+	Code    int    `json:"code,omitempty" xml:"code,omitempty"`
+	Message string `json:"message,omitempty" xml:"message,omitempty"`
+}
+
+type Tracing struct {
+	TraceId string `json:"traceId,omitempty" xml:"traceId,omitempty"`
+	//SpanId  string `json:"spanId,omitempty" xml:"spanId,omitempty"`
+}
+
+type Response struct {
+	Status  *Status  `json:"status,omitempty" xml:"status,omitempty"`
+	Tracing *Tracing `json:"tx,omitempty" xml:"tx,omitempty"`
+	//Item  interface{} `json:"item,omitempty" xml:"item,omitempty"`
+	//Items interface{} `json:"items,omitempty" xml:"items,omitempty"`
+	//Data  interface{} `json:"data,omitempty" xml:"data,omitempty"`
+}
+
 type ReceiverConfig struct {
 	Path               string `json:"path"`
 	Method             string `json:"method"`
 	Port               *int   `json:"port"`
 	TracePayloadOnNack *bool  `json:"tracePayloadOnNack,omitempty"`
+	SuccessStatus      *int   `json:"successStatus"`
+	FailureStatus      *int   `json:"failureStatus"`
+}
+
+var DefaultReceiverConfig = ReceiverConfig{
+	SuccessStatus: pointer.Int(200),
+	FailureStatus: pointer.Int(400),
 }
 
 type Receiver struct {

@@ -30,6 +30,7 @@ import (
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/global"
 	"go.opentelemetry.io/otel/metric/unit"
+	"go.opentelemetry.io/otel/trace"
 	"io/ioutil"
 	"net/http"
 )
@@ -52,6 +53,7 @@ func NewReceiver(tid tenant.Id, plugin string, name string, config interface{}, 
 			Err: err,
 		}
 	}
+	cfg = cfg.WithDefaults()
 	err = cfg.Validate()
 	if err != nil {
 		return nil, err
@@ -101,7 +103,6 @@ func (h *Receiver) Receive(next receiver.NextFn) error {
 	h.logger.Info().Int("port", port).Msg("starting http receiver")
 	h.srv = &http.Server{Addr: fmt.Sprintf(":%d", port), Handler: mux}
 	mux.HandleFunc(h.config.Path, func(w http.ResponseWriter, r *http.Request) {
-		defer fmt.Fprintln(w, "good")
 		b, err := ioutil.ReadAll(r.Body)
 		defer r.Body.Close()
 		if err != nil {
@@ -119,8 +120,34 @@ func (h *Receiver) Receive(next receiver.NextFn) error {
 		event, err := event.New(ctx, body,
 			event.WithAck(
 				func(e event.Event) {
+					w.WriteHeader(*h.config.SuccessStatus)
+					w.Header().Set("Content-Type", "application/json")
+					w.Header().Set("User-Agent", "ears")
+					resp := Response{
+						Status: &Status{
+							Code: *h.config.SuccessStatus,
+						},
+						Tracing: &Tracing{
+							TraceId: trace.SpanFromContext(ctx).SpanContext().TraceID().String(),
+						},
+					}
+					buf, _ := json.Marshal(resp)
+					fmt.Fprintf(w, "%s", string(buf))
 					h.eventSuccessCounter.Add(ctx, 1)
 				}, func(e event.Event, err error) {
+					w.WriteHeader(*h.config.FailureStatus)
+					w.Header().Set("Content-Type", "application/json")
+					w.Header().Set("User-Agent", "ears")
+					resp := Response{
+						Status: &Status{
+							Code: *h.config.FailureStatus,
+						},
+						Tracing: &Tracing{
+							TraceId: trace.SpanFromContext(ctx).SpanContext().TraceID().String(),
+						},
+					}
+					buf, _ := json.Marshal(resp)
+					fmt.Fprintf(w, "%s", string(buf))
 					log.Ctx(e.Context()).Error().Str("error", err.Error()).Msg("nack handling events")
 					h.eventFailureCounter.Add(ctx, 1)
 				},
