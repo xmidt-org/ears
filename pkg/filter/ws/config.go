@@ -43,6 +43,9 @@ func (c Config) WithDefaults() *Config {
 	if c.Url == "" {
 		cfg.Url = DefaultConfig.Url
 	}
+	if c.UrlPath == "" {
+		cfg.UrlPath = DefaultConfig.UrlPath
+	}
 	if c.Body == "" {
 		cfg.Body = DefaultConfig.Body
 	}

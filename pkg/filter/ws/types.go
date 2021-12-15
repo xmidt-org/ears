@@ -25,6 +25,7 @@ import (
 type Config struct {
 	Path                   string            `json:"path,omitempty"`
 	Url                    string            `json:"url,omitempty"`
+	UrlPath                string            `json:"urlPath,omitempty"`
 	Method                 string            `json:"method,omitempty"`
 	Body                   string            `json:"body,omitempty"`
 	Headers                map[string]string `json:"headers,omitempty"`
@@ -41,6 +42,7 @@ type Auth struct {
 var DefaultConfig = Config{
 	Path:                   "",
 	Url:                    "",
+	UrlPath:                "",
 	Method:                 "GET",
 	Body:                   "",
 	Headers:                map[string]string{},

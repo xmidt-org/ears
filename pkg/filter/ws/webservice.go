@@ -145,7 +145,13 @@ func (f *Filter) evalStr(evt event.Event, tt string) string {
 }
 
 func (f *Filter) hitEndpoint(ctx context.Context, evt event.Event) (string, int, error) {
-	url := f.evalStr(evt, f.config.Url)
+	e1 := f.evalStr(evt, f.config.Url)
+	e2 := f.evalStr(evt, f.config.UrlPath)
+	url := f.secrets.Secret(e1)
+	if url == "" {
+		url = e1
+	}
+	url = url + e2
 	payload := f.evalStr(evt, f.config.Body)
 	verb := f.evalStr(evt, f.config.Method)
 	headers := f.config.Headers
@@ -166,6 +172,9 @@ func (f *Filter) hitEndpoint(ctx context.Context, evt event.Event) (string, int,
 	//TODO: support SAT and OAuth
 	if f.config.Auth.Type == HTTP_AUTH_TYPE_BASIC {
 		password := f.secrets.Secret(f.config.Auth.Password)
+		if password == "" {
+			password = f.config.Auth.Password
+		}
 		req.SetBasicAuth(f.config.Auth.Username, password)
 	}
 	// send request
