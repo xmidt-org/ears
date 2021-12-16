@@ -23,7 +23,8 @@ import (
 // Config can be passed into NewFilter() in order to configure
 // the behavior of the sender.
 type Config struct {
-	Path                   string            `json:"path,omitempty"`
+	ToPath                 string            `json:"toPath,omitempty"`
+	FromPath               string            `json:"fromPath,omitempty"`
 	Url                    string            `json:"url,omitempty"`
 	UrlPath                string            `json:"urlPath,omitempty"`
 	Method                 string            `json:"method,omitempty"`
@@ -40,7 +41,8 @@ type Auth struct {
 }
 
 var DefaultConfig = Config{
-	Path:                   "",
+	ToPath:                 "",
+	FromPath:               "",
 	Url:                    "",
 	UrlPath:                "",
 	Method:                 "GET",
