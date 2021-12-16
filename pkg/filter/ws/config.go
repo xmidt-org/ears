@@ -34,8 +34,11 @@ func NewConfig(config interface{}) (*Config, error) {
 
 func (c Config) WithDefaults() *Config {
 	cfg := c
-	if c.Path == "" {
-		cfg.Path = DefaultConfig.Path
+	if c.FromPath == "" {
+		cfg.FromPath = DefaultConfig.FromPath
+	}
+	if c.ToPath == "" {
+		cfg.ToPath = DefaultConfig.ToPath
 	}
 	if c.Method == "" {
 		cfg.Method = DefaultConfig.Method

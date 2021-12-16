@@ -39,7 +39,7 @@ func TestFilterWsBasic(t *testing.T) {
 	}
 	secrets := appsecret.NewConfigVault(v)
 	f, err := ws.NewFilter(tenant.Id{AppId: "myapp", OrgId: "myorg"}, "ws", "myws", ws.Config{
-		Path:                   ".value",
+		ToPath:                 ".value",
 		Url:                    "http://echo.jsontest.com/key/value/one/two",
 		Method:                 "GET",
 		EmptyPathValueRequired: pointer.Bool(true),
@@ -85,7 +85,7 @@ func TestFilterWsUrlEval(t *testing.T) {
 	}
 	secrets := appsecret.NewConfigVault(v)
 	f, err := ws.NewFilter(tenant.Id{AppId: "myapp", OrgId: "myorg"}, "ws", "myws", ws.Config{
-		Path:   ".value",
+		ToPath: ".value",
 		Url:    "{.url}",
 		Method: "GET",
 	}, secrets)
@@ -130,7 +130,7 @@ func TestFilterWsEmptyPathValueNotMet(t *testing.T) {
 	}
 	secrets := appsecret.NewConfigVault(v)
 	f, err := ws.NewFilter(tenant.Id{AppId: "myapp", OrgId: "myorg"}, "ws", "myws", ws.Config{
-		Path:                   ".value",
+		ToPath:                 ".value",
 		Url:                    "http://echo.jsontest.com/key/value/one/two",
 		Method:                 "GET",
 		EmptyPathValueRequired: pointer.Bool(true),

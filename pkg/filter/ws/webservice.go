@@ -72,7 +72,7 @@ func (f *Filter) Filter(evt event.Event) []event.Event {
 		return nil
 	}
 	if *f.config.EmptyPathValueRequired {
-		pv, _, _ := evt.GetPathValue(f.config.Path)
+		pv, _, _ := evt.GetPathValue(f.config.ToPath)
 		if pv != nil {
 			return []event.Event{evt}
 		}
@@ -89,7 +89,11 @@ func (f *Filter) Filter(evt event.Event) []event.Event {
 		evt.Nack(err)
 		return []event.Event{}
 	}
-	evt.SetPathValue(f.config.Path, resObj, true)
+	if f.config.FromPath != "" {
+		resEvt, _ := event.New(evt.Context(), resObj)
+		resObj, _, _ = resEvt.GetPathValue(f.config.FromPath)
+	}
+	evt.SetPathValue(f.config.ToPath, resObj, true)
 	log.Ctx(evt.Context()).Debug().Str("op", "filter").Str("filterType", "ws").Str("name", f.Name()).Msg("ws")
 	return []event.Event{evt}
 }
