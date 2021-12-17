@@ -31,6 +31,7 @@ import (
 	"go.opentelemetry.io/otel/trace"
 	"io/ioutil"
 	"net/http"
+	"strings"
 
 	"github.com/gorilla/mux"
 	"github.com/rs/zerolog/log"
@@ -122,11 +123,16 @@ func NewAPIManager(routingMgr tablemgr.RoutingTableManager, tenantStorer tenant.
 	return api, nil
 }
 
+func doYaml(r *http.Request) bool {
+	ct := r.Header.Get("Content-Type")
+	return strings.Contains(ct, "yaml")
+}
+
 func (a *APIManager) versionHandler(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	log.Ctx(ctx).Debug().Msg("versionHandler")
 	resp := ItemResponse(app.Version)
-	resp.Respond(ctx, w)
+	resp.Respond(ctx, w, doYaml(r))
 }
 
 func getTenant(ctx context.Context, vars map[string]string) (*tenant.Id, ApiError) {
@@ -157,14 +163,14 @@ func (a *APIManager) addRouteHandler(w http.ResponseWriter, r *http.Request) {
 		log.Ctx(ctx).Error().Str("op", "addRouteHandler").Str("error", apiErr.Error()).Msg("orgId or appId empty")
 		a.addRouteFailureRecorder.Add(ctx, 1.0)
 		resp := ErrorResponse(apiErr)
-		resp.Respond(ctx, w)
+		resp.Respond(ctx, w, doYaml(r))
 		return
 	}
 	_, err := a.tenantStorer.GetConfig(ctx, *tid)
 	if err != nil {
 		log.Ctx(ctx).Error().Str("op", "addRouteHandler").Str("error", err.Error()).Msg("error getting tenant config")
 		resp := ErrorResponse(convertToApiError(ctx, err))
-		resp.Respond(ctx, w)
+		resp.Respond(ctx, w, doYaml(r))
 		return
 	}
 	routeId := vars["routeId"]
@@ -173,7 +179,7 @@ func (a *APIManager) addRouteHandler(w http.ResponseWriter, r *http.Request) {
 		log.Ctx(ctx).Error().Str("op", "addRouteHandler").Msg(err.Error())
 		a.addRouteFailureRecorder.Add(ctx, 1.0)
 		resp := ErrorResponse(&InternalServerError{err})
-		resp.Respond(ctx, w)
+		resp.Respond(ctx, w, doYaml(r))
 		return
 	}
 	var route route.Config
@@ -182,7 +188,7 @@ func (a *APIManager) addRouteHandler(w http.ResponseWriter, r *http.Request) {
 		log.Ctx(ctx).Error().Str("op", "addRouteHandler").Msg(err.Error())
 		a.addRouteFailureRecorder.Add(ctx, 1.0)
 		resp := ErrorResponse(&BadRequestError{"Cannot unmarshal request body", err})
-		resp.Respond(ctx, w)
+		resp.Respond(ctx, w, doYaml(r))
 		return
 	}
 	if routeId != "" && route.Id != "" && routeId != route.Id {
@@ -190,7 +196,7 @@ func (a *APIManager) addRouteHandler(w http.ResponseWriter, r *http.Request) {
 		log.Ctx(ctx).Error().Str("op", "addRouteHandler").Msg(err.Error())
 		a.addRouteFailureRecorder.Add(ctx, 1.0)
 		resp := ErrorResponse(err)
-		resp.Respond(ctx, w)
+		resp.Respond(ctx, w, doYaml(r))
 		return
 	}
 	if routeId != "" && route.Id == "" {
@@ -204,13 +210,13 @@ func (a *APIManager) addRouteHandler(w http.ResponseWriter, r *http.Request) {
 		log.Ctx(ctx).Error().Str("op", "addRouteHandler").Msg(err.Error())
 		a.addRouteFailureRecorder.Add(ctx, 1.0)
 		resp := ErrorResponse(convertToApiError(ctx, err))
-		resp.Respond(ctx, w)
+		resp.Respond(ctx, w, doYaml(r))
 		return
 	} else {
 		a.addRouteSuccessRecorder.Add(ctx, 1.0)
 	}
 	resp := ItemResponse(route)
-	resp.Respond(ctx, w)
+	resp.Respond(ctx, w, doYaml(r))
 }
 
 func (a *APIManager) removeRouteHandler(w http.ResponseWriter, r *http.Request) {
@@ -221,7 +227,7 @@ func (a *APIManager) removeRouteHandler(w http.ResponseWriter, r *http.Request) 
 		log.Ctx(ctx).Error().Str("op", "removeRouteHandler").Str("error", apiErr.Error()).Msg("orgId or appId empty")
 		a.removeRouteFailureRecorder.Add(ctx, 1.0)
 		resp := ErrorResponse(apiErr)
-		resp.Respond(ctx, w)
+		resp.Respond(ctx, w, doYaml(r))
 		return
 	}
 	routeId := vars["routeId"]
@@ -231,13 +237,13 @@ func (a *APIManager) removeRouteHandler(w http.ResponseWriter, r *http.Request) 
 		log.Ctx(ctx).Error().Str("op", "removeRouteHandler").Msg(err.Error())
 		a.removeRouteFailureRecorder.Add(ctx, 1.0)
 		resp := ErrorResponse(convertToApiError(ctx, err))
-		resp.Respond(ctx, w)
+		resp.Respond(ctx, w, doYaml(r))
 		return
 	} else {
 		a.removeRouteSuccessRecorder.Add(ctx, 1.0)
 	}
 	resp := ItemResponse(routeId)
-	resp.Respond(ctx, w)
+	resp.Respond(ctx, w, doYaml(r))
 }
 
 func (a *APIManager) getRouteHandler(w http.ResponseWriter, r *http.Request) {
@@ -247,7 +253,7 @@ func (a *APIManager) getRouteHandler(w http.ResponseWriter, r *http.Request) {
 	if apiErr != nil {
 		log.Ctx(ctx).Error().Str("op", "getRouteHandler").Str("error", apiErr.Error()).Msg("orgId or appId empty")
 		resp := ErrorResponse(apiErr)
-		resp.Respond(ctx, w)
+		resp.Respond(ctx, w, doYaml(r))
 		return
 	}
 	routeId := vars["routeId"]
@@ -256,11 +262,11 @@ func (a *APIManager) getRouteHandler(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		log.Ctx(ctx).Error().Str("op", "getRouteHandler").Msg(err.Error())
 		resp := ErrorResponse(convertToApiError(ctx, err))
-		resp.Respond(ctx, w)
+		resp.Respond(ctx, w, doYaml(r))
 		return
 	}
 	resp := ItemResponse(routeConfig)
-	resp.Respond(ctx, w)
+	resp.Respond(ctx, w, doYaml(r))
 }
 
 func (a *APIManager) getAllTenantRoutesHandler(w http.ResponseWriter, r *http.Request) {
@@ -270,19 +276,19 @@ func (a *APIManager) getAllTenantRoutesHandler(w http.ResponseWriter, r *http.Re
 	if apiErr != nil {
 		log.Ctx(ctx).Error().Str("op", "GetAllTenantRoutes").Str("error", apiErr.Error()).Msg("orgId or appId empty")
 		resp := ErrorResponse(apiErr)
-		resp.Respond(ctx, w)
+		resp.Respond(ctx, w, doYaml(r))
 		return
 	}
 	allRouteConfigs, err := a.routingTableMgr.GetAllTenantRoutes(ctx, *tid)
 	if err != nil {
 		log.Ctx(ctx).Error().Str("op", "GetAllTenantRoutes").Msg(err.Error())
 		resp := ErrorResponse(convertToApiError(ctx, err))
-		resp.Respond(ctx, w)
+		resp.Respond(ctx, w, doYaml(r))
 		return
 	}
 	trace.SpanFromContext(ctx).SetAttributes(attribute.Int("routeCount", len(allRouteConfigs)))
 	resp := ItemsResponse(allRouteConfigs)
-	resp.Respond(ctx, w)
+	resp.Respond(ctx, w, doYaml(r))
 }
 
 func (a *APIManager) getAllRoutesHandler(w http.ResponseWriter, r *http.Request) {
@@ -292,7 +298,7 @@ func (a *APIManager) getAllRoutesHandler(w http.ResponseWriter, r *http.Request)
 	if err != nil {
 		log.Ctx(ctx).Error().Str("op", "GetAllRoutes").Str("error", err.Error()).Msg("tenant configs read error")
 		resp := ErrorResponse(convertToApiError(ctx, err))
-		resp.Respond(ctx, w)
+		resp.Respond(ctx, w, doYaml(r))
 		return
 	}
 	for _, config := range configs {
@@ -300,14 +306,14 @@ func (a *APIManager) getAllRoutesHandler(w http.ResponseWriter, r *http.Request)
 		if err != nil {
 			log.Ctx(ctx).Error().Str("op", "GetAllRoutes").Msg(err.Error())
 			resp := ErrorResponse(convertToApiError(ctx, err))
-			resp.Respond(ctx, w)
+			resp.Respond(ctx, w, doYaml(r))
 			return
 		}
 		allRouteConfigs = append(allRouteConfigs, tenantRouteConfigs...)
 	}
 	trace.SpanFromContext(ctx).SetAttributes(attribute.Int("routeCount", len(allRouteConfigs)))
 	resp := ItemsResponse(allRouteConfigs)
-	resp.Respond(ctx, w)
+	resp.Respond(ctx, w, doYaml(r))
 }
 
 func (a *APIManager) getAllTenantFragmentsHandler(w http.ResponseWriter, r *http.Request) {
@@ -317,19 +323,19 @@ func (a *APIManager) getAllTenantFragmentsHandler(w http.ResponseWriter, r *http
 	if apiErr != nil {
 		log.Ctx(ctx).Error().Str("op", "GetAllTenantFragments").Str("error", apiErr.Error()).Msg("orgId or appId empty")
 		resp := ErrorResponse(apiErr)
-		resp.Respond(ctx, w)
+		resp.Respond(ctx, w, doYaml(r))
 		return
 	}
 	allFragments, err := a.routingTableMgr.GetAllTenantFragments(ctx, *tid)
 	if err != nil {
 		log.Ctx(ctx).Error().Str("op", "GetAllTenantFragments").Msg(err.Error())
 		resp := ErrorResponse(convertToApiError(ctx, err))
-		resp.Respond(ctx, w)
+		resp.Respond(ctx, w, doYaml(r))
 		return
 	}
 	trace.SpanFromContext(ctx).SetAttributes(attribute.Int("routeCount", len(allFragments)))
 	resp := ItemsResponse(allFragments)
-	resp.Respond(ctx, w)
+	resp.Respond(ctx, w, doYaml(r))
 }
 
 func (a *APIManager) getAllSendersHandler(w http.ResponseWriter, r *http.Request) {
@@ -338,12 +344,12 @@ func (a *APIManager) getAllSendersHandler(w http.ResponseWriter, r *http.Request
 	if err != nil {
 		log.Ctx(ctx).Error().Str("op", "getAllSendersHandler").Msg(err.Error())
 		resp := ErrorResponse(convertToApiError(ctx, err))
-		resp.Respond(ctx, w)
+		resp.Respond(ctx, w, doYaml(r))
 		return
 	}
 	trace.SpanFromContext(ctx).SetAttributes(attribute.Int("senderCount", len(allSenders)))
 	resp := ItemsResponse(allSenders)
-	resp.Respond(ctx, w)
+	resp.Respond(ctx, w, doYaml(r))
 }
 
 func (a *APIManager) getAllReceiversHandler(w http.ResponseWriter, r *http.Request) {
@@ -352,12 +358,12 @@ func (a *APIManager) getAllReceiversHandler(w http.ResponseWriter, r *http.Reque
 	if err != nil {
 		log.Ctx(ctx).Error().Str("op", "getAllReceiversHandler").Msg(err.Error())
 		resp := ErrorResponse(convertToApiError(ctx, err))
-		resp.Respond(ctx, w)
+		resp.Respond(ctx, w, doYaml(r))
 		return
 	}
 	trace.SpanFromContext(ctx).SetAttributes(attribute.Int("receiverCount", len(allReceivers)))
 	resp := ItemsResponse(allReceivers)
-	resp.Respond(ctx, w)
+	resp.Respond(ctx, w, doYaml(r))
 }
 
 func (a *APIManager) getAllFiltersHandler(w http.ResponseWriter, r *http.Request) {
@@ -366,12 +372,12 @@ func (a *APIManager) getAllFiltersHandler(w http.ResponseWriter, r *http.Request
 	if err != nil {
 		log.Ctx(ctx).Error().Str("op", "getAllFiltersHandler").Msg(err.Error())
 		resp := ErrorResponse(convertToApiError(ctx, err))
-		resp.Respond(ctx, w)
+		resp.Respond(ctx, w, doYaml(r))
 		return
 	}
 	trace.SpanFromContext(ctx).SetAttributes(attribute.Int("filterCount", len(allFilters)))
 	resp := ItemsResponse(allFilters)
-	resp.Respond(ctx, w)
+	resp.Respond(ctx, w, doYaml(r))
 }
 
 func (a *APIManager) getAllFragmentsHandler(w http.ResponseWriter, r *http.Request) {
@@ -380,12 +386,12 @@ func (a *APIManager) getAllFragmentsHandler(w http.ResponseWriter, r *http.Reque
 	if err != nil {
 		log.Ctx(ctx).Error().Str("op", "getAllFragmentsHandler").Msg(err.Error())
 		resp := ErrorResponse(convertToApiError(ctx, err))
-		resp.Respond(ctx, w)
+		resp.Respond(ctx, w, doYaml(r))
 		return
 	}
 	trace.SpanFromContext(ctx).SetAttributes(attribute.Int("fragmentCount", len(allFragments)))
 	resp := ItemsResponse(allFragments)
-	resp.Respond(ctx, w)
+	resp.Respond(ctx, w, doYaml(r))
 }
 
 func (a *APIManager) getFragmentHandler(w http.ResponseWriter, r *http.Request) {
@@ -395,7 +401,7 @@ func (a *APIManager) getFragmentHandler(w http.ResponseWriter, r *http.Request) 
 	if apiErr != nil {
 		log.Ctx(ctx).Error().Str("op", "getFragmentHandler").Str("error", apiErr.Error()).Msg("orgId or appId empty")
 		resp := ErrorResponse(apiErr)
-		resp.Respond(ctx, w)
+		resp.Respond(ctx, w, doYaml(r))
 		return
 	}
 	fragmentId := vars["fragmentId"]
@@ -404,11 +410,11 @@ func (a *APIManager) getFragmentHandler(w http.ResponseWriter, r *http.Request) 
 	if err != nil {
 		log.Ctx(ctx).Error().Str("op", "getFragmentHandler").Msg(err.Error())
 		resp := ErrorResponse(convertToApiError(ctx, err))
-		resp.Respond(ctx, w)
+		resp.Respond(ctx, w, doYaml(r))
 		return
 	}
 	resp := ItemResponse(fragmentConfig)
-	resp.Respond(ctx, w)
+	resp.Respond(ctx, w, doYaml(r))
 }
 
 func (a *APIManager) removeFragmentHandler(w http.ResponseWriter, r *http.Request) {
@@ -419,7 +425,7 @@ func (a *APIManager) removeFragmentHandler(w http.ResponseWriter, r *http.Reques
 		log.Ctx(ctx).Error().Str("op", "removeFragmentHandler").Str("error", apiErr.Error()).Msg("orgId or appId empty")
 		a.removeRouteFailureRecorder.Add(ctx, 1.0)
 		resp := ErrorResponse(apiErr)
-		resp.Respond(ctx, w)
+		resp.Respond(ctx, w, doYaml(r))
 		return
 	}
 	fragmentId := vars["fragmentId"]
@@ -429,13 +435,13 @@ func (a *APIManager) removeFragmentHandler(w http.ResponseWriter, r *http.Reques
 		log.Ctx(ctx).Error().Str("op", "removeFragmentHandler").Msg(err.Error())
 		a.removeRouteFailureRecorder.Add(ctx, 1.0)
 		resp := ErrorResponse(convertToApiError(ctx, err))
-		resp.Respond(ctx, w)
+		resp.Respond(ctx, w, doYaml(r))
 		return
 	} else {
 		a.removeRouteSuccessRecorder.Add(ctx, 1.0)
 	}
 	resp := ItemResponse(fragmentId)
-	resp.Respond(ctx, w)
+	resp.Respond(ctx, w, doYaml(r))
 }
 
 func (a *APIManager) addFragmentHandler(w http.ResponseWriter, r *http.Request) {
@@ -446,14 +452,14 @@ func (a *APIManager) addFragmentHandler(w http.ResponseWriter, r *http.Request) 
 		log.Ctx(ctx).Error().Str("op", "addFragmentHandler").Str("error", apiErr.Error()).Msg("orgId or appId empty")
 		a.addRouteFailureRecorder.Add(ctx, 1.0)
 		resp := ErrorResponse(apiErr)
-		resp.Respond(ctx, w)
+		resp.Respond(ctx, w, doYaml(r))
 		return
 	}
 	_, err := a.tenantStorer.GetConfig(ctx, *tid)
 	if err != nil {
 		log.Ctx(ctx).Error().Str("op", "addFragmentHandler").Str("error", err.Error()).Msg("error getting tenant config")
 		resp := ErrorResponse(convertToApiError(ctx, err))
-		resp.Respond(ctx, w)
+		resp.Respond(ctx, w, doYaml(r))
 		return
 	}
 	fragmentId := vars["fragmentId"]
@@ -462,7 +468,7 @@ func (a *APIManager) addFragmentHandler(w http.ResponseWriter, r *http.Request) 
 		log.Ctx(ctx).Error().Str("op", "addFragmentHandler").Msg(err.Error())
 		a.addRouteFailureRecorder.Add(ctx, 1.0)
 		resp := ErrorResponse(&InternalServerError{err})
-		resp.Respond(ctx, w)
+		resp.Respond(ctx, w, doYaml(r))
 		return
 	}
 	var fragmentConfig route.PluginConfig
@@ -470,14 +476,14 @@ func (a *APIManager) addFragmentHandler(w http.ResponseWriter, r *http.Request) 
 	if err != nil {
 		log.Ctx(ctx).Error().Str("op", "addFragmentHandler").Msg(err.Error())
 		resp := ErrorResponse(&BadRequestError{"Cannot unmarshal request body", err})
-		resp.Respond(ctx, w)
+		resp.Respond(ctx, w, doYaml(r))
 		return
 	}
 	if fragmentId != "" && fragmentConfig.FragmentName != "" && fragmentId != fragmentConfig.FragmentName {
 		err := &BadRequestError{"fragment name mismatch " + fragmentId + " vs " + fragmentConfig.Name, nil}
 		log.Ctx(ctx).Error().Str("op", "addFragmentHandler").Msg(err.Error())
 		resp := ErrorResponse(err)
-		resp.Respond(ctx, w)
+		resp.Respond(ctx, w, doYaml(r))
 		return
 	}
 	if fragmentId != "" && fragmentConfig.FragmentName == "" {
@@ -487,7 +493,7 @@ func (a *APIManager) addFragmentHandler(w http.ResponseWriter, r *http.Request) 
 		err := &BadRequestError{"missing fragment name", nil}
 		log.Ctx(ctx).Error().Str("op", "addFragmentHandler").Msg(err.Error())
 		resp := ErrorResponse(err)
-		resp.Respond(ctx, w)
+		resp.Respond(ctx, w, doYaml(r))
 		return
 	}
 	trace.SpanFromContext(ctx).SetAttributes(rtsemconv.EARSFragmentId.String(fragmentId))
@@ -495,11 +501,11 @@ func (a *APIManager) addFragmentHandler(w http.ResponseWriter, r *http.Request) 
 	if err != nil {
 		log.Ctx(ctx).Error().Str("op", "addFragmentHandler").Msg(err.Error())
 		resp := ErrorResponse(convertToApiError(ctx, err))
-		resp.Respond(ctx, w)
+		resp.Respond(ctx, w, doYaml(r))
 		return
 	}
 	resp := ItemResponse(fragmentConfig)
-	resp.Respond(ctx, w)
+	resp.Respond(ctx, w, doYaml(r))
 }
 
 func (a *APIManager) getTenantConfigHandler(w http.ResponseWriter, r *http.Request) {
@@ -509,18 +515,18 @@ func (a *APIManager) getTenantConfigHandler(w http.ResponseWriter, r *http.Reque
 	if apiErr != nil {
 		log.Ctx(ctx).Error().Str("op", "getTenantConfigHandler").Str("error", apiErr.Error()).Msg("orgId or appId empty")
 		resp := ErrorResponse(apiErr)
-		resp.Respond(ctx, w)
+		resp.Respond(ctx, w, doYaml(r))
 		return
 	}
 	config, err := a.tenantStorer.GetConfig(ctx, *tid)
 	if err != nil {
 		log.Ctx(ctx).Error().Str("op", "getTenantConfigHandler").Str("error", err.Error()).Msg("error getting tenant config")
 		resp := ErrorResponse(convertToApiError(ctx, err))
-		resp.Respond(ctx, w)
+		resp.Respond(ctx, w, doYaml(r))
 		return
 	}
 	resp := ItemResponse(config)
-	resp.Respond(ctx, w)
+	resp.Respond(ctx, w, doYaml(r))
 }
 
 func (a *APIManager) getAllTenantConfigsHandler(w http.ResponseWriter, r *http.Request) {
@@ -529,11 +535,11 @@ func (a *APIManager) getAllTenantConfigsHandler(w http.ResponseWriter, r *http.R
 	if err != nil {
 		log.Ctx(ctx).Error().Str("op", "getAllTenantConfigsHandler").Str("error", err.Error()).Msg("error getting all tenant configs")
 		resp := ErrorResponse(convertToApiError(ctx, err))
-		resp.Respond(ctx, w)
+		resp.Respond(ctx, w, doYaml(r))
 		return
 	}
 	resp := ItemsResponse(configs)
-	resp.Respond(ctx, w)
+	resp.Respond(ctx, w, doYaml(r))
 }
 
 func (a *APIManager) setTenantConfigHandler(w http.ResponseWriter, r *http.Request) {
@@ -544,7 +550,7 @@ func (a *APIManager) setTenantConfigHandler(w http.ResponseWriter, r *http.Reque
 	if apiErr != nil {
 		log.Ctx(ctx).Error().Str("op", "setTenantConfigHandler").Str("error", apiErr.Error()).Msg("orgId or appId empty")
 		resp := ErrorResponse(apiErr)
-		resp.Respond(ctx, w)
+		resp.Respond(ctx, w, doYaml(r))
 		return
 	}
 
@@ -552,7 +558,7 @@ func (a *APIManager) setTenantConfigHandler(w http.ResponseWriter, r *http.Reque
 	if err != nil {
 		log.Ctx(ctx).Error().Str("op", "setTenantConfigHandler").Str("error", err.Error()).Msg("error reading request body")
 		resp := ErrorResponse(&InternalServerError{err})
-		resp.Respond(ctx, w)
+		resp.Respond(ctx, w, doYaml(r))
 		return
 	}
 	var tenantConfig tenant.Config
@@ -561,7 +567,7 @@ func (a *APIManager) setTenantConfigHandler(w http.ResponseWriter, r *http.Reque
 		log.Ctx(ctx).Error().Str("op", "setTenantConfigHandler").Str("error", err.Error()).Msg("error unmarshal request body")
 		err = &BadRequestError{"Cannot unmarshal request body", err}
 		resp := ErrorResponse(&InternalServerError{err})
-		resp.Respond(ctx, w)
+		resp.Respond(ctx, w, doYaml(r))
 		return
 	}
 	tenantConfig.Tenant = *tid
@@ -569,12 +575,12 @@ func (a *APIManager) setTenantConfigHandler(w http.ResponseWriter, r *http.Reque
 	if err != nil {
 		log.Ctx(ctx).Error().Str("op", "setTenantConfigHandler").Str("error", err.Error()).Msg("error setting tenant config")
 		resp := ErrorResponse(convertToApiError(ctx, err))
-		resp.Respond(ctx, w)
+		resp.Respond(ctx, w, doYaml(r))
 		return
 	}
 	a.quotaManager.PublishQuota(ctx, *tid)
 	resp := ItemResponse(tenantConfig)
-	resp.Respond(ctx, w)
+	resp.Respond(ctx, w, doYaml(r))
 }
 
 func (a *APIManager) deleteTenantConfigHandler(w http.ResponseWriter, r *http.Request) {
@@ -584,31 +590,31 @@ func (a *APIManager) deleteTenantConfigHandler(w http.ResponseWriter, r *http.Re
 	if apiErr != nil {
 		log.Ctx(ctx).Error().Str("op", "deleteTenantConfigHandler").Str("error", apiErr.Error()).Msg("orgId or appId empty")
 		resp := ErrorResponse(apiErr)
-		resp.Respond(ctx, w)
+		resp.Respond(ctx, w, doYaml(r))
 		return
 	}
 	allRouteConfigs, err := a.routingTableMgr.GetAllTenantRoutes(ctx, *tid)
 	if err != nil {
 		log.Ctx(ctx).Error().Str("op", "deleteTenantConfigHandler").Msg(err.Error())
 		resp := ErrorResponse(convertToApiError(ctx, err))
-		resp.Respond(ctx, w)
+		resp.Respond(ctx, w, doYaml(r))
 		return
 	}
 	if len(allRouteConfigs) > 0 {
 		log.Ctx(ctx).Error().Str("op", "deleteTenantConfigHandler").Msg("tenant has routes")
 		resp := ErrorResponse(convertToApiError(ctx, &BadRequestError{"tenant has routes", nil}))
-		resp.Respond(ctx, w)
+		resp.Respond(ctx, w, doYaml(r))
 		return
 	}
 	err = a.tenantStorer.DeleteConfig(ctx, *tid)
 	if err != nil {
 		log.Ctx(ctx).Error().Str("op", "deleteTenantConfigHandler").Str("error", err.Error()).Msg("error deleting tenant config")
 		resp := ErrorResponse(convertToApiError(ctx, err))
-		resp.Respond(ctx, w)
+		resp.Respond(ctx, w, doYaml(r))
 		return
 	}
 	resp := ItemResponse(tid)
-	resp.Respond(ctx, w)
+	resp.Respond(ctx, w, doYaml(r))
 }
 
 func convertToApiError(ctx context.Context, err error) ApiError {
