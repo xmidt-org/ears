@@ -1,5 +1,5 @@
 {
-  "id": "http101",
+  "id": "http102",
   "orgId": "comcast",
   "appId": "xfi",
   "userId": "boris",
@@ -24,7 +24,21 @@
   "filterChain": [
     {
       "plugin": "log",
-      "name": "pass"
+      "name": "filterBefore"
+    },
+    {
+      "plugin": "match",
+      "config": {
+        "matcher": "pattern",
+        "mode": "deny",
+        "pattern" : {
+          "foo" : "bar"
+        }
+      }
+    },
+    {
+      "plugin": "log",
+      "name": "filterAfter"
     }
   ],
   "deliveryMode": "atLeastOnce"
