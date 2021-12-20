@@ -56,7 +56,7 @@ func (f *Filter) Filter(evt event.Event) []event.Event {
 	log.Ctx(evt.Context()).Debug().Str("op", "filter").Str("filterType", "unwrap").Str("name", f.Name()).Msg("unwrap")
 	obj, _, _ := evt.GetPathValue(f.config.Path)
 	if obj == nil {
-		evt.Nack(errors.New("nil object at path " + f.config.Path))
+		evt.Nack(errors.New("nil object in " + f.name + " at path " + f.config.Path))
 		return []event.Event{}
 	}
 	err := evt.SetPayload(obj)

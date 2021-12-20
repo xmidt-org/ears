@@ -19,6 +19,21 @@ import (
 	"github.com/xeipuuv/gojsonschema"
 )
 
+// WithDefaults
+func (rc *ReceiverConfig) WithDefaults() ReceiverConfig {
+	cfg := *rc
+	if cfg.SuccessStatus == nil {
+		cfg.SuccessStatus = DefaultReceiverConfig.SuccessStatus
+	}
+	if cfg.FailureStatus == nil {
+		cfg.FailureStatus = DefaultReceiverConfig.FailureStatus
+	}
+	if cfg.TracePayloadOnNack == nil {
+		cfg.TracePayloadOnNack = DefaultReceiverConfig.TracePayloadOnNack
+	}
+	return cfg
+}
+
 // Validate returns an error upon validation failure
 func (rc *ReceiverConfig) Validate() error {
 	schema := gojsonschema.NewStringLoader(receiverSchema)
@@ -56,6 +71,16 @@ const receiverSchema = `
 				"tracePayloadOnNack" : {
 					"type": "boolean",
 					"default": false
+				},
+				"successStatus": {
+                    "type": "integer", 
+					"minimum": 200,
+					"maximum": 599
+				},
+				"failureStatus": {
+                    "type": "integer", 
+					"minimum": 200,
+					"maximum": 599
 				}
             },
             "required": [

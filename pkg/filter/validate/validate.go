@@ -12,19 +12,19 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package split
+package validate
 
 import (
-	"errors"
 	"fmt"
-	"github.com/rs/zerolog/log"
+	"github.com/xeipuuv/gojsonschema"
 	"github.com/xmidt-org/ears/pkg/event"
 	"github.com/xmidt-org/ears/pkg/filter"
 	"github.com/xmidt-org/ears/pkg/secret"
 	"github.com/xmidt-org/ears/pkg/tenant"
 )
 
-// a SplitFilter splits and event into two or more events
+var _ filter.Filterer = (*Filter)(nil)
+
 func NewFilter(tid tenant.Id, plugin string, name string, config interface{}, secrets secret.Vault) (*Filter, error) {
 	cfg, err := NewConfig(config)
 	if err != nil {
@@ -42,51 +42,38 @@ func NewFilter(tid tenant.Id, plugin string, name string, config interface{}, se
 		name:   name,
 		plugin: plugin,
 		tid:    tid,
+		schema: gojsonschema.NewGoLoader(cfg.Schema),
 	}
 	return f, nil
 }
 
-// Filter splits an event containing an array into multiple events
+// Filter log event and pass it on
 func (f *Filter) Filter(evt event.Event) []event.Event {
 	if f == nil {
 		evt.Nack(&filter.InvalidConfigError{
-			Err: fmt.Errorf("<nil> pointer filter")})
+			Err: fmt.Errorf("<nil> pointer filter"),
+		})
 		return nil
 	}
-	events := []event.Event{}
 	obj, _, _ := evt.GetPathValue(f.config.Path)
-	if obj == nil {
-		evt.Nack(errors.New("nil object in " + f.name + " at path " + f.config.Path))
+	doc := gojsonschema.NewGoLoader(obj)
+	result, err := gojsonschema.Validate(f.schema, doc)
+	if err != nil {
+		evt.Nack(err)
 		return []event.Event{}
 	}
-	arr, ok := obj.([]interface{})
-	if !ok {
-		evt.Nack(errors.New("split on non array type"))
-		return nil
+	if !result.Valid() {
+		evt.Nack(fmt.Errorf(fmt.Sprintf("%+v", result.Errors())))
+		return []event.Event{}
 	}
-	for _, p := range arr {
-		nevt, err := evt.Clone(evt.Context())
-		if err != nil {
-			evt.Nack(err)
-			return nil
-		}
-		err = nevt.SetPayload(p)
-		if err != nil {
-			evt.Nack(err)
-			return nil
-		}
-		events = append(events, nevt)
-	}
-	evt.Ack()
-	log.Ctx(evt.Context()).Debug().Str("op", "filter").Str("filterType", "split").Str("name", f.Name()).Int("eventCount", len(events)).Msg("split")
-	return events
+	return []event.Event{evt}
 }
 
 func (f *Filter) Config() interface{} {
 	if f == nil {
 		return Config{}
 	}
-	return f.config
+	return nil
 }
 
 func (f *Filter) Name() string {

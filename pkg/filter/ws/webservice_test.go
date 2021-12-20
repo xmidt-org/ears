@@ -17,6 +17,8 @@ package ws_test
 import (
 	"context"
 	"encoding/json"
+	"github.com/spf13/viper"
+	"github.com/xmidt-org/ears/internal/pkg/appsecret"
 	"github.com/xmidt-org/ears/pkg/event"
 	"github.com/xmidt-org/ears/pkg/filter/ws"
 	"github.com/xmidt-org/ears/pkg/tenant"
@@ -27,12 +29,21 @@ import (
 
 func TestFilterWsBasic(t *testing.T) {
 	ctx := context.Background()
+	v := viper.New()
+	v.SetConfigName("config")
+	v.SetConfigType("yaml")
+	v.AddConfigPath(".")
+	err := v.ReadInConfig()
+	if err != nil {
+		t.Fatalf("failed to load test configuration %s\n", err.Error())
+	}
+	secrets := appsecret.NewConfigVault(v)
 	f, err := ws.NewFilter(tenant.Id{AppId: "myapp", OrgId: "myorg"}, "ws", "myws", ws.Config{
-		Path:                   ".value",
+		ToPath:                 ".value",
 		Url:                    "http://echo.jsontest.com/key/value/one/two",
 		Method:                 "GET",
 		EmptyPathValueRequired: pointer.Bool(true),
-	}, nil)
+	}, secrets)
 	if err != nil {
 		t.Fatalf("encode test failed: %s\n", err.Error())
 	}
@@ -64,11 +75,20 @@ func TestFilterWsBasic(t *testing.T) {
 
 func TestFilterWsUrlEval(t *testing.T) {
 	ctx := context.Background()
+	v := viper.New()
+	v.SetConfigName("config")
+	v.SetConfigType("yaml")
+	v.AddConfigPath(".")
+	err := v.ReadInConfig()
+	if err != nil {
+		t.Fatalf("failed to load test configuration %s\n", err.Error())
+	}
+	secrets := appsecret.NewConfigVault(v)
 	f, err := ws.NewFilter(tenant.Id{AppId: "myapp", OrgId: "myorg"}, "ws", "myws", ws.Config{
-		Path:   ".value",
+		ToPath: ".value",
 		Url:    "{.url}",
 		Method: "GET",
-	}, nil)
+	}, secrets)
 	if err != nil {
 		t.Fatalf("encode test failed: %s\n", err.Error())
 	}
@@ -100,12 +120,21 @@ func TestFilterWsUrlEval(t *testing.T) {
 
 func TestFilterWsEmptyPathValueNotMet(t *testing.T) {
 	ctx := context.Background()
+	v := viper.New()
+	v.SetConfigName("config")
+	v.SetConfigType("yaml")
+	v.AddConfigPath(".")
+	err := v.ReadInConfig()
+	if err != nil {
+		t.Fatalf("failed to load test configuration %s\n", err.Error())
+	}
+	secrets := appsecret.NewConfigVault(v)
 	f, err := ws.NewFilter(tenant.Id{AppId: "myapp", OrgId: "myorg"}, "ws", "myws", ws.Config{
-		Path:                   ".value",
+		ToPath:                 ".value",
 		Url:                    "http://echo.jsontest.com/key/value/one/two",
 		Method:                 "GET",
 		EmptyPathValueRequired: pointer.Bool(true),
-	}, nil)
+	}, secrets)
 	if err != nil {
 		t.Fatalf("encode test failed: %s\n", err.Error())
 	}

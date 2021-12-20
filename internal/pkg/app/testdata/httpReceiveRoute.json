@@ -1,0 +1,31 @@
+{
+  "id": "http101",
+  "orgId": "comcast",
+  "appId": "xfi",
+  "userId": "boris",
+  "name": "httpConsumerRoute",
+  "receiver": {
+    "plugin": "http",
+    "name": "myHttpReceiver",
+    "config": {
+      "path": "/ears/v1/webhook/",
+      "method": "POST",
+      "port": 8888
+    }
+  },
+  "sender": {
+    "plugin": "debug",
+    "name": "myDebug",
+    "config": {
+      "destination": "stdout",
+      "maxHistory": 1000
+    }
+  },
+  "filterChain": [
+    {
+      "plugin": "log",
+      "name": "pass"
+    }
+  ],
+  "deliveryMode": "atLeastOnce"
+}

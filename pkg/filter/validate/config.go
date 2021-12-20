@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package ws
+package validate
 
 import (
 	"github.com/xmidt-org/ears/pkg/config"
@@ -20,6 +20,9 @@ import (
 	"github.com/xmidt-org/ears/pkg/errs"
 	"github.com/xmidt-org/ears/pkg/filter"
 )
+
+var _ config.Exporter = (*Config)(nil)
+var _ config.Importer = (*Config)(nil)
 
 func NewConfig(config interface{}) (*Config, error) {
 	var cfg Config
@@ -32,52 +35,16 @@ func NewConfig(config interface{}) (*Config, error) {
 	return &cfg, nil
 }
 
+// WithDefaults will set default values
 func (c Config) WithDefaults() *Config {
 	cfg := c
-	if c.FromPath == "" {
-		cfg.FromPath = DefaultConfig.FromPath
+	if c.Path == "" {
+		cfg.Path = DefaultConfig.Path
 	}
-	if c.ToPath == "" {
-		cfg.ToPath = DefaultConfig.ToPath
-	}
-	if c.Method == "" {
-		cfg.Method = DefaultConfig.Method
-	}
-	if c.Url == "" {
-		cfg.Url = DefaultConfig.Url
-	}
-	if c.UrlPath == "" {
-		cfg.UrlPath = DefaultConfig.UrlPath
-	}
-	if c.Body == "" {
-		cfg.Body = DefaultConfig.Body
-	}
-	if c.Headers == nil {
-		cfg.Headers = DefaultConfig.Headers
-	}
-	if c.EmptyPathValueRequired == nil {
-		cfg.EmptyPathValueRequired = DefaultConfig.EmptyPathValueRequired
-	}
-	if c.Auth == nil {
-		cfg.Auth = DefaultConfig.Auth
+	if c.Schema == "" {
+		cfg.Schema = DefaultConfig.Schema
 	}
 	return &cfg
-}
-
-func (c *Config) Validate() error {
-	/*_, err := url.ParseRequestURI(c.Url)
-	if err != nil {
-		return err
-	}
-	switch c.Method {
-	case "GET":
-	case "PUT":
-	case "POST":
-	case "DELETE":
-	default:
-		return errors.New("unknown method " + c.Method)
-	}*/
-	return nil
 }
 
 func (c *Config) String() string {
@@ -102,4 +69,8 @@ func (c *Config) JSON() (string, error) {
 
 func (c *Config) FromJSON(in string) error {
 	return config.FromJSON(in, c)
+}
+
+func (c *Config) Validate() error {
+	return nil
 }
