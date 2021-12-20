@@ -17,6 +17,7 @@ package app
 import (
 	"context"
 	"encoding/json"
+	"github.com/goccy/go-yaml"
 	"github.com/xmidt-org/ears/internal/pkg/rtsemconv"
 	"net/http"
 )
@@ -50,9 +51,12 @@ type Response struct {
 	Data  interface{} `json:"data,omitempty" xml:"data,omitempty"`
 }
 
-func (r Response) Respond(ctx context.Context, w http.ResponseWriter) {
-	w.Header().Set("Content-Type", "application/json")
-
+func (r Response) Respond(ctx context.Context, w http.ResponseWriter, doYaml bool) {
+	if doYaml {
+		w.Header().Set("Content-Type", "text/x-yaml")
+	} else {
+		w.Header().Set("Content-Type", "application/json")
+	}
 	traceId, ok := ctx.Value(rtsemconv.EarsLogTraceIdKey).(string)
 	if ok && traceId != "" {
 		r.Tracing.TraceId = traceId
@@ -61,7 +65,11 @@ func (r Response) Respond(ctx context.Context, w http.ResponseWriter) {
 		r.Status.Message = http.StatusText(r.Status.Code)
 		w.WriteHeader(r.Status.Code)
 	}
-	json.NewEncoder(w).Encode(r)
+	if doYaml {
+		yaml.NewEncoder(w).Encode(r)
+	} else {
+		json.NewEncoder(w).Encode(r)
+	}
 }
 
 func ErrorResponse(apiErr ApiError) Response {

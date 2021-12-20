@@ -395,8 +395,13 @@ func (e *event) GetPathValue(path string) (interface{}, interface{}, string) {
 		s := segments[i]
 		parent = obj
 		key = s
-		obj, ok = obj.(map[string]interface{})[s]
-		if !ok {
+		switch tobj := obj.(type) {
+		case map[string]interface{}:
+			obj, ok = tobj[s]
+			if !ok {
+				return nil, parent, key
+			}
+		default:
 			return nil, parent, key
 		}
 	}

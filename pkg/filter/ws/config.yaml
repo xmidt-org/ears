@@ -1,0 +1,5 @@
+ears:
+  secrets:
+    all:
+      all:
+        foo: bar
