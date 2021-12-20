@@ -46,6 +46,7 @@ import (
 	"github.com/xmidt-org/ears/pkg/plugins/transform"
 	"github.com/xmidt-org/ears/pkg/plugins/ttl"
 	"github.com/xmidt-org/ears/pkg/plugins/unwrap"
+	"github.com/xmidt-org/ears/pkg/plugins/validate"
 	"github.com/xmidt-org/ears/pkg/plugins/ws"
 	"github.com/xmidt-org/ears/pkg/secret"
 
@@ -127,6 +128,10 @@ func ProvidePluginManager(in PluginIn) (PluginOut, error) {
 		{
 			name:   "log",
 			plugin: toArr(log.NewPluginVersion("log", "", ""))[0].(pkgplugin.Pluginer),
+		},
+		{
+			name:   "validate",
+			plugin: toArr(validate.NewPluginVersion("validate", "", ""))[0].(pkgplugin.Pluginer),
 		},
 		{
 			name:   "js",
