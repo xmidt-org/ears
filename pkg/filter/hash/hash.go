@@ -66,7 +66,7 @@ func (f *Filter) Filter(evt event.Event) []event.Event {
 		//if span != nil {
 		// add stuff to span here
 		//}
-		evt.Nack(errors.New("cannot hash nil object at path " + f.config.FromPath))
+		evt.Nack(errors.New("cannot hash nil object in " + f.name + " at path " + f.config.FromPath))
 		return []event.Event{}
 	}
 	var buf []byte
