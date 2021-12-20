@@ -56,7 +56,7 @@ func (f *Filter) Filter(evt event.Event) []event.Event {
 	events := []event.Event{}
 	obj, _, _ := evt.GetPathValue(f.config.Path)
 	if obj == nil {
-		evt.Nack(errors.New("nil object at path " + f.config.Path))
+		evt.Nack(errors.New("nil object in " + f.name + " at path " + f.config.Path))
 		return []event.Event{}
 	}
 	arr, ok := obj.([]interface{})
