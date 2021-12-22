@@ -68,7 +68,7 @@ func (f *Filter) Filter(evt event.Event) []event.Event {
 			isArray = true
 		}
 		for idx, elem := range a {
-			subEvt, err := event.New(evt.Context(), elem, event.WithMetadata(evt.Metadata()))
+			subEvt, err := event.New(evt.Context(), elem, event.WithMetadata(evt.Metadata()), event.WithTenant(evt.Tenant()))
 			if err != nil {
 				evt.Nack(err)
 				return events
