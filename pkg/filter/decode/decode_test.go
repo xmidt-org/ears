@@ -29,6 +29,7 @@ func TestFilterDecodeBasic(t *testing.T) {
 	f, err := decode.NewFilter(tenant.Id{AppId: "myapp", OrgId: "myorg"}, "decode", "mydecode", decode.Config{
 		FromPath: ".value",
 		ToPath:   ".",
+		Encoding: "base64",
 	}, nil)
 	if err != nil {
 		t.Fatalf("decode test failed: %s\n", err.Error())
@@ -48,6 +49,42 @@ func TestFilterDecodeBasic(t *testing.T) {
 		t.Fatalf("wrong number of decoded events: %d\n", len(evts))
 	}
 	expectedEventStr := `{"foo":"bar"}`
+	var res interface{}
+	err = json.Unmarshal([]byte(expectedEventStr), &res)
+	if err != nil {
+		t.Fatalf("decode test failed: %s\n", err.Error())
+	}
+	if !reflect.DeepEqual(evts[0].Payload(), res) {
+		pl, _ := json.MarshalIndent(evts[0].Payload(), "", "\t")
+		t.Fatalf("wrong payload in decoded event: %s\n", pl)
+	}
+}
+
+func TestFilterDecodeString(t *testing.T) {
+	ctx := context.Background()
+	f, err := decode.NewFilter(tenant.Id{AppId: "myapp", OrgId: "myorg"}, "decode", "mydecode", decode.Config{
+		FromPath: ".value",
+		ToPath:   ".value",
+		Encoding: "string",
+	}, nil)
+	if err != nil {
+		t.Fatalf("decode test failed: %s\n", err.Error())
+	}
+	eventStr := `{ "value": "{\"foo\":\"bar\"}"}`
+	var obj interface{}
+	err = json.Unmarshal([]byte(eventStr), &obj)
+	if err != nil {
+		t.Fatalf("decode test failed: %s\n", err.Error())
+	}
+	e, err := event.New(ctx, obj, event.FailOnNack(t))
+	if err != nil {
+		t.Fatalf("decode test failed: %s\n", err.Error())
+	}
+	evts := f.Filter(e)
+	if len(evts) != 1 {
+		t.Fatalf("wrong number of decoded events: %d\n", len(evts))
+	}
+	expectedEventStr := `{"value":{"foo":"bar"}}`
 	var res interface{}
 	err = json.Unmarshal([]byte(expectedEventStr), &res)
 	if err != nil {
