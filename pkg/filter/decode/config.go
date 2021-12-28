@@ -48,7 +48,7 @@ func (c Config) WithDefaults() *Config {
 }
 
 func (c *Config) Validate() error {
-	if c.Encoding != "base64" {
+	if c.Encoding != "base64" && c.Encoding != "string" {
 		return errors.New("unsupported encoding " + c.Encoding)
 	}
 	return nil
