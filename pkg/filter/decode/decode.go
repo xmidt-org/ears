@@ -69,10 +69,16 @@ func (f *Filter) Filter(evt event.Event) []event.Event {
 		evt.Nack(errors.New("unsupported field type at path " + f.config.FromPath))
 		return []event.Event{}
 	}
-	buf, err := base64.StdEncoding.DecodeString(input)
-	if err != nil {
-		evt.Nack(err)
-		return []event.Event{}
+	var buf []byte
+	var err error
+	if f.config.Encoding == "base64" {
+		buf, err = base64.StdEncoding.DecodeString(input)
+		if err != nil {
+			evt.Nack(err)
+			return []event.Event{}
+		}
+	} else {
+		buf = []byte(input)
 	}
 	var output interface{}
 	err = json.Unmarshal(buf, &output)
