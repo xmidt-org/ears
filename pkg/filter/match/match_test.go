@@ -138,7 +138,7 @@ func TestFilterMatchComparisonTree1(t *testing.T) {
 func TestFilterMatchComparisonTree2(t *testing.T) {
 	ctx := context.Background()
 	tree2 := &comparison.ComparisonTreeNode{Logic: "or", Comparison: &comparison.Comparison{Equal: []map[string]interface{}{{"{.foo}": "bar"}, {"{.noo}": "nay"}}}}
-	tree1 := &comparison.ComparisonTreeNode{Logic: "and", Comparison: &comparison.Comparison{Equal: []map[string]interface{}{{"{.foo}": "bar"}, {"{.noo}": "nar"}}}, ChildNode: tree2}
+	tree1 := &comparison.ComparisonTreeNode{Logic: "and", Comparison: &comparison.Comparison{Equal: []map[string]interface{}{{"{.foo}": "bar"}, {"{.noo}": "nar"}}}, ChildNodes: []*comparison.ComparisonTreeNode{tree2}}
 	f, err := match.NewFilter(tenant.Id{AppId: "myapp", OrgId: "myorg"}, "match", "mymatch", match.Config{
 		ComparisonTree: tree1,
 		Matcher:        match.MatcherComparison,
