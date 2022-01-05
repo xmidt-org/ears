@@ -53,6 +53,9 @@ issues:
     - path: pkg/filter/match/patternregex/patternregex\.go
       linters:
         - funlen
+    - path: pkg/filter/match/comparison/comparison\.go
+      linters:
+        - funlen
     - path: pkg/filter/js/goja\.go
       linters:
         - funlen
