@@ -23,9 +23,15 @@ import (
 type Matcher struct {
 	comparison    *Comparison
 	patternsLogic string
+	booleanTree   *TreeNode // allows tree structures like "and(or(comparison1,comparison2),comparison3)"
 }
 
-// so far only Equals is supported but in combination with deny this can also be used as NotEqual
+type TreeNode struct {
+	Logic      string // "and" or "or"
+	Comparison *Comparison
+	ChildNode  *TreeNode
+}
+
 type Comparison struct {
 	Equal    []map[string]interface{} `json:"equal,omitempty"`
 	NotEqual []map[string]interface{} `json:"notEqual,omitempty"`
@@ -41,15 +47,38 @@ func (m *Matcher) Match(event event.Event) bool {
 	if m == nil || m.comparison == nil || event == nil {
 		return false
 	}
-	return m.compare(event, m.comparison)
+	if m.comparison != nil {
+		return m.compare(event, m.comparison, m.patternsLogic)
+	} else {
+		return m.traverseTree(event, m.booleanTree)
+	}
 }
 
-func (m *Matcher) compare(evt event.Event, cmp *Comparison) bool {
+func (m *Matcher) traverseTree(evt event.Event, tree *TreeNode) bool {
+	if tree == nil {
+		return true
+	}
+	if tree.ChildNode != nil {
+		result := m.traverseTree(evt, tree.ChildNode)
+		if result == false {
+			return false
+		}
+	}
+	if tree.Comparison != nil {
+		result := m.compare(evt, tree.Comparison, tree.Logic)
+		if result == false {
+			return false
+		}
+	}
+	return true
+}
+
+func (m *Matcher) compare(evt event.Event, cmp *Comparison, logic string) bool {
 	if evt == nil || cmp == nil {
 		return true
 	}
 	andLogic := true
-	if strings.ToLower(m.patternsLogic) == "or" {
+	if strings.ToLower(logic) == "or" {
 		andLogic = false
 	}
 	foundOneEqual := false
