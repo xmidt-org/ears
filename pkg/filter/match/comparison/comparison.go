@@ -27,8 +27,8 @@ type Matcher struct {
 
 // so far only Equals is supported but in combination with deny this can also be used as NotEqual
 type Comparison struct {
-	Equal []map[string]interface{} `json:"equal,omitempty"`
-	//NotEqual    []map[string]interface{} `json:"notEqual,omitempty"`
+	Equal    []map[string]interface{} `json:"equal,omitempty"`
+	NotEqual []map[string]interface{} `json:"notEqual,omitempty"`
 	//GreaterThan []map[string]interface{} `json:"greaterThan,omitempty"`
 	//LessThan    []map[string]interface{} `json:"lessThan,omitempty"`
 }
@@ -49,7 +49,7 @@ func (m *Matcher) compare(evt event.Event, cmp *Comparison) bool {
 		return true
 	}
 	andLogic := true
-	if m.patternsLogic == "or" || m.patternsLogic == "OR" {
+	if strings.ToLower(m.patternsLogic) == "or" {
 		andLogic = false
 	}
 	foundOneEqual := false
@@ -79,7 +79,33 @@ func (m *Matcher) compare(evt event.Event, cmp *Comparison) bool {
 			}
 		}
 	}
-	if foundOneEqual || len(cmp.Equal) == 0 {
+	for _, eq := range cmp.NotEqual {
+		for b, a := range eq {
+			var aObj, bObj interface{}
+			aObj = a
+			bObj = b
+			switch aT := a.(type) {
+			case string:
+				if strings.HasPrefix(aT, "{") && strings.HasSuffix(aT, "}") {
+					aObj, _, _ = evt.GetPathValue(aT[1 : len(aT)-1])
+				}
+			}
+			if strings.HasPrefix(b, "{") && strings.HasSuffix(b, "}") {
+				bObj, _, _ = evt.GetPathValue(b[1 : len(b)-1])
+			}
+			if !reflect.DeepEqual(aObj, bObj) {
+				foundOneEqual = true
+				if !andLogic {
+					return true
+				}
+			} else {
+				if andLogic {
+					return false
+				}
+			}
+		}
+	}
+	if foundOneEqual || (len(cmp.Equal) == 0 && len(cmp.NotEqual) == 0) {
 		return true
 	}
 	return false
