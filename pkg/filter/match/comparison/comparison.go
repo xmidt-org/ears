@@ -21,15 +21,15 @@ import (
 )
 
 type Matcher struct {
-	comparison    *Comparison
-	patternsLogic string
-	booleanTree   *TreeNode // allows tree structures like "and(or(comparison1,comparison2),comparison3)"
+	comparisonTree *ComparisonTreeNode
+	comparison     *Comparison
+	patternsLogic  string
 }
 
-type TreeNode struct {
+type ComparisonTreeNode struct {
 	Logic      string // "and" or "or"
 	Comparison *Comparison
-	ChildNode  *TreeNode
+	ChildNode  *ComparisonTreeNode
 }
 
 type Comparison struct {
@@ -39,38 +39,38 @@ type Comparison struct {
 	//LessThan    []map[string]interface{} `json:"lessThan,omitempty"`
 }
 
-func NewMatcher(comparison *Comparison, patternsLogic string) (*Matcher, error) {
-	return &Matcher{comparison: comparison, patternsLogic: patternsLogic}, nil
+func NewMatcher(comparisonTree *ComparisonTreeNode, comparison *Comparison, patternsLogic string) (*Matcher, error) {
+	return &Matcher{comparisonTree: comparisonTree, comparison: comparison, patternsLogic: patternsLogic}, nil
 }
 
 func (m *Matcher) Match(event event.Event) bool {
-	if m == nil || m.comparison == nil || event == nil {
+	if m == nil || event == nil {
 		return false
 	}
 	if m.comparison != nil {
 		return m.compare(event, m.comparison, m.patternsLogic)
 	} else {
-		return m.traverseTree(event, m.booleanTree)
+		return m.traverseTree(event, m.comparisonTree)
 	}
 }
 
-func (m *Matcher) traverseTree(evt event.Event, tree *TreeNode) bool {
+func (m *Matcher) traverseTree(evt event.Event, tree *ComparisonTreeNode) bool {
 	if tree == nil {
 		return true
 	}
+	treeResult := true
+	compResult := true
 	if tree.ChildNode != nil {
-		result := m.traverseTree(evt, tree.ChildNode)
-		if result == false {
-			return false
-		}
+		treeResult = m.traverseTree(evt, tree.ChildNode)
 	}
 	if tree.Comparison != nil {
-		result := m.compare(evt, tree.Comparison, tree.Logic)
-		if result == false {
-			return false
-		}
+		compResult = m.compare(evt, tree.Comparison, tree.Logic)
 	}
-	return true
+	if strings.ToLower(tree.Logic) == "or" {
+		return treeResult || compResult
+	} else {
+		return treeResult && compResult
+	}
 }
 
 func (m *Matcher) compare(evt event.Event, cmp *Comparison, logic string) bool {
