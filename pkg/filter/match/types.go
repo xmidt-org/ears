@@ -50,14 +50,15 @@ const (
 // Config can be passed into NewFilter() in order to configure
 // the behavior of the sender.
 type Config struct {
-	Mode            ModeType               `json:"mode,omitempty"`
-	Matcher         MatcherType            `json:"matcher,omitempty"`
-	Pattern         interface{}            `json:"pattern,omitempty"`
-	Patterns        []interface{}          `json:"patterns,omitempty"`
-	PatternsLogic   string                 `json:"patternsLogic,omitempty"` // AND, OR
-	Path            string                 `json:"path,omitempty"`          // path to match pattern against, if omitted uses payload as default
-	ExactArrayMatch *bool                  `json:"exactArrayMatch,omitempty"`
-	Comparison      *comparison.Comparison `json:"comparison,omitempty"`
+	Mode            ModeType                       `json:"mode,omitempty"`
+	Matcher         MatcherType                    `json:"matcher,omitempty"`
+	Pattern         interface{}                    `json:"pattern,omitempty"`
+	Patterns        []interface{}                  `json:"patterns,omitempty"`
+	PatternsLogic   string                         `json:"patternsLogic,omitempty"` // AND, OR
+	Path            string                         `json:"path,omitempty"`          // path to match pattern against, if omitted uses payload as default
+	ExactArrayMatch *bool                          `json:"exactArrayMatch,omitempty"`
+	Comparison      *comparison.Comparison         `json:"comparison,omitempty"`
+	ComparisonTree  *comparison.ComparisonTreeNode `json:"comparisonTree,omitempty"`
 }
 
 var DefaultConfig = Config{
