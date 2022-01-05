@@ -29,7 +29,7 @@ type Matcher struct {
 type ComparisonTreeNode struct {
 	Logic      string // "and" or "or"
 	Comparison *Comparison
-	ChildNode  *ComparisonTreeNode
+	ChildNodes []*ComparisonTreeNode
 }
 
 type Comparison struct {
@@ -60,14 +60,18 @@ func (m *Matcher) traverseTree(evt event.Event, tree *ComparisonTreeNode) bool {
 	}
 	treeResult := true
 	compResult := true
-	if tree.ChildNode != nil {
-		treeResult = m.traverseTree(evt, tree.ChildNode)
+	for _, childNode := range tree.ChildNodes {
+		if strings.ToLower(tree.Logic) == "or" {
+			treeResult = treeResult || m.traverseTree(evt, childNode)
+		} else {
+			treeResult = treeResult && m.traverseTree(evt, childNode)
+		}
 	}
 	if tree.Comparison != nil {
 		compResult = m.compare(evt, tree.Comparison, tree.Logic)
 	}
 	if strings.ToLower(tree.Logic) == "or" {
-		if tree.ChildNode == nil {
+		if len(tree.ChildNodes) == 0 {
 			return compResult
 		} else if tree.Comparison == nil {
 			return treeResult
