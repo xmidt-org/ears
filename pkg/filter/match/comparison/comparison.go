@@ -27,9 +27,9 @@ type Matcher struct {
 }
 
 type ComparisonTreeNode struct {
-	Logic      string // "and" or "or"
-	Comparison *Comparison
-	ChildNodes []*ComparisonTreeNode
+	Logic      string                `json:"logic,omitempty"` // and, or
+	Comparison *Comparison           `json:"comparison,omitempty"`
+	ChildNodes []*ComparisonTreeNode `json:"childNodes,omitempty"`
 }
 
 type Comparison struct {
