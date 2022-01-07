@@ -53,6 +53,9 @@ func (f *Filter) Filter(evt event.Event) []event.Event {
 		})
 		return nil
 	}
+	if *f.config.Disabled {
+		return []event.Event{evt}
+	}
 	log.Ctx(evt.Context()).Debug().Str("op", "filter").Str("filterType", "ttl").Str("name", f.Name()).Msg("ttl")
 	obj, _, _ := evt.GetPathValue(f.config.Path)
 	if obj == nil {
@@ -64,6 +67,7 @@ func (f *Filter) Filter(evt event.Event) []event.Event {
 		evt.Nack(errors.New("not a uint64 at path " + f.config.Path))
 		return []event.Event{}
 	}
+	evtTs = evtTs * float64(*f.config.NanoFactor)
 	nowNanos := time.Now().UnixNano()
 	if int64(evtTs) > nowNanos {
 		evt.Nack(errors.New("event from the future in " + f.name + " at path " + f.config.Path))

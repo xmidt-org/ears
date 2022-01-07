@@ -43,6 +43,9 @@ func (c Config) WithDefaults() *Config {
 	if c.NanoFactor == nil {
 		cfg.NanoFactor = DefaultConfig.NanoFactor
 	}
+	if c.Disabled == nil {
+		cfg.Disabled = DefaultConfig.Disabled
+	}
 	return &cfg
 }
 
