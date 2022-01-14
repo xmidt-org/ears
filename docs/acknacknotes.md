@@ -11,6 +11,28 @@ for the event. Only after all routes attached to a single receiver instance
 have concluded with an ack, the ack routine of the receiver gets executed.
 This routine typically writes some metrics and cancels the event context.
 
+![ack.png](img/ack.png)
+
+Receiver event orchestration code example for ack and nack:
+
+```
+event, err := event.New(ctx, body,
+    event.WithAck(
+        func(e event.Event) {
+            // do success stuff...
+            h.eventSuccessCounter.Add(ctx, 1)
+            cancel()
+        }, func(e event.Event, err error) {
+            // do error stuff, potentially initiate retry
+            log.Ctx(e.Context()).Error().Str("error", err.Error()).Msg("event error")
+            h.eventFailureCounter.Add(ctx, 1)
+            cancel()
+        },
+    ),
+    event.WithMetadata(metadata),
+)
+```
+
 However, if any one of the filters or senders in the route tree finishes with a
 nack, the nack routine of the receiver gets executed immediately regardless of 
 whether other legs of the route tree are still processing (fail fast). This means, 
@@ -20,6 +42,8 @@ deliver the event to their destination and ack the event. The net affect is that
 application but not across applications and organizations. Also notice that this 
 is only an issue when multiple routes share the same receiver and some routes end
 in ack and some in nack.
+
+![nack.png](img/ack.png)
 
 The receiver orchestrates the lifecycle of an event. In case of all acks, 
 the receiver is clearly done with the event and can safely remove it from 
