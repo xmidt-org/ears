@@ -57,6 +57,7 @@ func (f *Filter) Filter(evt event.Event) []event.Event {
 	if dice <= *f.config.Percentage {
 		return []event.Event{evt}
 	}
+	evt.Ack()
 	return []event.Event{}
 }
 func (f *Filter) Config() interface{} {
