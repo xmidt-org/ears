@@ -43,7 +43,7 @@ application but not across applications and organizations. Also notice that this
 is only an issue when multiple routes share the same receiver and some routes end
 in ack and some in nack (which may not often be the case in practice).
 
-![nack.png](img/ack.png)
+![nack.png](img/nack.png)
 
 The receiver orchestrates the lifecycle of an event. In case of all acks, 
 the receiver is clearly done with the event and can safely remove it from 
