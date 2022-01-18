@@ -17,7 +17,6 @@ package dedup
 import (
 	"crypto/md5"
 	"encoding/json"
-	"errors"
 	"fmt"
 	lru "github.com/hashicorp/golang-lru"
 	"github.com/rs/zerolog/log"
@@ -25,6 +24,7 @@ import (
 	"github.com/xmidt-org/ears/pkg/filter"
 	"github.com/xmidt-org/ears/pkg/secret"
 	"github.com/xmidt-org/ears/pkg/tenant"
+	"go.opentelemetry.io/otel/trace"
 )
 
 func NewFilter(tid tenant.Id, plugin string, name string, config interface{}, secrets secret.Vault) (*Filter, error) {
@@ -61,7 +61,11 @@ func (f *Filter) Filter(evt event.Event) []event.Event {
 	}
 	obj, _, _ := evt.GetPathValue(f.config.Path)
 	if obj == nil {
-		evt.Nack(errors.New("nil object in " + f.name + " at path " + f.config.Path))
+		log.Ctx(evt.Context()).Error().Str("op", "filter").Str("filterType", "dedup").Str("name", f.Name()).Msg("nil object at " + f.config.Path)
+		if span := trace.SpanFromContext(evt.Context()); span != nil {
+			span.AddEvent("nil object at " + f.config.Path)
+		}
+		evt.Ack()
 		return []event.Event{}
 	}
 	buf, err := json.Marshal(obj)

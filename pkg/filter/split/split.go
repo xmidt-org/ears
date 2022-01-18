@@ -15,13 +15,13 @@
 package split
 
 import (
-	"errors"
 	"fmt"
 	"github.com/rs/zerolog/log"
 	"github.com/xmidt-org/ears/pkg/event"
 	"github.com/xmidt-org/ears/pkg/filter"
 	"github.com/xmidt-org/ears/pkg/secret"
 	"github.com/xmidt-org/ears/pkg/tenant"
+	"go.opentelemetry.io/otel/trace"
 )
 
 // a SplitFilter splits and event into two or more events
@@ -56,24 +56,40 @@ func (f *Filter) Filter(evt event.Event) []event.Event {
 	events := []event.Event{}
 	obj, _, _ := evt.GetPathValue(f.config.Path)
 	if obj == nil {
-		evt.Nack(errors.New("nil object in " + f.name + " at path " + f.config.Path))
+		log.Ctx(evt.Context()).Error().Str("op", "filter").Str("filterType", "split").Str("name", f.Name()).Msg("nil object at " + f.config.Path)
+		if span := trace.SpanFromContext(evt.Context()); span != nil {
+			span.AddEvent("nil object at " + f.config.Path)
+		}
+		evt.Ack()
 		return []event.Event{}
 	}
 	arr, ok := obj.([]interface{})
 	if !ok {
-		evt.Nack(errors.New("split on non array type"))
-		return nil
+		log.Ctx(evt.Context()).Error().Str("op", "filter").Str("filterType", "split").Str("name", f.Name()).Msg("split on non array type at " + f.config.Path)
+		if span := trace.SpanFromContext(evt.Context()); span != nil {
+			span.AddEvent("split on non array type at " + f.config.Path)
+		}
+		evt.Ack()
+		return []event.Event{}
 	}
 	for _, p := range arr {
 		nevt, err := evt.Clone(evt.Context())
 		if err != nil {
-			evt.Nack(err)
-			return nil
+			log.Ctx(evt.Context()).Error().Str("op", "filter").Str("filterType", "split").Str("name", f.Name()).Msg(err.Error())
+			if span := trace.SpanFromContext(evt.Context()); span != nil {
+				span.AddEvent(err.Error())
+			}
+			evt.Ack()
+			return []event.Event{}
 		}
 		err = nevt.SetPayload(p)
 		if err != nil {
-			evt.Nack(err)
-			return nil
+			log.Ctx(evt.Context()).Error().Str("op", "filter").Str("filterType", "split").Str("name", f.Name()).Msg(err.Error())
+			if span := trace.SpanFromContext(evt.Context()); span != nil {
+				span.AddEvent(err.Error())
+			}
+			evt.Ack()
+			return []event.Event{}
 		}
 		events = append(events, nevt)
 	}

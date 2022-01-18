@@ -23,6 +23,7 @@ import (
 	"github.com/xmidt-org/ears/pkg/filter"
 	"github.com/xmidt-org/ears/pkg/secret"
 	"github.com/xmidt-org/ears/pkg/tenant"
+	"go.opentelemetry.io/otel/trace"
 	"strings"
 )
 
@@ -70,7 +71,12 @@ func (f *Filter) Filter(evt event.Event) []event.Event {
 		for idx, elem := range a {
 			subEvt, err := event.New(evt.Context(), elem, event.WithMetadata(evt.Metadata()), event.WithTenant(evt.Tenant()))
 			if err != nil {
-				evt.Nack(err)
+				log.Ctx(evt.Context()).Error().Str("op", "filter").Str("filterType", "transform").Str("name", f.Name()).Msg(err.Error())
+				if span := trace.SpanFromContext(evt.Context()); span != nil {
+					span.AddEvent(err.Error())
+				}
+				// we move on here, so no ack
+				//evt.Ack()
 				return events
 			}
 			thisTransform := deepcopy.Copy(f.config.Transformation)

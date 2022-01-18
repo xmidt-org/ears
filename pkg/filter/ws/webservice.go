@@ -80,13 +80,18 @@ func (f *Filter) Filter(evt event.Event) []event.Event {
 	// execute http request
 	res, _, err := f.hitEndpoint(evt.Context(), evt)
 	if err != nil {
+		// legitimate filter nack because it involves an external service
 		evt.Nack(err)
 		return []event.Event{}
 	}
 	var resObj interface{}
 	err = json.Unmarshal([]byte(res), &resObj)
 	if err != nil {
-		evt.Nack(err)
+		log.Ctx(evt.Context()).Error().Str("op", "filter").Str("filterType", "ws").Str("name", f.Name()).Msg(err.Error())
+		if span := trace.SpanFromContext(evt.Context()); span != nil {
+			span.AddEvent(err.Error())
+		}
+		evt.Ack()
 		return []event.Event{}
 	}
 	if f.config.FromPath != "" {

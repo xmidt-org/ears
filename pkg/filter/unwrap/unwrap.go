@@ -15,13 +15,13 @@
 package unwrap
 
 import (
-	"errors"
 	"fmt"
 	"github.com/rs/zerolog/log"
 	"github.com/xmidt-org/ears/pkg/event"
 	"github.com/xmidt-org/ears/pkg/filter"
 	"github.com/xmidt-org/ears/pkg/secret"
 	"github.com/xmidt-org/ears/pkg/tenant"
+	"go.opentelemetry.io/otel/trace"
 )
 
 func NewFilter(tid tenant.Id, plugin string, name string, config interface{}, secrets secret.Vault) (*Filter, error) {
@@ -56,12 +56,20 @@ func (f *Filter) Filter(evt event.Event) []event.Event {
 	log.Ctx(evt.Context()).Debug().Str("op", "filter").Str("filterType", "unwrap").Str("name", f.Name()).Msg("unwrap")
 	obj, _, _ := evt.GetPathValue(f.config.Path)
 	if obj == nil {
-		evt.Nack(errors.New("nil object in " + f.name + " at path " + f.config.Path))
+		log.Ctx(evt.Context()).Error().Str("op", "filter").Str("filterType", "unwrap").Str("name", f.Name()).Msg("nil object at " + f.config.Path)
+		if span := trace.SpanFromContext(evt.Context()); span != nil {
+			span.AddEvent("nil object at " + f.config.Path)
+		}
+		evt.Ack()
 		return []event.Event{}
 	}
 	err := evt.SetPayload(obj)
 	if err != nil {
-		evt.Nack(err)
+		log.Ctx(evt.Context()).Error().Str("op", "filter").Str("filterType", "unwrap").Str("name", f.Name()).Msg(err.Error())
+		if span := trace.SpanFromContext(evt.Context()); span != nil {
+			span.AddEvent(err.Error())
+		}
+		evt.Ack()
 		return nil
 	}
 	return []event.Event{evt}

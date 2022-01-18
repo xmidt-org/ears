@@ -17,13 +17,13 @@ package decode
 import (
 	"encoding/base64"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"github.com/rs/zerolog/log"
 	"github.com/xmidt-org/ears/pkg/event"
 	"github.com/xmidt-org/ears/pkg/filter"
 	"github.com/xmidt-org/ears/pkg/secret"
 	"github.com/xmidt-org/ears/pkg/tenant"
+	"go.opentelemetry.io/otel/trace"
 )
 
 func NewFilter(tid tenant.Id, plugin string, name string, config interface{}, secrets secret.Vault) (*Filter, error) {
@@ -56,7 +56,11 @@ func (f *Filter) Filter(evt event.Event) []event.Event {
 	}
 	obj, _, _ := evt.GetPathValue(f.config.FromPath)
 	if obj == nil {
-		evt.Nack(errors.New("nil object in " + f.name + " at path " + f.config.FromPath))
+		log.Ctx(evt.Context()).Error().Str("op", "filter").Str("filterType", "decode").Str("name", f.Name()).Msg("nil object at " + f.config.FromPath)
+		if span := trace.SpanFromContext(evt.Context()); span != nil {
+			span.AddEvent("nil object at " + f.config.FromPath)
+		}
+		evt.Ack()
 		return []event.Event{}
 	}
 	var input string
@@ -66,7 +70,11 @@ func (f *Filter) Filter(evt event.Event) []event.Event {
 	case []byte:
 		input = string(obj)
 	default:
-		evt.Nack(errors.New("unsupported field type at path " + f.config.FromPath))
+		log.Ctx(evt.Context()).Error().Str("op", "filter").Str("filterType", "decode").Str("name", f.Name()).Msg("unsupported data type at " + f.config.FromPath)
+		if span := trace.SpanFromContext(evt.Context()); span != nil {
+			span.AddEvent("unsupported data type at " + f.config.FromPath)
+		}
+		evt.Ack()
 		return []event.Event{}
 	}
 	var buf []byte
@@ -74,7 +82,11 @@ func (f *Filter) Filter(evt event.Event) []event.Event {
 	if f.config.Encoding == "base64" {
 		buf, err = base64.StdEncoding.DecodeString(input)
 		if err != nil {
-			evt.Nack(err)
+			log.Ctx(evt.Context()).Error().Str("op", "filter").Str("filterType", "decode").Str("name", f.Name()).Msg(err.Error())
+			if span := trace.SpanFromContext(evt.Context()); span != nil {
+				span.AddEvent(err.Error())
+			}
+			evt.Ack()
 			return []event.Event{}
 		}
 	} else {
@@ -83,7 +95,11 @@ func (f *Filter) Filter(evt event.Event) []event.Event {
 	var output interface{}
 	err = json.Unmarshal(buf, &output)
 	if err != nil {
-		evt.Nack(err)
+		log.Ctx(evt.Context()).Error().Str("op", "filter").Str("filterType", "decode").Str("name", f.Name()).Msg(err.Error())
+		if span := trace.SpanFromContext(evt.Context()); span != nil {
+			span.AddEvent(err.Error())
+		}
+		evt.Ack()
 		return []event.Event{}
 	}
 	path := f.config.FromPath

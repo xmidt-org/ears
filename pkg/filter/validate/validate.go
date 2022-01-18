@@ -16,11 +16,13 @@ package validate
 
 import (
 	"fmt"
+	"github.com/rs/zerolog/log"
 	"github.com/xeipuuv/gojsonschema"
 	"github.com/xmidt-org/ears/pkg/event"
 	"github.com/xmidt-org/ears/pkg/filter"
 	"github.com/xmidt-org/ears/pkg/secret"
 	"github.com/xmidt-org/ears/pkg/tenant"
+	"go.opentelemetry.io/otel/trace"
 )
 
 var _ filter.Filterer = (*Filter)(nil)
@@ -59,11 +61,19 @@ func (f *Filter) Filter(evt event.Event) []event.Event {
 	doc := gojsonschema.NewGoLoader(obj)
 	result, err := gojsonschema.Validate(f.schema, doc)
 	if err != nil {
-		evt.Nack(err)
+		log.Ctx(evt.Context()).Error().Str("op", "filter").Str("filterType", "validate").Str("name", f.Name()).Msg(err.Error())
+		if span := trace.SpanFromContext(evt.Context()); span != nil {
+			span.AddEvent(err.Error())
+		}
+		evt.Ack()
 		return []event.Event{}
 	}
 	if !result.Valid() {
-		evt.Nack(fmt.Errorf(fmt.Sprintf("%+v", result.Errors())))
+		log.Ctx(evt.Context()).Error().Str("op", "filter").Str("filterType", "validate").Str("name", f.Name()).Msg(fmt.Sprintf("%+v", result.Errors()))
+		if span := trace.SpanFromContext(evt.Context()); span != nil {
+			span.AddEvent(fmt.Sprintf("%+v", result.Errors()))
+		}
+		evt.Ack()
 		return []event.Event{}
 	}
 	return []event.Event{evt}
