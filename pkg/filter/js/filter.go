@@ -21,6 +21,7 @@ import (
 	"github.com/xmidt-org/ears/pkg/filter"
 	"github.com/xmidt-org/ears/pkg/secret"
 	"github.com/xmidt-org/ears/pkg/tenant"
+	"go.opentelemetry.io/otel/trace"
 )
 
 func NewFilter(tid tenant.Id, plugin string, name string, config interface{}, secrets secret.Vault) (*Filter, error) {
@@ -54,8 +55,11 @@ func (f *Filter) Filter(evt event.Event) []event.Event {
 	}
 	transformedEvts, err := defaultInterpreter.Exec(evt, f.config.Source)
 	if err != nil {
-		log.Ctx(evt.Context()).Error().Str("op", "js.Filter").Msg("js filter error: " + err.Error())
-		evt.Nack(err)
+		log.Ctx(evt.Context()).Error().Str("op", "filter").Str("filterType", "js").Str("name", f.Name()).Msg("js filter error: " + err.Error())
+		if span := trace.SpanFromContext(evt.Context()); span != nil {
+			span.AddEvent("js filter error: " + err.Error())
+		}
+		evt.Ack()
 		return []event.Event{}
 	}
 	log.Ctx(evt.Context()).Debug().Str("op", "filter").Str("filterType", "js").Str("name", f.Name()).Int("eventCount", len(transformedEvts)).Msg("js")
