@@ -15,13 +15,13 @@
 package ttl
 
 import (
-	"errors"
 	"fmt"
 	"github.com/rs/zerolog/log"
 	"github.com/xmidt-org/ears/pkg/event"
 	"github.com/xmidt-org/ears/pkg/filter"
 	"github.com/xmidt-org/ears/pkg/secret"
 	"github.com/xmidt-org/ears/pkg/tenant"
+	"go.opentelemetry.io/otel/trace"
 	"time"
 )
 
@@ -59,18 +59,30 @@ func (f *Filter) Filter(evt event.Event) []event.Event {
 	log.Ctx(evt.Context()).Debug().Str("op", "filter").Str("filterType", "ttl").Str("name", f.Name()).Msg("ttl")
 	obj, _, _ := evt.GetPathValue(f.config.Path)
 	if obj == nil {
-		evt.Nack(errors.New("nil object in " + f.name + " at path " + f.config.Path))
+		log.Ctx(evt.Context()).Error().Str("op", "filter").Str("filterType", "ttl").Str("name", f.Name()).Msg("nil object at " + f.config.Path)
+		if span := trace.SpanFromContext(evt.Context()); span != nil {
+			span.AddEvent("nil object at " + f.config.Path)
+		}
+		evt.Ack()
 		return []event.Event{}
 	}
 	evtTs, ok := obj.(float64)
 	if !ok {
-		evt.Nack(errors.New("not a uint64 at path " + f.config.Path))
+		log.Ctx(evt.Context()).Error().Str("op", "filter").Str("filterType", "ttl").Str("name", f.Name()).Msg("not a uint64 at path " + f.config.Path)
+		if span := trace.SpanFromContext(evt.Context()); span != nil {
+			span.AddEvent("not a uint64 at path " + f.config.Path)
+		}
+		evt.Ack()
 		return []event.Event{}
 	}
 	evtTs = evtTs * float64(*f.config.NanoFactor)
 	nowNanos := time.Now().UnixNano()
 	if int64(evtTs) > nowNanos {
-		evt.Nack(errors.New("event from the future in " + f.name + " at path " + f.config.Path))
+		log.Ctx(evt.Context()).Error().Str("op", "filter").Str("filterType", "ttl").Str("name", f.Name()).Msg("event from the future at path " + f.config.Path)
+		if span := trace.SpanFromContext(evt.Context()); span != nil {
+			span.AddEvent("event from the future at path " + f.config.Path)
+		}
+		evt.Ack()
 		return []event.Event{}
 	}
 	if nowNanos-int64(evtTs) >= int64(*f.config.Ttl*(*f.config.NanoFactor)) {

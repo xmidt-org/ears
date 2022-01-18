@@ -68,7 +68,7 @@ func (f *Filter) Filter(evt event.Event) []event.Event {
 	}
 	buf, err := json.Marshal(obj)
 	if err != nil {
-		log.Ctx(evt.Context()).Error().Str("op", "log.Filter").Msg(err.Error())
+		log.Ctx(evt.Context()).Error().Str("op", "filter").Str("filterType", "log").Str("name", f.Name()).Msg(err.Error())
 	} else {
 		if *f.config.AsString {
 			log.Ctx(evt.Context()).Info().Str("op", "filter").Str("filterType", "log").Str("name", f.Name()).Str("event", string(buf)).Msg("log")

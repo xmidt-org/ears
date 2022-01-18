@@ -22,6 +22,7 @@ import (
 	"github.com/xmidt-org/ears/pkg/filter"
 	"github.com/xmidt-org/ears/pkg/secret"
 	"github.com/xmidt-org/ears/pkg/tenant"
+	"go.opentelemetry.io/otel/trace"
 	"reflect"
 	"strings"
 )
@@ -69,7 +70,11 @@ func (f *Filter) Filter(evt event.Event) []event.Event {
 			var err error
 			currEvent, err = event.New(evt.Context(), aElem, event.WithMetadata(evt.Metadata()))
 			if err != nil {
-				evt.Nack(err)
+				log.Ctx(evt.Context()).Error().Str("op", "filter").Str("filterType", "mapping").Str("name", f.Name()).Msg(err.Error())
+				if span := trace.SpanFromContext(evt.Context()); span != nil {
+					span.AddEvent(err.Error())
+				}
+				evt.Ack()
 				return []event.Event{}
 			}
 		}

@@ -15,6 +15,7 @@
 package pass
 
 import (
+	"fmt"
 	"github.com/rs/zerolog/log"
 	"github.com/xmidt-org/ears/pkg/event"
 	"github.com/xmidt-org/ears/pkg/filter"
@@ -40,6 +41,12 @@ type Filter struct {
 
 // Filter lets any event pass
 func (f *Filter) Filter(evt event.Event) []event.Event {
+	if f == nil {
+		evt.Nack(&filter.InvalidConfigError{
+			Err: fmt.Errorf("<nil> pointer filter"),
+		})
+		return nil
+	}
 	log.Ctx(evt.Context()).Debug().Str("op", "filter").Str("filterType", "pass").Str("name", f.Name()).Msg("pass")
 	return []event.Event{evt}
 }
