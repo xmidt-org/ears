@@ -25,12 +25,14 @@ type Config struct {
 	Path       string `json:"path,omitempty"`
 	Ttl        *int   `json:"ttl,omitempty"`        // ttl in MS
 	NanoFactor *int   `json:"nanoFactor,omitempty"` // factor to convert timestamp to nano seconds
+	Disabled   *bool  `json:"disabled,omitempty"`
 }
 
 var DefaultConfig = Config{
 	Path:       "",
 	Ttl:        pointer.Int(1000 * 60 * 5), // 5 min in ms
 	NanoFactor: pointer.Int(1000 * 1000),
+	Disabled:   pointer.Bool(false),
 }
 
 type Filter struct {

@@ -22,13 +22,13 @@ import (
 	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"github.com/rs/zerolog/log"
 	"github.com/xmidt-org/ears/pkg/event"
 	"github.com/xmidt-org/ears/pkg/filter"
 	"github.com/xmidt-org/ears/pkg/secret"
 	"github.com/xmidt-org/ears/pkg/tenant"
+	"go.opentelemetry.io/otel/trace"
 	"hash/fnv"
 )
 
@@ -62,11 +62,11 @@ func (f *Filter) Filter(evt event.Event) []event.Event {
 	}
 	obj, _, _ := evt.GetPathValue(f.config.FromPath)
 	if obj == nil {
-		//span := trace.SpanFromContext(evt.Context())
-		//if span != nil {
-		// add stuff to span here
-		//}
-		evt.Nack(errors.New("cannot hash nil object in " + f.name + " at path " + f.config.FromPath))
+		log.Ctx(evt.Context()).Error().Str("op", "filter").Str("filterType", "hash").Str("name", f.Name()).Msg("cannot hash nil object at " + f.config.FromPath)
+		if span := trace.SpanFromContext(evt.Context()); span != nil {
+			span.AddEvent("cannot hash nil object at " + f.config.FromPath)
+		}
+		evt.Ack()
 		return []event.Event{}
 	}
 	var buf []byte
@@ -79,7 +79,11 @@ func (f *Filter) Filter(evt event.Event) []event.Event {
 	default:
 		buf, err = json.Marshal(obj)
 		if err != nil {
-			evt.Nack(err)
+			log.Ctx(evt.Context()).Error().Str("op", "filter").Str("filterType", "hash").Str("name", f.Name()).Msg(err.Error())
+			if span := trace.SpanFromContext(evt.Context()); span != nil {
+				span.AddEvent(err.Error())
+			}
+			evt.Ack()
 			return []event.Event{}
 		}
 	}
@@ -101,7 +105,11 @@ func (f *Filter) Filter(evt event.Event) []event.Event {
 		output = sha256Hash[:]
 	case "hmac-md5":
 		if f.config.Key == "" {
-			evt.Nack(errors.New("key required for hmac"))
+			log.Ctx(evt.Context()).Error().Str("op", "filter").Str("filterType", "hash").Str("name", f.Name()).Msg("key required for hmac")
+			if span := trace.SpanFromContext(evt.Context()); span != nil {
+				span.AddEvent("key required for hmac")
+			}
+			evt.Ack()
 			return []event.Event{}
 		}
 		h := hmac.New(md5.New, []byte(f.config.Key))
@@ -110,7 +118,11 @@ func (f *Filter) Filter(evt event.Event) []event.Event {
 		output = md5Hash[:]
 	case "hmac-sha1":
 		if f.config.Key == "" {
-			evt.Nack(errors.New("key required for hmac"))
+			log.Ctx(evt.Context()).Error().Str("op", "filter").Str("filterType", "hash").Str("name", f.Name()).Msg("key required for hmac")
+			if span := trace.SpanFromContext(evt.Context()); span != nil {
+				span.AddEvent("key required for hmac")
+			}
+			evt.Ack()
 			return []event.Event{}
 		}
 		h := hmac.New(sha1.New, []byte(f.config.Key))
@@ -119,7 +131,11 @@ func (f *Filter) Filter(evt event.Event) []event.Event {
 		output = sha1Hash[:]
 	case "hmac-sha256":
 		if f.config.Key == "" {
-			evt.Nack(errors.New("key required for hmac"))
+			log.Ctx(evt.Context()).Error().Str("op", "filter").Str("filterType", "hash").Str("name", f.Name()).Msg("key required for hmac")
+			if span := trace.SpanFromContext(evt.Context()); span != nil {
+				span.AddEvent("key required for hmac")
+			}
+			evt.Ack()
 			return []event.Event{}
 		}
 		h := hmac.New(sha256.New, []byte(f.config.Key))
@@ -127,7 +143,11 @@ func (f *Filter) Filter(evt event.Event) []event.Event {
 		sha256Hash := h.Sum(nil)
 		output = sha256Hash[:]
 	default:
-		evt.Nack(errors.New("unsupported hashing algorithm " + f.config.HashAlgorithm))
+		log.Ctx(evt.Context()).Error().Str("op", "filter").Str("filterType", "hash").Str("name", f.Name()).Msg("unsupported hashing algorithm " + f.config.HashAlgorithm)
+		if span := trace.SpanFromContext(evt.Context()); span != nil {
+			span.AddEvent("unsupported hashing algorithm " + f.config.HashAlgorithm)
+		}
+		evt.Ack()
 		return []event.Event{}
 	}
 	if f.config.Encoding == "base64" {
