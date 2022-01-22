@@ -133,6 +133,9 @@ issues:
     - path: internal/pkg/fx/pluginmanagerfx/module\.go
       linters:
         - funlen
+    - path: pkg/filter/decode/decode\.go
+      linters:
+        - funlen
     - path: pkg/filter/hash/hash\.go
       text: "weak cryptographic primitive"
       linters:
