@@ -236,7 +236,7 @@ func (m *manager) ReceiversStatus() map[string]ReceiverStatus {
 			status.ReferenceCount++
 			receivers[mapKey] = status
 		} else {
-			receivers[mapKey] = ReceiverStatus{Name: v.Name(), Plugin: v.Plugin(), Config: v.Config(), ReferenceCount: 1}
+			receivers[mapKey] = ReceiverStatus{Name: v.Name(), Plugin: v.Plugin(), Config: v.Config(), ReferenceCount: 1, Tid: v.tid}
 		}
 	}
 	return receivers
@@ -452,7 +452,7 @@ func (m *manager) FiltersStatus() map[string]FilterStatus {
 			status.ReferenceCount++
 			filters[mapKey] = status
 		} else {
-			filters[mapKey] = FilterStatus{Name: v.Name(), Plugin: v.Plugin(), Config: v.Config(), ReferenceCount: 1}
+			filters[mapKey] = FilterStatus{Name: v.Name(), Plugin: v.Plugin(), Config: v.Config(), ReferenceCount: 1, Tid: v.tid}
 		}
 	}
 	return filters
@@ -604,7 +604,7 @@ func (m *manager) SendersStatus() map[string]SenderStatus {
 			status.ReferenceCount++
 			senders[mapKey] = status
 		} else {
-			senders[mapKey] = SenderStatus{Name: v.Name(), Plugin: v.Plugin(), Config: v.Config(), ReferenceCount: 1}
+			senders[mapKey] = SenderStatus{Name: v.Name(), Plugin: v.Plugin(), Config: v.Config(), ReferenceCount: 1, Tid: v.tid}
 		}
 	}
 	return senders

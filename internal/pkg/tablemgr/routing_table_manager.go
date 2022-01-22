@@ -140,11 +140,12 @@ func (r *DefaultRoutingTableManager) registerAndRunRoute(ctx context.Context, ro
 	// it's an update, so we first need to decrement the reference counter on the existing route and possibly stop it
 	if ok && existingLiveRoute.Config.Hash(ctx) != routeConfig.Hash(ctx) {
 		r.logger.Info().Str("op", "registerAndRunRoute").Str("routeId", routeConfig.Id).Msg("existing route needs to be updated")
-		err = r.unregisterAndStopRoute(ctx, routeConfig.TenantId, routeConfig.Id) // unregister will only truly decommission the route if this was th elast referecne
+		err = r.unregisterAndStopRoute(ctx, routeConfig.TenantId, routeConfig.Id) // unregister will only truly decommission the route if this was the last reference
 		if err != nil {
 			r.logger.Error().Str("op", "registerAndRunRoute").Str("routeId", routeConfig.Id).Msg(err.Error())
 		}
 	}
+
 	// An identical route already exists under a different ID.
 	// It would be ok to simply create another route here because plugin manager will ensure we share receiver and sender
 	// plugin for performance. However, simply creating another route would cause event duplication. Instead we need to

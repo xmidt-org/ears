@@ -19,6 +19,7 @@ import (
 	"embed"
 	"errors"
 	"github.com/goccy/go-yaml"
+	"github.com/xmidt-org/ears/internal/pkg/plugin"
 	"github.com/xmidt-org/ears/internal/pkg/quota"
 	"github.com/xmidt-org/ears/internal/pkg/rtsemconv"
 	"github.com/xmidt-org/ears/internal/pkg/tablemgr"
@@ -70,6 +71,10 @@ func NewAPIManager(routingMgr tablemgr.RoutingTableManager, tenantStorer tenant.
 	api.muxRouter.HandleFunc("/ears/v1/orgs/{orgId}/applications/{appId}/routes/{routeId}", api.removeRouteHandler).Methods(http.MethodDelete)
 	api.muxRouter.HandleFunc("/ears/v1/orgs/{orgId}/applications/{appId}/routes/{routeId}", api.getRouteHandler).Methods(http.MethodGet)
 	api.muxRouter.HandleFunc("/ears/v1/orgs/{orgId}/applications/{appId}/routes", api.getAllTenantRoutesHandler).Methods(http.MethodGet)
+
+	api.muxRouter.HandleFunc("/ears/v1/orgs/{orgId}/applications/{appId}/senders", api.getAllSendersHandler).Methods(http.MethodGet)
+	api.muxRouter.HandleFunc("/ears/v1/orgs/{orgId}/applications/{appId}/receivers", api.getAllReceiversHandler).Methods(http.MethodGet)
+	api.muxRouter.HandleFunc("/ears/v1/orgs/{orgId}/applications/{appId}/filters", api.getAllFiltersHandler).Methods(http.MethodGet)
 
 	api.muxRouter.HandleFunc("/ears/v1/orgs/{orgId}/applications/{appId}/fragments/{fragmentId}", api.addFragmentHandler).Methods(http.MethodPut)
 	api.muxRouter.HandleFunc("/ears/v1/orgs/{orgId}/applications/{appId}/fragments", api.addFragmentHandler).Methods(http.MethodPost)
@@ -340,6 +345,7 @@ func (a *APIManager) getAllTenantFragmentsHandler(w http.ResponseWriter, r *http
 
 func (a *APIManager) getAllSendersHandler(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
+	vars := mux.Vars(r)
 	allSenders, err := a.routingTableMgr.GetAllSendersStatus(ctx)
 	if err != nil {
 		log.Ctx(ctx).Error().Str("op", "getAllSendersHandler").Msg(err.Error())
@@ -347,13 +353,25 @@ func (a *APIManager) getAllSendersHandler(w http.ResponseWriter, r *http.Request
 		resp.Respond(ctx, w, doYaml(r))
 		return
 	}
-	trace.SpanFromContext(ctx).SetAttributes(attribute.Int("senderCount", len(allSenders)))
-	resp := ItemsResponse(allSenders)
+	senders := make(map[string]plugin.SenderStatus)
+	tid, _ := getTenant(ctx, vars)
+	if tid != nil {
+		for k, v := range allSenders {
+			if tid.Equal(v.Tid) {
+				senders[k] = v
+			}
+		}
+	} else {
+		senders = allSenders
+	}
+	trace.SpanFromContext(ctx).SetAttributes(attribute.Int("senderCount", len(senders)))
+	resp := ItemsResponse(senders)
 	resp.Respond(ctx, w, doYaml(r))
 }
 
 func (a *APIManager) getAllReceiversHandler(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
+	vars := mux.Vars(r)
 	allReceivers, err := a.routingTableMgr.GetAllReceiversStatus(ctx)
 	if err != nil {
 		log.Ctx(ctx).Error().Str("op", "getAllReceiversHandler").Msg(err.Error())
@@ -361,13 +379,25 @@ func (a *APIManager) getAllReceiversHandler(w http.ResponseWriter, r *http.Reque
 		resp.Respond(ctx, w, doYaml(r))
 		return
 	}
-	trace.SpanFromContext(ctx).SetAttributes(attribute.Int("receiverCount", len(allReceivers)))
-	resp := ItemsResponse(allReceivers)
+	receivers := make(map[string]plugin.ReceiverStatus)
+	tid, _ := getTenant(ctx, vars)
+	if tid != nil {
+		for k, v := range allReceivers {
+			if tid.Equal(v.Tid) {
+				receivers[k] = v
+			}
+		}
+	} else {
+		receivers = allReceivers
+	}
+	trace.SpanFromContext(ctx).SetAttributes(attribute.Int("receiverCount", len(receivers)))
+	resp := ItemsResponse(receivers)
 	resp.Respond(ctx, w, doYaml(r))
 }
 
 func (a *APIManager) getAllFiltersHandler(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
+	vars := mux.Vars(r)
 	allFilters, err := a.routingTableMgr.GetAllFiltersStatus(ctx)
 	if err != nil {
 		log.Ctx(ctx).Error().Str("op", "getAllFiltersHandler").Msg(err.Error())
@@ -375,8 +405,19 @@ func (a *APIManager) getAllFiltersHandler(w http.ResponseWriter, r *http.Request
 		resp.Respond(ctx, w, doYaml(r))
 		return
 	}
-	trace.SpanFromContext(ctx).SetAttributes(attribute.Int("filterCount", len(allFilters)))
-	resp := ItemsResponse(allFilters)
+	filters := make(map[string]plugin.FilterStatus)
+	tid, _ := getTenant(ctx, vars)
+	if tid != nil {
+		for k, v := range allFilters {
+			if tid.Equal(v.Tid) {
+				filters[k] = v
+			}
+		}
+	} else {
+		filters = allFilters
+	}
+	trace.SpanFromContext(ctx).SetAttributes(attribute.Int("filterCount", len(filters)))
+	resp := ItemsResponse(filters)
 	resp.Respond(ctx, w, doYaml(r))
 }
 
