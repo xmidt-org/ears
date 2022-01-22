@@ -107,6 +107,7 @@ type ReceiverStatus struct {
 	Plugin         string
 	Config         interface{}
 	ReferenceCount int
+	Tid            tenant.Id
 }
 
 type SenderStatus struct {
@@ -114,6 +115,7 @@ type SenderStatus struct {
 	Plugin         string
 	Config         interface{}
 	ReferenceCount int
+	Tid            tenant.Id
 }
 
 type FilterStatus struct {
@@ -121,6 +123,7 @@ type FilterStatus struct {
 	Plugin         string
 	Config         interface{}
 	ReferenceCount int
+	Tid            tenant.Id
 }
 
 type OptionError struct {
