@@ -34,6 +34,7 @@ import (
 	"github.com/xmidt-org/ears/pkg/plugins/log"
 	"github.com/xmidt-org/ears/pkg/plugins/mapping"
 	"github.com/xmidt-org/ears/pkg/plugins/match"
+	"github.com/xmidt-org/ears/pkg/plugins/merge"
 	"github.com/xmidt-org/ears/pkg/plugins/metric"
 	"github.com/xmidt-org/ears/pkg/plugins/pass"
 	"github.com/xmidt-org/ears/pkg/plugins/redis"
@@ -196,6 +197,10 @@ func ProvidePluginManager(in PluginIn) (PluginOut, error) {
 		{
 			name:   "transform",
 			plugin: toArr(transform.NewPluginVersion("transform", "", ""))[0].(pkgplugin.Pluginer),
+		},
+		{
+			name:   "merge",
+			plugin: toArr(merge.NewPluginVersion("merge", "", ""))[0].(pkgplugin.Pluginer),
 		},
 		{
 			name:   "http",

@@ -49,6 +49,7 @@ import (
 	plog "github.com/xmidt-org/ears/pkg/plugins/log"
 	"github.com/xmidt-org/ears/pkg/plugins/mapping"
 	"github.com/xmidt-org/ears/pkg/plugins/match"
+	"github.com/xmidt-org/ears/pkg/plugins/merge"
 	"github.com/xmidt-org/ears/pkg/plugins/metric"
 	"github.com/xmidt-org/ears/pkg/plugins/pass"
 	goredis "github.com/xmidt-org/ears/pkg/plugins/redis"
@@ -592,6 +593,10 @@ func setupRestApi(config config.Config, storageMgr route.RouteStorer, setupQuota
 		{
 			name:   "transform",
 			plugin: toArr(transform.NewPluginVersion("transform", "", ""))[0].(pkgplugin.Pluginer),
+		},
+		{
+			name:   "merge",
+			plugin: toArr(merge.NewPluginVersion("merge", "", ""))[0].(pkgplugin.Pluginer),
 		},
 		{
 			name:   "http",

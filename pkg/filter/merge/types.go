@@ -1,4 +1,4 @@
-// Copyright 2021 Comcast Cable Communications Management, LLC
+// Copyright 2020 Comcast Cable Communications Management, LLC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,26 +12,25 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package main
+package merge
 
-import (
-	"github.com/xmidt-org/ears/pkg/plugins/transform"
-)
+import "github.com/xmidt-org/ears/pkg/tenant"
 
-func main() {
-	// required for `go build` to not fail
+// Config can be passed into NewFilter() in order to configure
+// the behavior of the sender.
+type Config struct {
+	ToPath   string `json:"toPath,omitempty"`
+	FromPath string `json:"fromPath,omitempty"`
 }
 
-//go:generate ../../../../script/build-plugin.sh
+var DefaultConfig = Config{
+	ToPath:   "",
+	FromPath: "",
+}
 
-var (
-	Name       = "transform"
-	GitVersion = "v0.0.0"
-	GitCommit  = ""
-)
-
-var Plugin, PluginErr = transform.NewPluginVersion(Name, GitVersion, GitCommit)
-
-// for golangci-lint
-var _ = Plugin
-var _ = PluginErr
+type Filter struct {
+	config Config
+	name   string
+	plugin string
+	tid    tenant.Id
+}
