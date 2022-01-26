@@ -50,15 +50,15 @@ const (
 // Config can be passed into NewFilter() in order to configure
 // the behavior of the sender.
 type Config struct {
-	Mode            ModeType                       `json:"mode,omitempty"`
-	Matcher         MatcherType                    `json:"matcher,omitempty"`
-	Pattern         interface{}                    `json:"pattern,omitempty"`
-	Patterns        []interface{}                  `json:"patterns,omitempty"`
-	PatternsLogic   string                         `json:"patternsLogic,omitempty"` // AND, OR
-	Path            string                         `json:"path,omitempty"`          // path to match pattern against, if omitted uses payload as default
-	ExactArrayMatch *bool                          `json:"exactArrayMatch,omitempty"`
-	Comparison      *comparison.Comparison         `json:"comparison,omitempty"`
-	ComparisonTree  *comparison.ComparisonTreeNode `json:"comparisonTree,omitempty"`
+	Mode            ModeType                       `json:"mode,omitempty"`            // allow or deny
+	Matcher         MatcherType                    `json:"matcher,omitempty"`         // regex, pattern, patternregex, comparison
+	Pattern         interface{}                    `json:"pattern,omitempty"`         // single pattern
+	Patterns        []interface{}                  `json:"patterns,omitempty"`        // list of patterns
+	PatternsLogic   string                         `json:"patternsLogic,omitempty"`   // AND, OR only needed for pattern matches with multiple patterns
+	Path            string                         `json:"path,omitempty"`            // path to match pattern against, if omitted uses payload as default
+	ExactArrayMatch *bool                          `json:"exactArrayMatch,omitempty"` // if true pattern array must match payload array exactly, otherwise the pattern array can be a partial of the payload array
+	Comparison      *comparison.Comparison         `json:"comparison,omitempty"`      // equal or notEqual comparison
+	ComparisonTree  *comparison.ComparisonTreeNode `json:"comparisonTree,omitempty"`  // boolean tree of comparisons
 }
 
 var DefaultConfig = Config{
