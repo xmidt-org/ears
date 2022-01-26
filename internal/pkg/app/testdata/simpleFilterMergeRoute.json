@@ -1,0 +1,38 @@
+{
+  "id" : "merge100",
+  "userId" : "boris",
+  "name" : "simpleFilterMergeRoute",
+  "receiver" : {
+    "plugin" : "debug",
+    "name" : "simpleFilterMergeRouteReceiver",
+    "config" :
+    {
+      "rounds" : 1000,
+      "intervalMs" : 500,
+      "payload" : {
+        "foo" : ["bar"],
+        "bar" : ["baz"]
+      },
+      "maxHistory": 100
+    }
+  },
+  "sender" : {
+    "plugin" : "debug",
+    "name" : "simpleFilterMergeRouteSender",
+    "config" : {
+      "destination" : "stdout",
+      "maxHistory": 100
+    }
+  },
+  "filterChain" : [
+    {
+      "plugin" : "merge",
+      "name" : "simpleFilterMergeRouteMerger",
+      "config" : {
+        "fromPath" : ".foo",
+        "toPath" : ".bar"
+      }
+    }
+  ],
+  "deliveryMode" : "whoCares"
+}
