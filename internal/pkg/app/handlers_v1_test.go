@@ -633,7 +633,7 @@ func setupRestApi(config config.Config, storageMgr route.RouteStorer, setupQuota
 			return &EarsRuntime{config, nil, nil, storageMgr, nil, nil}, err
 		}
 	}
-	apiMgr, err := NewAPIManager(routingMgr, tenantStorer, quotaMgr)
+	apiMgr, err := NewAPIManager(routingMgr, tenantStorer, quotaMgr, nil)
 	if err != nil {
 		return &EarsRuntime{config, nil, nil, storageMgr, nil, nil}, err
 	}
@@ -748,7 +748,7 @@ func checkEventsSent(routeFileName string, testPrefix string, pluginMgr plugin.M
 func TestRestVersionHandler(t *testing.T) {
 	w := httptest.NewRecorder()
 	r := httptest.NewRequest(http.MethodGet, "/version", nil)
-	api, err := NewAPIManager(&tablemgr.DefaultRoutingTableManager{}, nil, nil)
+	api, err := NewAPIManager(&tablemgr.DefaultRoutingTableManager{}, nil, nil, nil)
 	if err != nil {
 		t.Fatalf("Fail to setup api manager: %s\n", err.Error())
 	}
