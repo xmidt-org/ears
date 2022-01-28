@@ -19,6 +19,7 @@ import (
 	"embed"
 	"errors"
 	"github.com/goccy/go-yaml"
+	"github.com/xmidt-org/ears/internal/pkg/jwt"
 	"github.com/xmidt-org/ears/internal/pkg/plugin"
 	"github.com/xmidt-org/ears/internal/pkg/quota"
 	"github.com/xmidt-org/ears/internal/pkg/rtsemconv"
@@ -48,18 +49,20 @@ type APIManager struct {
 	routingTableMgr            tablemgr.RoutingTableManager
 	tenantStorer               tenant.TenantStorer
 	quotaManager               *quota.QuotaManager
+	jwtManager                 jwt.JWTConsumer
 	addRouteSuccessRecorder    metric.BoundFloat64Counter
 	addRouteFailureRecorder    metric.BoundFloat64Counter
 	removeRouteSuccessRecorder metric.BoundFloat64Counter
 	removeRouteFailureRecorder metric.BoundFloat64Counter
 }
 
-func NewAPIManager(routingMgr tablemgr.RoutingTableManager, tenantStorer tenant.TenantStorer, quotaManager *quota.QuotaManager) (*APIManager, error) {
+func NewAPIManager(routingMgr tablemgr.RoutingTableManager, tenantStorer tenant.TenantStorer, quotaManager *quota.QuotaManager, jwtManager jwt.JWTConsumer) (*APIManager, error) {
 	api := &APIManager{
 		muxRouter:       mux.NewRouter(),
 		routingTableMgr: routingMgr,
 		tenantStorer:    tenantStorer,
 		quotaManager:    quotaManager,
+		jwtManager:      jwtManager,
 	}
 	api.muxRouter.PathPrefix("/ears/openapi").Handler(
 		http.FileServer(http.FS(WebsiteFS)),

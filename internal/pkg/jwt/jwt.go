@@ -1,7 +1,6 @@
 package jwt
 
 import (
-	"context"
 	"crypto/rsa"
 	"fmt"
 	"io"
@@ -17,20 +16,20 @@ const (
 	SATPrefix  = "x1:capabilities:"
 	SATPrefix1 = "x1:"
 
-	InvalidKid           = "invalid sat kid"
-	InvalidSignature     = "invalid sat signature"
-	MissingKid           = "missing sat kid"
-	MissingCapabilities  = "missing sat capabilities"
-	NoMatchCapabilities  = "no matching sat capabilities"
-	MissingClientId      = "missing sat client id"
-	UnauthorizedClientId = "unauthorized sat client id"
-	TokenExpired         = "sat token is expired"
-	TokenNotValidYet     = "sat token is not valid yet"
+	InvalidKid           = "invalid jwt kid"
+	InvalidSignature     = "invalid jwt signature"
+	MissingKid           = "missing jwt kid"
+	MissingCapabilities  = "missing jwt capabilities"
+	NoMatchCapabilities  = "no matching jwt capabilities"
+	MissingClientId      = "missing jwt client id"
+	UnauthorizedClientId = "unauthorized jwt client id"
+	TokenExpired         = "jwt token is expired"
+	TokenNotValidYet     = "jwt token is not valid yet"
 	InvalidSATFormat     = "invalid sat format"
 )
 
 type (
-	JWTConsumer struct {
+	DefaultJWTConsumer struct {
 		sync.Mutex
 		keyVault string
 		keys     map[string]*rsa.PublicKey
@@ -49,9 +48,10 @@ func (nfe *UnauthorizedError) Error() string {
 	return nfe.Msg
 }
 
-// InitConsumer inits JWTConsumer
-func InitConsumer(ctx context.Context, keyVault string, verifier Verifier) (*JWTConsumer, error) {
-	sc := JWTConsumer{
+// satConsumer, err = sat.InitConsumer(ctx, "https://sat-prod.codebig2.net/keys", satVerifier)
+
+func NewJWTConsumer(keyVault string, verifier Verifier) (JWTConsumer, error) {
+	sc := DefaultJWTConsumer{
 		keyVault: keyVault,
 		verifier: verifier,
 		keys:     make(map[string]*rsa.PublicKey),
@@ -63,8 +63,8 @@ func InitConsumer(ctx context.Context, keyVault string, verifier Verifier) (*JWT
 }
 
 // getKeyData checks cached token and downloads keys from key vault if expired
-// TODO: implement key revocation flow
-func (sc *JWTConsumer) getKeyData(kid string) (*rsa.PublicKey, error) {
+//TODO: implement key revocation flow
+func (sc *DefaultJWTConsumer) GetKeyData(kid string) (*rsa.PublicKey, error) {
 	sc.Lock()
 	defer sc.Unlock()
 	pub, has := sc.keys[kid]
@@ -72,17 +72,14 @@ func (sc *JWTConsumer) getKeyData(kid string) (*rsa.PublicKey, error) {
 		return pub, nil
 	}
 	// fetch from key vault
-	//status, bs, err := sc.client.DoRequest(ctx, "GET", sc.keyVault+"/"+kid, nil, nil)
 	req, err := http.NewRequest("GET", sc.keyVault+"/"+kid, nil)
-	//req.Header.Add("", "")
 	resp, err := sc.client.Do(req)
 	if err != nil {
-		// handle error
+		return nil, err
 	}
 	defer resp.Body.Close()
 	bs, err := io.ReadAll(resp.Body)
 	if nil != err {
-		//ctx.Logger().Error("op", "JWTConsumer.getKeyData", "stage", "client.DoRequest", "status", status, "err", err)
 		if resp.StatusCode == 404 {
 			return nil, &UnauthorizedError{InvalidKid}
 		} else {
@@ -102,8 +99,8 @@ func (sc *JWTConsumer) getKeyData(kid string) (*rsa.PublicKey, error) {
 	return pub, nil
 }
 
-func (sc *JWTConsumer) verifyTokenWithClientIds(clientIds []string, domain, component, api, method, token string) ([]string, string, error) {
-	partners, sub, capabilities, err := sc.extractToken(token)
+func (sc *DefaultJWTConsumer) VerifyTokenWithClientIds(clientIds []string, domain, component, api, method, token string) ([]string, string, error) {
+	partners, sub, capabilities, err := sc.ExtractToken(token)
 	if nil != err {
 		return nil, "", err
 	}
@@ -125,7 +122,7 @@ func (sc *JWTConsumer) verifyTokenWithClientIds(clientIds []string, domain, comp
 	}
 	// verify capabilities
 	for _, cap := range capabilities {
-		if sc.isValid(domain, component, api, method, cap) {
+		if sc.IsValid(domain, component, api, method, cap) {
 			return partners, sub, nil
 		}
 	}
@@ -133,16 +130,16 @@ func (sc *JWTConsumer) verifyTokenWithClientIds(clientIds []string, domain, comp
 	return nil, "", &UnauthorizedError{NoMatchCapabilities}
 }
 
-func (sc *JWTConsumer) extractToken(token string) ([]string, string, []string, error) {
+func (sc *DefaultJWTConsumer) ExtractToken(token string) ([]string, string, []string, error) {
 	var (
 		sat *jwt.Token
 		err error
 	)
-	//only allow RS256 to avoid hmac attack, please see details at https://auth0.com/blog/2015/03/31/critical-vulnerabilities-in-json-web-token-libraries/
+	// only allow RS256 to avoid hmac attack, please see details at https://auth0.com/blog/critical-vulnerabilities-in-json-web-token-libraries/
 	parser := &jwt.Parser{ValidMethods: []string{"RS256"}}
 	sat, err = parser.Parse(token, func(token *jwt.Token) (interface{}, error) {
 		if o, has := token.Header["kid"]; has {
-			return sc.getKeyData(o.(string))
+			return sc.GetKeyData(o.(string))
 		} else {
 			return nil, &UnauthorizedError{MissingKid}
 		}
@@ -197,7 +194,7 @@ func (sc *JWTConsumer) extractToken(token string) ([]string, string, []string, e
 // isValid verifies capability in two formats:
 //  * <domain>:<component>:<api>:<method>
 //  * <ignore>:<domain>:<component>:<api>:<method>
-func (sc *JWTConsumer) isValid(domain, component, api, method, cap string) bool {
+func (sc *DefaultJWTConsumer) IsValid(domain, component, api, method, cap string) bool {
 	//SAT requires prefix which is not related to the capabilities, remove it
 	cap = strings.TrimPrefix(cap, SATPrefix)
 	cap = strings.TrimPrefix(cap, SATPrefix1)
