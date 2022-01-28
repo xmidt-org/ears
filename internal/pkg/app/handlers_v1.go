@@ -143,6 +143,10 @@ func (a *APIManager) versionHandler(w http.ResponseWriter, r *http.Request) {
 	resp.Respond(ctx, w, doYaml(r))
 }
 
+func getBearerToken(req *http.Request) string {
+	return strings.TrimPrefix(req.Header.Get("Authorization"), "Bearer ")
+}
+
 func getTenant(ctx context.Context, vars map[string]string) (*tenant.Id, ApiError) {
 	orgId := vars["orgId"]
 	appId := vars["appId"]
@@ -174,7 +178,16 @@ func (a *APIManager) addRouteHandler(w http.ResponseWriter, r *http.Request) {
 		resp.Respond(ctx, w, doYaml(r))
 		return
 	}
-	_, err := a.tenantStorer.GetConfig(ctx, *tid)
+
+	bearerToken := getBearerToken(r)
+	_, _, err := a.jwtManager.VerifyTokenWithClientIds([]string{}, "xrs", "ears", r.URL.Path, r.Method, bearerToken)
+	if err != nil {
+		log.Ctx(ctx).Error().Str("op", "addRouteHandler").Str("error", err.Error()).Msg("authorization error")
+		resp := ErrorResponse(convertToApiError(ctx, err))
+		resp.Respond(ctx, w, doYaml(r))
+		return
+	}
+	_, err = a.tenantStorer.GetConfig(ctx, *tid)
 	if err != nil {
 		log.Ctx(ctx).Error().Str("op", "addRouteHandler").Str("error", err.Error()).Msg("error getting tenant config")
 		resp := ErrorResponse(convertToApiError(ctx, err))
@@ -670,6 +683,7 @@ func convertToApiError(ctx context.Context, err error) ApiError {
 	var routeValidationError *tablemgr.RouteValidationError
 	var routeRegistrationError *tablemgr.RouteRegistrationError
 	var routeNotFound *route.RouteNotFoundError
+	var jwtAuthError *jwt.JWTAuthError
 	if errors.As(err, &tenantNotFound) {
 		return &NotFoundError{"tenant " + tenantNotFound.Tenant.ToString() + " not found"}
 	} else if errors.As(err, &badTenantConfig) {
@@ -682,6 +696,8 @@ func convertToApiError(ctx context.Context, err error) ApiError {
 		return &BadRequestError{"bad route config", err}
 	} else if errors.As(err, &routeNotFound) {
 		return &NotFoundError{"route " + routeNotFound.RouteId + " not found"}
+	} else if errors.As(err, &jwtAuthError) {
+		return &BadRequestError{"bad or missing jwt token", err}
 	}
 	return &InternalServerError{err}
 }

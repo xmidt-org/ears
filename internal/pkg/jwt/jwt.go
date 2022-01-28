@@ -56,7 +56,7 @@ func NewJWTConsumer(keyVault string, verifier Verifier) (JWTConsumer, error) {
 		verifier: verifier,
 		keys:     make(map[string]*rsa.PublicKey),
 		client: &http.Client{
-			Timeout: time.Duration(30 * time.Second),
+			Timeout: 30 * time.Second,
 		},
 	}
 	return &sc, nil
@@ -72,7 +72,7 @@ func (sc *DefaultJWTConsumer) GetKeyData(kid string) (*rsa.PublicKey, error) {
 		return pub, nil
 	}
 	// fetch from key vault
-	req, err := http.NewRequest("GET", sc.keyVault+"/"+kid, nil)
+	req, _ := http.NewRequest("GET", sc.keyVault+"/"+kid, nil)
 	resp, err := sc.client.Do(req)
 	if err != nil {
 		return nil, err
