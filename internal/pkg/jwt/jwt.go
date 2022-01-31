@@ -38,7 +38,7 @@ func NewJWTConsumer(publicKeyEndpoint string, verifier Verifier, requireBearerTo
 }
 
 // getKeyData checks cached token and downloads keys from key vault if expired
-func (sc *DefaultJWTConsumer) GetKeyData(kid string) (*rsa.PublicKey, error) {
+func (sc *DefaultJWTConsumer) getPublicKey(kid string) (*rsa.PublicKey, error) {
 	sc.Lock()
 	defer sc.Unlock()
 	pub, has := sc.keys[kid]
@@ -73,14 +73,14 @@ func (sc *DefaultJWTConsumer) GetKeyData(kid string) (*rsa.PublicKey, error) {
 	return pub, nil
 }
 
-func (sc *DefaultJWTConsumer) VerifyTokenWithClientIds(clientIds []string, domain, component, api, method, token string) ([]string, string, error) {
+func (sc *DefaultJWTConsumer) VerifyToken(token string, clientIds []string, domain string, component string, api string, method string) ([]string, string, error) {
 	if !sc.requireBearerToken {
 		return nil, "", nil
 	}
 	if token == "" {
 		return nil, "", &UnauthorizedError{MissingToken}
 	}
-	partners, sub, capabilities, err := sc.ExtractToken(token)
+	partners, sub, capabilities, err := sc.extractToken(token)
 	if nil != err {
 		return nil, "", err
 	}
@@ -102,7 +102,7 @@ func (sc *DefaultJWTConsumer) VerifyTokenWithClientIds(clientIds []string, domai
 	}
 	// verify capabilities
 	for _, cap := range capabilities {
-		if sc.IsValid(domain, component, api, method, cap) {
+		if sc.isValid(domain, component, api, method, cap) {
 			return partners, sub, nil
 		}
 	}
@@ -110,7 +110,7 @@ func (sc *DefaultJWTConsumer) VerifyTokenWithClientIds(clientIds []string, domai
 	return nil, "", &UnauthorizedError{NoMatchingCapabilities}
 }
 
-func (sc *DefaultJWTConsumer) ExtractToken(token string) ([]string, string, []string, error) {
+func (sc *DefaultJWTConsumer) extractToken(token string) ([]string, string, []string, error) {
 	var (
 		sat *jwt.Token
 		err error
@@ -119,7 +119,7 @@ func (sc *DefaultJWTConsumer) ExtractToken(token string) ([]string, string, []st
 	parser := &jwt.Parser{ValidMethods: []string{"RS256"}}
 	sat, err = parser.Parse(token, func(token *jwt.Token) (interface{}, error) {
 		if o, has := token.Header["kid"]; has {
-			return sc.GetKeyData(o.(string))
+			return sc.getPublicKey(o.(string))
 		} else {
 			return nil, &UnauthorizedError{MissingKid}
 		}
@@ -174,7 +174,7 @@ func (sc *DefaultJWTConsumer) ExtractToken(token string) ([]string, string, []st
 // isValid verifies capability in two formats:
 //  * <domain>:<component>:<api>:<method>
 //  * <ignore>:<domain>:<component>:<api>:<method>
-func (sc *DefaultJWTConsumer) IsValid(domain, component, api, method, cap string) bool {
+func (sc *DefaultJWTConsumer) isValid(domain, component, api, method, cap string) bool {
 	//SAT requires prefix which is not related to the capabilities, remove it
 	cap = strings.TrimPrefix(cap, SATPrefix)
 	cap = strings.TrimPrefix(cap, SATPrefix1)
