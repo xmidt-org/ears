@@ -136,6 +136,10 @@ issues:
     - path: pkg/filter/decode/decode\.go
       linters:
         - funlen
+    - path: internal/pkg/jwt/types\.go
+      text: "Potential hardcoded credentials"
+      linters:
+        - gosec
     - path: pkg/filter/hash/hash\.go
       text: "weak cryptographic primitive"
       linters:
