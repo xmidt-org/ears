@@ -180,7 +180,7 @@ func (a *APIManager) addRouteHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	bearerToken := getBearerToken(r)
-	_, _, err := a.jwtManager.VerifyToken(bearerToken, nil, r.URL.Path, r.Method)
+	_, _, err := a.jwtManager.VerifyToken(bearerToken, r.URL.Path, r.Method, tid)
 	if err != nil {
 		log.Ctx(ctx).Error().Str("op", "addRouteHandler").Str("error", err.Error()).Msg("authorization error")
 		resp := ErrorResponse(convertToApiError(ctx, err))

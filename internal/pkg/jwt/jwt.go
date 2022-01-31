@@ -4,6 +4,7 @@ import (
 	"crypto/rsa"
 	"errors"
 	"fmt"
+	"github.com/xmidt-org/ears/pkg/tenant"
 	"io"
 	"net/http"
 	"strings"
@@ -16,7 +17,7 @@ func (nfe *UnauthorizedError) Error() string {
 	return nfe.Msg
 }
 
-func NewJWTConsumer(publicKeyEndpoint string, verifier Verifier, requireBearerToken bool, domain string, component string) (JWTConsumer, error) {
+func NewJWTConsumer(publicKeyEndpoint string, verifier Verifier, requireBearerToken bool, domain string, component string, adminClientIds []string) (JWTConsumer, error) {
 	if requireBearerToken {
 		if publicKeyEndpoint == "" {
 			return nil, errors.New("missing public key endpoint for jwt")
@@ -35,6 +36,7 @@ func NewJWTConsumer(publicKeyEndpoint string, verifier Verifier, requireBearerTo
 		keys:               make(map[string]*rsa.PublicKey),
 		domain:             domain,
 		component:          component,
+		adminClientIds:     adminClientIds,
 		client: &http.Client{
 			Timeout: 30 * time.Second,
 		},
@@ -80,7 +82,7 @@ func (sc *DefaultJWTConsumer) getPublicKey(kid string) (*rsa.PublicKey, error) {
 
 // VerifyToken validates a give token for an optional list of clientIds / "subjects" (use empty array if any client id ok) and
 // for a given domain, component, api and method (api and method are encoded in the claim)
-func (sc *DefaultJWTConsumer) VerifyToken(token string, clientIds []string, api string, method string) ([]string, string, error) {
+func (sc *DefaultJWTConsumer) VerifyToken(token string, api string, method string, tid *tenant.Id) ([]string, string, error) {
 	if !sc.requireBearerToken {
 		return nil, "", nil
 	}
@@ -91,19 +93,30 @@ func (sc *DefaultJWTConsumer) VerifyToken(token string, clientIds []string, api 
 	if nil != err {
 		return nil, "", err
 	}
-	// verify clientId
-	if 0 < len(clientIds) {
+	// verify clientId and partner
+	foundClientId := false
+	if 0 < len(sc.adminClientIds) {
 		if "" == sub {
 			return nil, "", &UnauthorizedError{MissingClientId}
 		}
-		found := false
-		for _, clientId := range clientIds {
+		for _, clientId := range sc.adminClientIds {
 			if sub == clientId {
-				found = true
+				foundClientId = true
 				break
 			}
 		}
-		if !found {
+	}
+	if !foundClientId {
+		foundAllowedPartner := false
+		for _, partner := range partners {
+			if partner == tid.OrgId {
+				foundAllowedPartner = true
+				break
+			}
+		}
+		// only error out here if the subject is not an admin client ID and
+		// the tenant's organization is also not part of the allowed partners
+		if !foundAllowedPartner {
 			return nil, "", &UnauthorizedError{UnauthorizedClientId}
 		}
 	}
