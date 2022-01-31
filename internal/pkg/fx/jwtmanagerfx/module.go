@@ -42,7 +42,9 @@ func ProvideJWTManager(in JWTIn) (JWTOut, error) {
 	out := JWTOut{}
 	requireBearerToken := in.Config.GetBool("ears.jwt.requireBearerToken")
 	publicKeyEndpoint := in.Config.GetString("ears.jwt.publicKeyEndpoint")
-	out.JWTManager, _ = jwt.NewJWTConsumer(publicKeyEndpoint, DefaultJWTVerifier, requireBearerToken)
+	domain := in.Config.GetString("ears.jwt.domain")
+	component := in.Config.GetString("ears.jwt.component")
+	out.JWTManager, _ = jwt.NewJWTConsumer(publicKeyEndpoint, DefaultJWTVerifier, requireBearerToken, domain, component)
 	return out, nil
 }
 
