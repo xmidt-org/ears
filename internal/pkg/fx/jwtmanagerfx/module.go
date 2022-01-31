@@ -19,6 +19,7 @@ import (
 	"github.com/xmidt-org/ears/internal/pkg/config"
 	"github.com/xmidt-org/ears/internal/pkg/jwt"
 	"go.uber.org/fx"
+	"strings"
 )
 
 var Module = fx.Options(
@@ -44,7 +45,11 @@ func ProvideJWTManager(in JWTIn) (JWTOut, error) {
 	publicKeyEndpoint := in.Config.GetString("ears.jwt.publicKeyEndpoint")
 	domain := in.Config.GetString("ears.jwt.domain")
 	component := in.Config.GetString("ears.jwt.component")
-	out.JWTManager, _ = jwt.NewJWTConsumer(publicKeyEndpoint, DefaultJWTVerifier, requireBearerToken, domain, component)
+	adminClientIds := []string{}
+	if in.Config.GetString("ears.jwt.adminClientIds") != "" {
+		adminClientIds = strings.Split(in.Config.GetString("ears.jwt.adminClientIds"), ",")
+	}
+	out.JWTManager, _ = jwt.NewJWTConsumer(publicKeyEndpoint, DefaultJWTVerifier, requireBearerToken, domain, component, adminClientIds)
 	return out, nil
 }
 

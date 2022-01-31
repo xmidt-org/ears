@@ -2,6 +2,7 @@ package jwt
 
 import (
 	"crypto/rsa"
+	"github.com/xmidt-org/ears/pkg/tenant"
 	"net/http"
 	"sync"
 )
@@ -17,7 +18,7 @@ const (
 	MissingCapabilities    = "missing jwt capabilities"
 	NoMatchingCapabilities = "no matching jwt capabilities"
 	MissingClientId        = "missing jwt client id"
-	UnauthorizedClientId   = "unauthorized jwt client id"
+	UnauthorizedClientId   = "unauthorized jwt client id or disallowed partner"
 	NoAllowedPartners      = "no allowed partners"
 	TokenExpired           = "jwt token is expired"
 	TokenNotValidYet       = "jwt token is not valid yet"
@@ -25,7 +26,7 @@ const (
 )
 
 type JWTConsumer interface {
-	VerifyToken(token string, clientIds []string, api string, method string) ([]string, string, error)
+	VerifyToken(token string, api string, method string, tid *tenant.Id) ([]string, string, error)
 }
 
 type (
@@ -38,6 +39,7 @@ type (
 		requireBearerToken bool
 		domain             string
 		component          string
+		adminClientIds     []string
 	}
 	Verifier func(path, method, scope string) bool
 )
