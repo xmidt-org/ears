@@ -16,16 +16,17 @@ const (
 	SATPrefix  = "x1:capabilities:"
 	SATPrefix1 = "x1:"
 
-	InvalidKid           = "invalid jwt kid"
-	InvalidSignature     = "invalid jwt signature"
-	MissingKid           = "missing jwt kid"
-	MissingCapabilities  = "missing jwt capabilities"
-	NoMatchCapabilities  = "no matching jwt capabilities"
-	MissingClientId      = "missing jwt client id"
-	UnauthorizedClientId = "unauthorized jwt client id"
-	TokenExpired         = "jwt token is expired"
-	TokenNotValidYet     = "jwt token is not valid yet"
-	InvalidSATFormat     = "invalid sat format"
+	MissingToken           = "missing token"
+	InvalidKid             = "invalid jwt kid"
+	InvalidSignature       = "invalid jwt signature"
+	MissingKid             = "missing jwt kid"
+	MissingCapabilities    = "missing jwt capabilities"
+	NoMatchingCapabilities = "no matching jwt capabilities"
+	MissingClientId        = "missing jwt client id"
+	UnauthorizedClientId   = "unauthorized jwt client id"
+	TokenExpired           = "jwt token is expired"
+	TokenNotValidYet       = "jwt token is not valid yet"
+	InvalidSATFormat       = "invalid sat format"
 )
 
 type (
@@ -63,7 +64,6 @@ func NewJWTConsumer(keyVault string, verifier Verifier) (JWTConsumer, error) {
 }
 
 // getKeyData checks cached token and downloads keys from key vault if expired
-//TODO: implement key revocation flow
 func (sc *DefaultJWTConsumer) GetKeyData(kid string) (*rsa.PublicKey, error) {
 	sc.Lock()
 	defer sc.Unlock()
@@ -100,6 +100,9 @@ func (sc *DefaultJWTConsumer) GetKeyData(kid string) (*rsa.PublicKey, error) {
 }
 
 func (sc *DefaultJWTConsumer) VerifyTokenWithClientIds(clientIds []string, domain, component, api, method, token string) ([]string, string, error) {
+	if token == "" {
+		return nil, "", &UnauthorizedError{MissingToken}
+	}
 	partners, sub, capabilities, err := sc.ExtractToken(token)
 	if nil != err {
 		return nil, "", err
@@ -127,7 +130,7 @@ func (sc *DefaultJWTConsumer) VerifyTokenWithClientIds(clientIds []string, domai
 		}
 	}
 	//ctx.Logger().Error("op", "JWTConsumer.VerfiyToken", "stage", "capabilities", "api", api, "method", method, "capabilities", capabilities)
-	return nil, "", &UnauthorizedError{NoMatchCapabilities}
+	return nil, "", &UnauthorizedError{NoMatchingCapabilities}
 }
 
 func (sc *DefaultJWTConsumer) ExtractToken(token string) ([]string, string, []string, error) {
