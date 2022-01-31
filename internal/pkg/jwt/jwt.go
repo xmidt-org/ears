@@ -147,10 +147,11 @@ func (sc *DefaultJWTConsumer) extractToken(token string) ([]string, string, []st
 		}
 	})
 	if nil != err {
-		if ve, ok := err.(*jwt.ValidationError); ok {
-			// key does not exist
-			if _, ok := ve.Inner.(*UnauthorizedError); ok {
-				return nil, "", nil, ve.Inner
+		var ve *jwt.ValidationError
+		if errors.As(err, &ve) {
+			var veInner *UnauthorizedError
+			if errors.As(ve.Inner, &veInner) {
+				return nil, "", nil, veInner
 				// token expired or not valid yet
 			} else {
 				return nil, "", nil, &UnauthorizedError{ve.Error()}
