@@ -16,7 +16,7 @@ func (nfe *UnauthorizedError) Error() string {
 	return nfe.Msg
 }
 
-func NewJWTConsumer(publicKeyEndpoint string, verifier Verifier, requireBearerToken bool) (JWTConsumer, error) {
+func NewJWTConsumer(publicKeyEndpoint string, verifier Verifier, requireBearerToken bool, domain string, component string) (JWTConsumer, error) {
 	if requireBearerToken {
 		if publicKeyEndpoint == "" {
 			return nil, errors.New("missing public key endpoint for jwt")
@@ -24,12 +24,17 @@ func NewJWTConsumer(publicKeyEndpoint string, verifier Verifier, requireBearerTo
 		if verifier == nil {
 			return nil, errors.New("missing jwt verifier")
 		}
+		if domain == "" || component == "" {
+			return nil, errors.New("missing jwt domain or component")
+		}
 	}
 	sc := DefaultJWTConsumer{
 		publicKeyEndpoint:  publicKeyEndpoint,
 		verifier:           verifier,
 		requireBearerToken: requireBearerToken,
 		keys:               make(map[string]*rsa.PublicKey),
+		domain:             domain,
+		component:          component,
 		client: &http.Client{
 			Timeout: 30 * time.Second,
 		},
@@ -73,7 +78,9 @@ func (sc *DefaultJWTConsumer) getPublicKey(kid string) (*rsa.PublicKey, error) {
 	return pub, nil
 }
 
-func (sc *DefaultJWTConsumer) VerifyToken(token string, clientIds []string, domain string, component string, api string, method string) ([]string, string, error) {
+// VerifyToken validates a give token for an optional list of clientIds / "subjects" (use empty array if any client id ok) and
+// for a given domain, component, api and method (api and method are encoded in the claim)
+func (sc *DefaultJWTConsumer) VerifyToken(token string, clientIds []string, api string, method string) ([]string, string, error) {
 	if !sc.requireBearerToken {
 		return nil, "", nil
 	}
@@ -102,14 +109,16 @@ func (sc *DefaultJWTConsumer) VerifyToken(token string, clientIds []string, doma
 	}
 	// verify capabilities
 	for _, cap := range capabilities {
-		if sc.isValid(domain, component, api, method, cap) {
+		if sc.isValid(api, method, cap) {
 			return partners, sub, nil
 		}
 	}
-	//ctx.Logger().Error("op", "JWTConsumer.VerfiyToken", "stage", "capabilities", "api", api, "method", method, "capabilities", capabilities)
 	return nil, "", &UnauthorizedError{NoMatchingCapabilities}
 }
 
+// extractToken returns array of partner strings (from claims.allowedResources.allowedPartners),
+// subject string (aka clientId), an array of capabilities and finally an error which is nil if the
+// token is valid
 func (sc *DefaultJWTConsumer) extractToken(token string) ([]string, string, []string, error) {
 	var (
 		sat *jwt.Token
@@ -135,7 +144,6 @@ func (sc *DefaultJWTConsumer) extractToken(token string) ([]string, string, []st
 			}
 		}
 		// internal error
-		//ctx.Logger().Error("op", "JWTConsumer.VerfiyToken", "stage", "validate", "err", err)
 		return nil, "", nil, err
 	}
 	if !sat.Valid {
@@ -147,7 +155,6 @@ func (sc *DefaultJWTConsumer) extractToken(token string) ([]string, string, []st
 	}
 	sub, _ := claims["sub"].(string)
 	// get partners
-	// TODO: return error if partners cannot be found
 	var partners []string
 	if res, ok := claims["allowedResources"].(map[string]interface{}); ok {
 		if os, ok := res["allowedPartners"].([]interface{}); ok {
@@ -157,6 +164,9 @@ func (sc *DefaultJWTConsumer) extractToken(token string) ([]string, string, []st
 				}
 			}
 		}
+	}
+	if len(partners) == 0 {
+		return nil, "", nil, &UnauthorizedError{NoAllowedPartners}
 	}
 	os, ok := claims["capabilities"].([]interface{})
 	if !ok {
@@ -174,7 +184,7 @@ func (sc *DefaultJWTConsumer) extractToken(token string) ([]string, string, []st
 // isValid verifies capability in two formats:
 //  * <domain>:<component>:<api>:<method>
 //  * <ignore>:<domain>:<component>:<api>:<method>
-func (sc *DefaultJWTConsumer) isValid(domain, component, api, method, cap string) bool {
+func (sc *DefaultJWTConsumer) isValid(api, method, cap string) bool {
 	//SAT requires prefix which is not related to the capabilities, remove it
 	cap = strings.TrimPrefix(cap, SATPrefix)
 	cap = strings.TrimPrefix(cap, SATPrefix1)
@@ -186,10 +196,10 @@ func (sc *DefaultJWTConsumer) isValid(domain, component, api, method, cap string
 	if len(ss) > 4 {
 		idx = 1
 	}
-	if domain != ss[idx] {
+	if sc.domain != ss[idx] {
 		return false
 	}
-	if component != ss[idx+1] {
+	if sc.component != ss[idx+1] {
 		return false
 	}
 	return sc.verifier(api, method, ss[idx+2]+":"+ss[idx+3])
