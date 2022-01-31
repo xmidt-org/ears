@@ -40,9 +40,9 @@ type JWTOut struct {
 
 func ProvideJWTManager(in JWTIn) (JWTOut, error) {
 	out := JWTOut{}
-	//requireBearerToken := in.Config.GetBool("ears.jwt.requireBearerToken")
+	requireBearerToken := in.Config.GetBool("ears.jwt.requireBearerToken")
 	publicKeyEndpoint := in.Config.GetString("ears.jwt.publicKeyEndpoint")
-	out.JWTManager, _ = jwt.NewJWTConsumer(publicKeyEndpoint, DefaultJWTVerifier)
+	out.JWTManager, _ = jwt.NewJWTConsumer(publicKeyEndpoint, DefaultJWTVerifier, requireBearerToken)
 	return out, nil
 }
 
