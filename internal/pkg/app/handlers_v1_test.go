@@ -28,6 +28,7 @@ import (
 	"github.com/xmidt-org/ears/internal/pkg/db"
 	"github.com/xmidt-org/ears/internal/pkg/db/dynamo"
 	"github.com/xmidt-org/ears/internal/pkg/db/redis"
+	"github.com/xmidt-org/ears/internal/pkg/jwt"
 	"github.com/xmidt-org/ears/internal/pkg/plugin"
 	"github.com/xmidt-org/ears/internal/pkg/quota"
 	"github.com/xmidt-org/ears/internal/pkg/syncer"
@@ -633,7 +634,8 @@ func setupRestApi(config config.Config, storageMgr route.RouteStorer, setupQuota
 			return &EarsRuntime{config, nil, nil, storageMgr, nil, nil}, err
 		}
 	}
-	apiMgr, err := NewAPIManager(routingMgr, tenantStorer, quotaMgr, nil)
+	jwtMgr, _ := jwt.NewJWTConsumer("", nil, false)
+	apiMgr, err := NewAPIManager(routingMgr, tenantStorer, quotaMgr, jwtMgr)
 	if err != nil {
 		return &EarsRuntime{config, nil, nil, storageMgr, nil, nil}, err
 	}
@@ -748,7 +750,8 @@ func checkEventsSent(routeFileName string, testPrefix string, pluginMgr plugin.M
 func TestRestVersionHandler(t *testing.T) {
 	w := httptest.NewRecorder()
 	r := httptest.NewRequest(http.MethodGet, "/version", nil)
-	api, err := NewAPIManager(&tablemgr.DefaultRoutingTableManager{}, nil, nil, nil)
+	jwtMgr, _ := jwt.NewJWTConsumer("", nil, false)
+	api, err := NewAPIManager(&tablemgr.DefaultRoutingTableManager{}, nil, nil, jwtMgr)
 	if err != nil {
 		t.Fatalf("Fail to setup api manager: %s\n", err.Error())
 	}
