@@ -2,60 +2,34 @@ package jwt
 
 import (
 	"crypto/rsa"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
 	"strings"
-	"sync"
 	"time"
 
 	jwt "github.com/golang-jwt/jwt"
 )
 
-const (
-	SATPrefix  = "x1:capabilities:"
-	SATPrefix1 = "x1:"
-
-	MissingToken           = "missing token"
-	InvalidKid             = "invalid jwt kid"
-	InvalidSignature       = "invalid jwt signature"
-	MissingKid             = "missing jwt kid"
-	MissingCapabilities    = "missing jwt capabilities"
-	NoMatchingCapabilities = "no matching jwt capabilities"
-	MissingClientId        = "missing jwt client id"
-	UnauthorizedClientId   = "unauthorized jwt client id"
-	TokenExpired           = "jwt token is expired"
-	TokenNotValidYet       = "jwt token is not valid yet"
-	InvalidSATFormat       = "invalid sat format"
-)
-
-type (
-	DefaultJWTConsumer struct {
-		sync.Mutex
-		keyVault string
-		keys     map[string]*rsa.PublicKey
-		client   *http.Client
-		verifier Verifier
-	}
-	Verifier func(path, method, scope string) bool
-)
-
-//401 errors
-type UnauthorizedError struct {
-	Msg string
-}
-
 func (nfe *UnauthorizedError) Error() string {
 	return nfe.Msg
 }
 
-// satConsumer, err = sat.InitConsumer(ctx, "https://sat-prod.codebig2.net/keys", satVerifier)
-
-func NewJWTConsumer(keyVault string, verifier Verifier) (JWTConsumer, error) {
+func NewJWTConsumer(publicKeyEndpoint string, verifier Verifier, requireBearerToken bool) (JWTConsumer, error) {
+	if requireBearerToken {
+		if publicKeyEndpoint == "" {
+			return nil, errors.New("missing public key endpoint for jwt")
+		}
+		if verifier == nil {
+			return nil, errors.New("missing jwt verifier")
+		}
+	}
 	sc := DefaultJWTConsumer{
-		keyVault: keyVault,
-		verifier: verifier,
-		keys:     make(map[string]*rsa.PublicKey),
+		publicKeyEndpoint:  publicKeyEndpoint,
+		verifier:           verifier,
+		requireBearerToken: requireBearerToken,
+		keys:               make(map[string]*rsa.PublicKey),
 		client: &http.Client{
 			Timeout: 30 * time.Second,
 		},
@@ -72,7 +46,7 @@ func (sc *DefaultJWTConsumer) GetKeyData(kid string) (*rsa.PublicKey, error) {
 		return pub, nil
 	}
 	// fetch from key vault
-	req, _ := http.NewRequest("GET", sc.keyVault+"/"+kid, nil)
+	req, _ := http.NewRequest("GET", sc.publicKeyEndpoint+"/"+kid, nil)
 	resp, err := sc.client.Do(req)
 	if err != nil {
 		return nil, err
@@ -100,6 +74,9 @@ func (sc *DefaultJWTConsumer) GetKeyData(kid string) (*rsa.PublicKey, error) {
 }
 
 func (sc *DefaultJWTConsumer) VerifyTokenWithClientIds(clientIds []string, domain, component, api, method, token string) ([]string, string, error) {
+	if !sc.requireBearerToken {
+		return nil, "", nil
+	}
 	if token == "" {
 		return nil, "", &UnauthorizedError{MissingToken}
 	}
