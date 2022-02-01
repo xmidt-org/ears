@@ -1,6 +1,7 @@
 package jwt
 
 import (
+	"context"
 	"crypto/rsa"
 	"github.com/xmidt-org/ears/pkg/tenant"
 	"net/http"
@@ -23,7 +24,7 @@ const (
 )
 
 type JWTConsumer interface {
-	VerifyToken(token string, api string, method string, tid *tenant.Id) ([]string, string, error)
+	VerifyToken(ctx context.Context, token string, api string, method string, tid *tenant.Id) ([]string, string, error)
 }
 
 type (
@@ -38,6 +39,7 @@ type (
 		component          string
 		adminClientIds     []string
 		capabilityPrefixes []string
+		tenantStorer       tenant.TenantStorer
 	}
 	Verifier func(path, method, scope string) bool
 )

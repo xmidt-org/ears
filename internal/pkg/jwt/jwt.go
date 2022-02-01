@@ -1,6 +1,7 @@
 package jwt
 
 import (
+	"context"
 	"crypto/rsa"
 	"errors"
 	"fmt"
@@ -17,7 +18,7 @@ func (nfe *UnauthorizedError) Error() string {
 	return nfe.Msg
 }
 
-func NewJWTConsumer(publicKeyEndpoint string, verifier Verifier, requireBearerToken bool, domain string, component string, adminClientIds []string, capabilityPrefixes []string) (JWTConsumer, error) {
+func NewJWTConsumer(publicKeyEndpoint string, verifier Verifier, requireBearerToken bool, domain string, component string, adminClientIds []string, capabilityPrefixes []string, tenantStorer tenant.TenantStorer) (JWTConsumer, error) {
 	if requireBearerToken {
 		if publicKeyEndpoint == "" {
 			return nil, errors.New("missing public key endpoint for jwt")
@@ -38,6 +39,7 @@ func NewJWTConsumer(publicKeyEndpoint string, verifier Verifier, requireBearerTo
 		component:          component,
 		adminClientIds:     adminClientIds,
 		capabilityPrefixes: capabilityPrefixes,
+		tenantStorer:       tenantStorer,
 		client: &http.Client{
 			Timeout: 30 * time.Second,
 		},
@@ -83,7 +85,7 @@ func (sc *DefaultJWTConsumer) getPublicKey(kid string) (*rsa.PublicKey, error) {
 
 // VerifyToken validates a give token for an optional list of clientIds / "subjects" (use empty array if any client id ok) and
 // for a given domain, component, api and method (api and method are encoded in the claim)
-func (sc *DefaultJWTConsumer) VerifyToken(token string, api string, method string, tid *tenant.Id) ([]string, string, error) {
+func (sc *DefaultJWTConsumer) VerifyToken(ctx context.Context, token string, api string, method string, tid *tenant.Id) ([]string, string, error) {
 	if !sc.requireBearerToken {
 		return nil, "", nil
 	}
@@ -95,11 +97,11 @@ func (sc *DefaultJWTConsumer) VerifyToken(token string, api string, method strin
 		return nil, "", err
 	}
 	// verify clientId and partner
+	if "" == sub {
+		return nil, "", &UnauthorizedError{MissingClientId}
+	}
 	foundClientId := false
 	if 0 < len(sc.adminClientIds) {
-		if "" == sub {
-			return nil, "", &UnauthorizedError{MissingClientId}
-		}
 		for _, clientId := range sc.adminClientIds {
 			if sub == clientId {
 				foundClientId = true
@@ -107,19 +109,31 @@ func (sc *DefaultJWTConsumer) VerifyToken(token string, api string, method strin
 			}
 		}
 	}
+	// verify app specific client ids here
 	if !foundClientId {
-		foundAllowedPartner := false
-		for _, partner := range partners {
-			if partner == tid.OrgId {
-				foundAllowedPartner = true
+		tenantConfig, err := sc.tenantStorer.GetConfig(ctx, *tid)
+		if err != nil {
+			return nil, "", err
+		}
+		for _, cid := range tenantConfig.ClientIds {
+			if sub == cid {
+				foundClientId = true
 				break
 			}
 		}
-		// only error out here if the subject is not an admin client ID and
-		// the tenant's organization is also not part of the allowed partners
-		if !foundAllowedPartner {
-			return nil, "", &UnauthorizedError{UnauthorizedClientId}
+	}
+	// verify allowed partners
+	foundAllowedPartner := false
+	for _, partner := range partners {
+		if partner == tid.OrgId {
+			foundAllowedPartner = true
+			break
 		}
+	}
+	// only error out here if the subject is not an admin client ID and
+	// the tenant's organization is also not part of the allowed partners
+	if !foundAllowedPartner {
+		return nil, "", &UnauthorizedError{UnauthorizedClientId}
 	}
 	// verify capabilities
 	for _, cap := range capabilities {

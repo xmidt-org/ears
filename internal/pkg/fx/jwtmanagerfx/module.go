@@ -18,6 +18,7 @@ import (
 	"github.com/rs/zerolog"
 	"github.com/xmidt-org/ears/internal/pkg/config"
 	"github.com/xmidt-org/ears/internal/pkg/jwt"
+	"github.com/xmidt-org/ears/pkg/tenant"
 	"go.uber.org/fx"
 	"regexp"
 	"strings"
@@ -31,8 +32,9 @@ var Module = fx.Options(
 
 type JWTIn struct {
 	fx.In
-	Config config.Config
-	Logger *zerolog.Logger
+	Config       config.Config
+	Logger       *zerolog.Logger
+	TenantStorer tenant.TenantStorer
 }
 
 type JWTOut struct {
@@ -54,7 +56,7 @@ func ProvideJWTManager(in JWTIn) (JWTOut, error) {
 	if in.Config.GetString("ears.jwt.capabilityPrefixes") != "" {
 		capabilityPrefixes = strings.Split(in.Config.GetString("ears.jwt.capabilityPrefixes"), ",")
 	}
-	out.JWTManager, _ = jwt.NewJWTConsumer(publicKeyEndpoint, DefaultJWTVerifier, requireBearerToken, domain, component, adminClientIds, capabilityPrefixes)
+	out.JWTManager, _ = jwt.NewJWTConsumer(publicKeyEndpoint, DefaultJWTVerifier, requireBearerToken, domain, component, adminClientIds, capabilityPrefixes, in.TenantStorer)
 	return out, nil
 }
 
