@@ -17,7 +17,7 @@ func (nfe *UnauthorizedError) Error() string {
 	return nfe.Msg
 }
 
-func NewJWTConsumer(publicKeyEndpoint string, verifier Verifier, requireBearerToken bool, domain string, component string, adminClientIds []string) (JWTConsumer, error) {
+func NewJWTConsumer(publicKeyEndpoint string, verifier Verifier, requireBearerToken bool, domain string, component string, adminClientIds []string, capabilityPrefixes []string) (JWTConsumer, error) {
 	if requireBearerToken {
 		if publicKeyEndpoint == "" {
 			return nil, errors.New("missing public key endpoint for jwt")
@@ -37,6 +37,7 @@ func NewJWTConsumer(publicKeyEndpoint string, verifier Verifier, requireBearerTo
 		domain:             domain,
 		component:          component,
 		adminClientIds:     adminClientIds,
+		capabilityPrefixes: capabilityPrefixes,
 		client: &http.Client{
 			Timeout: 30 * time.Second,
 		},
@@ -199,9 +200,10 @@ func (sc *DefaultJWTConsumer) extractToken(token string) ([]string, string, []st
 //  * <domain>:<component>:<api>:<method>
 //  * <ignore>:<domain>:<component>:<api>:<method>
 func (sc *DefaultJWTConsumer) isValid(api, method, cap string) bool {
-	//SAT requires prefix which is not related to the capabilities, remove it
-	cap = strings.TrimPrefix(cap, SATPrefix)
-	cap = strings.TrimPrefix(cap, SATPrefix1)
+	// SAT requires prefix which is not related to the capabilities, remove it
+	for _, prefix := range sc.capabilityPrefixes {
+		cap = strings.TrimPrefix(cap, prefix)
+	}
 	ss := strings.Split(cap, ":")
 	if len(ss) < 4 {
 		return false
