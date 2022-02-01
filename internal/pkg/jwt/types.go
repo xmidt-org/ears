@@ -8,9 +8,6 @@ import (
 )
 
 const (
-	SATPrefix  = "x1:capabilities:"
-	SATPrefix1 = "x1:"
-
 	MissingToken           = "missing token"
 	InvalidKid             = "invalid jwt kid"
 	InvalidSignature       = "invalid jwt signature"
@@ -40,6 +37,7 @@ type (
 		domain             string
 		component          string
 		adminClientIds     []string
+		capabilityPrefixes []string
 	}
 	Verifier func(path, method, scope string) bool
 )

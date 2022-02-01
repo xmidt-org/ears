@@ -19,6 +19,7 @@ import (
 	"github.com/xmidt-org/ears/internal/pkg/config"
 	"github.com/xmidt-org/ears/internal/pkg/jwt"
 	"go.uber.org/fx"
+	"regexp"
 	"strings"
 )
 
@@ -49,10 +50,24 @@ func ProvideJWTManager(in JWTIn) (JWTOut, error) {
 	if in.Config.GetString("ears.jwt.adminClientIds") != "" {
 		adminClientIds = strings.Split(in.Config.GetString("ears.jwt.adminClientIds"), ",")
 	}
-	out.JWTManager, _ = jwt.NewJWTConsumer(publicKeyEndpoint, DefaultJWTVerifier, requireBearerToken, domain, component, adminClientIds)
+	capabilityPrefixes := []string{}
+	if in.Config.GetString("ears.jwt.capabilityPrefixes") != "" {
+		capabilityPrefixes = strings.Split(in.Config.GetString("ears.jwt.capabilityPrefixes"), ",")
+	}
+	out.JWTManager, _ = jwt.NewJWTConsumer(publicKeyEndpoint, DefaultJWTVerifier, requireBearerToken, domain, component, adminClientIds, capabilityPrefixes)
 	return out, nil
 }
 
 func DefaultJWTVerifier(path, method, scope string) bool {
-	return true
+	if scope == "*:*" {
+		return true
+	}
+	if scope == "routes:*" {
+		r1, _ := regexp.Compile(`([\w]+/)*routes`)
+		r2, _ := regexp.Compile(`([\w]+/)*routes/[\w]+`)
+		if r1.MatchString(path) || r2.MatchString(path) {
+			return true
+		}
+	}
+	return false
 }
