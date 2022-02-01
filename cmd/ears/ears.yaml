@@ -1,9 +1,18 @@
 ears:
+
   env: local
   logLevel: info
 
   api:
     port: 3000
+
+  jwt:
+    requireBearerToken: no
+    publicKeyEndpoint: https://sat-prod.codebig2.net/keys
+    domain: xrs
+    component: ears
+    adminClientIds: "x1:xrs-internal:fb92de"
+    capabilityPrefixes: "x1:capabilities:,x1:"
 
   sharder:
     active: yes
