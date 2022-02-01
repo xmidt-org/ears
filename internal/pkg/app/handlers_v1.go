@@ -721,6 +721,7 @@ func convertToApiError(ctx context.Context, err error) ApiError {
 	var routeRegistrationError *tablemgr.RouteRegistrationError
 	var routeNotFound *route.RouteNotFoundError
 	var jwtAuthError *jwt.JWTAuthError
+	var jwtUnauthorizedError *jwt.UnauthorizedError
 	if errors.As(err, &tenantNotFound) {
 		return &NotFoundError{"tenant " + tenantNotFound.Tenant.ToString() + " not found"}
 	} else if errors.As(err, &badTenantConfig) {
@@ -735,6 +736,8 @@ func convertToApiError(ctx context.Context, err error) ApiError {
 		return &NotFoundError{"route " + routeNotFound.RouteId + " not found"}
 	} else if errors.As(err, &jwtAuthError) {
 		return &BadRequestError{"bad or missing jwt token", err}
+	} else if errors.As(err, &jwtUnauthorizedError) {
+		return &BadRequestError{"jwt authorization failed", err}
 	}
 	return &InternalServerError{err}
 }

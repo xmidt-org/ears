@@ -101,6 +101,7 @@ func (sc *DefaultJWTConsumer) VerifyToken(ctx context.Context, token string, api
 		return nil, "", &UnauthorizedError{MissingClientId}
 	}
 	foundClientId := false
+	// check if this is an admin client
 	if 0 < len(sc.adminClientIds) {
 		for _, clientId := range sc.adminClientIds {
 			if sub == clientId {
@@ -109,7 +110,7 @@ func (sc *DefaultJWTConsumer) VerifyToken(ctx context.Context, token string, api
 			}
 		}
 	}
-	// verify app specific client ids here
+	// otherwise check if this is an app client
 	if !foundClientId {
 		tenantConfig, err := sc.tenantStorer.GetConfig(ctx, *tid)
 		if err != nil {
@@ -122,18 +123,21 @@ func (sc *DefaultJWTConsumer) VerifyToken(ctx context.Context, token string, api
 			}
 		}
 	}
-	// verify allowed partners
-	foundAllowedPartner := false
-	for _, partner := range partners {
-		if partner == tid.OrgId {
-			foundAllowedPartner = true
-			break
-		}
-	}
-	// only error out here if the subject is not an admin client ID and
-	// the tenant's organization is also not part of the allowed partners
-	if !foundAllowedPartner {
+	if !foundClientId {
 		return nil, "", &UnauthorizedError{UnauthorizedClientId}
+	}
+	// verify allowed partners if any are given in token
+	if len(partners) > 0 {
+		foundAllowedPartner := false
+		for _, partner := range partners {
+			if partner == tid.OrgId {
+				foundAllowedPartner = true
+				break
+			}
+		}
+		if !foundAllowedPartner {
+			return nil, "", &UnauthorizedError{UnauthorizedPartnerId}
+		}
 	}
 	// verify capabilities
 	for _, cap := range capabilities {
