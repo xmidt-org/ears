@@ -19,9 +19,10 @@ const (
 	UnauthorizedClientId   = "unauthorized jwt client id"
 	UnauthorizedPartnerId  = "unauthorized jwt partner id"
 	NoAllowedPartners      = "no allowed partners"
-	TokenExpired           = "jwt token is expired"
-	TokenNotValidYet       = "jwt token is not valid yet"
 	InvalidSATFormat       = "invalid sat format"
+	AllowedResources       = "allowedResources"
+	AllowedPartners        = "allowedPartners"
+	Capabilities           = "capabilities"
 )
 
 type JWTConsumer interface {
