@@ -179,7 +179,7 @@ func (a *APIManager) addRouteHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	bearerToken := getBearerToken(r)
-	_, _, authErr := a.jwtManager.VerifyToken(bearerToken, r.URL.Path, r.Method, tid)
+	_, _, authErr := a.jwtManager.VerifyToken(ctx, bearerToken, r.URL.Path, r.Method, tid)
 	if authErr != nil {
 		log.Ctx(ctx).Error().Str("op", "addRouteHandler").Str("error", authErr.Error()).Msg("authorization error")
 		resp := ErrorResponse(convertToApiError(ctx, authErr))
@@ -251,7 +251,7 @@ func (a *APIManager) removeRouteHandler(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 	bearerToken := getBearerToken(r)
-	_, _, authErr := a.jwtManager.VerifyToken(bearerToken, r.URL.Path, r.Method, tid)
+	_, _, authErr := a.jwtManager.VerifyToken(ctx, bearerToken, r.URL.Path, r.Method, tid)
 	if authErr != nil {
 		log.Ctx(ctx).Error().Str("op", "removeRouteHandler").Str("error", authErr.Error()).Msg("authorization error")
 		resp := ErrorResponse(convertToApiError(ctx, authErr))
@@ -493,7 +493,7 @@ func (a *APIManager) removeFragmentHandler(w http.ResponseWriter, r *http.Reques
 		return
 	}
 	bearerToken := getBearerToken(r)
-	_, _, authErr := a.jwtManager.VerifyToken(bearerToken, r.URL.Path, r.Method, tid)
+	_, _, authErr := a.jwtManager.VerifyToken(ctx, bearerToken, r.URL.Path, r.Method, tid)
 	if authErr != nil {
 		log.Ctx(ctx).Error().Str("op", "removeFragmentHandler").Str("error", authErr.Error()).Msg("authorization error")
 		resp := ErrorResponse(convertToApiError(ctx, authErr))
@@ -528,7 +528,7 @@ func (a *APIManager) addFragmentHandler(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 	bearerToken := getBearerToken(r)
-	_, _, authErr := a.jwtManager.VerifyToken(bearerToken, r.URL.Path, r.Method, tid)
+	_, _, authErr := a.jwtManager.VerifyToken(ctx, bearerToken, r.URL.Path, r.Method, tid)
 	if authErr != nil {
 		log.Ctx(ctx).Error().Str("op", "addFragmentHandler").Str("error", authErr.Error()).Msg("authorization error")
 		resp := ErrorResponse(convertToApiError(ctx, authErr))
@@ -633,7 +633,7 @@ func (a *APIManager) setTenantConfigHandler(w http.ResponseWriter, r *http.Reque
 		return
 	}
 	bearerToken := getBearerToken(r)
-	_, _, authErr := a.jwtManager.VerifyToken(bearerToken, r.URL.Path, r.Method, tid)
+	_, _, authErr := a.jwtManager.VerifyToken(ctx, bearerToken, r.URL.Path, r.Method, tid)
 	if authErr != nil {
 		log.Ctx(ctx).Error().Str("op", "setTenantConfigHandler").Str("error", authErr.Error()).Msg("authorization error")
 		resp := ErrorResponse(convertToApiError(ctx, authErr))
@@ -680,7 +680,7 @@ func (a *APIManager) deleteTenantConfigHandler(w http.ResponseWriter, r *http.Re
 		return
 	}
 	bearerToken := getBearerToken(r)
-	_, _, authErr := a.jwtManager.VerifyToken(bearerToken, r.URL.Path, r.Method, tid)
+	_, _, authErr := a.jwtManager.VerifyToken(ctx, bearerToken, r.URL.Path, r.Method, tid)
 	if authErr != nil {
 		log.Ctx(ctx).Error().Str("op", "deleteTenantConfigHandler").Str("error", authErr.Error()).Msg("authorization error")
 		resp := ErrorResponse(convertToApiError(ctx, authErr))
