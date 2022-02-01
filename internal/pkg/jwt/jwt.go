@@ -189,8 +189,8 @@ func (sc *DefaultJWTConsumer) extractToken(token string) ([]string, string, []st
 	sub, _ := claims["sub"].(string)
 	// get partners
 	var partners []string
-	if res, ok := claims["allowedResources"].(map[string]interface{}); ok {
-		if os, ok := res["allowedPartners"].([]interface{}); ok {
+	if res, ok := claims[AllowedResources].(map[string]interface{}); ok {
+		if os, ok := res[AllowedPartners].([]interface{}); ok {
 			for _, o := range os {
 				if p, ok := o.(string); ok {
 					partners = append(partners, p)
@@ -201,7 +201,7 @@ func (sc *DefaultJWTConsumer) extractToken(token string) ([]string, string, []st
 	if len(partners) == 0 {
 		return nil, "", nil, &UnauthorizedError{NoAllowedPartners}
 	}
-	os, ok := claims["capabilities"].([]interface{})
+	os, ok := claims[Capabilities].([]interface{})
 	if !ok {
 		return nil, "", nil, &UnauthorizedError{MissingCapabilities}
 	}
