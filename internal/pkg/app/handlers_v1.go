@@ -178,14 +178,6 @@ func (a *APIManager) addRouteHandler(w http.ResponseWriter, r *http.Request) {
 		resp.Respond(ctx, w, doYaml(r))
 		return
 	}
-	bearerToken := getBearerToken(r)
-	_, _, authErr := a.jwtManager.VerifyToken(ctx, bearerToken, r.URL.Path, r.Method, tid)
-	if authErr != nil {
-		log.Ctx(ctx).Error().Str("op", "addRouteHandler").Str("error", authErr.Error()).Msg("authorization error")
-		resp := ErrorResponse(convertToApiError(ctx, authErr))
-		resp.Respond(ctx, w, doYaml(r))
-		return
-	}
 	_, err := a.tenantStorer.GetConfig(ctx, *tid)
 	if err != nil {
 		log.Ctx(ctx).Error().Str("op", "addRouteHandler").Str("error", err.Error()).Msg("error getting tenant config")
@@ -247,14 +239,6 @@ func (a *APIManager) removeRouteHandler(w http.ResponseWriter, r *http.Request) 
 		log.Ctx(ctx).Error().Str("op", "removeRouteHandler").Str("error", apiErr.Error()).Msg("orgId or appId empty")
 		a.removeRouteFailureRecorder.Add(ctx, 1.0)
 		resp := ErrorResponse(apiErr)
-		resp.Respond(ctx, w, doYaml(r))
-		return
-	}
-	bearerToken := getBearerToken(r)
-	_, _, authErr := a.jwtManager.VerifyToken(ctx, bearerToken, r.URL.Path, r.Method, tid)
-	if authErr != nil {
-		log.Ctx(ctx).Error().Str("op", "removeRouteHandler").Str("error", authErr.Error()).Msg("authorization error")
-		resp := ErrorResponse(convertToApiError(ctx, authErr))
 		resp.Respond(ctx, w, doYaml(r))
 		return
 	}
@@ -492,14 +476,6 @@ func (a *APIManager) removeFragmentHandler(w http.ResponseWriter, r *http.Reques
 		resp.Respond(ctx, w, doYaml(r))
 		return
 	}
-	bearerToken := getBearerToken(r)
-	_, _, authErr := a.jwtManager.VerifyToken(ctx, bearerToken, r.URL.Path, r.Method, tid)
-	if authErr != nil {
-		log.Ctx(ctx).Error().Str("op", "removeFragmentHandler").Str("error", authErr.Error()).Msg("authorization error")
-		resp := ErrorResponse(convertToApiError(ctx, authErr))
-		resp.Respond(ctx, w, doYaml(r))
-		return
-	}
 	fragmentId := vars["fragmentId"]
 	trace.SpanFromContext(ctx).SetAttributes(rtsemconv.EARSFragmentId.String(fragmentId))
 	err := a.routingTableMgr.RemoveFragment(ctx, *tid, fragmentId)
@@ -524,14 +500,6 @@ func (a *APIManager) addFragmentHandler(w http.ResponseWriter, r *http.Request) 
 		log.Ctx(ctx).Error().Str("op", "addFragmentHandler").Str("error", apiErr.Error()).Msg("orgId or appId empty")
 		a.addRouteFailureRecorder.Add(ctx, 1.0)
 		resp := ErrorResponse(apiErr)
-		resp.Respond(ctx, w, doYaml(r))
-		return
-	}
-	bearerToken := getBearerToken(r)
-	_, _, authErr := a.jwtManager.VerifyToken(ctx, bearerToken, r.URL.Path, r.Method, tid)
-	if authErr != nil {
-		log.Ctx(ctx).Error().Str("op", "addFragmentHandler").Str("error", authErr.Error()).Msg("authorization error")
-		resp := ErrorResponse(convertToApiError(ctx, authErr))
 		resp.Respond(ctx, w, doYaml(r))
 		return
 	}
@@ -632,14 +600,6 @@ func (a *APIManager) setTenantConfigHandler(w http.ResponseWriter, r *http.Reque
 		resp.Respond(ctx, w, doYaml(r))
 		return
 	}
-	bearerToken := getBearerToken(r)
-	_, _, authErr := a.jwtManager.VerifyToken(ctx, bearerToken, r.URL.Path, r.Method, tid)
-	if authErr != nil {
-		log.Ctx(ctx).Error().Str("op", "setTenantConfigHandler").Str("error", authErr.Error()).Msg("authorization error")
-		resp := ErrorResponse(convertToApiError(ctx, authErr))
-		resp.Respond(ctx, w, doYaml(r))
-		return
-	}
 	body, err := ioutil.ReadAll(r.Body)
 	if err != nil {
 		log.Ctx(ctx).Error().Str("op", "setTenantConfigHandler").Str("error", err.Error()).Msg("error reading request body")
@@ -676,14 +636,6 @@ func (a *APIManager) deleteTenantConfigHandler(w http.ResponseWriter, r *http.Re
 	if apiErr != nil {
 		log.Ctx(ctx).Error().Str("op", "deleteTenantConfigHandler").Str("error", apiErr.Error()).Msg("orgId or appId empty")
 		resp := ErrorResponse(apiErr)
-		resp.Respond(ctx, w, doYaml(r))
-		return
-	}
-	bearerToken := getBearerToken(r)
-	_, _, authErr := a.jwtManager.VerifyToken(ctx, bearerToken, r.URL.Path, r.Method, tid)
-	if authErr != nil {
-		log.Ctx(ctx).Error().Str("op", "deleteTenantConfigHandler").Str("error", authErr.Error()).Msg("authorization error")
-		resp := ErrorResponse(convertToApiError(ctx, authErr))
 		resp.Respond(ctx, w, doYaml(r))
 		return
 	}
