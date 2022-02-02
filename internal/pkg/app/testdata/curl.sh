@@ -12,10 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-echo "dev"
-
-curl -X PUT https://dev-us-west-2.gears.comcast.com/ears/v1/orgs/comcast/applications/myapp/config --data-binary @quota.json | jq .
-
 echo "version"
 
 curl -X GET http://localhost:3000/ears/version | jq .
