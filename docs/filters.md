@@ -11,7 +11,8 @@
 * Payloads are either byte arrays or strings. If a payload is a string it will be parsed as JSON into an `interface{}`. Thus the payload will be one of `map[string]interface{}`, `[]interface{}`, `string`, `bool` or `float`. 
 * Some filter configs require to specify a particular subset of a deeply nested map. We use dot-delimited path syntax for this purpose, for example `.foo.bar.baz` to reach the value `hello` of the payload `{ "foo" : { "bar" : { "baz" : "hello" }}}`. The root path is defined as `.` or blank string.
 * Array can be accessed by index, for example `.foo.bar[0]` to access the first element of `{ "foo" : { "bar" : ["a", "b"]}}`, in this case `"a"`. 
-* Some filters take data from one sub section of a payload and move them to another sub section of the same payload. By convention, we use the configs `FromPath`and `ToPath` for this purpose. If `ToPath` is omitted, then `FromPath` will be used as `ToPath` as well. 
+* Array can also be accessed by named index, for example `.foo.bar[code=a].val` to access the first element of `{ "foo" : { "bar" : [{"code":"a", "val":"c"}, {"code":"b", "val":"d"}]}}`, in this case `"c"`.
+* Some filters take data from one subsection of a payload and move them to another sub section of the same payload. By convention, we use the configs `FromPath`and `ToPath` for this purpose. If `ToPath` is omitted, then `FromPath` will be used as `ToPath` as well. 
 * Events carry two distinct pieces of data objects: payload and metadata and in the future possibly more. Metadata can be used to store temporary data that is produced by one filter and may be consumed by another filter or sender downstream. We use the path prefix `payload.` and `metadata.` to indicate if a filter should operate on metadata or payload. By default we assume a path is used for payloads so the path `.foo` is equivalent to `payload.foo`. 
 
 ## Standard Library Of Filters
@@ -20,6 +21,7 @@
 * decode
 * encode
 * transform
+* regex
 * mapping
 * hash
 * js
@@ -257,6 +259,30 @@ A typical structural transformation of an event payload.
     }
   }
 },
+```
+
+### regex
+
+### Description
+
+Apply regex transformation to single string value.
+
+### Example
+
+Move string at `{.data.schema}` to `{metadata.schema}`. Capture all alphanumeric characters starting from the right.
+For example `http://foo/bar` will be transformed to `bar`.
+
+### Filter Config
+
+```
+{
+  "plugin": "regex",
+  "config": {
+    "fromPath": ".data.schema",
+    "toPath": "metadata.schema",
+    "regex": "[\\w.]+$"
+  }
+}
 ```
 
 ## mapping
