@@ -20,6 +20,12 @@ package docs
 //   200: SendersResponse
 //   500: SendersErrorResponse
 
+// swagger:route GET /v1/orgs/{orgId}/applications/{appId}/senders plugins getSenders
+// Gets list of all senders currently present for a single tenant.
+// responses:
+//   200: SendersResponse
+//   500: SendersErrorResponse
+
 import (
 	"github.com/xmidt-org/ears/internal/pkg/plugin"
 )

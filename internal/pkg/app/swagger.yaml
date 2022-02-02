@@ -14,6 +14,8 @@ definitions:
       ReferenceCount:
         format: int64
         type: integer
+      Tid:
+        $ref: '#/definitions/Id'
     type: object
     x-go-package: github.com/xmidt-org/ears/internal/pkg/plugin
   FiltersErrorResponse:
@@ -51,6 +53,9 @@ definitions:
       config:
         type: object
         x-go-name: Config
+      fragmentName:
+        type: string
+        x-go-name: FragmentName
       name:
         type: string
         x-go-name: Name
@@ -78,6 +83,8 @@ definitions:
       ReferenceCount:
         format: int64
         type: integer
+      Tid:
+        $ref: '#/definitions/Id'
     type: object
     x-go-package: github.com/xmidt-org/ears/internal/pkg/plugin
   ReceiversErrorResponse:
@@ -189,6 +196,8 @@ definitions:
       ReferenceCount:
         format: int64
         type: integer
+      Tid:
+        $ref: '#/definitions/Id'
     type: object
     x-go-package: github.com/xmidt-org/ears/internal/pkg/plugin
   SendersErrorResponse:
@@ -213,6 +222,11 @@ definitions:
     x-go-package: github.com/xmidt-org/ears/internal/pkg/app/docs
   TenantConfig:
     properties:
+      clientIds:
+        items:
+          type: string
+        type: array
+        x-go-name: ClientIds
       modified:
         format: int64
         type: integer
@@ -391,6 +405,36 @@ paths:
         put body.
       tags:
       - tenants
+  /v1/orgs/{orgId}/applications/{appId}/filters:
+    get:
+      operationId: getFilters
+      responses:
+        "200":
+          description: FiltersResponse
+          schema:
+            $ref: '#/definitions/FiltersResponse'
+        "500":
+          description: FiltersErrorResponse
+          schema:
+            $ref: '#/definitions/FiltersErrorResponse'
+      summary: Gets list of all filters currently present for a single tenant.
+      tags:
+      - plugins
+  /v1/orgs/{orgId}/applications/{appId}/receivers:
+    get:
+      operationId: getReceivers
+      responses:
+        "200":
+          description: ReceiversResponse
+          schema:
+            $ref: '#/definitions/ReceiversResponse'
+        "500":
+          description: ReceiversErrorResponse
+          schema:
+            $ref: '#/definitions/ReceiversErrorResponse'
+      summary: Gets list of all receivers currently present for a single tenant.
+      tags:
+      - plugins
   /v1/orgs/{orgId}/applications/{appId}/routes:
     get:
       operationId: getRoutes
@@ -522,6 +566,21 @@ paths:
         and used instead.
       tags:
       - routes
+  /v1/orgs/{orgId}/applications/{appId}/senders:
+    get:
+      operationId: getSenders
+      responses:
+        "200":
+          description: SendersResponse
+          schema:
+            $ref: '#/definitions/SendersResponse'
+        "500":
+          description: SendersErrorResponse
+          schema:
+            $ref: '#/definitions/SendersErrorResponse'
+      summary: Gets list of all senders currently present for a single tenant.
+      tags:
+      - plugins
   /v1/orgs/{orgid}/applications/{appid}/routes:
     post:
       operationId: postRoute
@@ -696,7 +755,11 @@ responses:
       $ref: '#/definitions/VersionResponse'
 schemes:
 - https
+security:
+- Bearer: []
 securityDefinitions:
-  basic:
-    type: basic
+  Bearer:
+    in: header
+    name: Authorization
+    type: apiKey
 swagger: "2.0"
