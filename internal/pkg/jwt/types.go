@@ -8,23 +8,6 @@ import (
 	"sync"
 )
 
-const (
-	MissingToken           = "missing token"
-	InvalidKid             = "invalid jwt kid"
-	InvalidSignature       = "invalid jwt signature"
-	MissingKid             = "missing jwt kid"
-	MissingCapabilities    = "missing jwt capabilities"
-	NoMatchingCapabilities = "no matching jwt capabilities"
-	MissingClientId        = "missing jwt client id"
-	UnauthorizedClientId   = "unauthorized jwt client id"
-	UnauthorizedPartnerId  = "unauthorized jwt partner id"
-	NoAllowedPartners      = "no allowed partners"
-	InvalidSATFormat       = "invalid sat format"
-	AllowedResources       = "allowedResources"
-	AllowedPartners        = "allowedPartners"
-	Capabilities           = "capabilities"
-)
-
 type JWTConsumer interface {
 	VerifyToken(ctx context.Context, token string, api string, method string, tid *tenant.Id) ([]string, string, error)
 }
