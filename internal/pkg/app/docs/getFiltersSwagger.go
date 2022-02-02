@@ -20,6 +20,12 @@ package docs
 //   200: FiltersResponse
 //   500: FiltersErrorResponse
 
+// swagger:route GET /v1/orgs/{orgId}/applications/{appId}/filters plugins getFilters
+// Gets list of all filters currently present for a single tenant.
+// responses:
+//   200: FiltersResponse
+//   500: FiltersErrorResponse
+
 import (
 	"github.com/xmidt-org/ears/internal/pkg/plugin"
 )
