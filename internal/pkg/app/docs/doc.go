@@ -16,25 +16,28 @@
 //
 // Documentation EARS API
 //
-//     Schemes: https
-//     BasePath: /ears
-//     Version: 1.0.0
-//     Host: qa.gears.comcast.com
+// Schemes: https
+// BasePath: /ears
+// Version: 1.0.0
+// Host: qa.gears.comcast.com
 //
-//     Consumes:
-//     - application/json
-//     - application/yaml
+// Consumes:
+// - application/json
+// - application/yaml
 //
-//     Produces:
-//     - application/json
-//     - application/yaml
+// Produces:
+// - application/json
+// - application/yaml
 //
-//     Security:
-//     - basic
+// Security:
+//   Bearer:
 //
-//    SecurityDefinitions:
-//    basic:
-//      type: basic
+// SecurityDefinitions:
+//   Bearer:
+//     In: header
+//     Name: Authorization
+//     Type: apiKey
 //
 // swagger:meta
+//
 package docs

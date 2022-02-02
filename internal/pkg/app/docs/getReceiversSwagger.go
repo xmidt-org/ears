@@ -20,6 +20,12 @@ package docs
 //   200: ReceiversResponse
 //   500: ReceiversErrorResponse
 
+// swagger:route GET /v1/orgs/{orgId}/applications/{appId}/receivers plugins getReceivers
+// Gets list of all receivers currently present for a single tenant.
+// responses:
+//   200: ReceiversResponse
+//   500: ReceiversErrorResponse
+
 import (
 	"github.com/xmidt-org/ears/internal/pkg/plugin"
 )
