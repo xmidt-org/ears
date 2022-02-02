@@ -1,5 +1,8 @@
 {
   "quota": {
     "eventsPerSec": 2000
-  }
+  },
+  "clientIds": [
+    "abcdefg"
+  ]
 }

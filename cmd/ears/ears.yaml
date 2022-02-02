@@ -1,9 +1,18 @@
 ears:
+
   env: local
   logLevel: info
 
   api:
     port: 3000
+
+  jwt:
+    requireBearerToken: no
+    publicKeyEndpoint: ""
+    domain: ""
+    component: ""
+    adminClientIds: ""
+    capabilityPrefixes: ""
 
   sharder:
     active: yes

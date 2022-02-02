@@ -52,9 +52,10 @@ func (id Id) ToString() string {
 }
 
 type Config struct {
-	Tenant   Id    `json:"tenant"`             //tenant id
-	Quota    Quota `json:"quota"`              // tenant quota
-	Modified int64 `json:"modified,omitempty"` // last time when the tenant config is modified
+	Tenant    Id       `json:"tenant"`              // tenant id
+	Quota     Quota    `json:"quota"`               // tenant quota
+	ClientIds []string `json:"clientIds,omitempty"` // jwt subjects or client IDs
+	Modified  int64    `json:"modified,omitempty"`  // last time when the tenant config is modified
 }
 
 type Quota struct {

@@ -24,6 +24,7 @@ import (
 	"github.com/xmidt-org/ears/internal/pkg/config"
 	"github.com/xmidt-org/ears/internal/pkg/fx/checkpointmanagerfx"
 	"github.com/xmidt-org/ears/internal/pkg/fx/fragmentstorerfx"
+	"github.com/xmidt-org/ears/internal/pkg/fx/jwtmanagerfx"
 	"github.com/xmidt-org/ears/internal/pkg/fx/nodestatemanagerfx"
 	"github.com/xmidt-org/ears/internal/pkg/fx/pluginmanagerfx"
 	"github.com/xmidt-org/ears/internal/pkg/fx/quotamanagerfx"
@@ -69,6 +70,7 @@ var runCmd = &cobra.Command{
 			quotamanagerfx.Module,
 			nodestatemanagerfx.Module,
 			checkpointmanagerfx.Module,
+			jwtmanagerfx.Module,
 			fx.Provide(
 				AppConfig,
 				appsecret.NewConfigVault,
