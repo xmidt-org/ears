@@ -16,20 +16,25 @@ package app
 
 import (
 	"github.com/google/uuid"
+	"github.com/gorilla/mux"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
+	"github.com/xmidt-org/ears/internal/pkg/jwt"
 	"github.com/xmidt-org/ears/internal/pkg/rtsemconv"
 	"github.com/xmidt-org/ears/pkg/logs"
 	"github.com/xmidt-org/ears/pkg/panics"
 	"go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux"
 	"go.opentelemetry.io/contrib/propagators/b3"
 	"net/http"
+	"strings"
 )
 
 var middlewareLogger *zerolog.Logger
+var jwtMgr jwt.JWTConsumer
 
-func NewMiddleware(logger *zerolog.Logger) []func(next http.Handler) http.Handler {
+func NewMiddleware(logger *zerolog.Logger, jwtManager jwt.JWTConsumer) []func(next http.Handler) http.Handler {
 	middlewareLogger = logger
+	jwtMgr = jwtManager
 	otelMiddleware := otelmux.Middleware("ears", otelmux.WithPropagators(b3.New()))
 
 	return []func(next http.Handler) http.Handler{
@@ -69,7 +74,31 @@ func initRequestMiddleware(next http.Handler) http.Handler {
 
 func authenticateMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		//TODO implement API authentication
+		ctx := r.Context()
+		if r.URL.Path == "/ears/version" {
+			next.ServeHTTP(w, r)
+			return
+		}
+		if strings.HasPrefix(r.URL.Path, "/ears/openapi") {
+			next.ServeHTTP(w, r)
+			return
+		}
+		vars := mux.Vars(r)
+		tid, apiErr := getTenant(ctx, vars)
+		if apiErr != nil {
+			log.Ctx(ctx).Error().Str("op", "deleteTenantConfigHandler").Str("error", apiErr.Error()).Msg("orgId or appId empty")
+			resp := ErrorResponse(apiErr)
+			resp.Respond(ctx, w, doYaml(r))
+			return
+		}
+		bearerToken := getBearerToken(r)
+		_, _, authErr := jwtMgr.VerifyToken(ctx, bearerToken, r.URL.Path, r.Method, tid)
+		if authErr != nil {
+			log.Ctx(ctx).Error().Str("op", "deleteTenantConfigHandler").Str("error", authErr.Error()).Msg("authorization error")
+			resp := ErrorResponse(convertToApiError(ctx, authErr))
+			resp.Respond(ctx, w, doYaml(r))
+			return
+		}
 		next.ServeHTTP(w, r)
 	})
 }

@@ -23,6 +23,7 @@ import (
 	"github.com/xmidt-org/ears/internal/pkg/appsecret"
 	"github.com/xmidt-org/ears/internal/pkg/config"
 	"github.com/xmidt-org/ears/internal/pkg/fx/fragmentstorerfx"
+	"github.com/xmidt-org/ears/internal/pkg/fx/jwtmanagerfx"
 	"github.com/xmidt-org/ears/internal/pkg/fx/pluginmanagerfx"
 	"github.com/xmidt-org/ears/internal/pkg/fx/quotamanagerfx"
 	"github.com/xmidt-org/ears/internal/pkg/fx/routestorerfx"
@@ -100,6 +101,7 @@ func TestAppRunSuccess(t *testing.T) {
 		syncerfx.Module,
 		tenantstorerfx.Module,
 		quotamanagerfx.Module,
+		jwtmanagerfx.Module,
 		fx.Provide(
 			AppConfig,
 			appsecret.NewConfigVault,

@@ -18,6 +18,7 @@ import (
 	"context"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
+	"github.com/xmidt-org/ears/internal/pkg/jwt"
 	testLog "github.com/xmidt-org/ears/test/log"
 	"net/http"
 	"net/http/httptest"
@@ -36,7 +37,8 @@ func TestInitRequestMiddleware(t *testing.T) {
 
 	listener := testLog.NewLogListener()
 	logger := zerolog.New(listener)
-	middleware := NewMiddleware(&logger)
+	jwtMgr, _ := jwt.NewJWTConsumer("", nil, false, "", "", nil, nil, nil)
+	middleware := NewMiddleware(&logger, jwtMgr)
 
 	//Test Case 1
 	validator := &Validator{func(w http.ResponseWriter, r *http.Request) {
@@ -71,7 +73,8 @@ func TestAuthMiddleware(t *testing.T) {
 	ctx := context.Background()
 	listener := testLog.NewLogListener()
 	logger := zerolog.New(listener)
-	middleware := NewMiddleware(&logger)
+	jwtMgr, _ := jwt.NewJWTConsumer("", nil, false, "", "", nil, nil, nil)
+	middleware := NewMiddleware(&logger, jwtMgr)
 	subCtx := logger.WithContext(ctx)
 
 	//AuthenticateMiddleware is currently just a pass through.
