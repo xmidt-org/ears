@@ -611,8 +611,7 @@ func (a *APIManager) setTenantConfigHandler(w http.ResponseWriter, r *http.Reque
 	err = yaml.Unmarshal(body, &tenantConfig)
 	if err != nil {
 		log.Ctx(ctx).Error().Str("op", "setTenantConfigHandler").Str("error", err.Error()).Msg("error unmarshal request body")
-		err = &BadRequestError{"Cannot unmarshal request body", err}
-		resp := ErrorResponse(&InternalServerError{err})
+		resp := ErrorResponse(&BadRequestError{"Cannot unmarshal request body", err})
 		resp.Respond(ctx, w, doYaml(r))
 		return
 	}
