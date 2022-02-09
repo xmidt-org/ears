@@ -23,6 +23,7 @@ import (
 	"github.com/xmidt-org/ears/internal/pkg/rtsemconv"
 	"github.com/xmidt-org/ears/pkg/logs"
 	"github.com/xmidt-org/ears/pkg/panics"
+	"github.com/xmidt-org/ears/pkg/tenant"
 	"go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux"
 	"go.opentelemetry.io/contrib/propagators/b3"
 	"net/http"
@@ -83,13 +84,23 @@ func authenticateMiddleware(next http.Handler) http.Handler {
 			next.ServeHTTP(w, r)
 			return
 		}
-		vars := mux.Vars(r)
-		tid, apiErr := getTenant(ctx, vars)
-		if apiErr != nil {
-			log.Ctx(ctx).Error().Str("op", "deleteTenantConfigHandler").Str("error", apiErr.Error()).Msg("orgId or appId empty")
-			resp := ErrorResponse(apiErr)
-			resp.Respond(ctx, w, doYaml(r))
-			return
+		var tid *tenant.Id
+		if strings.HasPrefix(r.URL.Path, "/ears/v1/routes") ||
+			strings.HasPrefix(r.URL.Path, "/ears/v1/senders") ||
+			strings.HasPrefix(r.URL.Path, "/ears/v1/receivers") ||
+			strings.HasPrefix(r.URL.Path, "/ears/v1/filters") ||
+			strings.HasPrefix(r.URL.Path, "/ears/v1/fragments") ||
+			strings.HasPrefix(r.URL.Path, "/ears/v1/tenants") {
+		} else {
+			var tenantErr ApiError
+			vars := mux.Vars(r)
+			tid, tenantErr = getTenant(ctx, vars)
+			if tenantErr != nil {
+				log.Ctx(ctx).Error().Str("op", "deleteTenantConfigHandler").Str("error", tenantErr.Error()).Msg("orgId or appId empty")
+				resp := ErrorResponse(tenantErr)
+				resp.Respond(ctx, w, doYaml(r))
+				return
+			}
 		}
 		bearerToken := getBearerToken(r)
 		_, _, authErr := jwtMgr.VerifyToken(ctx, bearerToken, r.URL.Path, r.Method, tid)
