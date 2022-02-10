@@ -100,27 +100,24 @@ func (sc *DefaultJWTConsumer) VerifyToken(ctx context.Context, token string, api
 	if "" == sub {
 		return nil, "", &UnauthorizedError{MissingClientId}
 	}
-	foundClientId := false
 	// check if this is an admin client
 	if 0 < len(sc.adminClientIds) {
 		for _, clientId := range sc.adminClientIds {
 			if sub == clientId {
-				foundClientId = true
-				break
+				return partners, sub, nil
 			}
 		}
 	}
 	// otherwise check if this is an app client
-	if !foundClientId {
-		tenantConfig, err := sc.tenantStorer.GetConfig(ctx, *tid)
-		if err != nil {
-			return nil, "", err
-		}
-		for _, cid := range tenantConfig.ClientIds {
-			if sub == cid {
-				foundClientId = true
-				break
-			}
+	foundClientId := false
+	tenantConfig, err := sc.tenantStorer.GetConfig(ctx, *tid)
+	if err != nil {
+		return nil, "", err
+	}
+	for _, cid := range tenantConfig.ClientIds {
+		if sub == cid {
+			foundClientId = true
+			break
 		}
 	}
 	if !foundClientId {

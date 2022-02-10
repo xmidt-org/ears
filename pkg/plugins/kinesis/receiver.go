@@ -50,6 +50,8 @@ const (
 	monitorTimeoutSecLong  = 30
 )
 
+// https://docs.aws.amazon.com/streams/latest/dev/troubleshooting-consumers.html
+
 func NewReceiver(tid tenant.Id, plugin string, name string, config interface{}, secrets secret.Vault) (receiver.Receiver, error) {
 	var cfg ReceiverConfig
 	var err error
@@ -291,10 +293,8 @@ func (r *Receiver) startShardReceiverEFO(svc *kinesis.Kinesis, stream *kinesis.D
 				// a fully processed parent shard will cause errors here until its decommission
 				time.Sleep(errorTimeoutSecLong * time.Second)
 				continue
-				//return
 			}
-			for {
-				var evt kinesis.SubscribeToShardEventStreamEvent
+			for evt := range sub.EventStream.Events() {
 				select {
 				case <-r.getStopChannel(shardIdx):
 					r.logger.Info().Str("op", "Kinesis.receiveWorkerEFO").Str("stream", *r.stream.StreamDescription.StreamName).Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Int("shardIdx", shardIdx).Msg("receive loop stopped")
@@ -304,7 +304,7 @@ func (r *Receiver) startShardReceiverEFO(svc *kinesis.Kinesis, stream *kinesis.D
 					delete(r.stopChannelMap, shardIdx)
 					r.Unlock()
 					return
-				case evt = <-sub.EventStream.Events():
+				default:
 				}
 				switch kinEvt := evt.(type) {
 				case *kinesis.SubscribeToShardEvent:
@@ -370,6 +370,17 @@ func (r *Receiver) startShardReceiverEFO(svc *kinesis.Kinesis, stream *kinesis.D
 						}
 					}
 				}
+			}
+			if err := sub.EventStream.Err(); err != nil {
+				r.logger.Error().Str("op", "Kinesis.receiveWorkerEFO").Str("stream", *r.stream.StreamDescription.StreamName).Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Int("shardIdx", shardIdx).Msg("subscription event stream error: " + err.Error())
+				if sub != nil && sub.EventStream != nil && sub.EventStream.Reader != nil {
+					sub.EventStream.Close()
+				}
+				time.Sleep(1 * time.Second)
+				continue
+			}
+			if sub != nil && sub.EventStream != nil && sub.EventStream.Reader != nil {
+				sub.EventStream.Close()
 			}
 		}
 	}()
@@ -614,6 +625,7 @@ func (r *Receiver) Receive(next receiver.NextFn) error {
 		return err
 	}
 	r.svc = kinesis.New(sess)
+	//r.svc = kinesis.New(sess, aws.NewConfig().WithLogLevel(aws.LogDebug))
 	r.stream, err = r.svc.DescribeStream(&kinesis.DescribeStreamInput{StreamName: aws.String(r.config.StreamName)})
 	if err != nil {
 		return err
