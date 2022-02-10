@@ -77,7 +77,7 @@ logs for the foo-bar events hitting the debug sender.
         "pattern" : "^.*$"
       }
     }
-  ],
+  ]
 }
 ```
 
