@@ -41,11 +41,6 @@ Our Kanban Board can be found [here](https://github.com/orgs/xmidt-org/projects/
 * [swagger.yaml](internal/pkg/app/swagger.yaml)
 * [ears.yaml](docs/userguide/config.md)
 
-## Code of Conduct
-
-This project and everyone participating in it are governed by the [XMiDT Code Of Conduct](https://xmidt.io/code_of_conduct/). 
-By participating, you agree to this Code.
-
 ## Contributing
 
 Refer to [CONTRIBUTING.md](CONTRIBUTING.md).
