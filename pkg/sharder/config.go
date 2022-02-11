@@ -28,6 +28,7 @@ const (
 	defaultTable                  = "ears-nodes"
 	defaultTag                    = "local"
 	defaultRegion                 = "us-west-2"
+	defaultForcedHostname         = ""
 	//defaultRegion          = "local"
 )
 
@@ -39,6 +40,7 @@ type (
 		StorageTag             string
 		UpdateFrequencySeconds int
 		UpdateTtlSeconds       int
+		ForcedHostname         string
 	}
 )
 
@@ -50,6 +52,7 @@ var (
 		StorageTag:             defaultTag,
 		UpdateFrequencySeconds: defaultUpdateFrequencySeconds,
 		UpdateTtlSeconds:       defaultUpdateTtlSeconds,
+		ForcedHostname:         defaultForcedHostname,
 	}
 	defaultNodeStateManager NodeStateManager
 )
@@ -66,6 +69,10 @@ func InitDistributorConfigs(config config.Config) {
 	table := config.GetString("ears.sharder.table")
 	if table != "" {
 		DefaultStorageConfig.StorageTable = table
+	}
+	forcedHostname := config.GetString("ears.hostname")
+	if forcedHostname != "" {
+		DefaultStorageConfig.ForcedHostname = forcedHostname
 	}
 	updateFrequencySeconds := config.GetInt("ears.sharder.updateFrequencySeconds")
 	if updateFrequencySeconds > 0 {
@@ -90,16 +97,19 @@ func DefaultControllerConfig() *ControllerConfig {
 		},
 		StorageConfig: DefaultStorageConfig,
 	}
-	cc.NodeName, _ = os.Hostname()
+	cc.NodeName = cc.StorageConfig.ForcedHostname
 	if cc.NodeName == "" {
-		address, err := net.InterfaceAddrs()
-		if err == nil {
-			for _, addr := range address {
-				if ipnet, ok := addr.(*net.IPNet); ok && !ipnet.IP.IsLoopback() {
-					if ipnet.IP.To4() != nil {
-						cc.NodeName = ipnet.IP.String()
-						cc.Identity = cc.NodeName
-						break
+		cc.NodeName, _ = os.Hostname()
+		if cc.NodeName == "" {
+			address, err := net.InterfaceAddrs()
+			if err == nil {
+				for _, addr := range address {
+					if ipnet, ok := addr.(*net.IPNet); ok && !ipnet.IP.IsLoopback() {
+						if ipnet.IP.To4() != nil {
+							cc.NodeName = ipnet.IP.String()
+							cc.Identity = cc.NodeName
+							break
+						}
 					}
 				}
 			}
