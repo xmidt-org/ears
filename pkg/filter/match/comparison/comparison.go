@@ -58,8 +58,12 @@ func (m *Matcher) traverseTree(evt event.Event, tree *ComparisonTreeNode) bool {
 	if tree == nil {
 		return true
 	}
-	treeResult := true
 	compResult := true
+	treeResult := true
+	if strings.ToLower(tree.Logic) == "or" {
+		treeResult = false
+		compResult = false
+	}
 	for _, childNode := range tree.ChildNodes {
 		if strings.ToLower(tree.Logic) == "or" {
 			treeResult = treeResult || m.traverseTree(evt, childNode)
@@ -78,6 +82,11 @@ func (m *Matcher) traverseTree(evt event.Event, tree *ComparisonTreeNode) bool {
 		}
 		return treeResult || compResult
 	} else {
+		if len(tree.ChildNodes) == 0 {
+			return compResult
+		} else if tree.Comparison == nil {
+			return treeResult
+		}
 		return treeResult && compResult
 	}
 }
