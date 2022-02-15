@@ -86,6 +86,14 @@ func ViperAddArguments(cmd *cobra.Command, aList []Argument) error {
 	return nil
 }
 
+var configFile = ""
+
+// ViperConfigFile is only for visibility/debugging so that the user knows exactly which
+// config file is used
+func ViperConfigFile() string {
+	return configFile
+}
+
 // ViperConfig will help configure a project. This includes setting
 // the environment variable prefix, plus the default config file name.
 // For example:
@@ -131,6 +139,7 @@ func ViperConfig(envPrefix, configName string) error {
 	}
 	viper.SetConfigType(ext)
 
+	configFile = config
 	parts := strings.SplitN(config, "://", 2)
 	switch parts[0] {
 	//case "http", "https":
