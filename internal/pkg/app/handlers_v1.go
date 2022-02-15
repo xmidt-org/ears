@@ -25,6 +25,7 @@ import (
 	"github.com/xmidt-org/ears/internal/pkg/rtsemconv"
 	"github.com/xmidt-org/ears/internal/pkg/tablemgr"
 	"github.com/xmidt-org/ears/pkg/app"
+	"github.com/xmidt-org/ears/pkg/cli"
 	logs2 "github.com/xmidt-org/ears/pkg/logs"
 	"github.com/xmidt-org/ears/pkg/tenant"
 	"go.opentelemetry.io/otel/attribute"
@@ -136,10 +137,18 @@ func doYaml(r *http.Request) bool {
 	return strings.Contains(ct, "yaml")
 }
 
+type versions struct {
+	Version string
+	Config  string
+}
+
 func (a *APIManager) versionHandler(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	log.Ctx(ctx).Debug().Msg("versionHandler")
-	resp := ItemResponse(app.Version)
+	resp := ItemResponse(versions{
+		Version: app.Version,
+		Config:  cli.ViperConfigFile(),
+	})
 	resp.Respond(ctx, w, doYaml(r))
 }
 
