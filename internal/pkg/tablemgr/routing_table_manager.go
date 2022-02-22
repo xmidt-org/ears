@@ -196,8 +196,17 @@ func (r *DefaultRoutingTableManager) RemoveRoute(ctx context.Context, tid tenant
 		// even if the route cannot be deleted from storage we should still proceed to try to sync the delta
 		r.logger.Info().Str("op", "RemoveRoute").Str("routeId", routeId).Msg("could not delete route from storage layer: " + storageErr.Error())
 	}
+
+	r.logger.Info().Str("op", "RemoveRoute").Str("routeId", routeId).Msg("mchiang debug - before sync request")
+
 	r.rtSyncer.PublishSyncRequest(ctx, tid, syncer.ITEM_TYPE_ROUTE, routeId, false)
+
+	r.logger.Info().Str("op", "RemoveRoute").Str("routeId", routeId).Msg("mchiang debug - after sync request")
+
 	registrationErr := r.unregisterAndStopRoute(ctx, tid, routeId)
+
+	r.logger.Info().Str("op", "RemoveRoute").Str("routeId", routeId).Msg("mchiang debug - after unregisterAndStopRoute")
+
 	if registrationErr != nil {
 		return &RouteRegistrationError{registrationErr}
 	}
