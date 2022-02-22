@@ -286,10 +286,16 @@ func (r *DefaultRoutingTableManager) AddRoute(ctx context.Context, routeConfig *
 	if err != nil {
 		return &RouteValidationError{err}
 	}
+
+	r.logger.Info().Str("op", "AddRoute").Msg("mchiang debug - before registerAndRunRoute")
+
 	err = r.registerAndRunRoute(ctx, routeConfig)
 	if err != nil {
 		return &RouteRegistrationError{err}
 	}
+
+	r.logger.Info().Str("op", "AddRoute").Msg("mchiang debug - after registerAndRunRoute")
+
 	// currently storage layer handles created and updated timestamps
 	err = r.storageMgr.SetRoute(ctx, *routeConfig)
 	if err != nil {
@@ -299,7 +305,13 @@ func (r *DefaultRoutingTableManager) AddRoute(ctx context.Context, routeConfig *
 		}
 		return err
 	}
+
+	r.logger.Info().Str("op", "AddRoute").Msg("mchiang debug - after SetRoute")
+
 	r.rtSyncer.PublishSyncRequest(ctx, routeConfig.TenantId, syncer.ITEM_TYPE_ROUTE, routeConfig.Id, true)
+
+	r.logger.Info().Str("op", "AddRoute").Msg("mchiang debug - after PublishSyncRequest")
+
 	return nil
 }
 
