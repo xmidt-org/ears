@@ -34,7 +34,7 @@ import (
 )
 
 type DefaultRoutingTableManager struct {
-	sync.Mutex
+	lock         LogLock
 	pluginMgr    plugin.Manager
 	storageMgr   route.RouteStorer
 	fragmentMgr  fragments.FragmentStorer
@@ -43,6 +43,21 @@ type DefaultRoutingTableManager struct {
 	routeHashMap map[string]*LiveRouteWrapper // references to live routes by hash
 	logger       *zerolog.Logger
 	config       config.Config
+}
+
+type LogLock struct {
+	sync.Mutex
+	logger *zerolog.Logger
+}
+
+func (l *LogLock) LockWithLog(msg string) {
+	l.logger.Info().Str("op", "LogLock - lock").Msg(msg)
+	l.Lock()
+}
+
+func (l *LogLock) UnlockWithLog(msg string) {
+	l.Unlock()
+	l.logger.Info().Str("op", "LogLock - unlock").Msg(msg)
 }
 
 func stringify(data interface{}) string {
@@ -77,14 +92,17 @@ func SetupRoutingManager(lifecycle fx.Lifecycle, logger *zerolog.Logger, routing
 
 func NewRoutingTableManager(pluginMgr plugin.Manager, storageMgr route.RouteStorer, fragmentMgr fragments.FragmentStorer, tableSyncer syncer.DeltaSyncer, logger *zerolog.Logger, config config.Config) RoutingTableManager {
 	rtm := &DefaultRoutingTableManager{
+		lock: LogLock{
+			logger: logger,
+		},
 		pluginMgr:   pluginMgr,
 		storageMgr:  storageMgr,
 		fragmentMgr: fragmentMgr,
 		rtSyncer:    tableSyncer,
 		logger:      logger,
 		config:      config}
-	rtm.Lock()
-	defer rtm.Unlock()
+	rtm.lock.LockWithLog("NewRoutingTableManager")
+	defer rtm.lock.UnlockWithLog("NewRoutingTableManager")
 	rtm.liveRouteMap = make(map[string]*LiveRouteWrapper)
 	rtm.routeHashMap = make(map[string]*LiveRouteWrapper)
 	tableSyncer.RegisterLocalSyncer(syncer.ITEM_TYPE_ROUTE, rtm) // register self as observer
@@ -96,8 +114,8 @@ func (r *DefaultRoutingTableManager) unregisterAndStopRoute(ctx context.Context,
 	ctx, span := tracer.Start(ctx, "unregisterAndStopRoute")
 	defer span.End()
 	var err error
-	r.Lock()
-	defer r.Unlock()
+	r.lock.LockWithLog("unregisterAndStopRoute")
+	defer r.lock.UnlockWithLog("unregisterAndStopRoute")
 	liveRoute, ok := r.liveRouteMap[tid.KeyWithRoute(routeId)]
 	if !ok {
 		r.logger.Info().Str("op", "unregisterAndStopRoute").Str("routeId", routeId).Msg("no live route exists with this ID")
@@ -133,9 +151,9 @@ func (r *DefaultRoutingTableManager) registerAndRunRoute(ctx context.Context, ro
 
 	r.logger.Info().Str("op", "registerAndRunRoute").Msg("mchiang debug - before liveRouteMap")
 
-	r.Lock()
+	r.lock.LockWithLog("registerAndRunRoute - update liveRouteMap")
 	existingLiveRoute, ok := r.liveRouteMap[routeConfig.TenantId.KeyWithRoute(routeConfig.Id)]
-	r.Unlock()
+	r.lock.UnlockWithLog("registerAndRunRoute - update liveRouteMap")
 
 	r.logger.Info().Str("op", "registerAndRunRoute").Msg("mchiang debug - after liveRouteMap")
 
@@ -163,11 +181,9 @@ func (r *DefaultRoutingTableManager) registerAndRunRoute(ctx context.Context, ro
 	// millions of entries in the storage layer. I still believe it may be simpler and faster to force the route ID to be
 	// the route hash, use an internal reference counter and give up on idempotency. An alternative would be to take route creation
 	// out of the flow and use a dedicated route management UI.
-	r.Lock()
-	defer func() {
-		r.logger.Info().Str("op", "registerAndRunRoute").Msg("mchiang debug - exiting lock")
-		r.Unlock()
-	}()
+	r.lock.LockWithLog("registerAndRunRoute")
+	defer r.lock.UnlockWithLog("registerAndRunRoute")
+
 	existingLiveRoute, ok = r.routeHashMap[routeConfig.Hash(ctx)]
 	if ok {
 		// we simply increment the reference count of an already existing route and are done here
@@ -427,8 +443,8 @@ func (r *DefaultRoutingTableManager) IsSynchronized() (bool, error) {
 	if err != nil {
 		return true, err
 	}
-	r.Lock()
-	defer r.Unlock()
+	r.lock.LockWithLog("IsSynchronized")
+	defer r.lock.UnlockWithLog("IsSynchronized")
 	if len(storedRoutes) != len(r.liveRouteMap) {
 		return false, nil
 	}
@@ -469,12 +485,12 @@ func (r *DefaultRoutingTableManager) SynchronizeAllRoutes() (int, error) {
 		storedRouteMap[storedRoute.TenantId.KeyWithRoute(storedRoute.Id)] = storedRoute
 	}
 	mutated := 0
-	r.Lock()
+	r.lock.LockWithLog("SynchronizeAllRoutes")
 	lrm := make(map[string]*LiveRouteWrapper)
 	for k, v := range r.liveRouteMap {
 		lrm[k] = v
 	}
-	r.Unlock()
+	r.lock.UnlockWithLog("SynchronizeAllRoutes")
 	// stop all inconsistent or deleted routes
 	for key, liveRoute := range lrm {
 		storedRoute, ok := storedRouteMap[liveRoute.Config.TenantId.KeyWithRoute(liveRoute.Config.Id)]
@@ -542,8 +558,8 @@ func (r *DefaultRoutingTableManager) RegisterAllRoutes() error {
 }
 
 func (r *DefaultRoutingTableManager) GetAllRegisteredRoutes() ([]route.Config, error) {
-	r.Lock()
-	defer r.Unlock()
+	r.lock.LockWithLog("GetAllRegisteredRoutes")
+	defer r.lock.UnlockWithLog("GetAllRegisteredRoutes")
 	routes := make([]route.Config, 0)
 	for _, route := range r.liveRouteMap {
 		routes = append(routes, route.Config)
