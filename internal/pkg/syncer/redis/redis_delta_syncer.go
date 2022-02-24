@@ -126,56 +126,56 @@ func (s *RedisDeltaSyncer) PublishSyncRequest(ctx context.Context, tid tenant.Id
 	// this primarily cause issues when multi route unit tests share the same debug receiver
 	// in practice this may not be an issue
 	go func() {
-		//var wg sync.WaitGroup
-		//wg.Add(1)
-		// listen for ACKs first ...
-		//go func() {
-		//	received := make(map[string]bool)
-		//	lrc := redis.NewClient(&redis.Options{
-		//		Addr:     s.redisEndpoint,
-		//		Password: "",
-		//		DB:       0,
-		//	})
-		//	defer lrc.Close()
-		//	pubsub := lrc.Subscribe(EARS_REDIS_ACK_CHANNEL)
-		//	defer pubsub.Close()
-		//	// 30 sec timeout on collecting acks
-		//	done := make(chan bool, 1)
-		//	wg.Done()
-		//	go func() {
-		//		for {
-		//			msg, err := pubsub.ReceiveMessage()
-		//			if err != nil {
-		//				s.logger.Error().Str("op", "PublishSyncRequest").Err(err).Msg("Error collecting ack")
-		//				break
-		//			}
-		//
-		//			var syncCmd syncer.SyncCommand
-		//			err = json.Unmarshal([]byte(msg.Payload), &syncCmd)
-		//			if err != nil {
-		//				s.logger.Error().Str("op", "PublishSyncRequest").Str("error", err.Error()).Msg("bad ack message structure: " + msg.Payload)
-		//				break
-		//			}
-		//
-		//			// only collect acks for this session
-		//			if cmd == syncCmd.Cmd && itemType == syncCmd.ItemType && itemId == syncCmd.ItemId && syncCmd.Sid == sid && tid.Equal(syncCmd.Tenant) {
-		//				received[syncCmd.InstanceId] = true
-		//				// wait until we received an ack from each subscriber (except the one originating the request)
-		//				if len(received) >= numSubscribers-1 {
-		//					break
-		//				}
-		//			}
-		//		}
-		//		done <- true
-		//	}()
-		//	select {
-		//	case <-done:
-		//		s.logger.Info().Str("op", "PublishSyncRequest").Msg("done collecting acks")
-		//	case <-time.After(30 * time.Second):
-		//		s.logger.Info().Str("op", "PublishSyncRequest").Msg("timeout while collecting acks")
-		//	}
-		//	// at this point the delta has been fully synchronized - may want to publish something about that here
-		//}()
+		var wg sync.WaitGroup
+		wg.Add(1)
+		//listen for ACKs first ...
+		go func() {
+			received := make(map[string]bool)
+			lrc := redis.NewClient(&redis.Options{
+				Addr:     s.redisEndpoint,
+				Password: "",
+				DB:       0,
+			})
+			defer lrc.Close()
+			pubsub := lrc.Subscribe(EARS_REDIS_ACK_CHANNEL)
+			defer pubsub.Close()
+			// 30 sec timeout on collecting acks
+			done := make(chan bool, 1)
+			wg.Done()
+			go func() {
+				for {
+					msg, err := pubsub.ReceiveMessage()
+					if err != nil {
+						s.logger.Error().Str("op", "PublishSyncRequest").Err(err).Msg("Error collecting ack")
+						break
+					}
+
+					var syncCmd syncer.SyncCommand
+					err = json.Unmarshal([]byte(msg.Payload), &syncCmd)
+					if err != nil {
+						s.logger.Error().Str("op", "PublishSyncRequest").Str("error", err.Error()).Msg("bad ack message structure: " + msg.Payload)
+						break
+					}
+
+					// only collect acks for this session
+					if cmd == syncCmd.Cmd && itemType == syncCmd.ItemType && itemId == syncCmd.ItemId && syncCmd.Sid == sid && tid.Equal(syncCmd.Tenant) {
+						received[syncCmd.InstanceId] = true
+						// wait until we received an ack from each subscriber (except the one originating the request)
+						if len(received) >= numSubscribers-1 {
+							break
+						}
+					}
+				}
+				done <- true
+			}()
+			select {
+			case <-done:
+				s.logger.Info().Str("op", "PublishSyncRequest").Msg("done collecting acks")
+			case <-time.After(30 * time.Second):
+				s.logger.Info().Str("op", "PublishSyncRequest").Msg("timeout while collecting acks")
+			}
+			// at this point the delta has been fully synchronized - may want to publish something about that here
+		}()
 		if numSubscribers <= 1 {
 			s.logger.Info().Str("op", "PublishSyncRequest").Msg("no subscribers but me - no need to publish sync")
 		} else {
