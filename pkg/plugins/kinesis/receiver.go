@@ -25,6 +25,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/kinesis"
 	"github.com/goccy/go-yaml"
+	"github.com/rs/zerolog/log"
 	"github.com/xmidt-org/ears/internal/pkg/rtsemconv"
 	"github.com/xmidt-org/ears/pkg/checkpoint"
 	"github.com/xmidt-org/ears/pkg/event"
@@ -663,6 +664,8 @@ func (r *Receiver) Count() int {
 }
 
 func (r *Receiver) StopReceiving(ctx context.Context) error {
+	log.Ctx(ctx).Info().Str("op", "kinesis StopReceiving").Str("name", r.name).Msg("Stop Receiving...")
+
 	r.Lock()
 	stopped := r.stopped
 	r.stopped = true
@@ -679,6 +682,7 @@ func (r *Receiver) StopReceiving(ctx context.Context) error {
 		close(r.done)
 		r.Unlock()
 	}
+	log.Ctx(ctx).Info().Str("op", "kinesis StopReceiving").Str("name", r.name).Msg("Stop Receiving done...")
 	return nil
 }
 
