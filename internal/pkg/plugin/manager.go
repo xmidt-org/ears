@@ -322,13 +322,21 @@ func (m *manager) UnregisterReceiver(ctx context.Context, pr pkgreceiver.Receive
 			Message: fmt.Sprintf("receiver not registered %v", ok),
 		}
 	}
+
+	log.Ctx(ctx).Info().Str("op", "UnregisterReceiver").Str("r", r.name).Msg("stop receiving")
+
 	r.StopReceiving(ctx) // This in turn calls manager.stopreceiving()
+
+	log.Ctx(ctx).Info().Str("op", "UnregisterReceiver").Str("r", r.name).Msg("stop receiving done")
+
 	key := m.mapkey(r.tid, r.name, r.hash)
 	m.Lock()
 	defer m.Unlock()
 	m.receiversCount[key]--
 	if m.receiversCount[key] <= 0 {
+		log.Ctx(ctx).Info().Str("op", "UnregisterReceiver").Str("r", r.name).Msg("receiver stop receiving")
 		r.receiver.StopReceiving(ctx)
+		log.Ctx(ctx).Info().Str("op", "UnregisterReceiver").Str("r", r.name).Msg("receiver stop receiving done")
 		delete(m.receiversCount, key)
 		delete(m.receivers, key)
 	}
