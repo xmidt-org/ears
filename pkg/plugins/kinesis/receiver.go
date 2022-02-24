@@ -664,21 +664,26 @@ func (r *Receiver) Count() int {
 }
 
 func (r *Receiver) StopReceiving(ctx context.Context) error {
-	log.Ctx(ctx).Info().Str("op", "kinesis StopReceiving").Str("name", r.name).Msg("Stop Receiving...")
+	log.Ctx(ctx).Info().Str("op", "KS StopReceiving").Str("name", r.name).Msg("Stop Receiving...")
 
 	r.Lock()
 	stopped := r.stopped
 	r.stopped = true
 	r.Unlock()
 	if !stopped {
+		log.Ctx(ctx).Info().Str("op", "KS StopReceiving").Str("name", r.name).Msg("Stop shardMonitorStopChannel")
 		r.shardMonitorStopChannel <- true
+		log.Ctx(ctx).Info().Str("op", "KS StopReceiving").Str("name", r.name).Msg("Stop shardUpdateListenerStopChannel")
 		r.shardUpdateListenerStopChannel <- true
+		log.Ctx(ctx).Info().Str("op", "KS StopReceiving").Str("name", r.name).Msg("Stop stopShardReceiver")
 		r.stopShardReceiver(-1)
+		log.Ctx(ctx).Info().Str("op", "KS StopReceiving").Str("name", r.name).Msg("Stop shardDistributor")
 		r.shardDistributor.Stop()
 		r.eventSuccessCounter.Unbind()
 		r.eventFailureCounter.Unbind()
 		r.eventBytesCounter.Unbind()
 		r.Lock()
+		log.Ctx(ctx).Info().Str("op", "KS StopReceiving").Str("name", r.name).Msg("Close r.done")
 		close(r.done)
 		r.Unlock()
 	}
