@@ -21,6 +21,7 @@ import (
 	"github.com/xmidt-org/ears/pkg/route"
 	"github.com/xmidt-org/ears/pkg/sender"
 	"sync"
+	"sync/atomic"
 )
 
 type LiveRouteWrapper struct {
@@ -30,34 +31,28 @@ type LiveRouteWrapper struct {
 	Receiver    receiver.Receiver
 	FilterChain *filter.Chain
 	Config      route.Config
-	RefCnt      int
+	RefCnt      int32
 }
 
 func NewLiveRouteWrapper(routeConfig route.Config) *LiveRouteWrapper {
 	lrw := new(LiveRouteWrapper)
 	lrw.Config = routeConfig
-	lrw.RefCnt++
+	atomic.AddInt32(&lrw.RefCnt, 1)
 	return lrw
 }
 
 func (lrw *LiveRouteWrapper) GetReferenceCount() int {
-	lrw.Lock()
-	defer lrw.Unlock()
-	return lrw.RefCnt
+	return int(lrw.RefCnt)
 }
 
 func (lrw *LiveRouteWrapper) AddRouteReference() int {
-	lrw.Lock()
-	defer lrw.Unlock()
-	lrw.RefCnt++
-	return lrw.RefCnt
+	atomic.AddInt32(&lrw.RefCnt, 1)
+	return int(lrw.RefCnt)
 }
 
 func (lrw *LiveRouteWrapper) RemoveRouteReference() int {
-	lrw.Lock()
-	defer lrw.Unlock()
-	lrw.RefCnt--
-	return lrw.RefCnt
+	atomic.AddInt32(&lrw.RefCnt, -1)
+	return int(lrw.RefCnt)
 }
 
 func (lrw *LiveRouteWrapper) Unregister(ctx context.Context, r *DefaultRoutingTableManager) error {
