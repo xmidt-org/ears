@@ -334,9 +334,9 @@ func (m *manager) UnregisterReceiver(ctx context.Context, pr pkgreceiver.Receive
 	defer m.Unlock()
 	m.receiversCount[key]--
 	if m.receiversCount[key] <= 0 {
-		log.Ctx(ctx).Info().Str("op", "UnregisterReceiver").Str("r", r.name).Msg("receiver stop receiving")
+		log.Ctx(ctx).Info().Str("op", "UnregisterReceiver").Str("r", r.name).Str("key", key).Str("id", r.id).Msg("receiver stop receiving")
 		r.receiver.StopReceiving(ctx)
-		log.Ctx(ctx).Info().Str("op", "UnregisterReceiver").Str("r", r.name).Msg("receiver stop receiving done")
+		log.Ctx(ctx).Info().Str("op", "UnregisterReceiver").Str("r", r.name).Str("key", key).Str("id", r.id).Msg("receiver stop receiving done")
 		delete(m.receiversCount, key)
 		delete(m.receivers, key)
 	}
