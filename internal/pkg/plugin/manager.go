@@ -154,6 +154,7 @@ func (m *manager) RegisterReceiver(
 				Err:     err,
 			}
 		}
+		log.Ctx(ctx).Info().Str("op", "RegisterReceiver").Str("key", key).Str("name", name).Msg("Creating NewReceiver")
 
 		m.receivers[key] = r
 		m.receiversCount[key] = 0
@@ -210,6 +211,8 @@ func (m *manager) RegisterReceiver(
 
 	m.receiversWrapped[w.id] = w
 	m.receiversCount[key]++
+
+	log.Ctx(ctx).Info().Str("op", "RegisterReceiver").Str("key", key).Str("wid", w.id).Str("name", name).Msg("Receiver registered")
 
 	return w, nil
 
@@ -334,9 +337,9 @@ func (m *manager) UnregisterReceiver(ctx context.Context, pr pkgreceiver.Receive
 	defer m.Unlock()
 	m.receiversCount[key]--
 	if m.receiversCount[key] <= 0 {
-		log.Ctx(ctx).Info().Str("op", "UnregisterReceiver").Str("r", r.name).Str("key", key).Str("id", r.id).Msg("receiver stop receiving")
+		log.Ctx(ctx).Info().Str("op", "UnregisterReceiver").Str("r", r.name).Str("key", key).Str("wid", r.id).Msg("receiver stop receiving")
 		r.receiver.StopReceiving(ctx)
-		log.Ctx(ctx).Info().Str("op", "UnregisterReceiver").Str("r", r.name).Str("key", key).Str("id", r.id).Msg("receiver stop receiving done")
+		log.Ctx(ctx).Info().Str("op", "UnregisterReceiver").Str("r", r.name).Str("key", key).Str("wid", r.id).Msg("receiver stop receiving done")
 		delete(m.receiversCount, key)
 		delete(m.receivers, key)
 	}
