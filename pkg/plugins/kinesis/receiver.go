@@ -158,12 +158,13 @@ func (r *Receiver) getCheckpointId(shardID int) string {
 }
 
 func (r *Receiver) shardMonitor(svc *kinesis.Kinesis, distributor sharder.ShardDistributor) {
+	r.logger.Info().Str("op", "Kinesis.shardMonitor").Str("stream", *r.stream.StreamDescription.StreamName).Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Msg("starting shard monitor")
 	go func() {
 		defer func() {
 			p := recover()
 			if p != nil {
 				panicErr := panics.ToError(p)
-				r.logger.Error().Str("op", "kinesis.shardMonitor").Str("error", panicErr.Error()).
+				r.logger.Error().Str("op", "Kinesis.shardMonitor").Str("error", panicErr.Error()).
 					Str("stackTrace", panicErr.StackTrace()).Msg("a panic has occurred in shard monitor")
 			}
 		}()
