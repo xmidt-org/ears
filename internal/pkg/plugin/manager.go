@@ -161,7 +161,7 @@ func (m *manager) RegisterReceiver(
 		m.receiversFn[key] = map[string]pkgreceiver.NextFn{}
 
 		go func() {
-			r.Receive(func(e event.Event) {
+			err := r.Receive(func(e event.Event) {
 				defer func() {
 					p := recover()
 					if p != nil {
@@ -178,13 +178,18 @@ func (m *manager) RegisterReceiver(
 					err = m.quotaManager.Wait(e.Context(), tid)
 					span.End()
 					if err != nil {
-						m.logger.Debug().Str("op", "receiverNext").Str("tenantId", tid.ToString()).Msg("Tenant Ratelimited")
+						log.Ctx(e.Context()).Debug().Str("op", "receiverNext").Str("tenantId", tid.ToString()).Msg("Tenant Ratelimited")
 						e.Nack(err)
 						return
 					}
 				}
 				m.next(key, e)
 			})
+			if err != nil {
+				m.logger.Error().Str("op", "RegisterReceiver.Receive").Err(err).Str("key", key).Str("name", name).Msg("Error calling Receive function")
+
+				//TODO figure out if we need to cleanup the receiver (or how to)
+			}
 		}()
 	}
 
