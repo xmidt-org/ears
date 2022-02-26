@@ -693,13 +693,21 @@ func (r *Receiver) StopReceiving(ctx context.Context) error {
 	r.Unlock()
 	if !stopped {
 		log.Ctx(ctx).Info().Str("op", "KS StopReceiving").Str("name", r.name).Msg("2 Stop shardMonitorStopChannel")
-		r.shardMonitorStopChannel <- true
+		cleanupShardMonitor := false
+		select {
+		case r.shardMonitorStopChannel <- true:
+			cleanupShardMonitor = true
+		default:
+			cleanupShardMonitor = false
+		}
 		log.Ctx(ctx).Info().Str("op", "KS StopReceiving").Str("name", r.name).Msg("3 Stop shardUpdateListenerStopChannel")
-		r.shardUpdateListenerStopChannel <- true
-		log.Ctx(ctx).Info().Str("op", "KS StopReceiving").Str("name", r.name).Msg("4 Stop stopShardReceiver")
-		r.stopShardReceiver(-1)
-		log.Ctx(ctx).Info().Str("op", "KS StopReceiving").Str("name", r.name).Msg("5 Stop shardDistributor")
-		r.shardDistributor.Stop()
+		if cleanupShardMonitor {
+			r.shardUpdateListenerStopChannel <- true
+			log.Ctx(ctx).Info().Str("op", "KS StopReceiving").Str("name", r.name).Msg("4 Stop stopShardReceiver")
+			r.stopShardReceiver(-1)
+			log.Ctx(ctx).Info().Str("op", "KS StopReceiving").Str("name", r.name).Msg("5 Stop shardDistributor")
+			r.shardDistributor.Stop()
+		}
 		r.eventSuccessCounter.Unbind()
 		r.eventFailureCounter.Unbind()
 		r.eventBytesCounter.Unbind()
