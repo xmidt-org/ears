@@ -590,8 +590,6 @@ func (r *Receiver) updateShards(newShards sharder.ShardConfig) {
 }
 
 func (r *Receiver) Receive(next receiver.NextFn) error {
-	r.logger.Info().Str("op", "Receive").Str("name", r.name).Msg("100")
-
 	if r == nil {
 		return &pkgplugin.Error{
 			Err: fmt.Errorf("Receive called on <nil> pointer"),
@@ -608,9 +606,6 @@ func (r *Receiver) Receive(next receiver.NextFn) error {
 	r.done = make(chan struct{})
 	r.next = next
 	r.Unlock()
-
-	r.logger.Info().Str("op", "Receive").Str("name", r.name).Msg("200")
-
 	sess, err := session.NewSession()
 	if err != nil {
 		return err
@@ -623,9 +618,6 @@ func (r *Receiver) Receive(next receiver.NextFn) error {
 	} else {
 		creds = sess.Config.Credentials
 	}
-
-	r.logger.Info().Str("op", "Receive").Str("name", r.name).Msg("300")
-
 	sess, err = session.NewSession(&aws.Config{Region: aws.String(r.config.AWSRegion), Credentials: creds})
 	if nil != err {
 		return err
@@ -634,9 +626,6 @@ func (r *Receiver) Receive(next receiver.NextFn) error {
 	if nil != err {
 		return err
 	}
-
-	r.logger.Info().Str("op", "Receive").Str("name", r.name).Msg("400")
-
 	r.svc = kinesis.New(sess)
 	//r.svc = kinesis.New(sess, aws.NewConfig().WithLogLevel(aws.LogDebug))
 	r.stream, err = r.svc.DescribeStream(&kinesis.DescribeStreamInput{StreamName: aws.String(r.config.StreamName)})
@@ -649,21 +638,12 @@ func (r *Receiver) Receive(next receiver.NextFn) error {
 			return err
 		}
 	}
-
-	r.logger.Info().Str("op", "Receive").Str("name", r.name).Msg("500")
-
 	sharderConfig := sharder.DefaultControllerConfig()
 	r.shardDistributor, err = sharder.GetDefaultHashDistributor(sharderConfig.NodeName, len(r.stream.StreamDescription.Shards), sharderConfig.StorageConfig)
 	if err != nil {
 		return err
 	}
-
-	r.logger.Info().Str("op", "Receive").Str("name", r.name).Msg("600")
-
 	r.shardUpdateListener(r.shardDistributor)
-
-	r.logger.Info().Str("op", "Receive").Str("name", r.name).Msg("700")
-
 	r.shardMonitor(r.svc, r.shardDistributor)
 	r.logger.Info().Str("op", "Kinesis.Receive").Str("stream", *r.stream.StreamDescription.StreamName).Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Msg("waiting for receive done")
 	<-r.done
@@ -685,14 +665,11 @@ func (r *Receiver) Count() int {
 }
 
 func (r *Receiver) StopReceiving(ctx context.Context) error {
-	log.Ctx(ctx).Info().Str("op", "KS StopReceiving").Str("name", r.name).Msg("1 Stop Receiving...")
-
 	r.Lock()
 	stopped := r.stopped
 	r.stopped = true
 	r.Unlock()
 	if !stopped {
-		log.Ctx(ctx).Info().Str("op", "KS StopReceiving").Str("name", r.name).Msg("2 Stop shardMonitorStopChannel")
 		cleanupShardMonitor := false
 		select {
 		case r.shardMonitorStopChannel <- true:
@@ -700,23 +677,19 @@ func (r *Receiver) StopReceiving(ctx context.Context) error {
 		default:
 			cleanupShardMonitor = false
 		}
-		log.Ctx(ctx).Info().Str("op", "KS StopReceiving").Str("name", r.name).Msg("3 Stop shardUpdateListenerStopChannel")
 		if cleanupShardMonitor {
+			log.Ctx(ctx).Info().Str("op", "StopReceiving").Str("name", r.name).Msg("cleaning up shard monitor and distributor")
 			r.shardUpdateListenerStopChannel <- true
-			log.Ctx(ctx).Info().Str("op", "KS StopReceiving").Str("name", r.name).Msg("4 Stop stopShardReceiver")
 			r.stopShardReceiver(-1)
-			log.Ctx(ctx).Info().Str("op", "KS StopReceiving").Str("name", r.name).Msg("5 Stop shardDistributor")
 			r.shardDistributor.Stop()
 		}
 		r.eventSuccessCounter.Unbind()
 		r.eventFailureCounter.Unbind()
 		r.eventBytesCounter.Unbind()
 		r.Lock()
-		log.Ctx(ctx).Info().Str("op", "KS StopReceiving").Str("name", r.name).Msg("6 Close r.done")
 		close(r.done)
 		r.Unlock()
 	}
-	log.Ctx(ctx).Info().Str("op", "kinesis StopReceiving").Str("name", r.name).Msg("7 Stop Receiving done...")
 	return nil
 }
 
