@@ -331,20 +331,24 @@ func (m *manager) UnregisterReceiver(ctx context.Context, pr pkgreceiver.Receive
 		}
 	}
 
-	log.Ctx(ctx).Info().Str("op", "UnregisterReceiver").Str("r", r.name).Msg("stop receiving")
+	err := r.StopReceiving(ctx) // This in turn calls manager.stopreceiving()
 
-	r.StopReceiving(ctx) // This in turn calls manager.stopreceiving()
-
-	log.Ctx(ctx).Info().Str("op", "UnregisterReceiver").Str("r", r.name).Msg("stop receiving done")
+	if err != nil {
+		log.Ctx(ctx).Error().Str("op", "UnregisterReceiver").Str("r", r.name).Err(err).Msg("Error calling StopReceiving")
+	}
 
 	key := m.mapkey(r.tid, r.name, r.hash)
 	m.Lock()
 	defer m.Unlock()
 	m.receiversCount[key]--
 	if m.receiversCount[key] <= 0 {
-		log.Ctx(ctx).Info().Str("op", "UnregisterReceiver").Str("r", r.name).Str("key", key).Str("wid", r.id).Msg("receiver stop receiving")
-		r.receiver.StopReceiving(ctx)
-		log.Ctx(ctx).Info().Str("op", "UnregisterReceiver").Str("r", r.name).Str("key", key).Str("wid", r.id).Msg("receiver stop receiving done")
+		go func() {
+			err := r.receiver.StopReceiving(ctx)
+			if err != nil {
+				m.logger.Error().Str("op", "UnregisterReceiver").Str("r", r.name).Str("key", key).Err(err).Msg("Error stopping receiver")
+			}
+		}()
+		log.Ctx(ctx).Info().Str("op", "UnregisterReceiver").Str("r", r.name).Str("key", key).Str("wid", r.id).Msg("receiver stopped")
 		delete(m.receiversCount, key)
 		delete(m.receivers, key)
 	}

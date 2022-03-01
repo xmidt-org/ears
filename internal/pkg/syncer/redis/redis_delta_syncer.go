@@ -180,7 +180,7 @@ func (s *RedisDeltaSyncer) PublishSyncRequest(ctx context.Context, tid tenant.Id
 			s.logger.Info().Str("op", "PublishSyncRequest").Msg("no subscribers but me - no need to publish sync")
 		} else {
 			// wait for listener to be ready
-			//wg.Wait()
+			wg.Wait()
 			// ... then request all flow apis to sync
 			syncCmd := &syncer.SyncCommand{
 				Cmd:        cmd,

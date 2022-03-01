@@ -16,7 +16,6 @@ package tablemgr
 
 import (
 	"context"
-	"github.com/rs/zerolog/log"
 	"github.com/xmidt-org/ears/pkg/filter"
 	"github.com/xmidt-org/ears/pkg/receiver"
 	"github.com/xmidt-org/ears/pkg/route"
@@ -61,7 +60,6 @@ func (lrw *LiveRouteWrapper) Unregister(ctx context.Context, r *DefaultRoutingTa
 	defer lrw.Unlock()
 	var e, err error
 
-	log.Ctx(ctx).Info().Str("op", "Unregister").Msg("mchiang debug - receivers")
 	if lrw.Receiver != nil {
 		err = r.pluginMgr.UnregisterReceiver(ctx, lrw.Receiver)
 		if err != nil {
@@ -69,7 +67,6 @@ func (lrw *LiveRouteWrapper) Unregister(ctx context.Context, r *DefaultRoutingTa
 		}
 	}
 
-	log.Ctx(ctx).Info().Str("op", "Unregister").Msg("mchiang debug - senders")
 	if lrw.Sender != nil {
 		err = r.pluginMgr.UnregisterSender(ctx, lrw.Sender)
 		if err != nil {
@@ -77,7 +74,6 @@ func (lrw *LiveRouteWrapper) Unregister(ctx context.Context, r *DefaultRoutingTa
 		}
 	}
 
-	log.Ctx(ctx).Info().Str("op", "Unregister").Msg("mchiang debug - filterers")
 	if lrw.FilterChain != nil {
 		for _, filter := range lrw.FilterChain.Filterers() {
 			err = r.pluginMgr.UnregisterFilter(ctx, filter)
@@ -86,7 +82,6 @@ func (lrw *LiveRouteWrapper) Unregister(ctx context.Context, r *DefaultRoutingTa
 			}
 		}
 	}
-	log.Ctx(ctx).Info().Str("op", "Unregister").Msg("mchiang debug - all done")
 	return e
 }
 func (lrw *LiveRouteWrapper) Register(ctx context.Context, r *DefaultRoutingTableManager) error {
