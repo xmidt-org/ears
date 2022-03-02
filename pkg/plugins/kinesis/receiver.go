@@ -196,6 +196,10 @@ func (r *Receiver) shardMonitor(svc *kinesis.Kinesis, distributor sharder.ShardD
 				// this will trigger updates on the
 				distributor.UpdateNumberShards(len(stream.StreamDescription.Shards))
 			}
+			if !*r.config.UseShardMonitor {
+				r.logger.Info().Str("op", "Kinesis.shardMonitor").Str("stream", *r.stream.StreamDescription.StreamName).Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Msg("stopping shard monitor immediately")
+				return
+			}
 		}
 	}()
 }

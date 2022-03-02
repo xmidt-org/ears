@@ -45,6 +45,9 @@ func (rc *ReceiverConfig) WithDefaults() ReceiverConfig {
 	if cfg.MaxCheckpointAgeSeconds == nil {
 		cfg.MaxCheckpointAgeSeconds = DefaultReceiverConfig.MaxCheckpointAgeSeconds
 	}
+	if cfg.UseShardMonitor == nil {
+		cfg.UseShardMonitor = DefaultReceiverConfig.UseShardMonitor
+	}
 	return cfg
 }
 
@@ -111,6 +114,10 @@ const receiverSchema = `
 				"useCheckpoint" : {
 					"type": "boolean",
 					"default": true
+				},
+				"useShardMonitor" : {
+					"type": "boolean",
+					"default": false
 				},
 				"maxCheckpointAgeSeconds" : {
                     "type": "integer", 
