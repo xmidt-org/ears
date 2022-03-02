@@ -1,5 +1,8 @@
 {
-  "item": "v0.0.0",
+  "item": {
+    "Config": "",
+    "Version": "v0.0.0"
+  },
   "status": {
     "code": 200,
     "message": "OK"
