@@ -128,7 +128,7 @@ func (s *RedisDeltaSyncer) PublishSyncRequest(ctx context.Context, tid tenant.Id
 	go func() {
 		var wg sync.WaitGroup
 		wg.Add(1)
-		// listen for ACKs first ...
+		//listen for ACKs first ...
 		go func() {
 			received := make(map[string]bool)
 			lrc := redis.NewClient(&redis.Options{
@@ -146,7 +146,7 @@ func (s *RedisDeltaSyncer) PublishSyncRequest(ctx context.Context, tid tenant.Id
 				for {
 					msg, err := pubsub.ReceiveMessage()
 					if err != nil {
-						s.logger.Error().Str("op", "PublishSyncRequest").Msg(err.Error())
+						s.logger.Error().Str("op", "PublishSyncRequest").Err(err).Msg("Error collecting ack")
 						break
 					}
 
@@ -194,7 +194,7 @@ func (s *RedisDeltaSyncer) PublishSyncRequest(ctx context.Context, tid tenant.Id
 			msg, _ := json.Marshal(syncCmd)
 			err := s.client.Publish(EARS_REDIS_SYNC_CHANNEL, string(msg)).Err()
 			if err != nil {
-				s.logger.Error().Str("op", "PublishSyncRequest").Msg(err.Error())
+				s.logger.Error().Str("op", "PublishSyncRequest").Err(err).Msg("Fail to publish sync request")
 			}
 		}
 	}()

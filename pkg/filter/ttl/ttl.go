@@ -85,7 +85,8 @@ func (f *Filter) Filter(evt event.Event) []event.Event {
 		evt.Ack()
 		return []event.Event{}
 	}
-	if nowNanos-int64(evtTs) >= int64(*f.config.Ttl*(*f.config.NanoFactor)) {
+	// ttl is in milliseconds, so we need to convert the timestamp nanos
+	if (nowNanos-int64(evtTs))/1e6 >= int64(*f.config.Ttl) {
 		evt.Ack()
 		return []event.Event{}
 	}
