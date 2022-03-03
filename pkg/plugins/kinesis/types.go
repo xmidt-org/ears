@@ -69,6 +69,7 @@ var DefaultReceiverConfig = ReceiverConfig{
 	AWSRegion:               endpoints.UsWest2RegionID,
 	MaxCheckpointAgeSeconds: pointer.Int(86400),
 	UseCheckpoint:           pointer.Bool(true),
+	UseShardMonitor:         pointer.Bool(false),
 }
 
 type ReceiverConfig struct {
@@ -84,6 +85,7 @@ type ReceiverConfig struct {
 	AWSRegion               string `json:"awsRegion,omitempty"`
 	UseCheckpoint           *bool  `json:"useCheckpoint,omitempty"`
 	MaxCheckpointAgeSeconds *int   `json:"maxCheckpointAgeSeconds,omitempty"`
+	UseShardMonitor         *bool  `json:"useShardMonitor,omitempty"`
 }
 
 type Receiver struct {

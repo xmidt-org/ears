@@ -45,7 +45,7 @@ will focus on the Redis implementation.
 
 The Redis implementation utilizes two Redis topics, _ears_sync_ and _ears_ack_. All EARS instances 
 in a cluster subscribe to the _ears_sync_ topic to learn about routing table changes performed by
-other EARS instances. By contrast, if an ERAS instance is actively processing a CRUD operation, it 
+other EARS instances. If an ERAS instance is actively processing a CRUD operation, it 
 will publish an event on the _ears_sync_ channel to notify all other instances.
 
 Delta event consist of comma separated operation code, rules id, instance id and a unique session id.
@@ -53,15 +53,15 @@ The session id is necessary to allow for concurrent CRUD operation originating f
 instance.
 
 1. An EARS Instance (IS1) receives an AddRoute() API call
-1. IS1 stores the new route config in the shared persistence layer, here also Redis: `HSET routes rid config` 
-1. IS1 publishes a delta event on _ears_sybc_: `PUBLISH ears_sync add,rid,iid,sid`
+1. IS1 stores the new route config in the shared persistence layer, here also Redis: `HSET routes rid config` (note: we usually use DynamoDb for persistence here) 
+1. IS1 publishes a delta event on _ears_sync_: `PUBLISH ears_sync add,rid,iid,sid`
 1. IS1 register and runs the route
-1. Meanwhile, IS2 receives the delta event and makes sure the instance ID in the event is not idenitical 
-   with hits own instance ID
+1. Meanwhile, IS2 receives the delta event and makes sure the instance ID in the event is not identical 
+   with its own instance ID
 1. IS2 then loads the route config from the persistence layer
 1. IS2 now also register and runs the route
-1. IS2 sends an ack message back through the _ears_ack_ channel using its own instance ID and teh same
-   session ID: `PUBLISH ears_sync add,rid,iid,sid`
+1. IS2 sends an ack message back through the _ears_ack_ channel using its own instance ID and the same
+   session ID: `PUBLISH ears_ack add,rid,iid,sid`
 1. Once IS1 has collected acks from all other instances for the current session ID it can be sure the 
    new route information has been fully propagated
    

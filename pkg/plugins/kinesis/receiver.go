@@ -25,6 +25,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/kinesis"
 	"github.com/goccy/go-yaml"
+	"github.com/rs/zerolog/log"
 	"github.com/xmidt-org/ears/internal/pkg/rtsemconv"
 	"github.com/xmidt-org/ears/pkg/checkpoint"
 	"github.com/xmidt-org/ears/pkg/event"
@@ -157,12 +158,13 @@ func (r *Receiver) getCheckpointId(shardID int) string {
 }
 
 func (r *Receiver) shardMonitor(svc *kinesis.Kinesis, distributor sharder.ShardDistributor) {
+	r.logger.Info().Str("op", "Kinesis.shardMonitor").Str("stream", *r.stream.StreamDescription.StreamName).Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Msg("starting shard monitor")
 	go func() {
 		defer func() {
 			p := recover()
 			if p != nil {
 				panicErr := panics.ToError(p)
-				r.logger.Error().Str("op", "kinesis.shardMonitor").Str("error", panicErr.Error()).
+				r.logger.Error().Str("op", "Kinesis.shardMonitor").Str("error", panicErr.Error()).
 					Str("stackTrace", panicErr.StackTrace()).Msg("a panic has occurred in shard monitor")
 			}
 		}()
@@ -193,6 +195,10 @@ func (r *Receiver) shardMonitor(svc *kinesis.Kinesis, distributor sharder.ShardD
 				r.stream = stream
 				// this will trigger updates on the
 				distributor.UpdateNumberShards(len(stream.StreamDescription.Shards))
+			}
+			if !*r.config.UseShardMonitor {
+				r.logger.Info().Str("op", "Kinesis.shardMonitor").Str("stream", *r.stream.StreamDescription.StreamName).Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Msg("stopping shard monitor immediately")
+				return
 			}
 		}
 	}()
@@ -668,10 +674,19 @@ func (r *Receiver) StopReceiving(ctx context.Context) error {
 	r.stopped = true
 	r.Unlock()
 	if !stopped {
-		r.shardMonitorStopChannel <- true
-		r.shardUpdateListenerStopChannel <- true
-		r.stopShardReceiver(-1)
-		r.shardDistributor.Stop()
+		cleanupShardMonitor := false
+		select {
+		case r.shardMonitorStopChannel <- true:
+			cleanupShardMonitor = true
+		default:
+			cleanupShardMonitor = false
+		}
+		if cleanupShardMonitor {
+			log.Ctx(ctx).Info().Str("op", "StopReceiving").Str("name", r.name).Msg("cleaning up shard monitor and distributor")
+			r.shardUpdateListenerStopChannel <- true
+			r.stopShardReceiver(-1)
+			r.shardDistributor.Stop()
+		}
 		r.eventSuccessCounter.Unbind()
 		r.eventFailureCounter.Unbind()
 		r.eventBytesCounter.Unbind()

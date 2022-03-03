@@ -51,7 +51,7 @@ func TestFilterTtlBasic(t *testing.T) {
 	}
 	evts := f.Filter(e)
 	if len(evts) != 1 {
-		t.Fatalf("wrong number of ttled events: %d\n", len(evts))
+		t.Fatalf("wrong number of ttled events: %d, now is %s\n", len(evts), tsStr)
 	}
 	expectedEventStr := eventStr
 	var res interface{}
