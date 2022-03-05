@@ -169,11 +169,18 @@ func (r *Receiver) shardMonitor(svc *kinesis.Kinesis, distributor sharder.ShardD
 			}
 		}()
 		for {
+			//TODO: what happens if the shard monitor is busy describing the stream and not waiting on the channel?
 			select {
 			case <-r.shardMonitorStopChannel:
 				r.logger.Info().Str("op", "Kinesis.shardMonitor").Str("stream", *r.stream.StreamDescription.StreamName).Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Msg("stopping shard monitor")
 				return
 			case <-time.After(monitorTimeoutSecShort * time.Second):
+			}
+			if !*r.config.UseShardMonitor {
+				// keep the shard monitor on, so we keep listening on the stop channel
+				//r.logger.Info().Str("op", "Kinesis.shardMonitor").Str("stream", *r.stream.StreamDescription.StreamName).Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Msg("stopping shard monitor immediately")
+				//return
+				continue
 			}
 			stream, err := svc.DescribeStream(&kinesis.DescribeStreamInput{
 				StreamName: &r.config.StreamName,
@@ -195,10 +202,6 @@ func (r *Receiver) shardMonitor(svc *kinesis.Kinesis, distributor sharder.ShardD
 				r.stream = stream
 				// this will trigger updates on the
 				distributor.UpdateNumberShards(len(stream.StreamDescription.Shards))
-			}
-			if !*r.config.UseShardMonitor {
-				r.logger.Info().Str("op", "Kinesis.shardMonitor").Str("stream", *r.stream.StreamDescription.StreamName).Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Msg("stopping shard monitor immediately")
-				return
 			}
 		}
 	}()
@@ -334,6 +337,7 @@ func (r *Receiver) startShardReceiverEFO(svc *kinesis.Kinesis, stream *kinesis.D
 						}
 					}
 					for _, rec := range kinEvt.Records {
+						//TODO: do we need to check the stop channel here as well?
 						if len(rec.Data) == 0 {
 							continue
 						} else {
