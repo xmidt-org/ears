@@ -169,7 +169,7 @@ func (r *Receiver) shardMonitor(svc *kinesis.Kinesis, distributor sharder.ShardD
 			}
 		}()
 		for {
-			//TODO: what happens if the shard monitor is busy describing the stream and not waiting on the channel?
+			// the stop function will wait for 5 sec in case the shard monitor is busy describing the stream and not waiting on the channel
 			select {
 			case <-r.shardMonitorStopChannel:
 				r.logger.Info().Str("op", "Kinesis.shardMonitor").Str("stream", *r.stream.StreamDescription.StreamName).Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Msg("stopping shard monitor")
@@ -178,8 +178,6 @@ func (r *Receiver) shardMonitor(svc *kinesis.Kinesis, distributor sharder.ShardD
 			}
 			if !*r.config.UseShardMonitor {
 				// keep the shard monitor on, so we keep listening on the stop channel
-				//r.logger.Info().Str("op", "Kinesis.shardMonitor").Str("stream", *r.stream.StreamDescription.StreamName).Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Msg("stopping shard monitor immediately")
-				//return
 				continue
 			}
 			stream, err := svc.DescribeStream(&kinesis.DescribeStreamInput{
@@ -678,11 +676,12 @@ func (r *Receiver) StopReceiving(ctx context.Context) error {
 	r.stopped = true
 	r.Unlock()
 	if !stopped {
+		// check if there is a shard monitor to stop
 		cleanupShardMonitor := false
 		select {
 		case r.shardMonitorStopChannel <- true:
 			cleanupShardMonitor = true
-		default:
+		case <-time.After(errorTimeoutSecLong * time.Second):
 			cleanupShardMonitor = false
 		}
 		if cleanupShardMonitor {
