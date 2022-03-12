@@ -141,10 +141,10 @@ func (r *Receiver) stopShardReceiver(shardIdx int) {
 	if shardIdx < 0 {
 		r.Lock()
 		m := r.stopChannelMap
-		r.Unlock()
 		for _, stopChan := range m {
 			go func(stopChan chan bool) { stopChan <- true }(stopChan)
 		}
+		r.Unlock()
 	} else {
 		stopChan := r.getStopChannel(shardIdx)
 		if stopChan != nil {
