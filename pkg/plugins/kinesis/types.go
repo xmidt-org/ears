@@ -18,6 +18,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws/endpoints"
 	"github.com/aws/aws-sdk-go/service/kinesis"
 	"github.com/rs/zerolog"
+	"github.com/xmidt-org/ears/pkg/errs"
 	"github.com/xmidt-org/ears/pkg/event"
 	"github.com/xmidt-org/ears/pkg/secret"
 	"github.com/xmidt-org/ears/pkg/sharder"
@@ -148,4 +149,17 @@ type Sender struct {
 	eventBytesCounter   metric.BoundInt64Counter
 	eventProcessingTime metric.BoundInt64Histogram
 	eventSendOutTime    metric.BoundInt64Histogram
+}
+
+type KinesisError struct {
+	op  string
+	err error
+}
+
+func (e *KinesisError) Error() string {
+	return errs.String("KinesisError", map[string]interface{}{"op": e.op}, e.err)
+}
+
+func (e *KinesisError) Unwrap() error {
+	return e.err
 }
