@@ -19,7 +19,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/endpoints"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/sqs"
 	"github.com/goccy/go-yaml"
@@ -181,6 +180,7 @@ func (r *Receiver) startReceiveWorker(svc *sqs.SQS, n int) {
 				if delEntry != nil && !*r.config.NeverDelete {
 					deleteBatch = append(deleteBatch, delEntry)
 				}
+
 				if len(deleteBatch) >= *r.config.MaxNumberOfMessages || (delEntry == nil && len(deleteBatch) > 0) {
 					deleteParams := &sqs.DeleteMessageBatchInput{
 						Entries:  deleteBatch,
@@ -337,7 +337,7 @@ func (r *Receiver) Receive(next receiver.NextFn) error {
 	r.Unlock()
 	// create sqs session
 	sess, err := session.NewSession(&aws.Config{
-		Region: aws.String(endpoints.UsWest2RegionID),
+		Region: aws.String(r.config.Region),
 	})
 	if nil != err {
 		return err
