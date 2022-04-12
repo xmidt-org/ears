@@ -293,7 +293,7 @@ func TestLoadPlugin(t *testing.T) {
 
 	paths, err := getTestPluginSOPaths()
 	if err != nil {
-		t.Errorf("could not get plugin paths: %w", err)
+		t.Errorf("could not get plugin paths: %s", err.Error())
 	}
 
 	m, _ := manager.New()
