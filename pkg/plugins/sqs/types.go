@@ -15,6 +15,7 @@
 package sqs
 
 import (
+	"github.com/aws/aws-sdk-go/aws/endpoints"
 	"github.com/aws/aws-sdk-go/service/sqs"
 	"github.com/rs/zerolog"
 	"github.com/xmidt-org/ears/pkg/event"
@@ -55,6 +56,7 @@ func NewPluginVersion(name string, version string, commitID string) (*pkgplugin.
 
 var DefaultReceiverConfig = ReceiverConfig{
 	QueueUrl:            "",
+	Region:              endpoints.UsWest2RegionID,
 	MaxNumberOfMessages: pointer.Int(10),
 	VisibilityTimeout:   pointer.Int(10),
 	WaitTimeSeconds:     pointer.Int(10),
@@ -68,6 +70,7 @@ var DefaultReceiverConfig = ReceiverConfig{
 
 type ReceiverConfig struct {
 	QueueUrl            string `json:"queueUrl,omitempty"`
+	Region              string `json:"region,omitempty"`
 	MaxNumberOfMessages *int   `json:"maxNumberOfMessages,omitempty"`
 	VisibilityTimeout   *int   `json:"visibilityTimeout,omitempty"`
 	WaitTimeSeconds     *int   `json:"waitTimeSeconds,omitempty"`
