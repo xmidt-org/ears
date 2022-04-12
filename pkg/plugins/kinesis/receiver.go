@@ -626,28 +626,28 @@ func (r *Receiver) Receive(next receiver.NextFn) error {
 	}
 	sess, err = session.NewSession(&aws.Config{Region: aws.String(r.config.AWSRegion), Credentials: creds})
 	if nil != err {
-		return err
+		return &KinesisError{op: "NewSession", err: err}
 	}
 	_, err = sess.Config.Credentials.Get()
 	if nil != err {
-		return err
+		return &KinesisError{op: "GetCredentials", err: err}
 	}
 	r.svc = kinesis.New(sess)
 	//r.svc = kinesis.New(sess, aws.NewConfig().WithLogLevel(aws.LogDebug))
 	r.stream, err = r.svc.DescribeStream(&kinesis.DescribeStreamInput{StreamName: aws.String(r.config.StreamName)})
 	if err != nil {
-		return err
+		return &KinesisError{op: "DescribeStream", err: err}
 	}
 	if *r.config.EnhancedFanOut {
 		r.consumer, err = r.registerStreamConsumer(r.svc, r.config.StreamName, r.config.ConsumerName)
 		if err != nil {
-			return err
+			return &KinesisError{op: "registerStreamConsumer", err: err}
 		}
 	}
 	sharderConfig := sharder.DefaultControllerConfig()
 	r.shardDistributor, err = sharder.GetDefaultHashDistributor(sharderConfig.NodeName, len(r.stream.StreamDescription.Shards), sharderConfig.StorageConfig)
 	if err != nil {
-		return err
+		return &KinesisError{op: "GetDefaultHashDistributor", err: err}
 	}
 	r.shardUpdateListener(r.shardDistributor)
 	r.shardMonitor(r.svc, r.shardDistributor)

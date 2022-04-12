@@ -24,6 +24,9 @@ import (
 // of the unset (nil) values filled in.
 func (rc *ReceiverConfig) WithDefaults() ReceiverConfig {
 	cfg := *rc
+	if cfg.Region == "" {
+		cfg.Region = DefaultReceiverConfig.Region
+	}
 	if cfg.MaxNumberOfMessages == nil {
 		cfg.MaxNumberOfMessages = DefaultReceiverConfig.MaxNumberOfMessages
 	}
@@ -78,6 +81,9 @@ const receiverSchema = `
             "additionalProperties": false,
             "properties": {
                 "queueUrl": {
+                    "type": "string"
+                },
+                "region": {
                     "type": "string"
                 },
 				"maxNumberOfMessages": {
