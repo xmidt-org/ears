@@ -117,12 +117,7 @@ func NewReceiver(tid tenant.Id, plugin string, name string, config interface{}, 
 			metric.WithDescription("measures the number of event bytes processed"),
 			metric.WithUnit(unit.Bytes),
 		).Bind(commonLabels...)
-	r.eventLagMillis = metric.Must(meter).
-		NewInt64Histogram(
-			rtsemconv.EARSMetricMillisBehindLatest,
-			metric.WithDescription("measures the number of milliseconds current event is behind tip of stream"),
-			metric.WithUnit(unit.Milliseconds),
-		).Bind(commonLabels...)
+	//defer eventLagMillis to startShardReceiverEFO() because shardIdx is wanted as tag
 	return r, nil
 }
 
@@ -242,6 +237,24 @@ func (r *Receiver) registerStreamConsumer(svc *kinesis.Kinesis, streamName, cons
 }
 
 func (r *Receiver) startShardReceiverEFO(svc *kinesis.Kinesis, stream *kinesis.DescribeStreamOutput, consumer *kinesis.DescribeStreamConsumerOutput, shardIdx int) {
+	// metric recorders
+	meter := global.Meter(rtsemconv.EARSMeterName)
+	commonLabels := []attribute.KeyValue{
+		attribute.String(rtsemconv.EARSPluginTypeLabel, rtsemconv.EARSPluginTypeKinesisReceiver),
+		attribute.String(rtsemconv.EARSPluginNameLabel, r.Name()),
+		attribute.String(rtsemconv.EARSAppIdLabel, r.tid.AppId),
+		attribute.String(rtsemconv.EARSOrgIdLabel, r.tid.OrgId),
+		attribute.String(rtsemconv.KinesisStreamNameLabel, r.config.StreamName),
+		attribute.Int(rtsemconv.KinesisShardIdxLabel, shardIdx),
+	}
+
+	r.eventLagMillis = metric.Must(meter).
+		NewInt64Histogram(
+			rtsemconv.EARSMetricMillisBehindLatest,
+			metric.WithDescription("measures the number of milliseconds current event is behind tip of stream"),
+			metric.WithUnit(unit.Milliseconds),
+		).Bind(commonLabels...)
+
 	// this is an enhanced consumer that will only consume from a dedicated shard
 	go func() {
 		defer func() {
@@ -395,6 +408,24 @@ func (r *Receiver) startShardReceiverEFO(svc *kinesis.Kinesis, stream *kinesis.D
 }
 
 func (r *Receiver) startShardReceiver(svc *kinesis.Kinesis, stream *kinesis.DescribeStreamOutput, shardIdx int) {
+	// metric recorders
+	meter := global.Meter(rtsemconv.EARSMeterName)
+	commonLabels := []attribute.KeyValue{
+		attribute.String(rtsemconv.EARSPluginTypeLabel, rtsemconv.EARSPluginTypeKinesisReceiver),
+		attribute.String(rtsemconv.EARSPluginNameLabel, r.Name()),
+		attribute.String(rtsemconv.EARSAppIdLabel, r.tid.AppId),
+		attribute.String(rtsemconv.EARSOrgIdLabel, r.tid.OrgId),
+		attribute.String(rtsemconv.KinesisStreamNameLabel, r.config.StreamName),
+		attribute.Int(rtsemconv.KinesisShardIdxLabel, shardIdx),
+	}
+
+	r.eventLagMillis = metric.Must(meter).
+		NewInt64Histogram(
+			rtsemconv.EARSMetricMillisBehindLatest,
+			metric.WithDescription("measures the number of milliseconds current event is behind tip of stream"),
+			metric.WithUnit(unit.Milliseconds),
+		).Bind(commonLabels...)
+
 	// this is a non-enhanced consumer that will only consume from one shard
 	// n is number of worker in pool
 	go func() {
