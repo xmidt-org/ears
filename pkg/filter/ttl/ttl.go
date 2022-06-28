@@ -107,6 +107,7 @@ func (f *Filter) Filter(evt event.Event) []event.Event {
 	}
 	// ttl is in milliseconds, so we need to convert the timestamp nanos
 	if (nowNanos-int64(evtTs))/1e6 >= int64(*f.config.Ttl) {
+		log.Ctx(evt.Context()).Info().Str("op", "filter").Str("filterType", "ttl").Str("name", f.Name()).Msg("event ttl expired")
 		ctx := context.Background()
 		f.eventTtlExpirationCounter.Add(ctx, 1)
 		evt.Ack()
