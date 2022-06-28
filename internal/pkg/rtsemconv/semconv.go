@@ -50,7 +50,7 @@ const (
 	EARSMetricEventProcessingTime = "ears.eventProcessingTime"
 	EARSMetricEventSendOutTime    = "ears.eventSendOutTime"
 	EARSMetricEventQueueDepth     = "ears.eventQueueDepth"
-	EARSMetricEventTtlExpiration  = "ears.EventTtlExpiration"
+	EARSMetricEventTtlExpiration  = "ears.eventTtlExpiration"
 	EARSMetricAddRouteSuccess     = "ears.addRouteSuccess"
 	EARSMetricAddRouteFailure     = "ears.addRouteFailure"
 	EARSMetricRemoveRouteSuccess  = "ears.removeRouteSuccess"
