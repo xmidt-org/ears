@@ -76,6 +76,7 @@ const (
 	SQSQueueUrlLabel       = "sqs.QueueUrl"
 	S3Bucket               = "s3.Bucket"
 	KinesisStreamNameLabel = "kinesis.StreamName"
+	KinesisShardIdxLabel   = "kinesis.ShardIdx"
 	HostnameLabel          = "hostname"
 
 	EarsLogTraceIdKey  = "tx.traceId"
