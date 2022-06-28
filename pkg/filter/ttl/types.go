@@ -17,6 +17,7 @@ package ttl
 import (
 	"github.com/xmidt-org/ears/pkg/tenant"
 	"github.com/xorcare/pointer"
+	"go.opentelemetry.io/otel/metric"
 )
 
 // Config can be passed into NewFilter() in order to configure
@@ -36,8 +37,9 @@ var DefaultConfig = Config{
 }
 
 type Filter struct {
-	config Config
-	name   string
-	plugin string
-	tid    tenant.Id
+	config                    Config
+	name                      string
+	plugin                    string
+	tid                       tenant.Id
+	eventTtlExpirationCounter metric.BoundInt64Counter
 }

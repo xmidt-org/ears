@@ -35,6 +35,7 @@ const (
 	EARSPluginTypeRedisSender   = "redisSender"
 
 	EARSPluginTypeMetricFilter = "metricFilter"
+	EARSPluginTypeTtlFilter    = "ttlFilter"
 
 	EARSPluginTypeDebugReceiver   = "debugReceiver"
 	EARSPluginTypeSQSReceiver     = "sqsReceiver"
@@ -49,6 +50,7 @@ const (
 	EARSMetricEventProcessingTime = "ears.eventProcessingTime"
 	EARSMetricEventSendOutTime    = "ears.eventSendOutTime"
 	EARSMetricEventQueueDepth     = "ears.eventQueueDepth"
+	EARSMetricEventTtlExpiration  = "ears.EventTtlExpiration"
 	EARSMetricAddRouteSuccess     = "ears.addRouteSuccess"
 	EARSMetricAddRouteFailure     = "ears.addRouteFailure"
 	EARSMetricRemoveRouteSuccess  = "ears.removeRouteSuccess"

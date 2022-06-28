@@ -15,12 +15,17 @@
 package ttl
 
 import (
+	"context"
 	"fmt"
 	"github.com/rs/zerolog/log"
+	"github.com/xmidt-org/ears/internal/pkg/rtsemconv"
 	"github.com/xmidt-org/ears/pkg/event"
 	"github.com/xmidt-org/ears/pkg/filter"
 	"github.com/xmidt-org/ears/pkg/secret"
 	"github.com/xmidt-org/ears/pkg/tenant"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/metric"
+	"go.opentelemetry.io/otel/metric/global"
 	"go.opentelemetry.io/otel/trace"
 	"time"
 )
@@ -43,6 +48,21 @@ func NewFilter(tid tenant.Id, plugin string, name string, config interface{}, se
 		plugin: plugin,
 		tid:    tid,
 	}
+
+	// metric recorders
+	meter := global.Meter(rtsemconv.EARSMeterName)
+	commonLabels := []attribute.KeyValue{
+		attribute.String(rtsemconv.EARSPluginTypeLabel, rtsemconv.EARSPluginTypeTtlFilter),
+		attribute.String(rtsemconv.EARSPluginNameLabel, f.Name()),
+		attribute.String(rtsemconv.EARSAppIdLabel, f.tid.AppId),
+		attribute.String(rtsemconv.EARSOrgIdLabel, f.tid.OrgId),
+	}
+	f.eventTtlExpirationCounter = metric.Must(meter).
+		NewInt64Counter(
+			rtsemconv.EARSMetricEventTtlExpiration,
+			metric.WithDescription("measures the number of expired events"),
+		).Bind(commonLabels...)
+
 	return f, nil
 }
 
@@ -87,6 +107,8 @@ func (f *Filter) Filter(evt event.Event) []event.Event {
 	}
 	// ttl is in milliseconds, so we need to convert the timestamp nanos
 	if (nowNanos-int64(evtTs))/1e6 >= int64(*f.config.Ttl) {
+		ctx := context.Background()
+		f.eventTtlExpirationCounter.Add(ctx, 1)
 		evt.Ack()
 		return []event.Event{}
 	}
