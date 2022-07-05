@@ -44,6 +44,7 @@ import (
 	semconv "go.opentelemetry.io/otel/semconv/v1.4.0"
 	"go.uber.org/fx"
 	"net/http"
+	_ "net/http/pprof"
 	"os"
 	"time"
 )
