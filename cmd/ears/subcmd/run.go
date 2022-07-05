@@ -86,6 +86,7 @@ var runCmd = &cobra.Command{
 			fx.Invoke(quotamanagerfx.SetupQuotaManager),
 			fx.Invoke(app.SetupOpenTelemetry),
 			fx.Invoke(app.SetupAPIServer),
+			fx.Invoke(app.SetupPprof),
 			fx.Invoke(app.SetupNodeStateManager),
 			fx.Invoke(app.SetupCheckpointManager),
 		)

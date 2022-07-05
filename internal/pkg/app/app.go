@@ -241,3 +241,25 @@ func SetupAPIServer(lifecycle fx.Lifecycle, config config.Config, logger *zerolo
 	)
 	return nil
 }
+
+func SetupPprof(lifecycle fx.Lifecycle, logger *zerolog.Logger, config config.Config) error {
+	port := config.GetInt("ears.pprof.port")
+	if port <= 0 {
+		logger.Info().Int("port", port).Msg("Pprof disabled")
+		return nil
+	}
+	lifecycle.Append(
+		fx.Hook{
+			OnStart: func(ctx context.Context) error {
+				go http.ListenAndServe(fmt.Sprintf(":%d", port), nil)
+				logger.Info().Msg("Pprof Server Started")
+				return nil
+			},
+			OnStop: func(ctx context.Context) error {
+				logger.Info().Msg("Pprof Server Stopped")
+				return nil
+			},
+		},
+	)
+	return nil
+}
