@@ -499,42 +499,47 @@ func (r *Receiver) startShardReceiver(svc *kinesis.Kinesis, stream *kinesis.Desc
 					r.Lock()
 					r.logger.Debug().Str("op", "Kinesis.receiveWorker").Str("stream", *r.stream.StreamDescription.StreamName).Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Int("receiveCount", r.receiveCount).Int("batchSize", len(records)).Int("shardIdx", shardIdx).Msg("received message batch")
 					r.Unlock()
+				} else {
+					r.logger.Debug().Str("op", "Kinesis.receiveWorker").Msg("no new records")
 				}
+
 				for _, msg := range records {
 					if len(msg.Data) == 0 {
 						continue
 					} else {
-						r.Lock()
-						r.receiveCount++
-						r.Unlock()
-						var payload interface{}
-						err = json.Unmarshal(msg.Data, &payload)
-						if err != nil {
-							r.logger.Error().Str("op", "Kinesis.receiveWorker").Str("stream", *r.stream.StreamDescription.StreamName).Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Int("shardIdx", shardIdx).Msg("cannot parse message " + (*msg.SequenceNumber) + ": " + err.Error())
-							continue
-						}
-						ctx, cancel := context.WithTimeout(context.Background(), time.Duration(*r.config.AcknowledgeTimeout)*time.Second)
-						r.eventLagMillis.Record(ctx, *getRecordsOutput.MillisBehindLatest)
-						r.eventBytesCounter.Add(ctx, int64(len(msg.Data)))
-						e, err := event.New(ctx, payload, event.WithMetadataKeyValue("kinesisMessage", *msg), event.WithAck(
-							func(e event.Event) {
-								r.eventSuccessCounter.Add(ctx, 1)
-								checkpoint.SetCheckpoint(checkpointId, *msg.SequenceNumber)
-								cancel()
-							},
-							func(e event.Event, err error) {
-								r.eventFailureCounter.Add(ctx, 1)
-								checkpoint.SetCheckpoint(checkpointId, *msg.SequenceNumber)
-								cancel()
-							}),
-							event.WithTenant(r.Tenant()),
-							event.WithOtelTracing(r.Name()),
-							event.WithTracePayloadOnNack(*r.config.TracePayloadOnNack))
-						if err != nil {
-							r.logger.Error().Str("op", "Kinesis.receiveWorker").Str("stream", *r.stream.StreamDescription.StreamName).Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Int("shardIdx", shardIdx).Msg("cannot create event: " + err.Error())
-							return
-						}
-						r.Trigger(e)
+						go func() {
+							r.Lock()
+							r.receiveCount++
+							r.Unlock()
+							var payload interface{}
+							err = json.Unmarshal(msg.Data, &payload)
+							if err != nil {
+								r.logger.Error().Str("op", "Kinesis.receiveWorker").Str("stream", *r.stream.StreamDescription.StreamName).Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Int("shardIdx", shardIdx).Msg("cannot parse message " + (*msg.SequenceNumber) + ": " + err.Error())
+								return
+							}
+							ctx, cancel := context.WithTimeout(context.Background(), time.Duration(*r.config.AcknowledgeTimeout)*time.Second)
+							r.eventLagMillis.Record(ctx, *getRecordsOutput.MillisBehindLatest)
+							r.eventBytesCounter.Add(ctx, int64(len(msg.Data)))
+							e, err := event.New(ctx, payload, event.WithMetadataKeyValue("kinesisMessage", *msg), event.WithAck(
+								func(e event.Event) {
+									r.eventSuccessCounter.Add(ctx, 1)
+									checkpoint.SetCheckpoint(checkpointId, *msg.SequenceNumber)
+									cancel()
+								},
+								func(e event.Event, err error) {
+									r.eventFailureCounter.Add(ctx, 1)
+									checkpoint.SetCheckpoint(checkpointId, *msg.SequenceNumber)
+									cancel()
+								}),
+								event.WithTenant(r.Tenant()),
+								event.WithOtelTracing(r.Name()),
+								event.WithTracePayloadOnNack(*r.config.TracePayloadOnNack))
+							if err != nil {
+								r.logger.Error().Str("op", "Kinesis.receiveWorker").Str("stream", *r.stream.StreamDescription.StreamName).Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Int("shardIdx", shardIdx).Msg("cannot create event: " + err.Error())
+								return
+							}
+							r.Trigger(e)
+						}()
 					}
 				}
 				// this the next sequence number to read from in the shard, if nil the shard has been closed pending expiration
