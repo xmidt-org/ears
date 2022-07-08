@@ -39,6 +39,8 @@ import (
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/global"
 	"go.opentelemetry.io/otel/metric/unit"
+	"golang.org/x/net/http2"
+	"net/http"
 	"os"
 	"strconv"
 	"time"
@@ -660,7 +662,19 @@ func (r *Receiver) Receive(next receiver.NextFn) error {
 	} else {
 		creds = sess.Config.Credentials
 	}
-	sess, err = session.NewSession(&aws.Config{Region: aws.String(r.config.AWSRegion), Credentials: creds})
+
+	tr := &http.Transport{
+		MaxIdleConnsPerHost: 100,
+	}
+	err = http2.ConfigureTransport(tr)
+	if err != nil {
+		return &pkgplugin.Error{Err: err}
+	}
+	httpClient := &http.Client{
+		Transport: tr,
+	}
+
+	sess, err = session.NewSession(&aws.Config{Region: aws.String(r.config.AWSRegion), Credentials: creds, HTTPClient: httpClient})
 	if nil != err {
 		return &KinesisError{op: "NewSession", err: err}
 	}
