@@ -665,6 +665,7 @@ func (r *Receiver) Receive(next receiver.NextFn) error {
 
 	tr := &http.Transport{
 		MaxIdleConnsPerHost: 100,
+		MaxConnsPerHost:     100,
 	}
 	err = http2.ConfigureTransport(tr)
 	if err != nil {
