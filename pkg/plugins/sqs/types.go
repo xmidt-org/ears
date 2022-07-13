@@ -19,6 +19,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/sqs"
 	"github.com/rs/zerolog"
 	"github.com/xmidt-org/ears/pkg/event"
+	"github.com/xmidt-org/ears/pkg/secret"
 	"github.com/xmidt-org/ears/pkg/tenant"
 	"github.com/xorcare/pointer"
 	"go.opentelemetry.io/otel/metric"
@@ -55,8 +56,12 @@ func NewPluginVersion(name string, version string, commitID string) (*pkgplugin.
 }
 
 var DefaultReceiverConfig = ReceiverConfig{
-	QueueUrl:            "",
-	Region:              endpoints.UsWest2RegionID,
+	QueueUrl: "",
+	//Region:              endpoints.UsWest2RegionID,
+	AWSRoleARN:          "",
+	AWSSecretAccessKey:  "",
+	AWSAccessKeyId:      "",
+	AWSRegion:           endpoints.UsWest2RegionID,
 	MaxNumberOfMessages: pointer.Int(10),
 	VisibilityTimeout:   pointer.Int(10),
 	WaitTimeSeconds:     pointer.Int(10),
@@ -69,8 +74,12 @@ var DefaultReceiverConfig = ReceiverConfig{
 }
 
 type ReceiverConfig struct {
-	QueueUrl            string `json:"queueUrl,omitempty"`
-	Region              string `json:"region,omitempty"`
+	QueueUrl string `json:"queueUrl,omitempty"`
+	//Region              string `json:"region,omitempty"`
+	AWSRoleARN          string `json:"awsRoleARN,omitempty"`
+	AWSAccessKeyId      string `json:"awsAccessKeyId,omitempty"`
+	AWSSecretAccessKey  string `json:"awsSecretAccessKey,omitempty"`
+	AWSRegion           string `json:"awsRegion,omitempty"`
 	MaxNumberOfMessages *int   `json:"maxNumberOfMessages,omitempty"`
 	VisibilityTimeout   *int   `json:"visibilityTimeout,omitempty"`
 	WaitTimeSeconds     *int   `json:"waitTimeSeconds,omitempty"`
@@ -92,6 +101,7 @@ type Receiver struct {
 	tid                 tenant.Id
 	next                receiver.NextFn
 	logger              *zerolog.Logger
+	secrets             secret.Vault
 	receiveCount        int
 	deleteCount         int
 	startTime           time.Time
