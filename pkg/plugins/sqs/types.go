@@ -56,8 +56,7 @@ func NewPluginVersion(name string, version string, commitID string) (*pkgplugin.
 }
 
 var DefaultReceiverConfig = ReceiverConfig{
-	QueueUrl: "",
-	//Region:              endpoints.UsWest2RegionID,
+	QueueUrl:            "",
 	AWSRoleARN:          "",
 	AWSSecretAccessKey:  "",
 	AWSAccessKeyId:      "",
@@ -74,8 +73,7 @@ var DefaultReceiverConfig = ReceiverConfig{
 }
 
 type ReceiverConfig struct {
-	QueueUrl string `json:"queueUrl,omitempty"`
-	//Region              string `json:"region,omitempty"`
+	QueueUrl            string `json:"queueUrl,omitempty"`
 	AWSRoleARN          string `json:"awsRoleARN,omitempty"`
 	AWSAccessKeyId      string `json:"awsAccessKeyId,omitempty"`
 	AWSSecretAccessKey  string `json:"awsSecretAccessKey,omitempty"`
