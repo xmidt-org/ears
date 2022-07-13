@@ -24,9 +24,6 @@ import (
 // of the unset (nil) values filled in.
 func (rc *ReceiverConfig) WithDefaults() ReceiverConfig {
 	cfg := *rc
-	if cfg.Region == "" {
-		cfg.Region = DefaultReceiverConfig.Region
-	}
 	if cfg.MaxNumberOfMessages == nil {
 		cfg.MaxNumberOfMessages = DefaultReceiverConfig.MaxNumberOfMessages
 	}
@@ -83,9 +80,18 @@ const receiverSchema = `
                 "queueUrl": {
                     "type": "string"
                 },
-                "region": {
+				"awsRoleARN": {
                     "type": "string"
-                },
+				},
+				"awsAccessKeyId": {
+                    "type": "string"
+				},
+				"awsSecretAccessKey": {
+                    "type": "string"
+				},
+				"awsRegion": {
+                    "type": "string"
+				},
 				"maxNumberOfMessages": {
                     "type": "integer", 
 					"minimum": 1,
