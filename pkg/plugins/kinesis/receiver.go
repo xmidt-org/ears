@@ -317,6 +317,15 @@ func (r *Receiver) startShardReceiverEFO(svc *kinesis.Kinesis, stream *kinesis.D
 				continue
 			} else {
 				r.logger.Info().Str("op", "Kinesis.receiveWorkerEFO").Str("stream", *r.stream.StreamDescription.StreamName).Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Int("shardIdx", shardIdx).Msg("subscribe to shard")
+				osstr := ""
+				for idx, os := range r.shardConfig.OwnedShards {
+					if idx > 0 {
+						osstr += ", "
+					}
+					osstr += os
+				}
+				r.logger.Info().Str("op", "Kinesis.receiveWorkerEFO").Str("stream", *r.stream.StreamDescription.StreamName).Str("name", r.Name()).Str("tid", r.Tenant().ToString()).
+					Int("num_shards", r.shardConfig.NumShards).Int("num_owned_shards", len(r.shardConfig.OwnedShards)).Str("owned_shards", osstr).Msg("report owned shards")
 			}
 			for evt := range sub.EventStream.Events() {
 				select {
@@ -353,7 +362,6 @@ func (r *Receiver) startShardReceiverEFO(svc *kinesis.Kinesis, stream *kinesis.D
 						}
 					}
 					for _, rec := range kinEvt.Records {
-						//TODO: do we need to check the stop channel here as well?
 						if len(rec.Data) == 0 {
 							continue
 						} else {
