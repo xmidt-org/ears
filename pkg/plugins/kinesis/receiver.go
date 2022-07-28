@@ -584,6 +584,7 @@ func (r *Receiver) shardUpdateListener(distributor sharder.ShardDistributor) {
 				r.updateShards(config)
 			case <-r.shardUpdateListenerStopChannel:
 				r.logger.Info().Str("op", "kinesis.shardUpdateListener").Msg("stopping shard update listener")
+				return
 			}
 		}
 	}()
@@ -662,7 +663,6 @@ func (r *Receiver) Receive(next receiver.NextFn) error {
 	} else {
 		creds = sess.Config.Credentials
 	}
-
 	tr := &http.Transport{
 		MaxIdleConnsPerHost: 100,
 		MaxConnsPerHost:     100,
@@ -674,7 +674,6 @@ func (r *Receiver) Receive(next receiver.NextFn) error {
 	httpClient := &http.Client{
 		Transport: tr,
 	}
-
 	sess, err = session.NewSession(&aws.Config{Region: aws.String(r.config.AWSRegion), Credentials: creds, HTTPClient: httpClient})
 	if nil != err {
 		return &KinesisError{op: "NewSession", err: err}
