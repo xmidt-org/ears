@@ -315,6 +315,8 @@ func (r *Receiver) startShardReceiverEFO(svc *kinesis.Kinesis, stream *kinesis.D
 				// a fully processed parent shard will cause errors here until its decommission
 				time.Sleep(errorTimeoutSecLong * time.Second)
 				continue
+			} else {
+				r.logger.Info().Str("op", "Kinesis.receiveWorkerEFO").Str("stream", *r.stream.StreamDescription.StreamName).Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Int("shardIdx", shardIdx).Msg("subscribe to shard")
 			}
 			for evt := range sub.EventStream.Events() {
 				select {
@@ -333,6 +335,7 @@ func (r *Receiver) startShardReceiverEFO(svc *kinesis.Kinesis, stream *kinesis.D
 					if kinEvt.ContinuationSequenceNumber != nil {
 						params.StartingPosition.Type = aws.String(kinesis.ShardIteratorTypeAtSequenceNumber)
 						params.StartingPosition.SequenceNumber = kinEvt.ContinuationSequenceNumber
+						r.logger.Info().Str("op", "Kinesis.receiveWorkerEFO").Str("stream", *r.stream.StreamDescription.StreamName).Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Int("shardIdx", shardIdx).Str("continuationSequenceNumber", *kinEvt.ContinuationSequenceNumber).Msg("subscription confirmation")
 					} else {
 						// shard is closed, wait for shard decommission
 						for {
