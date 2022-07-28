@@ -315,6 +315,17 @@ func (r *Receiver) startShardReceiverEFO(svc *kinesis.Kinesis, stream *kinesis.D
 				// a fully processed parent shard will cause errors here until its decommission
 				time.Sleep(errorTimeoutSecLong * time.Second)
 				continue
+			} else {
+				r.logger.Info().Str("op", "Kinesis.receiveWorkerEFO").Str("stream", *r.stream.StreamDescription.StreamName).Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Int("shardIdx", shardIdx).Msg("subscribe to shard")
+				osstr := ""
+				for idx, os := range r.shardConfig.OwnedShards {
+					if idx > 0 {
+						osstr += ", "
+					}
+					osstr += os
+				}
+				r.logger.Info().Str("op", "Kinesis.receiveWorkerEFO").Str("stream", *r.stream.StreamDescription.StreamName).Str("name", r.Name()).Str("tid", r.Tenant().ToString()).
+					Int("num_shards", r.shardConfig.NumShards).Int("num_owned_shards", len(r.shardConfig.OwnedShards)).Str("owned_shards", osstr).Msg("report owned shards")
 			}
 			for evt := range sub.EventStream.Events() {
 				select {
@@ -333,6 +344,7 @@ func (r *Receiver) startShardReceiverEFO(svc *kinesis.Kinesis, stream *kinesis.D
 					if kinEvt.ContinuationSequenceNumber != nil {
 						params.StartingPosition.Type = aws.String(kinesis.ShardIteratorTypeAtSequenceNumber)
 						params.StartingPosition.SequenceNumber = kinEvt.ContinuationSequenceNumber
+						r.logger.Info().Str("op", "Kinesis.receiveWorkerEFO").Str("stream", *r.stream.StreamDescription.StreamName).Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Int("shardIdx", shardIdx).Str("continuationSequenceNumber", *kinEvt.ContinuationSequenceNumber).Msg("subscription confirmation")
 					} else {
 						// shard is closed, wait for shard decommission
 						for {
@@ -350,7 +362,6 @@ func (r *Receiver) startShardReceiverEFO(svc *kinesis.Kinesis, stream *kinesis.D
 						}
 					}
 					for _, rec := range kinEvt.Records {
-						//TODO: do we need to check the stop channel here as well?
 						if len(rec.Data) == 0 {
 							continue
 						} else {
@@ -584,6 +595,7 @@ func (r *Receiver) shardUpdateListener(distributor sharder.ShardDistributor) {
 				r.updateShards(config)
 			case <-r.shardUpdateListenerStopChannel:
 				r.logger.Info().Str("op", "kinesis.shardUpdateListener").Msg("stopping shard update listener")
+				return
 			}
 		}
 	}()
@@ -662,7 +674,6 @@ func (r *Receiver) Receive(next receiver.NextFn) error {
 	} else {
 		creds = sess.Config.Credentials
 	}
-
 	tr := &http.Transport{
 		MaxIdleConnsPerHost: 100,
 		MaxConnsPerHost:     100,
@@ -674,7 +685,6 @@ func (r *Receiver) Receive(next receiver.NextFn) error {
 	httpClient := &http.Client{
 		Transport: tr,
 	}
-
 	sess, err = session.NewSession(&aws.Config{Region: aws.String(r.config.AWSRegion), Credentials: creds, HTTPClient: httpClient})
 	if nil != err {
 		return &KinesisError{op: "NewSession", err: err}

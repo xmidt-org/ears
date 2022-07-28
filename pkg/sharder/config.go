@@ -15,9 +15,12 @@
 package sharder
 
 import (
+	"encoding/json"
 	"errors"
 	"github.com/xmidt-org/ears/internal/pkg/config"
+	"io"
 	"net"
+	"net/http"
 	"os"
 )
 
@@ -88,6 +91,35 @@ func InitDistributorConfigs(config config.Config) {
 	}
 }
 
+type (
+	AWSTaskMetadata struct {
+		TaskARN string
+	}
+)
+
+func GetTaskArn() (string, error) {
+	// https://docs.aws.amazon.com/AmazonECS/latest/userguide/task-metadata-endpoint-v4-fargate.html
+	url := os.Getenv("ECS_CONTAINER_METADATA_URI_V4")
+	if url == "" {
+		return "", errors.New("no url")
+	}
+	resp, err := http.Get(url + "/task")
+	if err != nil {
+		return "", err
+	}
+	defer resp.Body.Close()
+	buf, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return "", err
+	}
+	var tm AWSTaskMetadata
+	err = json.Unmarshal(buf, &tm)
+	if err != nil {
+		return "", err
+	}
+	return tm.TaskARN, nil
+}
+
 // DefaultControllerConfig generates a default configuration based on a local dynamo instance
 func DefaultControllerConfig() *ControllerConfig {
 	cc := ControllerConfig{
@@ -99,16 +131,19 @@ func DefaultControllerConfig() *ControllerConfig {
 	}
 	cc.NodeName = cc.StorageConfig.ForcedHostname
 	if cc.NodeName == "" {
-		cc.NodeName, _ = os.Hostname()
+		cc.NodeName, _ = GetTaskArn()
 		if cc.NodeName == "" {
-			address, err := net.InterfaceAddrs()
-			if err == nil {
-				for _, addr := range address {
-					if ipnet, ok := addr.(*net.IPNet); ok && !ipnet.IP.IsLoopback() {
-						if ipnet.IP.To4() != nil {
-							cc.NodeName = ipnet.IP.String()
-							cc.Identity = cc.NodeName
-							break
+			cc.NodeName, _ = os.Hostname()
+			if cc.NodeName == "" {
+				address, err := net.InterfaceAddrs()
+				if err == nil {
+					for _, addr := range address {
+						if ipnet, ok := addr.(*net.IPNet); ok && !ipnet.IP.IsLoopback() {
+							if ipnet.IP.To4() != nil {
+								cc.NodeName = ipnet.IP.String()
+								cc.Identity = cc.NodeName
+								break
+							}
 						}
 					}
 				}
