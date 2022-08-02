@@ -249,14 +249,18 @@ func (r *Receiver) startShardReceiverEFO(svc *kinesis.Kinesis, stream *kinesis.D
 		attribute.String(rtsemconv.KinesisStreamNameLabel, r.config.StreamName),
 		attribute.Int(rtsemconv.KinesisShardIdxLabel, shardIdx),
 	}
-
 	r.eventLagMillis = metric.Must(meter).
 		NewInt64Histogram(
 			rtsemconv.EARSMetricMillisBehindLatest,
 			metric.WithDescription("measures the number of milliseconds current event is behind tip of stream"),
 			metric.WithUnit(unit.Milliseconds),
 		).Bind(commonLabels...)
-
+	r.eventTrueLagMillis = metric.Must(meter).
+		NewInt64Histogram(
+			rtsemconv.EARSMetricTrueLagMillis,
+			metric.WithDescription("measures the number of milliseconds current event is behind tip of stream"),
+			metric.WithUnit(unit.Milliseconds),
+		).Bind(commonLabels...)
 	// this is an enhanced consumer that will only consume from a dedicated shard
 	go func() {
 		defer func() {
@@ -377,6 +381,8 @@ func (r *Receiver) startShardReceiverEFO(svc *kinesis.Kinesis, stream *kinesis.D
 							ctx, cancel := context.WithTimeout(context.Background(), time.Duration(*r.config.AcknowledgeTimeout)*time.Second)
 							r.eventBytesCounter.Add(ctx, int64(len(rec.Data)))
 							r.eventLagMillis.Record(ctx, *kinEvt.MillisBehindLatest)
+							trueLagMillis := time.Since(*rec.ApproximateArrivalTimestamp).Milliseconds()
+							r.eventTrueLagMillis.Record(ctx, trueLagMillis)
 							r.logger.Debug().Str("op", "Kinesis.receiveWorkerEFO").Str("stream", *r.stream.StreamDescription.StreamName).Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Int("shardIdx", shardIdx).Str("partitionId", *rec.PartitionKey).Str("sequenceId", *rec.SequenceNumber).Msg("message received")
 							e, err := event.New(ctx, payload, event.WithMetadataKeyValue("kinesisMessage", rec), event.WithAck(
 								func(e event.Event) {
@@ -515,7 +521,6 @@ func (r *Receiver) startShardReceiver(svc *kinesis.Kinesis, stream *kinesis.Desc
 				} else {
 					r.logger.Debug().Str("op", "Kinesis.receiveWorker").Msg("no new records")
 				}
-
 				for _, msg := range records {
 					if len(msg.Data) == 0 {
 						continue
@@ -532,6 +537,8 @@ func (r *Receiver) startShardReceiver(svc *kinesis.Kinesis, stream *kinesis.Desc
 							}
 							ctx, cancel := context.WithTimeout(context.Background(), time.Duration(*r.config.AcknowledgeTimeout)*time.Second)
 							r.eventLagMillis.Record(ctx, *getRecordsOutput.MillisBehindLatest)
+							trueLagMillis := time.Since(*msg.ApproximateArrivalTimestamp).Milliseconds()
+							r.eventTrueLagMillis.Record(ctx, trueLagMillis)
 							r.eventBytesCounter.Add(ctx, int64(len(msg.Data)))
 							e, err := event.New(ctx, payload, event.WithMetadataKeyValue("kinesisMessage", *msg), event.WithAck(
 								func(e event.Event) {
