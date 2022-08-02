@@ -16,9 +16,11 @@ package event_test
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"github.com/xmidt-org/ears/internal/pkg/ack"
 	"github.com/xmidt-org/ears/pkg/event"
+	"io/ioutil"
 	"reflect"
 	"testing"
 	"time"
@@ -142,6 +144,32 @@ func TestEventGetPath(t *testing.T) {
 	v, _, _ = e.GetPathValue(path)
 	if v.(string) != "x" {
 		t.Errorf("bad path value %s\n", path)
+	}
+}
+
+func BenchmarkCloneEvent(b *testing.B) {
+	ctx := context.Background()
+	buf, err := ioutil.ReadFile("event.json")
+	if err != nil {
+		b.Fatal(err)
+	}
+	b.Log("event size", len(buf), "test size", b.N)
+	var payload map[string]interface{}
+	err = json.Unmarshal(buf, &payload)
+	if err != nil {
+		b.Fatal(err)
+	}
+	for i := 0; i < b.N; i++ {
+		e1, err := event.New(ctx, payload)
+		if err != nil {
+			b.Errorf("failed to create new event %s\n", err.Error())
+		}
+		e2, err := e1.Clone(ctx)
+		if err != nil {
+			b.Errorf("failed to clone new event %s\n", err.Error())
+		}
+		e2.Ack()
+		e1.Ack()
 	}
 }
 
