@@ -529,8 +529,8 @@ func (e *event) Clone(ctx context.Context) (Event, error) {
 			return nil, err
 		}
 	}
-	// gohobby deepcopy
-	// benchmark for 1.7 kb event: 35,000 ns / op
+	// gohobby deepcopy without reflection
+	// benchmark for 1.7 kb event: 6,000 ns / op
 	newPayloadCopy := deepcopy.DeepCopy(e.payload)
 	newMetadtaCopy := deepcopy.DeepCopy(e.metadata).(map[string]interface{})
 	return &event{
@@ -553,7 +553,7 @@ func (e *event) Clone(ctx context.Context) (Event, error) {
 			return nil, err
 		}
 	}
-	// mohae deepcopy
+	// mohae deepcopy using reflection
 	// very fast according to the following benchmark:
 	// https://xuri.me/2018/06/17/deep-copy-object-with-reflecting-or-gob-in-go.html
 	// unclear if all types are supported:
@@ -581,7 +581,7 @@ func (e *event) Clone(ctx context.Context) (Event, error) {
 			return nil, err
 		}
 	}
-	// trivial json serialization implementation
+	// trivial json serialization / deserialization implementation
 	// benchmark for 1.7 kb event: 35,000 ns / op
 	buf, err := json.Marshal(e.Payload())
 	if err != nil {
