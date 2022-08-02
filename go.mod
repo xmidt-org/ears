@@ -13,6 +13,7 @@ require (
 	github.com/go-redis/redis v6.15.9+incompatible
 	github.com/go-redis/redis/v8 v8.11.3
 	github.com/goccy/go-yaml v1.9.3
+	github.com/gohobby/deepcopy v1.0.0 // indirect
 	github.com/golang-jwt/jwt v3.2.2+incompatible // indirect
 	github.com/golang/snappy v0.0.4 // indirect
 	github.com/google/go-cmp v0.5.6
