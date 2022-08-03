@@ -51,6 +51,7 @@ type event struct {
 	tracePayloadOnNack bool
 	tracePayload       interface{}
 	created            time.Time
+	deepcopied         bool
 }
 
 type EventOption func(*event) error
@@ -542,6 +543,10 @@ func (e *event) Clone(ctx context.Context) (Event, error) {
 }
 
 func (e *event) DeepCopy() error {
+	if e.deepcopied {
+		return nil
+	}
+	e.deepcopied = true
 	//TODO: check if this event has already been deepcopied on this linear route
 	// gohobby deepcopy without reflection
 	// benchmark for 1.7 kb event: 6,000 ns / op
@@ -551,6 +556,10 @@ func (e *event) DeepCopy() error {
 }
 
 /*func (e *event) DeepCopy() error {
+	if e.deepcopied {
+		return nil
+	}
+	e.deepcopied = true
 	// mohae deepcopy using reflection
 	// very fast according to the following benchmark:
 	// https://xuri.me/2018/06/17/deep-copy-object-with-reflecting-or-gob-in-go.html
@@ -563,6 +572,10 @@ func (e *event) DeepCopy() error {
 }*/
 
 /*func (e *event) DeepCopy() error {
+	if e.deepcopied {
+		return nil
+	}
+	e.deepcopied = true
 	// trivial json serialization / deserialization implementation
 	// benchmark for 1.7 kb event: 35,000 ns / op
 	buf, err := json.Marshal(e.Payload())
