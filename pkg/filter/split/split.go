@@ -16,6 +16,7 @@ package split
 
 import (
 	"fmt"
+	"github.com/gohobby/deepcopy"
 	"github.com/rs/zerolog/log"
 	"github.com/xmidt-org/ears/pkg/event"
 	"github.com/xmidt-org/ears/pkg/filter"
@@ -82,7 +83,11 @@ func (f *Filter) Filter(evt event.Event) []event.Event {
 			evt.Ack()
 			return []event.Event{}
 		}
+		// no deepcopy needed for payload because we set new payload at root level, we do need deepcopy for metadata though
 		err = nevt.SetPayload(p)
+		if err == nil {
+			nevt.SetMetadata(deepcopy.DeepCopy(evt.Metadata()).(map[string]interface{}))
+		}
 		if err != nil {
 			log.Ctx(evt.Context()).Error().Str("op", "filter").Str("filterType", "split").Str("name", f.Name()).Msg(err.Error())
 			if span := trace.SpanFromContext(evt.Context()); span != nil {

@@ -447,11 +447,11 @@ func (interpreter *Interpreter) Exec(evt event.Event, code string) ([]event.Even
 			if err != nil {
 				return nil, err
 			}
+			//TODO: does goja copy data or do we need a deepcopy here?
 			err = nevt.SetPayload(m["payload"])
 			if err != nil {
 				return nil, err
 			}
-			//TODO: do we need a deepcopy here?
 			err = nevt.SetMetadata(m["metadata"].(map[string]interface{}))
 			if err != nil {
 				return nil, err
