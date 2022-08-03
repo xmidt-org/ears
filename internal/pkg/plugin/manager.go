@@ -270,7 +270,7 @@ func (m *manager) next(receiverKey string, e pkgevent.Event) {
 		logs.StrToLogCtx(subCtx, "wid", wid)
 		logs.StrToLogCtx(subCtx, "receiverKey", receiverKey)
 		childEvt, err := e.Clone(subCtx)
-		childEvt.DeepCopy()
+		//childEvt.DeepCopy()
 		if err != nil {
 			e.Nack(err)
 		} else {

@@ -63,14 +63,17 @@ func (f *Filter) Filter(evt event.Event) []event.Event {
 		evt.Ack()
 		return []event.Event{}
 	}
-	err := evt.SetPayload(obj)
+	err := evt.DeepCopy()
+	if err == nil {
+		err = evt.SetPayload(obj)
+	}
 	if err != nil {
 		log.Ctx(evt.Context()).Error().Str("op", "filter").Str("filterType", "unwrap").Str("name", f.Name()).Msg(err.Error())
 		if span := trace.SpanFromContext(evt.Context()); span != nil {
 			span.AddEvent(err.Error())
 		}
 		evt.Ack()
-		return nil
+		return []event.Event{}
 	}
 	return []event.Event{evt}
 }
