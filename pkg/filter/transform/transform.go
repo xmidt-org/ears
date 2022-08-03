@@ -17,7 +17,8 @@ package transform
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/mohae/deepcopy"
+	//"github.com/mohae/deepcopy"
+	"github.com/gohobby/deepcopy"
 	"github.com/rs/zerolog/log"
 	"github.com/xmidt-org/ears/pkg/event"
 	"github.com/xmidt-org/ears/pkg/filter"
@@ -79,7 +80,7 @@ func (f *Filter) Filter(evt event.Event) []event.Event {
 				//evt.Ack()
 				return events
 			}
-			thisTransform := deepcopy.Copy(f.config.Transformation)
+			thisTransform := deepcopy.DeepCopy(f.config.Transformation)
 			transform(subEvt, thisTransform, nil, "", -1)
 			if isArray {
 				evt.SetPathValue(fmt.Sprintf("%s[%d]", f.config.ToPath, idx), thisTransform, true)
@@ -116,7 +117,7 @@ func transform(evt event.Event, t interface{}, parent interface{}, key string, i
 			}
 			path := tt[si+1 : ei]
 			v, _, _ := evt.GetPathValue(path)
-			v = deepcopy.Copy(v)
+			v = deepcopy.DeepCopy(v)
 			if !(si == 0 && ei == len(tt)-1) {
 				switch vt := v.(type) {
 				case string:
