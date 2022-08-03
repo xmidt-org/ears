@@ -521,6 +521,7 @@ func (e *event) Nack(err error) {
 }
 
 func (e *event) Clone(ctx context.Context) (Event, error) {
+	// clone shallow
 	var subTree ack.SubTree
 	if e.ack != nil {
 		var err error
@@ -529,13 +530,9 @@ func (e *event) Clone(ctx context.Context) (Event, error) {
 			return nil, err
 		}
 	}
-	// gohobby deepcopy without reflection
-	// benchmark for 1.7 kb event: 6,000 ns / op
-	newPayloadCopy := deepcopy.DeepCopy(e.payload)
-	newMetadtaCopy := deepcopy.DeepCopy(e.metadata).(map[string]interface{})
 	return &event{
-		payload:  newPayloadCopy,
-		metadata: newMetadtaCopy,
+		payload:  e.Payload(),
+		metadata: e.Metadata(),
 		ctx:      ctx,
 		ack:      subTree,
 		eid:      e.eid,
@@ -544,70 +541,48 @@ func (e *event) Clone(ctx context.Context) (Event, error) {
 	}, nil
 }
 
-/*func (e *event) Clone(ctx context.Context) (Event, error) {
-	var subTree ack.SubTree
-	if e.ack != nil {
-		var err error
-		subTree, err = e.ack.NewSubTree()
-		if err != nil {
-			return nil, err
-		}
-	}
+func (e *event) DeepCopy() error {
+	// gohobby deepcopy without reflection
+	// benchmark for 1.7 kb event: 6,000 ns / op
+	e.payload = deepcopy.DeepCopy(e.payload)
+	e.metadata = deepcopy.DeepCopy(e.metadata).(map[string]interface{})
+	return nil
+}
+
+/*func (e *event) DeepCopy() error {
 	// mohae deepcopy using reflection
 	// very fast according to the following benchmark:
 	// https://xuri.me/2018/06/17/deep-copy-object-with-reflecting-or-gob-in-go.html
 	// unclear if all types are supported:
 	// https://github.com/mohae/deepcopy/blob/master/deepcopy.go#L45-L46
 	// benchmark for 1.7 kb event: 29,000 ns / op
-	newPayloadCopy := deepcopy.Copy(e.payload)
-	newMetadtaCopy := deepcopy.Copy(e.metadata).(map[string]interface{})
-	return &event{
-		payload:  newPayloadCopy,
-		metadata: newMetadtaCopy,
-		ctx:      ctx,
-		ack:      subTree,
-		eid:      e.eid,
-		tid:      e.tid,
-		created:  e.created,
-	}, nil
+	e.payload = deepcopy.Copy(e.payload)
+	e.metadata = deepcopy.Copy(e.metadata).(map[string]interface{})
+	return nil
 }*/
 
-/*func (e *event) Clone(ctx context.Context) (Event, error) {
-	var subTree ack.SubTree
-	if e.ack != nil {
-		var err error
-		subTree, err = e.ack.NewSubTree()
-		if err != nil {
-			return nil, err
-		}
-	}
+/*func (e *event) DeepCopy() error {
 	// trivial json serialization / deserialization implementation
 	// benchmark for 1.7 kb event: 35,000 ns / op
 	buf, err := json.Marshal(e.Payload())
 	if err != nil {
-		return nil, err
+		return err
 	}
-	var newPayloadCopy interface{}
-	err = json.Unmarshal(buf, &newPayloadCopy)
+	var payload interface{}
+	err = json.Unmarshal(buf, &payload)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	buf, err = json.Marshal(e.Metadata())
 	if err != nil {
-		return nil, err
+		return err
 	}
-	var newMetadtaCopy map[string]interface{}
-	err = json.Unmarshal(buf, &newMetadtaCopy)
+	var metadata map[string]interface{}
+	err = json.Unmarshal(buf, &metadata)
 	if err != nil {
-		return nil, err
+		return err
 	}
-	return &event{
-		payload:  newPayloadCopy,
-		metadata: newMetadtaCopy,
-		ctx:      ctx,
-		ack:      subTree,
-		eid:      e.eid,
-		tid:      e.tid,
-		created:  e.created,
-	}, nil
+	e.payload = payload
+	e.metadata = metadata
+	return nil
 }*/

@@ -443,7 +443,6 @@ func (interpreter *Interpreter) Exec(evt event.Event, code string) ([]event.Even
 			if !is {
 				return nil, errors.New("array element is not map")
 			}
-			//m = deepcopy.Copy(m).(map[string]interface{})
 			nevt, err := evt.Clone(evt.Context())
 			if err != nil {
 				return nil, err
@@ -452,6 +451,7 @@ func (interpreter *Interpreter) Exec(evt event.Event, code string) ([]event.Even
 			if err != nil {
 				return nil, err
 			}
+			//TODO: do we need a deepcopy here?
 			err = nevt.SetMetadata(m["metadata"].(map[string]interface{}))
 			if err != nil {
 				return nil, err
@@ -460,7 +460,6 @@ func (interpreter *Interpreter) Exec(evt event.Event, code string) ([]event.Even
 		}
 		return events, nil
 	case map[string]interface{}:
-		//m = deepcopy.Copy(m).(map[string]interface{})
 		err = evt.SetPayload(x["payload"])
 		if err != nil {
 			return nil, err

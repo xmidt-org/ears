@@ -175,11 +175,13 @@ func newDoubleFilterer() filter.Filterer {
 				e.Nack(err)
 				return nil
 			}
+			e1.DeepCopy()
 			e2, err := e.Clone(e.Context())
 			if err != nil {
 				e.Nack(err)
 				return nil
 			}
+			e2.DeepCopy()
 			e.Ack()
 			return []event.Event{e1, e2}
 		},

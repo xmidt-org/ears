@@ -270,6 +270,7 @@ func (m *manager) next(receiverKey string, e pkgevent.Event) {
 		logs.StrToLogCtx(subCtx, "wid", wid)
 		logs.StrToLogCtx(subCtx, "receiverKey", receiverKey)
 		childEvt, err := e.Clone(subCtx)
+		childEvt.DeepCopy()
 		if err != nil {
 			e.Nack(err)
 		} else {
@@ -279,7 +280,7 @@ func (m *manager) next(receiverKey string, e pkgevent.Event) {
 					if p != nil {
 						panicErr := panics.ToError(p)
 						log.Ctx(evt.Context()).Error().Str("op", "nextRoute").Str("error", panicErr.Error()).
-							Str("stackTrace", panicErr.StackTrace()).Msg("A panic has occurred")
+							Str("stackTrace", panicErr.StackTrace()).Msg("a panic has occurred")
 					}
 				}()
 				//log.Ctx(evt.Context()).Debug().Str("op", "nextRoute").Msg("sending event to next route")

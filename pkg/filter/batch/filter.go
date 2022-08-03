@@ -66,6 +66,7 @@ func (f *Filter) Filter(evt event.Event) []event.Event {
 		}
 		batchPayload := make([]interface{}, 0)
 		for _, e := range f.batch {
+			//TODO: do we need a deepcopy here?
 			batchPayload = append(batchPayload, e.Payload())
 		}
 		newEvt.SetPathValue("", batchPayload, true)
