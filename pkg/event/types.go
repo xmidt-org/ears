@@ -84,9 +84,12 @@ type Event interface {
 	//Further actions on the event are no longer possible
 	Nack(err error)
 
-	//Create a child the event with payload deep-copied
+	//Create a child event with payload shallow-copied
 	//Clone fails and return an error if the event is already acknowledged
 	Clone(ctx context.Context) (Event, error)
+
+	//Deep copy event payload and metadata
+	DeepCopy() error
 }
 
 type NoAckHandlersError struct {

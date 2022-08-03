@@ -32,6 +32,9 @@ var _ Event = &EventMock{}
 // 			CreatedFunc: func() time.Time {
 // 				panic("mock out the Created method")
 // 			},
+// 			DeepCopyFunc: func() error {
+// 				panic("mock out the DeepCopy method")
+// 			},
 // 			GetPathValueFunc: func(path string) (interface{}, interface{}, string) {
 // 				panic("mock out the GetPathValue method")
 // 			},
@@ -81,6 +84,9 @@ type EventMock struct {
 	// CreatedFunc mocks the Created method.
 	CreatedFunc func() time.Time
 
+	// DeepCopyFunc mocks the DeepCopy method.
+	DeepCopyFunc func() error
+
 	// GetPathValueFunc mocks the GetPathValue method.
 	GetPathValueFunc func(path string) (interface{}, interface{}, string)
 
@@ -126,6 +132,9 @@ type EventMock struct {
 		}
 		// Created holds details about calls to the Created method.
 		Created []struct {
+		}
+		// DeepCopy holds details about calls to the DeepCopy method.
+		DeepCopy []struct {
 		}
 		// GetPathValue holds details about calls to the GetPathValue method.
 		GetPathValue []struct {
@@ -178,6 +187,7 @@ type EventMock struct {
 	lockClone        sync.RWMutex
 	lockContext      sync.RWMutex
 	lockCreated      sync.RWMutex
+	lockDeepCopy     sync.RWMutex
 	lockGetPathValue sync.RWMutex
 	lockId           sync.RWMutex
 	lockMetadata     sync.RWMutex
@@ -296,6 +306,32 @@ func (mock *EventMock) CreatedCalls() []struct {
 	mock.lockCreated.RLock()
 	calls = mock.calls.Created
 	mock.lockCreated.RUnlock()
+	return calls
+}
+
+// DeepCopy calls DeepCopyFunc.
+func (mock *EventMock) DeepCopy() error {
+	if mock.DeepCopyFunc == nil {
+		panic("EventMock.DeepCopyFunc: method is nil but Event.DeepCopy was just called")
+	}
+	callInfo := struct {
+	}{}
+	mock.lockDeepCopy.Lock()
+	mock.calls.DeepCopy = append(mock.calls.DeepCopy, callInfo)
+	mock.lockDeepCopy.Unlock()
+	return mock.DeepCopyFunc()
+}
+
+// DeepCopyCalls gets all the calls that were made to DeepCopy.
+// Check the length with:
+//     len(mockedEvent.DeepCopyCalls())
+func (mock *EventMock) DeepCopyCalls() []struct {
+} {
+	var calls []struct {
+	}
+	mock.lockDeepCopy.RLock()
+	calls = mock.calls.DeepCopy
+	mock.lockDeepCopy.RUnlock()
 	return calls
 }
 
