@@ -16,7 +16,8 @@ package batch
 
 import (
 	"fmt"
-	"github.com/gohobby/deepcopy"
+	//"github.com/gohobby/deepcopy"
+	"github.com/boriwo/deepcopy"
 	"github.com/rs/zerolog/log"
 	"github.com/xmidt-org/ears/pkg/event"
 	"github.com/xmidt-org/ears/pkg/filter"

@@ -19,7 +19,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/mohae/deepcopy"
+	"github.com/boriwo/deepcopy"
 	"github.com/rs/zerolog/log"
 	"github.com/xmidt-org/ears/pkg/event"
 	"github.com/xmidt-org/ears/pkg/filter"
@@ -148,7 +148,7 @@ func (f *Filter) evalStr(evt event.Event, tt string) string {
 		}
 		path := tt[si+1 : ei]
 		v, _, _ := evt.GetPathValue(path)
-		v = deepcopy.Copy(v)
+		v = deepcopy.DeepCopy(v)
 		if !(si == 0 && ei == len(tt)-1) {
 			switch vt := v.(type) {
 			case string:

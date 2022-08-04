@@ -37,7 +37,8 @@ import (
 	"time"
 
 	//"github.com/mohae/deepcopy"
-	"github.com/gohobby/deepcopy"
+	//"github.com/gohobby/deepcopy"
+	"github.com/boriwo/deepcopy"
 )
 
 type event struct {
