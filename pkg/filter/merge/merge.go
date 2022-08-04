@@ -65,7 +65,15 @@ func (f *Filter) Filter(evt event.Event) []event.Event {
 		evt.Ack()
 		return []event.Event{}
 	}
-	evt.SetPathValue(f.config.ToPath, mergeObj, true)
+	_, _, err = evt.SetPathValue(f.config.ToPath, mergeObj, true)
+	if err != nil {
+		log.Ctx(evt.Context()).Error().Str("op", "filter").Str("filterType", "merge").Str("name", f.Name()).Msg(err.Error())
+		if span := trace.SpanFromContext(evt.Context()); span != nil {
+			span.AddEvent(err.Error())
+		}
+		evt.Ack()
+		return []event.Event{}
+	}
 	log.Ctx(evt.Context()).Debug().Str("op", "filter").Str("filterType", "merge").Str("name", f.Name()).Msg("merge")
 	return []event.Event{evt}
 }

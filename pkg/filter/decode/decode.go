@@ -115,7 +115,15 @@ func (f *Filter) Filter(evt event.Event) []event.Event {
 		evt.Ack()
 		return []event.Event{}
 	}
-	evt.SetPathValue(path, output, true)
+	_, _, err = evt.SetPathValue(path, output, true)
+	if err != nil {
+		log.Ctx(evt.Context()).Error().Str("op", "filter").Str("filterType", "decode").Str("name", f.Name()).Msg(err.Error())
+		if span := trace.SpanFromContext(evt.Context()); span != nil {
+			span.AddEvent(err.Error())
+		}
+		evt.Ack()
+		return []event.Event{}
+	}
 	log.Ctx(evt.Context()).Debug().Str("op", "filter").Str("filterType", "decode").Str("name", f.Name()).Msg("decode")
 	return []event.Event{evt}
 }

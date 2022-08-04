@@ -56,7 +56,7 @@ var _ Event = &EventMock{}
 // 			SetMetadataFunc: func(metadata map[string]interface{}) error {
 // 				panic("mock out the SetMetadata method")
 // 			},
-// 			SetPathValueFunc: func(path string, val interface{}, createPath bool) (interface{}, string) {
+// 			SetPathValueFunc: func(path string, val interface{}, createPath bool) (interface{}, string, error) {
 // 				panic("mock out the SetPathValue method")
 // 			},
 // 			SetPayloadFunc: func(payload interface{}) error {
@@ -109,7 +109,7 @@ type EventMock struct {
 	SetMetadataFunc func(metadata map[string]interface{}) error
 
 	// SetPathValueFunc mocks the SetPathValue method.
-	SetPathValueFunc func(path string, val interface{}, createPath bool) (interface{}, string)
+	SetPathValueFunc func(path string, val interface{}, createPath bool) (interface{}, string, error)
 
 	// SetPayloadFunc mocks the SetPayload method.
 	SetPayloadFunc func(payload interface{}) error
@@ -538,7 +538,7 @@ func (mock *EventMock) SetMetadataCalls() []struct {
 }
 
 // SetPathValue calls SetPathValueFunc.
-func (mock *EventMock) SetPathValue(path string, val interface{}, createPath bool) (interface{}, string) {
+func (mock *EventMock) SetPathValue(path string, val interface{}, createPath bool) (interface{}, string, error) {
 	if mock.SetPathValueFunc == nil {
 		panic("EventMock.SetPathValueFunc: method is nil but Event.SetPathValue was just called")
 	}
