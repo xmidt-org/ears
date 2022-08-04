@@ -16,11 +16,13 @@ package batch
 
 import (
 	"fmt"
+	"github.com/gohobby/deepcopy"
 	"github.com/rs/zerolog/log"
 	"github.com/xmidt-org/ears/pkg/event"
 	"github.com/xmidt-org/ears/pkg/filter"
 	"github.com/xmidt-org/ears/pkg/secret"
 	"github.com/xmidt-org/ears/pkg/tenant"
+	"go.opentelemetry.io/otel/trace"
 )
 
 func NewFilter(tid tenant.Id, plugin string, name string, config interface{}, secrets secret.Vault) (*Filter, error) {
@@ -58,8 +60,13 @@ func (f *Filter) Filter(evt event.Event) []event.Event {
 	if len(f.batch) >= *f.config.BatchSize {
 		newEvt, err := evt.Clone(evt.Context())
 		if err != nil {
+			log.Ctx(evt.Context()).Error().Str("op", "filter").Str("filterType", "batch").Str("name", f.Name()).Msg(err.Error())
+			if span := trace.SpanFromContext(evt.Context()); span != nil {
+				span.AddEvent(err.Error())
+			}
+			newEvt.Ack()
 			for _, e := range f.batch {
-				e.Nack(err)
+				e.Ack()
 			}
 			f.batch = make([]event.Event, 0)
 			return []event.Event{}
@@ -68,15 +75,32 @@ func (f *Filter) Filter(evt event.Event) []event.Event {
 		for _, e := range f.batch {
 			batchPayload = append(batchPayload, e.Payload())
 		}
-		err = newEvt.DeepCopy()
+		err = newEvt.SetMetadata(deepcopy.DeepCopy(evt.Metadata()).(map[string]interface{}))
 		if err != nil {
+			log.Ctx(evt.Context()).Error().Str("op", "filter").Str("filterType", "batch").Str("name", f.Name()).Msg(err.Error())
+			if span := trace.SpanFromContext(evt.Context()); span != nil {
+				span.AddEvent(err.Error())
+			}
+			newEvt.Ack()
 			for _, e := range f.batch {
-				e.Nack(err)
+				e.Ack()
 			}
 			f.batch = make([]event.Event, 0)
 			return []event.Event{}
 		}
-		newEvt.SetPathValue("", batchPayload, true)
+		err = newEvt.SetPayload(batchPayload)
+		if err != nil {
+			log.Ctx(evt.Context()).Error().Str("op", "filter").Str("filterType", "batch").Str("name", f.Name()).Msg(err.Error())
+			if span := trace.SpanFromContext(evt.Context()); span != nil {
+				span.AddEvent(err.Error())
+			}
+			newEvt.Ack()
+			for _, e := range f.batch {
+				e.Ack()
+			}
+			f.batch = make([]event.Event, 0)
+			return []event.Event{}
+		}
 		for _, e := range f.batch {
 			e.Ack()
 		}
