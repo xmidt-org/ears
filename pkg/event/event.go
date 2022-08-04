@@ -20,6 +20,7 @@ package event
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"github.com/google/uuid"
 	"github.com/rs/zerolog"
 	"github.com/xmidt-org/ears/internal/pkg/ack"
@@ -411,7 +412,10 @@ func (e *event) GetPathValue(path string) (interface{}, interface{}, string) {
 	return obj, parent, key
 }
 
-func (e *event) SetPathValue(path string, val interface{}, createPath bool) (interface{}, string) {
+func (e *event) SetPathValue(path string, val interface{}, createPath bool) (interface{}, string, error) {
+	if e.ack != nil && e.ack.IsAcked() {
+		return nil, "", &ack.AlreadyAckedError{}
+	}
 	obj := e.Payload()
 	if strings.HasPrefix(path, METADATA+".") || path == METADATA {
 		metaObj := e.Metadata()
@@ -420,7 +424,7 @@ func (e *event) SetPathValue(path string, val interface{}, createPath bool) (int
 				e.SetMetadata(make(map[string]interface{}))
 				obj = e.Metadata()
 			} else {
-				return nil, ""
+				return nil, "", errors.New("path " + path + " does not exist")
 			}
 		} else {
 			obj = metaObj
@@ -433,17 +437,17 @@ func (e *event) SetPathValue(path string, val interface{}, createPath bool) (int
 		path = PAYLOAD
 	}
 	if path == PAYLOAD || path == PAYLOAD+"." {
-		e.SetPayload(val)
-		return nil, ""
+		err := e.SetPayload(val)
+		return nil, "", err
 	} else if path == METADATA || path == METADATA+"." {
 		valMap, ok := val.(map[string]interface{})
 		if ok {
 			e.SetMetadata(valMap)
 		}
-		return nil, ""
+		return nil, "", errors.New("bad metadata")
 	}
 	if !strings.HasPrefix(path, PAYLOAD+".") && !strings.HasPrefix(path, METADATA+".") {
-		return nil, ""
+		return nil, "", errors.New("bad path " + path)
 	}
 	var parent interface{}
 	var key string
@@ -465,7 +469,7 @@ func (e *event) SetPathValue(path string, val interface{}, createPath bool) (int
 				parent.(map[string]interface{})[key] = make(map[string]interface{})
 				obj = parent.(map[string]interface{})[key]
 			} else {
-				return nil, ""
+				return nil, "", errors.New("invalid path " + path)
 			}
 		}
 	}
@@ -494,7 +498,7 @@ func (e *event) SetPathValue(path string, val interface{}, createPath bool) (int
 			obj[key] = val
 		}
 	}
-	return parent, key
+	return parent, key, nil
 }
 
 func (e *event) Context() context.Context {

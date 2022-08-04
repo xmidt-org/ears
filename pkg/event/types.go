@@ -66,7 +66,7 @@ type Event interface {
 
 	// SetPathValue sets object value at path in either payload or metadata and returns its parent
 	// object and parent key if those exist
-	SetPathValue(path string, val interface{}, createPath bool) (interface{}, string)
+	SetPathValue(path string, val interface{}, createPath bool) (interface{}, string, error)
 
 	// GetPathValue finds object at path in either payload or metadata and returns such object
 	// if one exists along with its parent object and parent key if those exist
