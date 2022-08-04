@@ -61,6 +61,15 @@ func (f *Filter) Filter(evt event.Event) []event.Event {
 	if f.config.Transformation == nil {
 		events = append(events, evt)
 	} else {
+		err := evt.DeepCopy()
+		if err != nil {
+			log.Ctx(evt.Context()).Error().Str("op", "filter").Str("filterType", "transform").Str("name", f.Name()).Msg(err.Error())
+			if span := trace.SpanFromContext(evt.Context()); span != nil {
+				span.AddEvent(err.Error())
+			}
+			evt.Ack()
+			return []event.Event{}
+		}
 		obj, _, _ := evt.GetPathValue(f.config.FromPath)
 		a := []interface{}{obj}
 		isArray := false
@@ -76,9 +85,8 @@ func (f *Filter) Filter(evt event.Event) []event.Event {
 				if span := trace.SpanFromContext(evt.Context()); span != nil {
 					span.AddEvent(err.Error())
 				}
-				// we move on here, so no ack
-				//evt.Ack()
-				return events
+				evt.Ack()
+				return []event.Event{}
 			}
 			thisTransform := deepcopy.DeepCopy(f.config.Transformation)
 			transform(subEvt, thisTransform, nil, "", -1)

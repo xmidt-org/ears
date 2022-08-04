@@ -543,11 +543,11 @@ func (e *event) Clone(ctx context.Context) (Event, error) {
 }
 
 func (e *event) DeepCopy() error {
+	// only deepcopy once per clone
 	if e.deepcopied {
 		return nil
 	}
 	e.deepcopied = true
-	//TODO: check if this event has already been deepcopied on this linear route
 	// gohobby deepcopy without reflection
 	// benchmark for 1.7 kb event: 6,000 ns / op
 	e.payload = deepcopy.DeepCopy(e.payload)
