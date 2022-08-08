@@ -52,8 +52,25 @@ func (f *Filter) Filter(evt event.Event) []event.Event {
 		})
 		return nil
 	}
+	err := evt.DeepCopy()
+	if err != nil {
+		log.Ctx(evt.Context()).Error().Str("op", "filter").Str("filterType", "trace").Str("name", f.Name()).Msg(err.Error())
+		if span := trace.SpanFromContext(evt.Context()); span != nil {
+			span.AddEvent(err.Error())
+		}
+		evt.Ack()
+		return []event.Event{}
+	}
 	traceId := trace.SpanFromContext(evt.Context()).SpanContext().TraceID().String()
-	evt.SetPathValue(f.config.Path, traceId, true)
+	_, _, err = evt.SetPathValue(f.config.Path, traceId, true)
+	if err != nil {
+		log.Ctx(evt.Context()).Error().Str("op", "filter").Str("filterType", "trace").Str("name", f.Name()).Msg(err.Error())
+		if span := trace.SpanFromContext(evt.Context()); span != nil {
+			span.AddEvent(err.Error())
+		}
+		evt.Ack()
+		return []event.Event{}
+	}
 	log.Ctx(evt.Context()).Debug().Str("op", "filter").Str("filterType", "trace").Str("name", f.Name()).Msg("trace")
 	return []event.Event{evt}
 }

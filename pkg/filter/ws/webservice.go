@@ -19,7 +19,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/mohae/deepcopy"
+	"github.com/boriwo/deepcopy"
 	"github.com/rs/zerolog/log"
 	"github.com/xmidt-org/ears/pkg/event"
 	"github.com/xmidt-org/ears/pkg/filter"
@@ -98,7 +98,24 @@ func (f *Filter) Filter(evt event.Event) []event.Event {
 		resEvt, _ := event.New(evt.Context(), resObj)
 		resObj, _, _ = resEvt.GetPathValue(f.config.FromPath)
 	}
-	evt.SetPathValue(f.config.ToPath, resObj, true)
+	err = evt.DeepCopy()
+	if err != nil {
+		log.Ctx(evt.Context()).Error().Str("op", "filter").Str("filterType", "ws").Str("name", f.Name()).Msg(err.Error())
+		if span := trace.SpanFromContext(evt.Context()); span != nil {
+			span.AddEvent(err.Error())
+		}
+		evt.Ack()
+		return []event.Event{}
+	}
+	_, _, err = evt.SetPathValue(f.config.ToPath, resObj, true)
+	if err != nil {
+		log.Ctx(evt.Context()).Error().Str("op", "filter").Str("filterType", "ws").Str("name", f.Name()).Msg(err.Error())
+		if span := trace.SpanFromContext(evt.Context()); span != nil {
+			span.AddEvent(err.Error())
+		}
+		evt.Ack()
+		return []event.Event{}
+	}
 	log.Ctx(evt.Context()).Debug().Str("op", "filter").Str("filterType", "ws").Str("name", f.Name()).Msg("ws")
 	return []event.Event{evt}
 }
@@ -131,7 +148,7 @@ func (f *Filter) evalStr(evt event.Event, tt string) string {
 		}
 		path := tt[si+1 : ei]
 		v, _, _ := evt.GetPathValue(path)
-		v = deepcopy.Copy(v)
+		v = deepcopy.DeepCopy(v)
 		if !(si == 0 && ei == len(tt)-1) {
 			switch vt := v.(type) {
 			case string:

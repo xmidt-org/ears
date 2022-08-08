@@ -18,7 +18,8 @@ import (
 	"bytes"
 	"crypto/md5"
 	"fmt"
-	"github.com/mohae/deepcopy"
+	//"github.com/gohobby/deepcopy"
+	"github.com/boriwo/deepcopy"
 	"github.com/rs/zerolog/log"
 	"github.com/xmidt-org/ears/pkg/event"
 	"io/ioutil"
@@ -354,12 +355,12 @@ func (interpreter *Interpreter) Exec(evt event.Event, code string) ([]event.Even
 	if evt.Payload() == nil {
 		env["payload"] = map[string]interface{}{}
 	} else {
-		env["payload"] = deepcopy.Copy(evt.Payload())
+		env["payload"] = deepcopy.DeepCopy(evt.Payload())
 	}
 	if evt.Metadata() == nil {
 		env["metadata"] = map[string]interface{}{}
 	} else {
-		env["metadata"] = deepcopy.Copy(evt.Metadata())
+		env["metadata"] = deepcopy.DeepCopy(evt.Metadata())
 	}
 	env["event"] = map[string]interface{}{}
 	(env["event"].(map[string]interface{}))["payload"] = env["payload"]
@@ -443,11 +444,11 @@ func (interpreter *Interpreter) Exec(evt event.Event, code string) ([]event.Even
 			if !is {
 				return nil, errors.New("array element is not map")
 			}
-			//m = deepcopy.Copy(m).(map[string]interface{})
 			nevt, err := evt.Clone(evt.Context())
 			if err != nil {
 				return nil, err
 			}
+			//TODO: does goja copy data or do we need a deepcopy here?
 			err = nevt.SetPayload(m["payload"])
 			if err != nil {
 				return nil, err
@@ -460,7 +461,6 @@ func (interpreter *Interpreter) Exec(evt event.Event, code string) ([]event.Even
 		}
 		return events, nil
 	case map[string]interface{}:
-		//m = deepcopy.Copy(m).(map[string]interface{})
 		err = evt.SetPayload(x["payload"])
 		if err != nil {
 			return nil, err

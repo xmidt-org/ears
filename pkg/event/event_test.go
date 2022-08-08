@@ -168,6 +168,7 @@ func BenchmarkCloneEvent(b *testing.B) {
 		if err != nil {
 			b.Errorf("failed to clone new event %s\n", err.Error())
 		}
+		e2.DeepCopy()
 		e2.Ack()
 		e1.Ack()
 	}
@@ -193,6 +194,7 @@ func TestCloneEvent(t *testing.T) {
 	if err != nil {
 		t.Errorf("Fail to clone new event %s\n", err.Error())
 	}
+	e2.DeepCopy()
 
 	payload2, ok := e2.Payload().(map[string]interface{})
 	if !ok {
