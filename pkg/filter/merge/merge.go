@@ -21,6 +21,7 @@ import (
 	"github.com/xmidt-org/ears/pkg/filter"
 	"github.com/xmidt-org/ears/pkg/secret"
 	"github.com/xmidt-org/ears/pkg/tenant"
+	"go.opentelemetry.io/otel/trace"
 )
 
 func NewFilter(tid tenant.Id, plugin string, name string, config interface{}, secrets secret.Vault) (*Filter, error) {
@@ -55,7 +56,24 @@ func (f *Filter) Filter(evt event.Event) []event.Event {
 	fromObj, _, _ := evt.GetPathValue(f.config.FromPath)
 	toObj, _, _ := evt.GetPathValue(f.config.ToPath)
 	mergeObj := merge(fromObj, toObj)
-	evt.SetPathValue(f.config.ToPath, mergeObj, true)
+	err := evt.DeepCopy()
+	if err != nil {
+		log.Ctx(evt.Context()).Error().Str("op", "filter").Str("filterType", "merge").Str("name", f.Name()).Msg(err.Error())
+		if span := trace.SpanFromContext(evt.Context()); span != nil {
+			span.AddEvent(err.Error())
+		}
+		evt.Ack()
+		return []event.Event{}
+	}
+	_, _, err = evt.SetPathValue(f.config.ToPath, mergeObj, true)
+	if err != nil {
+		log.Ctx(evt.Context()).Error().Str("op", "filter").Str("filterType", "merge").Str("name", f.Name()).Msg(err.Error())
+		if span := trace.SpanFromContext(evt.Context()); span != nil {
+			span.AddEvent(err.Error())
+		}
+		evt.Ack()
+		return []event.Event{}
+	}
 	log.Ctx(evt.Context()).Debug().Str("op", "filter").Str("filterType", "merge").Str("name", f.Name()).Msg("merge")
 	return []event.Event{evt}
 }
