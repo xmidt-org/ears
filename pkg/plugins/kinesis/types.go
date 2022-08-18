@@ -90,7 +90,7 @@ type ReceiverConfig struct {
 	MaxCheckpointAgeSeconds *int   `json:"maxCheckpointAgeSeconds,omitempty"`
 	UseShardMonitor         *bool  `json:"useShardMonitor,omitempty"`
 	StartingSequenceNumber  string `json:"startingSequenceNumber,omitempty"`
-	StartingTimestamp       *int64 `json:"StartingTimestamp,omitempty"`
+	StartingTimestamp       *int64 `json:"startingTimestamp,omitempty"`
 }
 
 type Receiver struct {
