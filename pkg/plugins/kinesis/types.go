@@ -71,6 +71,8 @@ var DefaultReceiverConfig = ReceiverConfig{
 	MaxCheckpointAgeSeconds: pointer.Int(86400),
 	UseCheckpoint:           pointer.Bool(true),
 	UseShardMonitor:         pointer.Bool(false),
+	StartingTimestamp:       pointer.Int64(0),
+	StartingSequenceNumber:  "",
 }
 
 type ReceiverConfig struct {
@@ -87,6 +89,8 @@ type ReceiverConfig struct {
 	UseCheckpoint           *bool  `json:"useCheckpoint,omitempty"`
 	MaxCheckpointAgeSeconds *int   `json:"maxCheckpointAgeSeconds,omitempty"`
 	UseShardMonitor         *bool  `json:"useShardMonitor,omitempty"`
+	StartingSequenceNumber  string `json:"startingSequenceNumber,omitempty"`
+	StartingTimestamp       *int64 `json:"startingTimestamp,omitempty"`
 }
 
 type Receiver struct {
