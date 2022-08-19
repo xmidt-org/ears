@@ -28,7 +28,7 @@ type Config struct {
 
 var DefaultConfig = Config{
 	Path:     "",
-	AsString: pointer.Bool(false),
+	AsString: pointer.Bool(true),
 }
 
 type Filter struct {
