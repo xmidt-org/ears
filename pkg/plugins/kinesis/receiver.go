@@ -304,9 +304,9 @@ func (r *Receiver) startShardReceiverEFO(svc *kinesis.Kinesis, stream *kinesis.D
 			//} else if *r.config.StartingTimestamp > 0 {
 			//	params.StartingPosition.Type = aws.String(kinesis.ShardIteratorTypeAtTimestamp)
 			//	params.StartingPosition.Timestamp = aws.Time(time.UnixMilli(*r.config.StartingTimestamp))
-			//} else if r.config.StartingSequenceNumber != "" {
-			//	params.StartingPosition.Type = aws.String(kinesis.ShardIteratorTypeAtSequenceNumber)
-			//	params.StartingPosition.SequenceNumber = aws.String(r.config.StartingSequenceNumber)
+		} else if r.config.StartingSequenceNumber != "" {
+			params.StartingPosition.Type = aws.String(kinesis.ShardIteratorTypeAtSequenceNumber)
+			params.StartingPosition.SequenceNumber = aws.String(r.config.StartingSequenceNumber)
 		}
 		for {
 			select {
@@ -495,9 +495,9 @@ func (r *Receiver) startShardReceiver(svc *kinesis.Kinesis, stream *kinesis.Desc
 				//} else if *r.config.StartingTimestamp > 0 {
 				//	shardIteratorInput.ShardIteratorType = aws.String(kinesis.ShardIteratorTypeAtTimestamp)
 				//	shardIteratorInput.Timestamp = aws.Time(time.UnixMilli(*r.config.StartingTimestamp))
-				//} else if r.config.StartingSequenceNumber != "" {
-				//	shardIteratorInput.ShardIteratorType = aws.String(kinesis.ShardIteratorTypeAtSequenceNumber)
-				//	shardIteratorInput.StartingSequenceNumber = aws.String(r.config.StartingSequenceNumber)
+			} else if r.config.StartingSequenceNumber != "" {
+				shardIteratorInput.ShardIteratorType = aws.String(kinesis.ShardIteratorTypeAtSequenceNumber)
+				shardIteratorInput.StartingSequenceNumber = aws.String(r.config.StartingSequenceNumber)
 			}
 			iteratorOutput, err := svc.GetShardIterator(shardIteratorInput)
 			if err != nil {
