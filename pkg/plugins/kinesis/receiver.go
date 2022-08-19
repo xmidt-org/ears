@@ -301,9 +301,9 @@ func (r *Receiver) startShardReceiverEFO(svc *kinesis.Kinesis, stream *kinesis.D
 			} else {
 				r.logger.Error().Str("op", "kinesis.startShardReceiverEFO").Str("stream", *r.stream.StreamDescription.StreamName).Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Int("shardIdx", shardIdx).Msg("checkpoint error: " + err.Error())
 			}
-		} else if *r.config.StartingTimestamp > 0 {
-			params.StartingPosition.Type = aws.String(kinesis.ShardIteratorTypeAtTimestamp)
-			params.StartingPosition.Timestamp = aws.Time(time.UnixMilli(*r.config.StartingTimestamp))
+			//} else if *r.config.StartingTimestamp > 0 {
+			//	params.StartingPosition.Type = aws.String(kinesis.ShardIteratorTypeAtTimestamp)
+			//	params.StartingPosition.Timestamp = aws.Time(time.UnixMilli(*r.config.StartingTimestamp))
 		} else if r.config.StartingSequenceNumber != "" {
 			params.StartingPosition.Type = aws.String(kinesis.ShardIteratorTypeAtSequenceNumber)
 			params.StartingPosition.SequenceNumber = aws.String(r.config.StartingSequenceNumber)
@@ -492,9 +492,9 @@ func (r *Receiver) startShardReceiver(svc *kinesis.Kinesis, stream *kinesis.Desc
 				} else {
 					r.logger.Error().Str("op", "kinesis.startShardReceiver").Str("stream", *r.stream.StreamDescription.StreamName).Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Int("shardIdx", shardIdx).Msg("checkpoint error: " + err.Error())
 				}
-			} else if *r.config.StartingTimestamp > 0 {
-				shardIteratorInput.ShardIteratorType = aws.String(kinesis.ShardIteratorTypeAtTimestamp)
-				shardIteratorInput.Timestamp = aws.Time(time.UnixMilli(*r.config.StartingTimestamp))
+				//} else if *r.config.StartingTimestamp > 0 {
+				//	shardIteratorInput.ShardIteratorType = aws.String(kinesis.ShardIteratorTypeAtTimestamp)
+				//	shardIteratorInput.Timestamp = aws.Time(time.UnixMilli(*r.config.StartingTimestamp))
 			} else if r.config.StartingSequenceNumber != "" {
 				shardIteratorInput.ShardIteratorType = aws.String(kinesis.ShardIteratorTypeAtSequenceNumber)
 				shardIteratorInput.StartingSequenceNumber = aws.String(r.config.StartingSequenceNumber)
