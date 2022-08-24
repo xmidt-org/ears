@@ -22,7 +22,6 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"github.com/Shopify/sarama"
 	"github.com/rs/zerolog/log"
@@ -87,21 +86,11 @@ func NewReceiver(tid tenant.Id, plugin string, name string, config interface{}, 
 	if err != nil {
 		return nil, err
 	}
-	saramaChan := make(chan sarama.ConsumerGroup, 1)
-	go func() {
-		var client sarama.ConsumerGroup
-		client, err = sarama.NewConsumerGroup(strings.Split(r.config.Brokers, ","), r.config.GroupId, saramaConfig)
-		saramaChan <- client
-	}()
-	select {
-	case client := <-saramaChan:
-		r.client = client
-	case <-time.After(5 * time.Second):
-		return nil, errors.New("sarama timed out")
-	}
+	client, err := sarama.NewConsumerGroup(strings.Split(r.config.Brokers, ","), r.config.GroupId, saramaConfig)
 	if nil != err {
 		return nil, err
 	}
+	r.client = client
 	// metric recorders
 	meter := global.Meter(rtsemconv.EARSMeterName)
 	commonLabels := []attribute.KeyValue{
