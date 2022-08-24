@@ -16,6 +16,7 @@ package plugin
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
@@ -140,12 +141,25 @@ func (m *manager) RegisterReceiver(
 	defer m.Unlock()
 
 	r, ok := m.receivers[key]
+
 	if !ok {
+
 		var secrets secret.Vault
 		if m.secrets != nil {
 			secrets = appsecret.NewTenantConfigVault(tid, m.secrets)
 		}
-		r, err = ns.NewReceiver(tid, plugin, name, config, secrets)
+
+		receiverChan := make(chan pkgreceiver.Receiver, 1)
+		go func() {
+			r, err = ns.NewReceiver(tid, plugin, name, config, secrets)
+			receiverChan <- r
+		}()
+		select {
+		case rcv := <-receiverChan:
+			r = rcv
+		case <-time.After(5 * time.Second):
+			err = errors.New("receiver registration timed out")
+		}
 		if err != nil {
 			return nil, &RegistrationError{
 				Message: "could not create new receiver",
@@ -560,12 +574,25 @@ func (m *manager) RegisterSender(
 	defer m.Unlock()
 
 	s, ok := m.senders[key]
+
 	if !ok {
+		
 		var secrets secret.Vault
 		if m.secrets != nil {
 			secrets = appsecret.NewTenantConfigVault(tid, m.secrets)
 		}
-		s, err = ns.NewSender(tid, plugin, name, config, secrets)
+
+		senderChan := make(chan pkgsender.Sender, 1)
+		go func() {
+			s, err = ns.NewSender(tid, plugin, name, config, secrets)
+			senderChan <- s
+		}()
+		select {
+		case snd := <-senderChan:
+			s = snd
+		case <-time.After(5 * time.Second):
+			err = errors.New("sender registration timed out")
+		}
 		if err != nil {
 			return nil, &RegistrationError{
 				Message: "could not create sender",
