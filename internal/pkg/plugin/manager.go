@@ -69,7 +69,8 @@ type manager struct {
 // === Initialization ================================================
 
 const (
-	defaultNextFnDeadline = 5 * time.Second
+	defaultNextFnDeadline      = 5 * time.Second
+	pluginRegistrationDeadline = 5 * time.Second
 )
 
 func NewManager(options ...ManagerOption) (Manager, error) {
@@ -157,7 +158,7 @@ func (m *manager) RegisterReceiver(
 		select {
 		case rcv := <-receiverChan:
 			r = rcv
-		case <-time.After(5 * time.Second):
+		case <-time.After(pluginRegistrationDeadline):
 			err = errors.New("receiver registration timed out")
 		}
 		if err != nil {
@@ -576,7 +577,7 @@ func (m *manager) RegisterSender(
 	s, ok := m.senders[key]
 
 	if !ok {
-		
+
 		var secrets secret.Vault
 		if m.secrets != nil {
 			secrets = appsecret.NewTenantConfigVault(tid, m.secrets)
@@ -590,7 +591,7 @@ func (m *manager) RegisterSender(
 		select {
 		case snd := <-senderChan:
 			s = snd
-		case <-time.After(5 * time.Second):
+		case <-time.After(pluginRegistrationDeadline):
 			err = errors.New("sender registration timed out")
 		}
 		if err != nil {
