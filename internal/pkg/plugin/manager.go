@@ -421,12 +421,25 @@ func (m *manager) RegisterFilter(
 	defer m.Unlock()
 
 	f, ok := m.filters[key]
+
 	if !ok {
+
 		var secrets secret.Vault
 		if m.secrets != nil {
 			secrets = appsecret.NewTenantConfigVault(tid, m.secrets)
 		}
-		f, err = factory.NewFilterer(tid, plugin, name, config, secrets)
+
+		filterChan := make(chan pkgfilter.Filterer, 1)
+		go func() {
+			f, err = factory.NewFilterer(tid, plugin, name, config, secrets)
+			filterChan <- f
+		}()
+		select {
+		case flt := <-filterChan:
+			f = flt
+		case <-time.After(pluginRegistrationDeadline):
+			err = errors.New("filter registration timed out")
+		}
 		if err != nil {
 			return nil, &RegistrationError{
 				Message: "could not create new filterer",
