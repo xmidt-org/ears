@@ -23,11 +23,13 @@ import (
 // the behavior of the sender.
 type Config struct {
 	Path     string `json:"path,omitempty"`
+	Tag      string `json:"tag,omitempty"`
 	AsString *bool  `json:"asString,omitempty"`
 }
 
 var DefaultConfig = Config{
 	Path:     "",
+	Tag:      "",
 	AsString: pointer.Bool(true),
 }
 
