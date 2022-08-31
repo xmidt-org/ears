@@ -25,6 +25,7 @@ import (
 	"github.com/xmidt-org/ears/internal/pkg/plugin"
 	"github.com/xmidt-org/ears/internal/pkg/rtsemconv"
 	"github.com/xmidt-org/ears/internal/pkg/syncer"
+	"github.com/xmidt-org/ears/pkg/event"
 	"github.com/xmidt-org/ears/pkg/fragments"
 	"github.com/xmidt-org/ears/pkg/logs"
 	"github.com/xmidt-org/ears/pkg/route"
@@ -208,6 +209,33 @@ func (r *DefaultRoutingTableManager) RemoveRoute(ctx context.Context, tid tenant
 		return &RouteRegistrationError{registrationErr}
 	}
 	return storageErr
+}
+
+func (r *DefaultRoutingTableManager) RouteEvent(ctx context.Context, tid tenant.Id, routeId string, payload interface{}) error {
+	lrw, ok := r.liveRouteMap[tid.KeyWithRoute(routeId)]
+	if !ok {
+		return errors.New("no route " + routeId)
+	}
+	if lrw.Receiver == nil {
+		return errors.New("no receiver for route " + routeId)
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	e, err := event.New(ctx, payload, event.WithAck(
+		func(evt event.Event) {
+			cancel()
+		}, func(evt event.Event, err error) {
+			r.logger.Error().Str("op", "routeTestEvent").Msg("failed to process message: " + err.Error())
+			cancel()
+		}),
+		event.WithOtelTracing("routeTestEvent"),
+		event.WithTenant(tid),
+		event.WithTracePayloadOnNack(false),
+	)
+	if err != nil {
+		return errors.New("bad test event for route " + routeId)
+	}
+	lrw.Receiver.Trigger(e)
+	return nil
 }
 
 func (r *DefaultRoutingTableManager) AddRoute(ctx context.Context, routeConfig *route.Config) error {

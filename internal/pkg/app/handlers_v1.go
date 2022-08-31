@@ -71,6 +71,7 @@ func NewAPIManager(routingMgr tablemgr.RoutingTableManager, tenantStorer tenant.
 	api.muxRouter.HandleFunc("/ears/version", api.versionHandler).Methods(http.MethodGet)
 
 	api.muxRouter.HandleFunc("/ears/v1/orgs/{orgId}/applications/{appId}/routes/{routeId}", api.addRouteHandler).Methods(http.MethodPut)
+	api.muxRouter.HandleFunc("/ears/v1/orgs/{orgId}/applications/{appId}/routes/{routeId}/event", api.sendEventHandler).Methods(http.MethodPost)
 	api.muxRouter.HandleFunc("/ears/v1/orgs/{orgId}/applications/{appId}/routes", api.addRouteHandler).Methods(http.MethodPost)
 	api.muxRouter.HandleFunc("/ears/v1/orgs/{orgId}/applications/{appId}/routes/{routeId}", api.removeRouteHandler).Methods(http.MethodDelete)
 	api.muxRouter.HandleFunc("/ears/v1/orgs/{orgId}/applications/{appId}/routes/{routeId}", api.getRouteHandler).Methods(http.MethodGet)
@@ -174,6 +175,64 @@ func getTenant(ctx context.Context, vars map[string]string) (*tenant.Id, ApiErro
 	span.SetAttributes(rtsemconv.EARSOrgId.String(orgId))
 	span.SetAttributes(rtsemconv.EARSAppId.String(appId))
 	return &tenant.Id{OrgId: orgId, AppId: appId}, nil
+}
+
+func (a *APIManager) sendEventHandler(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	vars := mux.Vars(r)
+	tid, apiErr := getTenant(ctx, vars)
+	if apiErr != nil {
+		log.Ctx(ctx).Error().Str("op", "sendEventHandler").Str("error", apiErr.Error()).Msg("orgId or appId empty")
+		resp := ErrorResponse(apiErr)
+		resp.Respond(ctx, w, doYaml(r))
+		return
+	}
+	_, err := a.tenantStorer.GetConfig(ctx, *tid)
+	if err != nil {
+		log.Ctx(ctx).Error().Str("op", "sendEventHandler").Str("error", err.Error()).Msg("error getting tenant config")
+		resp := ErrorResponse(convertToApiError(ctx, err))
+		resp.Respond(ctx, w, doYaml(r))
+		return
+	}
+	body, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		log.Ctx(ctx).Error().Str("op", "sendEventHandler").Msg(err.Error())
+		resp := ErrorResponse(&InternalServerError{err})
+		resp.Respond(ctx, w, doYaml(r))
+		return
+	}
+	var payload interface{}
+	err = yaml.Unmarshal(body, &payload)
+	if err != nil {
+		log.Ctx(ctx).Error().Str("op", "sendEventHandler").Msg(err.Error())
+		a.addRouteFailureRecorder.Add(ctx, 1.0)
+		resp := ErrorResponse(&BadRequestError{"cannot unmarshal request body", err})
+		resp.Respond(ctx, w, doYaml(r))
+		return
+	}
+	routeId := vars["routeId"]
+	if routeId == "" {
+		log.Ctx(ctx).Error().Str("op", "sendEventHandler").Msg("missing route ID")
+		resp := ErrorResponse(convertToApiError(ctx, err))
+		resp.Respond(ctx, w, doYaml(r))
+		return
+	}
+	_, err = a.routingTableMgr.GetRoute(ctx, *tid, routeId)
+	if err != nil {
+		log.Ctx(ctx).Error().Str("op", "sendEventHandler").Msg(err.Error())
+		resp := ErrorResponse(convertToApiError(ctx, err))
+		resp.Respond(ctx, w, doYaml(r))
+		return
+	}
+	err = a.routingTableMgr.RouteEvent(ctx, *tid, routeId, payload)
+	if err != nil {
+		log.Ctx(ctx).Error().Str("op", "sendEventHandler").Msg(err.Error())
+		resp := ErrorResponse(convertToApiError(ctx, err))
+		resp.Respond(ctx, w, doYaml(r))
+		return
+	}
+	resp := ItemResponse(routeId)
+	resp.Respond(ctx, w, doYaml(r))
 }
 
 func (a *APIManager) addRouteHandler(w http.ResponseWriter, r *http.Request) {
