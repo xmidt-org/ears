@@ -54,6 +54,8 @@ type (
 		RemoveFragment(ctx context.Context, tenantId tenant.Id, fragmentId string) error
 		// AddFragment adds a new fragment
 		AddFragment(ctx context.Context, tid tenant.Id, fragmentConfig route.PluginConfig) error
+		// Send test event to route
+		RouteEvent(ctx context.Context, tid tenant.Id, routeId string, payload interface{}) error
 	}
 
 	RoutingTableGlobalSyncer interface {
