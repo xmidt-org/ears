@@ -24,6 +24,7 @@ import (
 	"github.com/xorcare/pointer"
 	"go.opentelemetry.io/otel/metric"
 	"net/http"
+	"sync"
 )
 
 var _ sender.Sender = (*Sender)(nil)
@@ -83,6 +84,7 @@ var DefaultReceiverConfig = ReceiverConfig{
 }
 
 type Receiver struct {
+	sync.Mutex
 	logger              *zerolog.Logger
 	srv                 *http.Server
 	config              ReceiverConfig
@@ -92,6 +94,7 @@ type Receiver struct {
 	eventSuccessCounter metric.BoundInt64Counter
 	eventFailureCounter metric.BoundInt64Counter
 	eventBytesCounter   metric.BoundInt64Counter
+	next                receiver.NextFn
 }
 
 type SenderConfig struct {

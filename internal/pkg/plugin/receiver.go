@@ -17,6 +17,7 @@ package plugin
 import (
 	"context"
 	"fmt"
+	"github.com/xmidt-org/ears/pkg/event"
 	"github.com/xmidt-org/ears/pkg/tenant"
 	"sync"
 
@@ -57,6 +58,9 @@ func (r *receiver) Plugin() string {
 
 func (r *receiver) Tenant() tenant.Id {
 	return r.tid
+}
+
+func (r *receiver) Trigger(e event.Event) {
 }
 
 func (r *receiver) Receive(next pkgreceiver.NextFn) error {
