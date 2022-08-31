@@ -101,6 +101,7 @@ func (h *Receiver) GetTraceId(r *http.Request) string {
 }
 
 func (h *Receiver) Receive(next receiver.NextFn) error {
+	h.next = next
 	mux := http.NewServeMux()
 	port := *h.config.Port
 	h.logger.Info().Int("port", port).Str("path", h.config.Path).Msg("starting http receiver")
@@ -197,6 +198,15 @@ func (h *Receiver) StopReceiving(ctx context.Context) error {
 		return h.srv.Shutdown(ctx)
 	}
 	return nil
+}
+
+func (r *Receiver) Trigger(e event.Event) {
+	r.Lock()
+	next := r.next
+	r.Unlock()
+	if next != nil {
+		next(e)
+	}
 }
 
 func (r *Receiver) Config() interface{} {
