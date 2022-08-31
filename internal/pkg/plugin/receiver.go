@@ -61,6 +61,7 @@ func (r *receiver) Tenant() tenant.Id {
 }
 
 func (r *receiver) Trigger(e event.Event) {
+	r.receiver.Trigger(e)
 }
 
 func (r *receiver) Receive(next pkgreceiver.NextFn) error {
