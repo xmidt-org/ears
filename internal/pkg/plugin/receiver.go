@@ -35,6 +35,7 @@ type receiver struct {
 	plugin string
 	hash   string
 	tid    tenant.Id
+	next   pkgreceiver.NextFn
 
 	manager *manager
 	active  bool
@@ -61,7 +62,13 @@ func (r *receiver) Tenant() tenant.Id {
 }
 
 func (r *receiver) Trigger(e event.Event) {
-	r.receiver.Trigger(e)
+	//r.receiver.Trigger(e)
+	r.Lock()
+	next := r.next
+	r.Unlock()
+	if next != nil {
+		next(e)
+	}
 }
 
 func (r *receiver) Receive(next pkgreceiver.NextFn) error {
@@ -83,6 +90,8 @@ func (r *receiver) Receive(next pkgreceiver.NextFn) error {
 		}
 		r.Unlock()
 	}
+
+	r.next = next
 
 	// Block
 	return r.manager.receive(r, next)
