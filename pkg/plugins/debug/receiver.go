@@ -193,7 +193,9 @@ func (r *Receiver) Trigger(e event.Event) {
 	next := r.next
 	r.Unlock()
 	r.history.Add(e)
-	next(e)
+	if next != nil {
+		next(e)
+	}
 }
 
 func (r *Receiver) History() []event.Event {
