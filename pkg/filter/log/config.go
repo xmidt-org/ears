@@ -41,6 +41,9 @@ func (c Config) WithDefaults() *Config {
 	if c.Path == "" {
 		cfg.Path = DefaultConfig.Path
 	}
+	if c.Tag == "" {
+		cfg.Tag = DefaultConfig.Tag
+	}
 	if c.AsString == nil {
 		cfg.AsString = DefaultConfig.AsString
 	}

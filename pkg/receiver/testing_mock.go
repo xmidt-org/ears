@@ -5,6 +5,7 @@ package receiver
 
 import (
 	"context"
+	"github.com/xmidt-org/ears/pkg/event"
 	"github.com/xmidt-org/ears/pkg/secret"
 	"github.com/xmidt-org/ears/pkg/tenant"
 	"sync"
@@ -235,6 +236,9 @@ var _ Receiver = &ReceiverMock{}
 // 			TenantFunc: func() tenant.Id {
 // 				panic("mock out the Tenant method")
 // 			},
+// 			TriggerFunc: func(e event.Event)  {
+// 				panic("mock out the Trigger method")
+// 			},
 // 		}
 //
 // 		// use mockedReceiver in code that requires Receiver
@@ -260,6 +264,9 @@ type ReceiverMock struct {
 	// TenantFunc mocks the Tenant method.
 	TenantFunc func() tenant.Id
 
+	// TriggerFunc mocks the Trigger method.
+	TriggerFunc func(e event.Event)
+
 	// calls tracks calls to the methods.
 	calls struct {
 		// Config holds details about calls to the Config method.
@@ -284,6 +291,11 @@ type ReceiverMock struct {
 		// Tenant holds details about calls to the Tenant method.
 		Tenant []struct {
 		}
+		// Trigger holds details about calls to the Trigger method.
+		Trigger []struct {
+			// E is the e argument value.
+			E event.Event
+		}
 	}
 	lockConfig        sync.RWMutex
 	lockName          sync.RWMutex
@@ -291,6 +303,7 @@ type ReceiverMock struct {
 	lockReceive       sync.RWMutex
 	lockStopReceiving sync.RWMutex
 	lockTenant        sync.RWMutex
+	lockTrigger       sync.RWMutex
 }
 
 // Config calls ConfigFunc.
@@ -456,5 +469,36 @@ func (mock *ReceiverMock) TenantCalls() []struct {
 	mock.lockTenant.RLock()
 	calls = mock.calls.Tenant
 	mock.lockTenant.RUnlock()
+	return calls
+}
+
+// Trigger calls TriggerFunc.
+func (mock *ReceiverMock) Trigger(e event.Event) {
+	if mock.TriggerFunc == nil {
+		panic("ReceiverMock.TriggerFunc: method is nil but Receiver.Trigger was just called")
+	}
+	callInfo := struct {
+		E event.Event
+	}{
+		E: e,
+	}
+	mock.lockTrigger.Lock()
+	mock.calls.Trigger = append(mock.calls.Trigger, callInfo)
+	mock.lockTrigger.Unlock()
+	mock.TriggerFunc(e)
+}
+
+// TriggerCalls gets all the calls that were made to Trigger.
+// Check the length with:
+//     len(mockedReceiver.TriggerCalls())
+func (mock *ReceiverMock) TriggerCalls() []struct {
+	E event.Event
+} {
+	var calls []struct {
+		E event.Event
+	}
+	mock.lockTrigger.RLock()
+	calls = mock.calls.Trigger
+	mock.lockTrigger.RUnlock()
 	return calls
 }
