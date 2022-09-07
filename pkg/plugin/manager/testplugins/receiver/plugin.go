@@ -16,6 +16,7 @@ package main
 
 import (
 	"context"
+	"github.com/xmidt-org/ears/pkg/event"
 	"github.com/xmidt-org/ears/pkg/secret"
 	"github.com/xmidt-org/ears/pkg/tenant"
 
@@ -87,4 +88,7 @@ func (p *plugin) Plugin() string {
 
 func (p *plugin) Tenant() tenant.Id {
 	return tenant.Id{OrgId: "myorg", AppId: "myapp"}
+}
+
+func (p *plugin) Trigger(e event.Event) {
 }

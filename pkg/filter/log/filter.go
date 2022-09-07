@@ -71,9 +71,9 @@ func (f *Filter) Filter(evt event.Event) []event.Event {
 		log.Ctx(evt.Context()).Error().Str("op", "filter").Str("filterType", "log").Str("name", f.Name()).Msg(err.Error())
 	} else {
 		if *f.config.AsString {
-			log.Ctx(evt.Context()).Info().Str("op", "filter").Str("filterType", "log").Str("name", f.Name()).Str("payload", string(buf)).Msg("log")
+			log.Ctx(evt.Context()).Info().Str("op", "filter").Str("filterType", "log").Str("tag", f.config.Tag).Str("name", f.Name()).Str("payload", string(buf)).Msg("log")
 		} else {
-			log.Ctx(evt.Context()).Info().Str("op", "filter").Str("filterType", "log").Str("name", f.Name()).RawJSON("payload", buf).Msg("log")
+			log.Ctx(evt.Context()).Info().Str("op", "filter").Str("filterType", "log").Str("tag", f.config.Tag).Str("name", f.Name()).RawJSON("payload", buf).Msg("log")
 		}
 	}
 	return []event.Event{evt}
