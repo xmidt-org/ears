@@ -20,5 +20,5 @@ jobs:
   ci:
     uses: xmidt-org/.github/.github/workflows/go-ci.yml@go-ci-v1
     with:
-      sonarcloud-exclusions: **/*_test.go,**/*testing.go,**/testing_mock.go,**/vendor/**,**/cmd/**,**/test/**,**/fx/**,**/dynamo/**,**/redis/**,**/http/**,**/sqs/**,**/kafka/**,**/s3/**
+      sonarcloud-exclusions: '**/*_test.go,**/*testing.go,**/testing_mock.go,**/vendor/**,**/cmd/**,**/test/**,**/fx/**,**/dynamo/**,**/redis/**,**/http/**,**/sqs/**,**/kafka/**,**/s3/**'
     secrets: inherit
