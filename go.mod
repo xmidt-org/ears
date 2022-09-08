@@ -38,7 +38,7 @@ require (
 	github.com/xeipuuv/gojsonschema v1.2.0
 	github.com/xorcare/pointer v1.1.0
 	go.opentelemetry.io/contrib/instrumentation/github.com/Shopify/sarama/otelsarama v0.23.0
-	go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux v0.23.0
+	go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux v0.34.0
 	go.opentelemetry.io/contrib/propagators v0.22.0
 	go.opentelemetry.io/otel v1.9.0
 	go.opentelemetry.io/otel/exporters/otlp/otlpmetric v0.23.0
