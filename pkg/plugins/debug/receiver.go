@@ -28,6 +28,7 @@ import (
 	"go.opentelemetry.io/otel/metric/global"
 	"go.opentelemetry.io/otel/metric/unit"
 	"os"
+	"sync"
 	"time"
 
 	"github.com/xmidt-org/ears/pkg/event"
@@ -128,6 +129,10 @@ func (r *Receiver) Receive(next receiver.NextFn) error {
 		if err != nil {
 			return
 		}
+		eventsDone := &sync.WaitGroup{}
+		if *r.config.Rounds > 0 {
+			eventsDone.Add(*r.config.Rounds)
+		}
 		for count := *r.config.Rounds; count != 0; {
 			select {
 			case <-r.done:
@@ -137,10 +142,16 @@ func (r *Receiver) Receive(next receiver.NextFn) error {
 				r.eventBytesCounter.Add(ctx, int64(len(buf)))
 				e, err := event.New(ctx, r.config.Payload, event.WithAck(
 					func(evt event.Event) {
+						if *r.config.Rounds > 0 {
+							eventsDone.Done()
+						}
 						r.eventSuccessCounter.Add(ctx, 1)
 						cancel()
 					}, func(evt event.Event, err error) {
 						r.logger.Error().Str("op", "debug.Receive").Msg("failed to process message: " + err.Error())
+						if *r.config.Rounds > 0 {
+							eventsDone.Done()
+						}
 						r.eventFailureCounter.Add(ctx, 1)
 						cancel()
 					}),
@@ -157,6 +168,7 @@ func (r *Receiver) Receive(next receiver.NextFn) error {
 				}
 			}
 		}
+		eventsDone.Wait()
 	}()
 	<-r.done
 	return nil
