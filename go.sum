@@ -461,8 +461,9 @@ go.opentelemetry.io/otel/internal/metric v0.23.0 h1:mPfzm9Iqhw7G2nDBmUAjFTfPqLZP
 go.opentelemetry.io/otel/internal/metric v0.23.0/go.mod h1:z+RPiDJe30YnCrOhFGivwBS+DU1JU/PiLKkk4re2DNY=
 go.opentelemetry.io/otel/metric v0.23.0 h1:mYCcDxi60P4T27/0jchIDFa1WHEfQeU3zH9UEMpnj2c=
 go.opentelemetry.io/otel/metric v0.23.0/go.mod h1:G/Nn9InyNnIv7J6YVkQfpc0JCfKBNJaERBGw08nqmVQ=
-go.opentelemetry.io/otel/sdk v1.0.0-RC3 h1:iRMkET+EmJUn5mW0hJzygBraXRmrUwzbOtNvTCh/oKs=
 go.opentelemetry.io/otel/sdk v1.0.0-RC3/go.mod h1:78H6hyg2fka0NYT9fqGuFLvly2yCxiBXDJAgLKo/2Us=
+go.opentelemetry.io/otel/sdk v1.10.0 h1:jZ6K7sVn04kk/3DNUdJ4mqRlGDiXAVuIG+MMENpTNdY=
+go.opentelemetry.io/otel/sdk v1.10.0/go.mod h1:vO06iKzD5baltJz1zarxMCNHFpUlUiOy4s65ECtn6kE=
 go.opentelemetry.io/otel/sdk/export/metric v0.23.0 h1:7NeoKPPx6NdZBVHLEp/LY5Lq85Ff1WNZnuJkuRy+azw=
 go.opentelemetry.io/otel/sdk/export/metric v0.23.0/go.mod h1:SuMiREmKVRIwFKq73zvGTvwFpxb/ZAYkMfyqMoOtDqs=
 go.opentelemetry.io/otel/sdk/metric v0.23.0 h1:xlZhPbiue1+jjSFEth94q9QCmX8Q24mOtue9IAmlVyI=
