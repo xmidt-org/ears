@@ -42,15 +42,15 @@ require (
 	go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux v0.23.0
 	go.opentelemetry.io/contrib/propagators v0.22.0
 	go.opentelemetry.io/otel v1.10.0
-	go.opentelemetry.io/otel/exporters/otlp/otlpmetric v0.23.0
+	go.opentelemetry.io/otel/exporters/otlp/otlpmetric v0.31.0
 	go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc v0.23.0
 	go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc v1.0.0-RC3
 	go.opentelemetry.io/otel/exporters/stdout/stdoutmetric v0.23.0
 	go.opentelemetry.io/otel/exporters/stdout/stdouttrace v1.10.0
-	go.opentelemetry.io/otel/metric v0.23.0
+	go.opentelemetry.io/otel/metric v0.31.0
 	go.opentelemetry.io/otel/sdk v1.10.0
 	go.opentelemetry.io/otel/sdk/export/metric v0.23.0
-	go.opentelemetry.io/otel/sdk/metric v0.23.0
+	go.opentelemetry.io/otel/sdk/metric v0.31.0
 	go.opentelemetry.io/otel/trace v1.10.0
 	go.uber.org/atomic v1.9.0 // indirect
 	go.uber.org/fx v1.14.2
