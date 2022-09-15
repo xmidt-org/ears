@@ -152,6 +152,8 @@ func (c *SimpleHashDistributor) publishChanges() {
 }
 
 func (c *SimpleHashDistributor) hashShards() bool {
+	c.Lock()
+	defer c.Unlock()
 	var myShards []string
 	var myPeerIndex int
 	for i, peer := range c.nodes {
@@ -167,17 +169,13 @@ func (c *SimpleHashDistributor) hashShards() bool {
 	}
 	// check the len of the myShards change
 	if len(myShards) != len(c.ShardConfig.OwnedShards) {
-		c.Lock()
 		c.ShardConfig.OwnedShards = myShards
-		c.Unlock()
 		return true
 	}
 	// check the content of owned shard change
 	for i, shard := range myShards {
 		if shard != c.ShardConfig.OwnedShards[i] {
-			c.Lock()
 			c.ShardConfig.OwnedShards = myShards
-			c.Unlock()
 			return true
 		}
 	}
