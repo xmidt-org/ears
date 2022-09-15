@@ -175,6 +175,7 @@ func (r *Receiver) shardMonitor(svc *kinesis.Kinesis, distributor sharder.ShardD
 			}
 			if !*r.config.UseShardMonitor {
 				// keep the shard monitor on, so we keep listening on the stop channel
+				//r.logger.Info().Str("op", "Kinesis.shardMonitor").Str("stream", *r.stream.StreamDescription.StreamName).Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Msg("shard monitor disabled")
 				continue
 			}
 			stream, err := svc.DescribeStream(&kinesis.DescribeStreamInput{
@@ -354,7 +355,7 @@ func (r *Receiver) startShardReceiverEFO(svc *kinesis.Kinesis, stream *kinesis.D
 					if kinEvt.ContinuationSequenceNumber != nil {
 						params.StartingPosition.Type = aws.String(kinesis.ShardIteratorTypeAtSequenceNumber)
 						params.StartingPosition.SequenceNumber = kinEvt.ContinuationSequenceNumber
-						r.logger.Info().Str("op", "kinesis.startShardReceiverEFO").Str("stream", *r.stream.StreamDescription.StreamName).Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Int("shardIdx", shardIdx).Str("continuationSequenceNumber", *kinEvt.ContinuationSequenceNumber).Msg("subscription confirmation")
+						//r.logger.Info().Str("op", "kinesis.startShardReceiverEFO").Str("stream", *r.stream.StreamDescription.StreamName).Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Int("shardIdx", shardIdx).Str("continuationSequenceNumber", *kinEvt.ContinuationSequenceNumber).Msg("subscription confirmation")
 					} else {
 						// shard is closed, wait for shard decommission
 						for {
@@ -610,10 +611,10 @@ func (r *Receiver) shardUpdateListener(distributor sharder.ShardDistributor) {
 		for {
 			select {
 			case config := <-distributor.Updates():
-				r.logger.Info().Str("op", "kinesis.shardUpdateListener").Msg("shard update received")
+				r.logger.Info().Str("op", "kinesis.shardUpdateListener").Str("stream", *r.stream.StreamDescription.StreamName).Str("identity", config.Identity).Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Msg("shard update received")
 				r.updateShards(config)
 			case <-r.shardUpdateListenerStopChannel:
-				r.logger.Info().Str("op", "kinesis.shardUpdateListener").Msg("stopping shard update listener")
+				r.logger.Info().Str("op", "kinesis.shardUpdateListener").Str("stream", *r.stream.StreamDescription.StreamName).Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Msg("stopping shard update listener")
 				return
 			}
 		}
