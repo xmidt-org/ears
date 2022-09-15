@@ -23,6 +23,7 @@ import (
 	"github.com/rs/zerolog"
 	"github.com/xmidt-org/ears/pkg/event"
 	"github.com/xmidt-org/ears/pkg/panics"
+	"sort"
 	"strings"
 	"sync"
 	"time"
@@ -94,7 +95,10 @@ func newDynamoDBNodeManager(identity string, configData StorageConfig) (*dynamoD
 
 func (d *dynamoDBNodeManager) GetActiveNodes() ([]string, error) {
 	if int(time.Since(d.lastUpdateTime).Seconds()) < d.config.UpdateFrequencySeconds && len(d.activeNodes) > 0 {
-		return d.activeNodes, nil
+		d.Lock()
+		an := d.activeNodes
+		d.Unlock()
+		return an, nil
 	}
 	activeNodes := make([]string, 0)
 	keyCond := expression.Key(keyName).Equal(expression.Value(d.config.StorageTag))
@@ -136,8 +140,11 @@ func (d *dynamoDBNodeManager) GetActiveNodes() ([]string, error) {
 		}
 		activeNodes = append(activeNodes, aws.StringValue(ipAttr.S))
 	}
+	sort.Strings(activeNodes)
+	d.Lock()
 	d.activeNodes = activeNodes
 	d.lastUpdateTime = time.Now()
+	d.Unlock()
 	return activeNodes, nil
 }
 
