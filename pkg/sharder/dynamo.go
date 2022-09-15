@@ -23,6 +23,7 @@ import (
 	"github.com/rs/zerolog"
 	"github.com/xmidt-org/ears/pkg/event"
 	"github.com/xmidt-org/ears/pkg/panics"
+	"sort"
 	"strings"
 	"sync"
 	"time"
@@ -136,6 +137,7 @@ func (d *dynamoDBNodeManager) GetActiveNodes() ([]string, error) {
 		}
 		activeNodes = append(activeNodes, aws.StringValue(ipAttr.S))
 	}
+	sort.Strings(activeNodes)
 	d.activeNodes = activeNodes
 	d.lastUpdateTime = time.Now()
 	return activeNodes, nil
