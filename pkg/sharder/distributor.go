@@ -18,7 +18,6 @@ import (
 	"github.com/xmidt-org/ears/pkg/event"
 	"github.com/xmidt-org/ears/pkg/panics"
 	"math/rand"
-	"sort"
 	"strconv"
 	"time"
 )
@@ -92,7 +91,6 @@ func (c *SimpleHashDistributor) nodeMonitor() {
 			if err != nil || aliveNodes == nil {
 				continue
 			}
-			sort.Strings(aliveNodes)
 			var change bool
 			c.Lock()
 			if len(aliveNodes) != len(c.nodes) {
