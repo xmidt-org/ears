@@ -121,16 +121,32 @@ func (c *SimpleHashDistributor) Nodes() []string {
 	return c.nodes
 }
 
+func (c *SimpleHashDistributor) cloneShardConfig(sc ShardConfig) ShardConfig {
+	var csc ShardConfig
+	csc.Identity = sc.Identity
+	csc.NumShards = sc.NumShards
+	if sc.OwnedShards != nil {
+		csc.OwnedShards = make([]string, 0)
+		csc.OwnedShards = append(csc.OwnedShards, sc.OwnedShards...)
+	}
+	return csc
+}
+
 func (c *SimpleHashDistributor) publishChanges() {
-	// c.Lock() is held by nodeMonitor() before calling us
 	if len(c.nodes) == 0 {
+		c.Lock()
 		c.ShardConfig.OwnedShards = nil
-		c.updateChan <- c.ShardConfig
+		sc := c.cloneShardConfig(c.ShardConfig)
+		c.Unlock()
+		c.updateChan <- sc
 		return
 	}
 	changeFlag := c.hashShards()
 	if changeFlag {
-		c.updateChan <- c.ShardConfig
+		c.Lock()
+		sc := c.cloneShardConfig(c.ShardConfig)
+		c.Unlock()
+		c.updateChan <- sc
 		return
 	}
 }
@@ -151,13 +167,17 @@ func (c *SimpleHashDistributor) hashShards() bool {
 	}
 	// check the len of the myShards change
 	if len(myShards) != len(c.ShardConfig.OwnedShards) {
+		c.Lock()
 		c.ShardConfig.OwnedShards = myShards
+		c.Unlock()
 		return true
 	}
 	// check the content of owned shard change
 	for i, shard := range myShards {
 		if shard != c.ShardConfig.OwnedShards[i] {
+			c.Lock()
 			c.ShardConfig.OwnedShards = myShards
+			c.Unlock()
 			return true
 		}
 	}
