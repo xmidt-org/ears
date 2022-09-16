@@ -33,7 +33,6 @@ require (
 	github.com/spf13/cobra v1.2.1
 	github.com/spf13/pflag v1.0.5
 	github.com/spf13/viper v1.8.1
-	github.com/stretchr/testify v1.7.1 // indirect
 	github.com/xeipuuv/gojsonpointer v0.0.0-20190905194746-02993c407bfb // indirect
 	github.com/xeipuuv/gojsonschema v1.2.0
 	github.com/xorcare/pointer v1.2.1
@@ -52,7 +51,7 @@ require (
 	go.opentelemetry.io/otel/sdk/metric v0.23.0
 	go.opentelemetry.io/otel/trace v1.0.0-RC3
 	go.uber.org/atomic v1.9.0 // indirect
-	go.uber.org/fx v1.14.2
+	go.uber.org/fx v1.18.1
 	go.uber.org/multierr v1.7.0 // indirect
 	go.uber.org/zap v1.19.1 // indirect
 	golang.org/x/crypto v0.0.0-20210817164053-32db794688a5 // indirect
