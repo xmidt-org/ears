@@ -3,8 +3,9 @@
 There are some useful techniques available to you for developing, testing and debugging routes in EARS.
 Often times you can debug a route by either replacing sender and receiver plugins with debug plugins or
 by adding special filter plugins, such as the log filter, to gain more visibility into how the route
-operates on a particular event payload. In other situations it is helpful to temporarily creare a helper
-route that can be removed once testing is complete.
+operates on a particular event payload. In other situations it is helpful to temporarily create a helper
+route that can be removed once testing is complete. Finally, there is a convenience REST API to inject
+test events into existing routes.
 
 The tools EARS offers for this purpose are:
 
@@ -82,7 +83,7 @@ http plugin as a webhook or even a debug receiver plugin to inject any number of
 
 ## Technique 4 - Drain Data Sources
 
-Sometime you end up with some data source that is clogged with old test events you want to get rid of. Again a route
+Sometimes you end up with some data source that is clogged with old test events you want to get rid of. Again a route
 can come to the rescue. Simply deploy a drain route that consumes all events from your data source and throws them
 away by sending them to a debug sender.
 
@@ -111,5 +112,15 @@ Example:
   }
 }
 ```
+
+## Technique 5 - Inject Test Events
+
+You can inject individual test events into existing routes using tools like curl or Postmaster. Here is
+an example:
+
+```
+curl -X POST http://localhost:3000/ears/v1/orgs/myorg/applications/myapp/routes/r100/event --data @event.json
+```
+
 
 
