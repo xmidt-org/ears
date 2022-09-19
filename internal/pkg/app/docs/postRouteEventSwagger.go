@@ -14,18 +14,8 @@
 
 package docs
 
-// swagger:parameters putRoute postRoute getRoute deleteRoute putTenant getTenant deleteTenant postRouteEvent
-type appIdParamWrapper struct {
-	// App ID
-	// in: path
-	// required: true
-	AppId string `json:"appId"`
-}
-
-// swagger:parameters putRoute postRoute getRoute deleteRoute putTenant getTenant deleteTenant postRouteEvent
-type orgIdParamWrapper struct {
-	// Org ID
-	// in: path
-	// required: true
-	OrgId string `json:"orgId"`
-}
+// swagger:route POST /v1/orgs/{orgId}/applications/{appId}/routes/{routeId}/event routes postRouteEvent
+// Injects a test event into an existing route.
+// responses:
+//   200: SuccessResponse
+//   500: ErrorResponse
