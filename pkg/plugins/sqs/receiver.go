@@ -171,7 +171,7 @@ func (r *Receiver) startReceiveWorker(svc *sqs.SQS, n int) {
 						Str("stackTrace", panicErr.StackTrace()).Msg("A panic has occurred while batch deleting messages")
 				}
 			}()
-			deleteBatch := make([]*sqs.DeleteMessageBatchRequestEntry, 0)
+			deleteMap := make(map[string]*sqs.DeleteMessageBatchRequestEntry, 0)
 			for {
 				var delEntry *sqs.DeleteMessageBatchRequestEntry
 				select {
@@ -181,10 +181,14 @@ func (r *Receiver) startReceiveWorker(svc *sqs.SQS, n int) {
 					delEntry = nil
 				}
 				if delEntry != nil && !*r.config.NeverDelete {
-					deleteBatch = append(deleteBatch, delEntry)
+					// collect in map to avoid duplicate IDs
+					deleteMap[*delEntry.Id] = delEntry
 				}
-
-				if len(deleteBatch) >= *r.config.MaxNumberOfMessages || (delEntry == nil && len(deleteBatch) > 0) {
+				if len(deleteMap) >= *r.config.MaxNumberOfMessages || (delEntry == nil && len(deleteMap) > 0) {
+					deleteBatch := make([]*sqs.DeleteMessageBatchRequestEntry, 0)
+					for _, de := range deleteMap {
+						deleteBatch = append(deleteBatch, de)
+					}
 					deleteParams := &sqs.DeleteMessageBatchInput{
 						Entries:  deleteBatch,
 						QueueUrl: aws.String(r.config.QueueUrl),
@@ -201,7 +205,7 @@ func (r *Receiver) startReceiveWorker(svc *sqs.SQS, n int) {
 							r.logger.Info().Str("op", "SQS.receiveWorker").Int("batchSize", len(deleteBatch)).Int("workerNum", n).Msg("deleted message " + (*entry.Id))
 						}*/
 					}
-					deleteBatch = make([]*sqs.DeleteMessageBatchRequestEntry, 0)
+					deleteMap = make(map[string]*sqs.DeleteMessageBatchRequestEntry, 0)
 				}
 				r.Lock()
 				stopNow := r.stopped
@@ -281,7 +285,6 @@ func (r *Receiver) startReceiveWorker(svc *sqs.SQS, n int) {
 					cancel()
 					continue
 				}
-
 				r.eventBytesCounter.Add(ctx, int64(len(*message.Body)))
 				e, err := event.New(ctx, payload, event.WithMetadataKeyValue("sqsMessage", *message), event.WithAck(
 					func(e event.Event) {
