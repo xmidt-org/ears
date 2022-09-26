@@ -56,7 +56,8 @@ func (f *Filter) Filter(evt event.Event) []event.Event {
 	}
 	obj, _, _ := evt.GetPathValue(f.config.FromPath)
 	if obj == nil {
-		log.Ctx(evt.Context()).Error().Str("op", "filter").Str("filterType", "regex").Str("name", f.Name()).Msg("nil object at " + f.config.FromPath)
+		buf, _ := json.Marshal(evt.Payload())
+		log.Ctx(evt.Context()).Error().Str("op", "filter").Str("filterType", "regex").Str("name", f.Name()).RawJSON("payload", buf).Msg("nil object at " + f.config.FromPath)
 		if span := trace.SpanFromContext(evt.Context()); span != nil {
 			span.AddEvent("nil object at " + f.config.FromPath)
 		}

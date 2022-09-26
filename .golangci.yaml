@@ -121,6 +121,12 @@ issues:
     - path: pkg/plugins/http/sender\.go
       linters:
         - funlen
+    - path: pkg/filter/regex/regex\.go
+      linters:
+        - funlen
+    - path: pkg/filter/batch/filter\.go
+      linters:
+        - funlen
     - path: pkg/ratelimit/adaptive_limiter\.go
       linters:
         - funlen
