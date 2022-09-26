@@ -37,6 +37,9 @@ func (c Config) WithDefaults() *Config {
 	if c.FromPath == "" {
 		cfg.FromPath = DefaultConfig.FromPath
 	}
+	if c.From == "" {
+		cfg.From = DefaultConfig.From
+	}
 	if c.ToPath == "" {
 		cfg.ToPath = DefaultConfig.ToPath
 	}
