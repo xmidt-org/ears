@@ -1,0 +1,22 @@
+{
+  "content": {
+    "accountId": "SomeAccountId",
+    "adapterId": "foo-adapter",
+    "description": "operation",
+    "deviceId": "",
+    "eventId": "468adf80-dc9d-11e4-989a-41f236438965",
+    "hash": {
+      "accountIdHashMd5Hex1": "0d4c4b08f12d47fc3e10abc5050b30a7",
+      "accountIdHashMd5Hex2": "c2850de62ed9f3f59202b6ca799b3d76",
+      "accountIdHashMd5Hex3": "3858f62230ac3c915f300c664312c63f"
+    },
+    "name": "name",
+    "timestamp": 1428352877944,
+    "title": "title",
+    "type": "type",
+    "value": "name"
+  },
+  "sequence": 1428352877944,
+  "timestamp": 1428352877944,
+  "topic": "some/test/topic"
+}
