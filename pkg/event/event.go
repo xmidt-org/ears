@@ -355,6 +355,36 @@ func (e *event) getChildElement(curr interface{}, segment string) (interface{}, 
 	return nil, nil, "", -1
 }
 
+func (e *event) Evaluate(expression interface{}) (interface{}, interface{}, string) {
+	switch expr := expression.(type) {
+	case string:
+		for {
+			si := strings.Index(expr, "{")
+			ei := strings.Index(expr, "}")
+			if si < 0 || ei < 0 {
+				break
+			}
+			path := expr[si+1 : ei]
+			v, pr, ky := e.GetPathValue(path)
+			v = deepcopy.DeepCopy(v)
+			if si == 0 && ei == len(expr)-1 {
+				return v, pr, ky
+			}
+			switch vt := v.(type) {
+			case string:
+				expr = expr[0:si] + vt + expr[ei+1:]
+			default:
+				sv, _ := json.Marshal(vt)
+				expr = expr[0:si] + string(sv) + expr[ei+1:]
+			}
+		}
+		return expr, nil, ""
+	default:
+		return expression, nil, ""
+	}
+	return expression, nil, ""
+}
+
 func (e *event) GetPathValue(path string) (interface{}, interface{}, string) {
 	if path == TRACE+".id" {
 		traceId := trace.SpanFromContext(e.ctx).SpanContext().TraceID().String()

@@ -72,6 +72,10 @@ type Event interface {
 	// if one exists along with its parent object and parent key if those exist
 	GetPathValue(path string) (interface{}, interface{}, string)
 
+	//Evaluate processes expressions like "my {payload.some.feature} thing", if the expression is a
+	// simple path like "{payload.some.feature}" it will act like GetPathValue()
+	Evaluate(expression interface{}) (interface{}, interface{}, string)
+
 	//Replace the current event context
 	//Will return an error if the event is done
 	SetContext(ctx context.Context) error
