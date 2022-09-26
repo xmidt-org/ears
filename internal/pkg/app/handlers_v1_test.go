@@ -42,6 +42,7 @@ import (
 	"github.com/xmidt-org/ears/pkg/plugins/decode"
 	"github.com/xmidt-org/ears/pkg/plugins/dedup"
 	"github.com/xmidt-org/ears/pkg/plugins/encode"
+	"github.com/xmidt-org/ears/pkg/plugins/gears"
 	"github.com/xmidt-org/ears/pkg/plugins/hash"
 	http_plugin "github.com/xmidt-org/ears/pkg/plugins/http"
 	"github.com/xmidt-org/ears/pkg/plugins/js"
@@ -510,6 +511,10 @@ func setupRestApi(config config.Config, storageMgr route.RouteStorer, setupQuota
 		{
 			name:   "kafka",
 			plugin: toArr(kafka.NewPluginVersion("kafka", "", ""))[0].(pkgplugin.Pluginer),
+		},
+		{
+			name:   "gears",
+			plugin: toArr(gears.NewPluginVersion("gears", "", ""))[0].(pkgplugin.Pluginer),
 		},
 		{
 			name:   "match",
