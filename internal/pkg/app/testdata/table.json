@@ -508,6 +508,22 @@
           "expectedEventPayloadFile": "event21"
         }
       ]
+    },
+    "simpleFilterHashRouteTwo": {
+      "seq": 30,
+      "disabled": false,
+      "routeFiles": [
+        "simpleFilterHashRouteTwo"
+      ],
+      "waitMs": 1000,
+      "events": [
+        {
+          "senderRouteFiles": "simpleFilterHashRouteTwo",
+          "expectedEventCount": 5,
+          "expectedEventIndex": 0,
+          "expectedEventPayloadFile": "event22"
+        }
+      ]
     }
   }
 }
