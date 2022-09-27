@@ -35,6 +35,7 @@ import (
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/global"
 	"go.opentelemetry.io/otel/metric/unit"
+	"hash/fnv"
 	"strings"
 	"time"
 )
@@ -383,11 +384,46 @@ func (s *Sender) Send(e event.Event) {
 		s.getMetrics(s.getLabelValues(e, s.config.DynamicMetricLabels)).eventFailureCounter.Add(e.Context(), 1.0)
 		return
 	}
-
-	//TODO: create envelope here
-
-	buf, err := json.Marshal(e.Payload())
-
+	to := make(map[string]string, 0)
+	obj, _, _ := e.Evaluate(s.config.Partner)
+	if obj != nil {
+		switch partner := obj.(type) {
+		case string:
+			to["partner"] = partner
+		}
+	}
+	obj, _, _ = e.Evaluate(s.config.App)
+	if obj != nil {
+		switch app := obj.(type) {
+		case string:
+			to["app"] = app
+		}
+	}
+	obj, _, _ = e.Evaluate(s.config.Location)
+	// TODO: what about arrays of locations
+	if obj != nil {
+		switch location := obj.(type) {
+		case string:
+			to["location"] = location
+		}
+	}
+	// TODO: check for missing routing information
+	tx := make(map[string]string, 0)
+	obj, _, _ = e.Evaluate("{trace.id}")
+	if obj != nil {
+		switch txid := obj.(type) {
+		case string:
+			tx["traceId"] = txid
+		}
+	}
+	message := make(map[string]interface{}, 0)
+	message["op"] = "process"
+	message["payload"] = e.Payload()
+	envelope := make(map[string]interface{}, 0)
+	envelope["message"] = message
+	envelope["to"] = to
+	envelope["tx"] = tx
+	buf, err := json.Marshal(envelope)
 	if err != nil {
 		log.Ctx(e.Context()).Error().Str("op", "kafka.Send").Str("name", s.Name()).Str("tid", s.Tenant().ToString()).Msg("failed to marshal message: " + err.Error())
 		s.getMetrics(s.getLabelValues(e, s.config.DynamicMetricLabels)).eventFailureCounter.Add(e.Context(), 1.0)
@@ -396,20 +432,11 @@ func (s *Sender) Send(e event.Event) {
 	}
 	s.getMetrics(s.getLabelValues(e, s.config.DynamicMetricLabels)).eventProcessingTime.Record(e.Context(), time.Since(e.Created()).Milliseconds())
 	s.getMetrics(s.getLabelValues(e, s.config.DynamicMetricLabels)).eventBytesCounter.Add(e.Context(), int64(len(buf)))
-	partition := -1
-
-	//TODO: figure out partition here
-
-	/*if s.config.PartitionPath != "" {
-		val, _, _ := e.GetPathValue(s.config.PartitionPath)
-		intVal, ok := val.(int)
-		if ok {
-			partition = intVal
-		}
-	} else {
-		partition = *s.config.Partition
-	}*/
-
+	//partition := -1
+	hashbuf := []byte(to["location"])
+	h := fnv.New32a()
+	h.Write(hashbuf)
+	partition := int(h.Sum32())
 	err = s.producer.SendMessage(e.Context(), s.config.Topic, partition, nil, buf, e)
 	if err != nil {
 		log.Ctx(e.Context()).Error().Str("op", "kafka.Send").Str("name", s.Name()).Str("tid", s.Tenant().ToString()).Msg("failed to send message: " + err.Error())
