@@ -423,11 +423,21 @@ func (s *Sender) Send(e event.Event) {
 		case string:
 			locations = append(locations, loc)
 		case []string:
-			locations = append(locations, loc...)
+			for _, ls := range loc {
+				obj, _, _ := e.Evaluate(ls)
+				switch sls := obj.(type) {
+				case string:
+					locations = append(locations, sls)
+				}
+			}
 		case []interface{}:
 			for _, l := range loc {
 				if ls, ok := l.(string); ok {
-					locations = append(locations, ls)
+					obj, _, _ := e.Evaluate(ls)
+					switch sls := obj.(type) {
+					case string:
+						locations = append(locations, sls)
+					}
 				}
 			}
 		}

@@ -82,7 +82,7 @@ const senderSchema = `
                     "type": "string"
                 },
                 "location": {
-                    "type": "object"
+                    "type": ["string", "array"]
                 },
                 "app": {
                     "type": "string"
