@@ -35,6 +35,7 @@ import (
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/global"
 	"go.opentelemetry.io/otel/metric/unit"
+	"go.opentelemetry.io/otel/trace"
 	"hash/fnv"
 	"strings"
 	"time"
@@ -365,7 +366,7 @@ func (p *Producer) SendMessage(ctx context.Context, topic string, partition int,
 	// override log values if any
 	elapsed := time.Since(start).Milliseconds()
 	p.sender.getMetrics(p.sender.getLabelValues(e, p.sender.config.DynamicMetricLabels)).eventSendOutTime.Record(ctx, elapsed)
-	log.Ctx(ctx).Debug().Str("op", "kafka.Send").Int("elapsed", int(elapsed)).Int("partition", int(part)).Int("offset", int(offset)).Msg("sent message on kafka topic")
+	log.Ctx(ctx).Debug().Str("op", "gears.Send").Int("elapsed", int(elapsed)).Int("partition", int(part)).Int("offset", int(offset)).Msg("sent message on gears topic")
 	return nil
 }
 
@@ -380,7 +381,7 @@ func (mp *ManualHashPartitioner) Partition(message *sarama.ProducerMessage, numP
 
 func (s *Sender) Send(e event.Event) {
 	if s.stopped {
-		log.Ctx(e.Context()).Error().Str("op", "kafka.Send").Str("name", s.Name()).Str("tid", s.Tenant().ToString()).Msg("drop message due to closed sender")
+		log.Ctx(e.Context()).Error().Str("op", "gears.Send").Str("name", s.Name()).Str("tid", s.Tenant().ToString()).Msg("drop message due to closed sender")
 		s.getMetrics(s.getLabelValues(e, s.config.DynamicMetricLabels)).eventFailureCounter.Add(e.Context(), 1.0)
 		return
 	}
@@ -392,6 +393,14 @@ func (s *Sender) Send(e event.Event) {
 			to["partner"] = partner
 		}
 	}
+	if to["partner"] == "" {
+		log.Ctx(e.Context()).Error().Str("op", "gears.Send").Str("name", s.Name()).Str("tid", s.Tenant().ToString()).Msg("missing gears routing information partner")
+		if span := trace.SpanFromContext(e.Context()); span != nil {
+			span.AddEvent("missing partner")
+		}
+		e.Ack()
+		return
+	}
 	obj, _, _ = e.Evaluate(s.config.App)
 	if obj != nil {
 		switch app := obj.(type) {
@@ -399,15 +408,38 @@ func (s *Sender) Send(e event.Event) {
 			to["app"] = app
 		}
 	}
+	if to["app"] == "" {
+		log.Ctx(e.Context()).Error().Str("op", "gears.Send").Str("name", s.Name()).Str("tid", s.Tenant().ToString()).Msg("missing gears routing information app")
+		if span := trace.SpanFromContext(e.Context()); span != nil {
+			span.AddEvent("missing app")
+		}
+		e.Ack()
+		return
+	}
+	locations := make([]string, 0)
 	obj, _, _ = e.Evaluate(s.config.Location)
-	// TODO: what about arrays of locations
 	if obj != nil {
-		switch location := obj.(type) {
+		switch loc := obj.(type) {
 		case string:
-			to["location"] = location
+			locations = append(locations, loc)
+		case []string:
+			locations = append(locations, loc...)
+		case []interface{}:
+			for _, l := range loc {
+				if ls, ok := l.(string); ok {
+					locations = append(locations, ls)
+				}
+			}
 		}
 	}
-	// TODO: check for missing routing information
+	if len(locations) == 0 {
+		log.Ctx(e.Context()).Error().Str("op", "gears.Send").Str("name", s.Name()).Str("tid", s.Tenant().ToString()).Msg("missing gears routing information location")
+		if span := trace.SpanFromContext(e.Context()); span != nil {
+			span.AddEvent("missing location")
+		}
+		e.Ack()
+		return
+	}
 	tx := make(map[string]string, 0)
 	obj, _, _ = e.Evaluate("{trace.id}")
 	if obj != nil {
@@ -423,32 +455,34 @@ func (s *Sender) Send(e event.Event) {
 	envelope["message"] = message
 	envelope["to"] = to
 	envelope["tx"] = tx
-	buf, err := json.Marshal(envelope)
-	if err != nil {
-		log.Ctx(e.Context()).Error().Str("op", "kafka.Send").Str("name", s.Name()).Str("tid", s.Tenant().ToString()).Msg("failed to marshal message: " + err.Error())
-		s.getMetrics(s.getLabelValues(e, s.config.DynamicMetricLabels)).eventFailureCounter.Add(e.Context(), 1.0)
-		e.Nack(err)
-		return
+	for _, l := range locations {
+		to["location"] = l
+		buf, err := json.Marshal(envelope)
+		if err != nil {
+			log.Ctx(e.Context()).Error().Str("op", "gears.Send").Str("name", s.Name()).Str("tid", s.Tenant().ToString()).Msg("failed to marshal message: " + err.Error())
+			s.getMetrics(s.getLabelValues(e, s.config.DynamicMetricLabels)).eventFailureCounter.Add(e.Context(), 1.0)
+			e.Nack(err)
+			return
+		}
+		s.getMetrics(s.getLabelValues(e, s.config.DynamicMetricLabels)).eventProcessingTime.Record(e.Context(), time.Since(e.Created()).Milliseconds())
+		s.getMetrics(s.getLabelValues(e, s.config.DynamicMetricLabels)).eventBytesCounter.Add(e.Context(), int64(len(buf)))
+		hashbuf := []byte(to["location"])
+		h := fnv.New32a()
+		h.Write(hashbuf)
+		partition := int(h.Sum32())
+		err = s.producer.SendMessage(e.Context(), s.config.Topic, partition, nil, buf, e)
+		if err != nil {
+			log.Ctx(e.Context()).Error().Str("op", "gears.Send").Str("name", s.Name()).Str("tid", s.Tenant().ToString()).Msg("failed to send message: " + err.Error())
+			s.getMetrics(s.getLabelValues(e, s.config.DynamicMetricLabels)).eventFailureCounter.Add(e.Context(), 1)
+			e.Nack(err)
+			return
+		}
+		s.getMetrics(s.getLabelValues(e, s.config.DynamicMetricLabels)).eventSuccessCounter.Add(e.Context(), 1)
+		s.Lock()
+		s.count++
+		log.Ctx(e.Context()).Debug().Str("op", "gears.Send").Str("name", s.Name()).Str("tid", s.Tenant().ToString()).Int("count", s.count).Msg("sent message on gears topic")
+		s.Unlock()
 	}
-	s.getMetrics(s.getLabelValues(e, s.config.DynamicMetricLabels)).eventProcessingTime.Record(e.Context(), time.Since(e.Created()).Milliseconds())
-	s.getMetrics(s.getLabelValues(e, s.config.DynamicMetricLabels)).eventBytesCounter.Add(e.Context(), int64(len(buf)))
-	//partition := -1
-	hashbuf := []byte(to["location"])
-	h := fnv.New32a()
-	h.Write(hashbuf)
-	partition := int(h.Sum32())
-	err = s.producer.SendMessage(e.Context(), s.config.Topic, partition, nil, buf, e)
-	if err != nil {
-		log.Ctx(e.Context()).Error().Str("op", "kafka.Send").Str("name", s.Name()).Str("tid", s.Tenant().ToString()).Msg("failed to send message: " + err.Error())
-		s.getMetrics(s.getLabelValues(e, s.config.DynamicMetricLabels)).eventFailureCounter.Add(e.Context(), 1)
-		e.Nack(err)
-		return
-	}
-	s.getMetrics(s.getLabelValues(e, s.config.DynamicMetricLabels)).eventSuccessCounter.Add(e.Context(), 1)
-	s.Lock()
-	s.count++
-	log.Ctx(e.Context()).Debug().Str("op", "kafka.Send").Str("name", s.Name()).Str("tid", s.Tenant().ToString()).Int("count", s.count).Msg("sent message on kafka topic")
-	s.Unlock()
 	e.Ack()
 }
 
