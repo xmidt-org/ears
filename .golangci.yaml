@@ -89,6 +89,9 @@ issues:
     - path: pkg/plugins/gears/receiver\.go
       linters:
         - funlen
+    - path: pkg/plugins/gears/sender\.go
+      linters:
+        - funlen
     - path: pkg/sharder/distributor\.go
       linters:
         - gosec
