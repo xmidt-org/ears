@@ -1,0 +1,82 @@
+{
+  "status": {
+    "code": 200,
+    "message": "OK"
+  },
+  "item": {
+    "deliveryMode": "whoCares",
+    "filterChain": [
+      {
+        "config": {
+          "encoding": "hex",
+          "from": "{.content.accountId}",
+          "hashAlgorithm": "md5",
+          "toPath": ".content.hash.accountIdHashMd5Hex1"
+        },
+        "name": "simpleHashMd5HexFilterRouteTwoFilter1",
+        "plugin": "hash"
+      },
+      {
+        "config": {
+          "encoding": "hex",
+          "from": "foo{.content.accountId}bar",
+          "hashAlgorithm": "md5",
+          "toPath": ".content.hash.accountIdHashMd5Hex2"
+        },
+        "name": "simpleHashMd5HexFilterRouteTwoFilter2",
+        "plugin": "hash"
+      },
+      {
+        "config": {
+          "encoding": "hex",
+          "from": "foobar",
+          "hashAlgorithm": "md5",
+          "toPath": ".content.hash.accountIdHashMd5Hex3"
+        },
+        "name": "simpleHashMd5HexFilterRouteTwoFilter3",
+        "plugin": "hash"
+      }
+    ],
+    "id": "hash102",
+    "name": "tbltstsimpleFilterHashRouteTwosimpleHashFilterRouteTwo",
+    "receiver": {
+      "config": {
+        "intervalMs": 10,
+        "maxHistory": 100,
+        "payload": {
+          "content": {
+            "accountId": "SomeAccountId",
+            "adapterId": "foo-adapter",
+            "description": "operation",
+            "deviceId": "",
+            "eventId": "468adf80-dc9d-11e4-989a-41f236438965",
+            "name": "name",
+            "timestamp": 1428352877944,
+            "title": "title",
+            "type": "type",
+            "value": "name"
+          },
+          "sequence": 1428352877944,
+          "timestamp": 1428352877944,
+          "topic": "some/test/topic"
+        },
+        "rounds": 5
+      },
+      "name": "tbltstsimpleFilterHashRouteTwosimpleHashFilterRouteTwoReceiver",
+      "plugin": "debug"
+    },
+    "sender": {
+      "config": {
+        "destination": "stdout",
+        "maxHistory": 100
+      },
+      "name": "tbltstsimpleFilterHashRouteTwosimpleHashFilterRouteTwoSender",
+      "plugin": "debug"
+    },
+    "tenant": {
+      "appId": "myapp",
+      "orgId": "myorg"
+    },
+    "userId": "boris"
+  }
+}
