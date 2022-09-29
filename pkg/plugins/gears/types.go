@@ -15,23 +15,18 @@
 package gears
 
 import (
-	"context"
 	"github.com/Shopify/sarama"
 	"github.com/rs/zerolog"
 	pkgplugin "github.com/xmidt-org/ears/pkg/plugin"
-	"github.com/xmidt-org/ears/pkg/receiver"
 	"github.com/xmidt-org/ears/pkg/secret"
+	"github.com/xmidt-org/ears/pkg/sender"
 	"github.com/xmidt-org/ears/pkg/tenant"
 	"github.com/xorcare/pointer"
 	"go.opentelemetry.io/otel/metric"
 	"sync"
-	"time"
-
-	"github.com/xmidt-org/ears/pkg/sender"
 )
 
 var _ sender.Sender = (*Sender)(nil)
-var _ receiver.Receiver = (*Receiver)(nil)
 
 var (
 	Name     = "gears"
@@ -49,66 +44,7 @@ func NewPluginVersion(name string, version string, commitID string) (*pkgplugin.
 		pkgplugin.WithVersion(version),
 		pkgplugin.WithCommitID(commitID),
 		pkgplugin.WithNewSender(NewSender),
-		pkgplugin.WithNewReceiver(NewReceiver),
 	)
-}
-
-var DefaultReceiverConfig = ReceiverConfig{
-	Brokers:            "localhost:9092",
-	Topic:              "quickstart-events",
-	GroupId:            "",
-	Username:           "",
-	Password:           "",
-	CACert:             "",
-	AccessCert:         "",
-	AccessKey:          "",
-	Version:            "",
-	CommitInterval:     pointer.Int(1),
-	ChannelBufferSize:  pointer.Int(0),
-	TracePayloadOnNack: pointer.Bool(false),
-}
-
-type ReceiverConfig struct {
-	Brokers             string `json:"brokers,omitempty"`
-	Topic               string `json:"topic,omitempty"`
-	GroupId             string `json:"groupId,omitempty"`
-	Username            string `json:"username,omitempty"` // yaml
-	Password            string `json:"password,omitempty"`
-	CACert              string `json:"caCert,omitempty"`
-	AccessCert          string `json:"accessCert,omitempty"`
-	AccessKey           string `json:"accessKey,omitempty"`
-	Version             string `json:"version,omitempty"`
-	CommitInterval      *int   `json:"commitInterval,omitempty"`
-	ChannelBufferSize   *int   `json:"channelBufferSize,omitempty"`
-	ConsumeByPartitions bool   `json:"consumeByPartitions,omitempty"`
-	TLSEnable           bool   `json:"tlsEnable,omitempty"`
-	TracePayloadOnNack  *bool  `json:"tracePayloadOnNack,omitempty"`
-}
-
-type Receiver struct {
-	sync.Mutex
-	done      chan struct{}
-	stopped   bool
-	config    ReceiverConfig
-	name      string
-	plugin    string
-	tid       tenant.Id
-	next      receiver.NextFn
-	logger    *zerolog.Logger
-	count     int
-	startTime time.Time
-	sarama.ConsumerGroupSession
-	wg                  sync.WaitGroup
-	ready               chan bool
-	cancel              context.CancelFunc
-	ctx                 context.Context
-	client              sarama.ConsumerGroup
-	topics              []string
-	handler             func(message *sarama.ConsumerMessage) bool
-	eventSuccessCounter metric.BoundInt64Counter
-	eventFailureCounter metric.BoundInt64Counter
-	eventBytesCounter   metric.BoundInt64Counter
-	secrets             secret.Vault
 }
 
 var DefaultSenderConfig = SenderConfig{
