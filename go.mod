@@ -3,8 +3,8 @@ module github.com/xmidt-org/ears
 go 1.16
 
 require (
-	github.com/Shopify/sarama v1.29.1
-	github.com/aws/aws-sdk-go v1.44.104
+	github.com/Shopify/sarama v1.37.0
+	github.com/aws/aws-sdk-go v1.44.107
 	github.com/boriwo/deepcopy v0.0.0-20220804211148-d5122121a902
 	github.com/dop251/goja v0.0.0-20210912140721-ac5354e9a820
 	github.com/fatih/color v1.12.0 // indirect
@@ -14,7 +14,6 @@ require (
 	github.com/go-redis/redis/v8 v8.11.5
 	github.com/goccy/go-yaml v1.9.3
 	github.com/golang-jwt/jwt v3.2.2+incompatible
-	github.com/golang/snappy v0.0.4 // indirect
 	github.com/google/go-cmp v0.5.9
 	github.com/google/uuid v1.3.0
 	github.com/gopherjs/gopherjs v0.0.0-20181103185306-d547d1d9531e // indirect
@@ -51,11 +50,10 @@ require (
 	go.opentelemetry.io/otel/sdk/metric v0.23.0
 	go.opentelemetry.io/otel/trace v1.0.0-RC3
 	go.uber.org/atomic v1.9.0 // indirect
-	go.uber.org/fx v1.18.1
+	go.uber.org/fx v1.18.2
 	go.uber.org/multierr v1.7.0 // indirect
 	go.uber.org/zap v1.19.1 // indirect
-	golang.org/x/crypto v0.0.0-20210817164053-32db794688a5 // indirect
-	golang.org/x/net v0.0.0-20220127200216-cd36cc0744dd
+	golang.org/x/net v0.0.0-20220927171203-f486391704dc
 	golang.org/x/time v0.0.0-20210723032227-1f47c861a9ac
 	gopkg.in/ini.v1 v1.63.0 // indirect
 	gopkg.in/yaml.v2 v2.4.0
