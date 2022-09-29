@@ -31,6 +31,7 @@ const (
 	EARSPluginTypeSQSSender     = "sqsSender"
 	EARSPluginTypeKinesisSender = "kinesisSender"
 	EARSPluginTypeKafkaSender   = "kafkaSender"
+	EARSPluginTypeGearsSender   = "gearsSender"
 	EARSPluginTypeHttpSender    = "httpSender"
 	EARSPluginTypeRedisSender   = "redisSender"
 
@@ -41,6 +42,7 @@ const (
 	EARSPluginTypeSQSReceiver     = "sqsReceiver"
 	EARSPluginTypeKinesisReceiver = "kinesisReceiver"
 	EARSPluginTypeKafkaReceiver   = "kafkaReceiver"
+	EARSPluginTypeGearsReceiver   = "gearsReceiver"
 	EARSPluginTypeHttpReceiver    = "httpReceiver"
 	EARSPluginTypeRedisReceiver   = "redisReceiver"
 

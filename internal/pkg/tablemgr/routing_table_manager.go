@@ -219,8 +219,8 @@ func (r *DefaultRoutingTableManager) RouteEvent(ctx context.Context, tid tenant.
 	if lrw.Receiver == nil {
 		return errors.New("no receiver for route " + routeId)
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	e, err := event.New(ctx, payload, event.WithAck(
+	sctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	e, err := event.New(sctx, payload, event.WithAck(
 		func(evt event.Event) {
 			cancel()
 		}, func(evt event.Event, err error) {

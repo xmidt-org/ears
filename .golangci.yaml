@@ -86,6 +86,12 @@ issues:
     - path: pkg/plugins/kafka/receiver\.go
       linters:
         - funlen
+    - path: pkg/plugins/gears/receiver\.go
+      linters:
+        - funlen
+    - path: pkg/plugins/gears/sender\.go
+      linters:
+        - funlen
     - path: pkg/sharder/distributor\.go
       linters:
         - gosec
@@ -119,6 +125,12 @@ issues:
       linters:
         - funlen
     - path: pkg/plugins/http/sender\.go
+      linters:
+        - funlen
+    - path: pkg/filter/regex/regex\.go
+      linters:
+        - funlen
+    - path: pkg/filter/batch/filter\.go
       linters:
         - funlen
     - path: pkg/ratelimit/adaptive_limiter\.go
