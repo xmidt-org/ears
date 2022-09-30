@@ -4,7 +4,7 @@ go 1.16
 
 require (
 	github.com/Shopify/sarama v1.37.0
-	github.com/aws/aws-sdk-go v1.44.107
+	github.com/aws/aws-sdk-go v1.44.108
 	github.com/boriwo/deepcopy v0.0.0-20220804211148-d5122121a902
 	github.com/dop251/goja v0.0.0-20210912140721-ac5354e9a820
 	github.com/fatih/color v1.12.0 // indirect
@@ -19,7 +19,6 @@ require (
 	github.com/gopherjs/gopherjs v0.0.0-20181103185306-d547d1d9531e // indirect
 	github.com/gorilla/mux v1.8.0
 	github.com/hashicorp/golang-lru v0.5.4
-	github.com/klauspost/compress v1.15.11 // indirect
 	github.com/onsi/gomega v1.18.1
 	github.com/pelletier/go-toml v1.9.4 // indirect
 	github.com/pierrec/lz4 v2.6.1+incompatible // indirect
