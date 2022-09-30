@@ -78,82 +78,63 @@ func NewSender(tid tenant.Id, plugin string, name string, config interface{}, se
 	if err != nil {
 		return nil, err
 	}
+
+	hostname, _ := os.Hostname()
+	meter := global.Meter(rtsemconv.EARSMeterName)
+	s.commonLabels = []attribute.KeyValue{
+		attribute.String(rtsemconv.EARSPluginTypeLabel, rtsemconv.EARSPluginTypeKafkaSender),
+		attribute.String(rtsemconv.EARSPluginNameLabel, s.Name()),
+		attribute.String(rtsemconv.EARSAppIdLabel, s.tid.AppId),
+		attribute.String(rtsemconv.EARSOrgIdLabel, s.tid.OrgId),
+		attribute.String(rtsemconv.KafkaTopicLabel, s.config.Topic),
+		attribute.String(rtsemconv.HostnameLabel, hostname),
+	}
+
+	s.eventSuccessCounter = metric.Must(meter).
+		NewInt64Counter(
+			rtsemconv.EARSMetricEventSuccess,
+			metric.WithDescription("measures the number of successful events"),
+		)
+	s.eventFailureCounter = metric.Must(meter).
+		NewInt64Counter(
+			rtsemconv.EARSMetricEventFailure,
+			metric.WithDescription("measures the number of unsuccessful events"),
+		)
+	s.eventBytesCounter = metric.Must(meter).
+		NewInt64Counter(
+			rtsemconv.EARSMetricEventBytes,
+			metric.WithDescription("measures the number of event bytes processed"),
+			metric.WithUnit(unit.Bytes),
+		)
+	s.eventProcessingTime = metric.Must(meter).
+		NewInt64Histogram(
+			rtsemconv.EARSMetricEventProcessingTime,
+			metric.WithDescription("measures the time an event spends in ears"),
+			metric.WithUnit(unit.Milliseconds),
+		)
+	s.eventSendOutTime = metric.Must(meter).
+		NewInt64Histogram(
+			rtsemconv.EARSMetricEventSendOutTime,
+			metric.WithDescription("measures the time ears spends to send an event to a downstream data sink"),
+			metric.WithUnit(unit.Milliseconds),
+		)
 	return s, nil
 }
 
-func (s *Sender) getLabelValues(e event.Event, labels []DynamicMetricLabel) []DynamicMetricValue {
-	labelValues := make([]DynamicMetricValue, 0)
+func (s *Sender) getAttributes(e event.Event, labels []DynamicMetricLabel) []attribute.KeyValue {
+	attrs := make([]attribute.KeyValue, 0)
+	for _, label := range s.commonLabels {
+		attrs = append(attrs, label)
+	}
 	for _, label := range labels {
 		obj, _, _ := e.GetPathValue(label.Path)
 		value, ok := obj.(string)
 		if !ok {
 			continue
 		}
-		labelValues = append(labelValues, DynamicMetricValue{Label: label.Label, Value: value})
+		attrs = append(attrs, attribute.String(label.Label, value))
 	}
-	return labelValues
-}
-
-func (s *Sender) getMetrics(labels []DynamicMetricValue) *SenderMetrics {
-	s.Lock()
-	defer s.Unlock()
-	key := ""
-	for _, label := range labels {
-		key += label.Label + "-" + label.Value + "-"
-	}
-	if s.metrics == nil {
-		s.metrics = make(map[string]*SenderMetrics)
-	}
-	m, ok := s.metrics[key]
-	if !ok {
-		newMetric := new(SenderMetrics)
-		// metric recorders
-		hostname, _ := os.Hostname()
-		meter := global.Meter(rtsemconv.EARSMeterName)
-		commonLabels := []attribute.KeyValue{
-			attribute.String(rtsemconv.EARSPluginTypeLabel, rtsemconv.EARSPluginTypeKafkaSender),
-			attribute.String(rtsemconv.EARSPluginNameLabel, s.Name()),
-			attribute.String(rtsemconv.EARSAppIdLabel, s.tid.AppId),
-			attribute.String(rtsemconv.EARSOrgIdLabel, s.tid.OrgId),
-			attribute.String(rtsemconv.KafkaTopicLabel, s.config.Topic),
-			attribute.String(rtsemconv.HostnameLabel, hostname),
-		}
-		for _, label := range labels {
-			commonLabels = append(commonLabels, attribute.String(label.Label, label.Value))
-		}
-		newMetric.eventSuccessCounter = metric.Must(meter).
-			NewInt64Counter(
-				rtsemconv.EARSMetricEventSuccess,
-				metric.WithDescription("measures the number of successful events"),
-			).Bind(commonLabels...)
-		newMetric.eventFailureCounter = metric.Must(meter).
-			NewInt64Counter(
-				rtsemconv.EARSMetricEventFailure,
-				metric.WithDescription("measures the number of unsuccessful events"),
-			).Bind(commonLabels...)
-		newMetric.eventBytesCounter = metric.Must(meter).
-			NewInt64Counter(
-				rtsemconv.EARSMetricEventBytes,
-				metric.WithDescription("measures the number of event bytes processed"),
-				metric.WithUnit(unit.Bytes),
-			).Bind(commonLabels...)
-		newMetric.eventProcessingTime = metric.Must(meter).
-			NewInt64Histogram(
-				rtsemconv.EARSMetricEventProcessingTime,
-				metric.WithDescription("measures the time an event spends in ears"),
-				metric.WithUnit(unit.Milliseconds),
-			).Bind(commonLabels...)
-		newMetric.eventSendOutTime = metric.Must(meter).
-			NewInt64Histogram(
-				rtsemconv.EARSMetricEventSendOutTime,
-				metric.WithDescription("measures the time ears spends to send an event to a downstream data sink"),
-				metric.WithUnit(unit.Milliseconds),
-			).Bind(commonLabels...)
-		s.metrics[key] = newMetric
-		return newMetric
-	} else {
-		return m
-	}
+	return attrs
 }
 
 func (s *Sender) initPlugin() error {
@@ -178,13 +159,6 @@ func (s *Sender) StopSending(ctx context.Context) {
 	defer s.Unlock()
 	if !s.stopped {
 		s.stopped = true
-		for _, m := range s.metrics {
-			m.eventSuccessCounter.Unbind()
-			m.eventFailureCounter.Unbind()
-			m.eventBytesCounter.Unbind()
-			m.eventProcessingTime.Unbind()
-			m.eventSendOutTime.Unbind()
-		}
 		s.producer.Close(ctx)
 	}
 }
@@ -369,7 +343,7 @@ func (p *Producer) SendMessage(ctx context.Context, topic string, partition int,
 	}
 	// override log values if any
 	elapsed := time.Since(start).Milliseconds()
-	p.sender.getMetrics(p.sender.getLabelValues(e, p.sender.config.DynamicMetricLabels)).eventSendOutTime.Record(ctx, elapsed)
+	p.sender.eventSendOutTime.Record(ctx, elapsed, p.sender.getAttributes(e, p.sender.config.DynamicMetricLabels)...)
 	log.Ctx(ctx).Debug().Str("op", "kafka.Send").Int("elapsed", int(elapsed)).Int("partition", int(part)).Int("offset", int(offset)).Msg("sent message on kafka topic")
 	return nil
 }
@@ -386,18 +360,18 @@ func (mp *ManualHashPartitioner) Partition(message *sarama.ProducerMessage, numP
 func (s *Sender) Send(e event.Event) {
 	if s.stopped {
 		log.Ctx(e.Context()).Error().Str("op", "kafka.Send").Str("name", s.Name()).Str("tid", s.Tenant().ToString()).Msg("drop message due to closed sender")
-		s.getMetrics(s.getLabelValues(e, s.config.DynamicMetricLabels)).eventFailureCounter.Add(e.Context(), 1.0)
+		s.eventFailureCounter.Add(e.Context(), 1.0, s.getAttributes(e, s.config.DynamicMetricLabels)...)
 		return
 	}
 	buf, err := json.Marshal(e.Payload())
 	if err != nil {
 		log.Ctx(e.Context()).Error().Str("op", "kafka.Send").Str("name", s.Name()).Str("tid", s.Tenant().ToString()).Msg("failed to marshal message: " + err.Error())
-		s.getMetrics(s.getLabelValues(e, s.config.DynamicMetricLabels)).eventFailureCounter.Add(e.Context(), 1.0)
+		s.eventFailureCounter.Add(e.Context(), 1.0, s.getAttributes(e, s.config.DynamicMetricLabels)...)
 		e.Nack(err)
 		return
 	}
-	s.getMetrics(s.getLabelValues(e, s.config.DynamicMetricLabels)).eventProcessingTime.Record(e.Context(), time.Since(e.Created()).Milliseconds())
-	s.getMetrics(s.getLabelValues(e, s.config.DynamicMetricLabels)).eventBytesCounter.Add(e.Context(), int64(len(buf)))
+	s.eventProcessingTime.Record(e.Context(), time.Since(e.Created()).Milliseconds(), s.getAttributes(e, s.config.DynamicMetricLabels)...)
+	s.eventBytesCounter.Add(e.Context(), int64(len(buf)), s.getAttributes(e, s.config.DynamicMetricLabels)...)
 	partition := -1
 	if s.config.PartitionPath != "" {
 		val, _, _ := e.GetPathValue(s.config.PartitionPath)
@@ -411,11 +385,11 @@ func (s *Sender) Send(e event.Event) {
 	err = s.producer.SendMessage(e.Context(), s.config.Topic, partition, nil, buf, e)
 	if err != nil {
 		log.Ctx(e.Context()).Error().Str("op", "kafka.Send").Str("name", s.Name()).Str("tid", s.Tenant().ToString()).Msg("failed to send message: " + err.Error())
-		s.getMetrics(s.getLabelValues(e, s.config.DynamicMetricLabels)).eventFailureCounter.Add(e.Context(), 1)
+		s.eventFailureCounter.Add(e.Context(), 1, s.getAttributes(e, s.config.DynamicMetricLabels)...)
 		e.Nack(err)
 		return
 	}
-	s.getMetrics(s.getLabelValues(e, s.config.DynamicMetricLabels)).eventSuccessCounter.Add(e.Context(), 1)
+	s.eventSuccessCounter.Add(e.Context(), 1, s.getAttributes(e, s.config.DynamicMetricLabels)...)
 	s.Lock()
 	s.count++
 	log.Ctx(e.Context()).Debug().Str("op", "kafka.Send").Str("name", s.Name()).Str("tid", s.Tenant().ToString()).Int("count", s.count).Msg("sent message on kafka topic")
