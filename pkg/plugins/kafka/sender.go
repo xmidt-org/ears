@@ -35,6 +35,7 @@ import (
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/global"
 	"go.opentelemetry.io/otel/metric/unit"
+	"os"
 	"strings"
 	"time"
 )
@@ -107,6 +108,7 @@ func (s *Sender) getMetrics(labels []DynamicMetricValue) *SenderMetrics {
 	if !ok {
 		newMetric := new(SenderMetrics)
 		// metric recorders
+		hostname, _ := os.Hostname()
 		meter := global.Meter(rtsemconv.EARSMeterName)
 		commonLabels := []attribute.KeyValue{
 			attribute.String(rtsemconv.EARSPluginTypeLabel, rtsemconv.EARSPluginTypeKafkaSender),
@@ -114,6 +116,7 @@ func (s *Sender) getMetrics(labels []DynamicMetricValue) *SenderMetrics {
 			attribute.String(rtsemconv.EARSAppIdLabel, s.tid.AppId),
 			attribute.String(rtsemconv.EARSOrgIdLabel, s.tid.OrgId),
 			attribute.String(rtsemconv.KafkaTopicLabel, s.config.Topic),
+			attribute.String(rtsemconv.HostnameLabel, hostname),
 		}
 		for _, label := range labels {
 			commonLabels = append(commonLabels, attribute.String(label.Label, label.Value))
