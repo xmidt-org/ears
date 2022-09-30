@@ -21,6 +21,7 @@ import (
 	"github.com/xmidt-org/ears/pkg/secret"
 	"github.com/xmidt-org/ears/pkg/tenant"
 	"github.com/xorcare/pointer"
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
 	"sync"
 	"time"
@@ -178,7 +179,13 @@ type Sender struct {
 	producer *Producer
 	stopped  bool
 	secrets  secret.Vault
-	metrics  map[string]*SenderMetrics
+	//metrics  map[string]*SenderMetrics
+	commonLabels        []attribute.KeyValue
+	eventSuccessCounter metric.Int64Counter
+	eventFailureCounter metric.Int64Counter
+	eventBytesCounter   metric.Int64Counter
+	eventProcessingTime metric.Int64Histogram
+	eventSendOutTime    metric.Int64Histogram
 }
 
 type ManualHashPartitioner struct {
