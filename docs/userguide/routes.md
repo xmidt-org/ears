@@ -67,7 +67,7 @@ same parameters in their receiver configuration.
 
 ![image route](img/stream_sharing_1.png)
 
-In a situation like this, EARS will detect this an only create one instance of the SQS receiver plugin which will 
+In a situation like this, EARS will detect this and only create one instance of the SQS receiver plugin which will 
 then be shared by all routes which have identical receiver configurations. In this example, every event received
 from SQS will be cloned by the SQS receiver and each filter chain will receive its own copy of the event. 
 Effectively, the SQS receiver will fan out each incoming event to all routes that have expressed an interest.
