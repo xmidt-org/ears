@@ -79,7 +79,7 @@ const receiverSchema = `
                 }
             },
             "required": [
-                "bucket", "region"
+                "bucket", "awsRegion"
             ],
             "title": "ReceiverConfig"
         }

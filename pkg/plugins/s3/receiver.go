@@ -128,7 +128,8 @@ func (r *Receiver) initPlugin() error {
 	if nil != err {
 		return &S3Error{op: "GetCredentials", err: err}
 	}
-	r.s3Service = s3.New(r.session)
+	r.s3Service = s3.New(sess)
+	r.session = sess
 	r.done = make(chan struct{})
 	return nil
 }

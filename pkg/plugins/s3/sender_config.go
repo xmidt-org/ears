@@ -77,7 +77,7 @@ const senderSchema = `
                 }
             },
             "required": [
-                "bucket", "region"
+                "bucket", "awsRegion"
             ],
             "title": "SenderConfig"
         }
