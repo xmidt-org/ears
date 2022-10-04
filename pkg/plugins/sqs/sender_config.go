@@ -31,6 +31,9 @@ func (sc SenderConfig) WithDefaults() SenderConfig {
 	if cfg.DelaySeconds == nil {
 		cfg.DelaySeconds = DefaultSenderConfig.DelaySeconds
 	}
+	if cfg.AWSRegion == "" {
+		cfg.AWSRegion = DefaultReceiverConfig.AWSRegion
+	}
 	return cfg
 }
 
@@ -60,6 +63,18 @@ const senderSchema = `
                 "queueUrl": {
                     "type": "string"
                 },
+				"awsRoleARN": {
+                    "type": "string"
+				},
+				"awsAccessKeyId": {
+                    "type": "string"
+				},
+				"awsSecretAccessKey": {
+                    "type": "string"
+				},
+				"awsRegion": {
+                    "type": "string"
+				},
 				"maxNumberOfMessages": {
                     "type": "integer", 
 					"minimum": 1,

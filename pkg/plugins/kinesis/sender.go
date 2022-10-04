@@ -117,8 +117,8 @@ func (s *Sender) initPlugin() error {
 	s.Lock()
 	defer s.Unlock()
 	sess, err := session.NewSession()
-	if err != nil {
-		return err
+	if nil != err {
+		return &KinesisError{op: "NewSession", err: err}
 	}
 	var creds *credentials.Credentials
 	if s.config.AWSRoleARN != "" {

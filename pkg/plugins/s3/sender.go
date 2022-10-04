@@ -119,8 +119,8 @@ func (s *Sender) initPlugin() error {
 	defer s.Unlock()
 	var err error
 	sess, err := session.NewSession()
-	if err != nil {
-		return err
+	if nil != err {
+		return &S3Error{op: "NewSession", err: err}
 	}
 	var creds *credentials.Credentials
 	if s.config.AWSRoleARN != "" {
