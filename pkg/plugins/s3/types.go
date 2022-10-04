@@ -19,6 +19,8 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/rs/zerolog"
+	"github.com/xmidt-org/ears/pkg/errs"
+	"github.com/xmidt-org/ears/pkg/secret"
 	"github.com/xmidt-org/ears/pkg/tenant"
 	"github.com/xorcare/pointer"
 	"go.opentelemetry.io/otel/metric"
@@ -57,15 +59,21 @@ func NewPluginVersion(name string, version string, commitID string) (*pkgplugin.
 var DefaultReceiverConfig = ReceiverConfig{
 	Bucket:             "",
 	Path:               "",
-	Region:             endpoints.UsWest2RegionID,
+	AWSRegion:          endpoints.UsWest2RegionID,
+	AWSRoleARN:         "",
+	AWSSecretAccessKey: "",
+	AWSAccessKeyId:     "",
 	AcknowledgeTimeout: pointer.Int(5),
 }
 
 type ReceiverConfig struct {
 	Bucket             string `json:"bucket,omitempty"`
 	Path               string `json:"path,omitempty"`
-	Region             string `json:"region,omitempty"`
 	AcknowledgeTimeout *int   `json:"acknowledgeTimeout,omitempty"`
+	AWSRoleARN         string `json:"awsRoleARN,omitempty"`
+	AWSAccessKeyId     string `json:"awsAccessKeyId,omitempty"`
+	AWSSecretAccessKey string `json:"awsSecretAccessKey,omitempty"`
+	AWSRegion          string `json:"awsRegion,omitempty"`
 }
 
 type Receiver struct {
@@ -81,6 +89,7 @@ type Receiver struct {
 	next                receiver.NextFn
 	logger              *zerolog.Logger
 	count               int
+	secrets             secret.Vault
 	startTime           time.Time
 	eventSuccessCounter metric.BoundInt64Counter
 	eventFailureCounter metric.BoundInt64Counter
@@ -88,21 +97,27 @@ type Receiver struct {
 }
 
 var DefaultSenderConfig = SenderConfig{
-	Bucket:   "",
-	Path:     "",
-	Region:   endpoints.UsWest2RegionID,
-	FileName: "",
-	FilePath: "",
+	Bucket:             "",
+	Path:               "",
+	AWSRegion:          endpoints.UsWest2RegionID,
+	AWSRoleARN:         "",
+	AWSSecretAccessKey: "",
+	AWSAccessKeyId:     "",
+	FileName:           "",
+	FilePath:           "",
 }
 
 // SenderConfig can be passed into NewSender() in order to configure
 // the behavior of the sender.
 type SenderConfig struct {
-	Bucket   string `json:"bucket,omitempty"`
-	Path     string `json:"path,omitempty"`
-	Region   string `json:"region,omitempty"`
-	FileName string `json:"fileName,omitempty"`
-	FilePath string `json:"filePath,omitempty"`
+	Bucket             string `json:"bucket,omitempty"`
+	Path               string `json:"path,omitempty"`
+	FileName           string `json:"fileName,omitempty"`
+	FilePath           string `json:"filePath,omitempty"`
+	AWSRoleARN         string `json:"awsRoleARN,omitempty"`
+	AWSAccessKeyId     string `json:"awsAccessKeyId,omitempty"`
+	AWSSecretAccessKey string `json:"awsSecretAccessKey,omitempty"`
+	AWSRegion          string `json:"awsRegion,omitempty"`
 }
 
 type Sender struct {
@@ -116,9 +131,23 @@ type Sender struct {
 	count               int
 	logger              *zerolog.Logger
 	done                chan struct{}
+	secrets             secret.Vault
 	eventSuccessCounter metric.BoundInt64Counter
 	eventFailureCounter metric.BoundInt64Counter
 	eventBytesCounter   metric.BoundInt64Counter
 	eventProcessingTime metric.BoundInt64Histogram
 	eventSendOutTime    metric.BoundInt64Histogram
+}
+
+type S3Error struct {
+	op  string
+	err error
+}
+
+func (e *S3Error) Error() string {
+	return errs.String("S3Error", map[string]interface{}{"op": e.op}, e.err)
+}
+
+func (e *S3Error) Unwrap() error {
+	return e.err
 }

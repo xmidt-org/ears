@@ -22,8 +22,8 @@ import (
 // WithDefaults
 func (sc SenderConfig) WithDefaults() SenderConfig {
 	cfg := sc
-	if cfg.Region == "" {
-		cfg.Region = DefaultSenderConfig.Region
+	if cfg.AWSRegion == "" {
+		cfg.AWSRegion = DefaultSenderConfig.AWSRegion
 	}
 	return cfg
 }
@@ -57,9 +57,18 @@ const senderSchema = `
                 "path": {
                     "type": "string"
                 },
-                "region": {
+				"awsRoleARN": {
                     "type": "string"
-                },
+				},
+				"awsAccessKeyId": {
+                    "type": "string"
+				},
+				"awsSecretAccessKey": {
+                    "type": "string"
+				},
+				"awsRegion": {
+                    "type": "string"
+				},
                 "fileName": {
                     "type": "string"
                 },
