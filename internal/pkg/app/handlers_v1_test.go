@@ -53,6 +53,7 @@ import (
 	"github.com/xmidt-org/ears/pkg/plugins/match"
 	"github.com/xmidt-org/ears/pkg/plugins/merge"
 	"github.com/xmidt-org/ears/pkg/plugins/metric"
+	"github.com/xmidt-org/ears/pkg/plugins/nop"
 	"github.com/xmidt-org/ears/pkg/plugins/pass"
 	goredis "github.com/xmidt-org/ears/pkg/plugins/redis"
 	"github.com/xmidt-org/ears/pkg/plugins/regex"
@@ -488,6 +489,10 @@ func setupRestApi(config config.Config, storageMgr route.RouteStorer, setupQuota
 		name   string
 		plugin pkgplugin.Pluginer
 	}{
+		{
+			name:   "nop",
+			plugin: toArr(nop.NewPluginVersion("nop", "", ""))[0].(pkgplugin.Pluginer),
+		},
 		{
 			name:   "debug",
 			plugin: toArr(debug.NewPluginVersion("debug", "", ""))[0].(pkgplugin.Pluginer),
