@@ -3,6 +3,15 @@ consumes:
 - application/json
 - application/yaml
 definitions:
+  ErrorResponse:
+    properties:
+      item:
+        type: string
+        x-go-name: Item
+      status:
+        $ref: '#/definitions/responseStatus'
+    type: object
+    x-go-package: github.com/xmidt-org/ears/internal/pkg/app/docs
   FilterStatus:
     properties:
       Config:
@@ -14,6 +23,8 @@ definitions:
       ReferenceCount:
         format: int64
         type: integer
+      Tid:
+        $ref: '#/definitions/Id'
     type: object
     x-go-package: github.com/xmidt-org/ears/internal/pkg/plugin
   FiltersErrorResponse:
@@ -51,6 +62,9 @@ definitions:
       config:
         type: object
         x-go-name: Config
+      fragmentName:
+        type: string
+        x-go-name: FragmentName
       name:
         type: string
         x-go-name: Name
@@ -78,6 +92,8 @@ definitions:
       ReferenceCount:
         format: int64
         type: integer
+      Tid:
+        $ref: '#/definitions/Id'
     type: object
     x-go-package: github.com/xmidt-org/ears/internal/pkg/plugin
   ReceiversErrorResponse:
@@ -189,6 +205,8 @@ definitions:
       ReferenceCount:
         format: int64
         type: integer
+      Tid:
+        $ref: '#/definitions/Id'
     type: object
     x-go-package: github.com/xmidt-org/ears/internal/pkg/plugin
   SendersErrorResponse:
@@ -211,8 +229,22 @@ definitions:
         $ref: '#/definitions/responseStatus'
     type: object
     x-go-package: github.com/xmidt-org/ears/internal/pkg/app/docs
+  SuccessResponse:
+    properties:
+      item:
+        type: string
+        x-go-name: Item
+      status:
+        $ref: '#/definitions/responseStatus'
+    type: object
+    x-go-package: github.com/xmidt-org/ears/internal/pkg/app/docs
   TenantConfig:
     properties:
+      clientIds:
+        items:
+          type: string
+        type: array
+        x-go-name: ClientIds
       modified:
         format: int64
         type: integer
@@ -391,6 +423,36 @@ paths:
         put body.
       tags:
       - tenants
+  /v1/orgs/{orgId}/applications/{appId}/filters:
+    get:
+      operationId: getFilters
+      responses:
+        "200":
+          description: FiltersResponse
+          schema:
+            $ref: '#/definitions/FiltersResponse'
+        "500":
+          description: FiltersErrorResponse
+          schema:
+            $ref: '#/definitions/FiltersErrorResponse'
+      summary: Gets list of all filters currently present for a single tenant.
+      tags:
+      - plugins
+  /v1/orgs/{orgId}/applications/{appId}/receivers:
+    get:
+      operationId: getReceivers
+      responses:
+        "200":
+          description: ReceiversResponse
+          schema:
+            $ref: '#/definitions/ReceiversResponse'
+        "500":
+          description: ReceiversErrorResponse
+          schema:
+            $ref: '#/definitions/ReceiversErrorResponse'
+      summary: Gets list of all receivers currently present for a single tenant.
+      tags:
+      - plugins
   /v1/orgs/{orgId}/applications/{appId}/routes:
     get:
       operationId: getRoutes
@@ -405,6 +467,42 @@ paths:
             $ref: '#/definitions/RouteErrorResponse'
       summary: Gets list of all routes currently present in the routing table for
         a single tenant.
+      tags:
+      - routes
+    post:
+      operationId: postRoute
+      parameters:
+      - description: Route configuration including sender, receiver and optional filter
+          chain.
+        in: body
+        name: Body
+        required: true
+        schema:
+          $ref: '#/definitions/RouteConfig'
+      - description: App ID
+        in: path
+        name: appId
+        required: true
+        type: string
+        x-go-name: AppId
+      - description: Org ID
+        in: path
+        name: orgId
+        required: true
+        type: string
+        x-go-name: OrgId
+      responses:
+        "200":
+          description: RouteResponse
+          schema:
+            $ref: '#/definitions/RouteResponse'
+        "500":
+          description: RouteErrorResponse
+          schema:
+            $ref: '#/definitions/RouteErrorResponse'
+      summary: Adds a new route to the routing table or updates an existing route.
+        Route ID can be given in the body. If it is omitted a hash will be calculated
+        and used instead.
       tags:
       - routes
   /v1/orgs/{orgId}/applications/{appId}/routes/{routeId}:
@@ -518,21 +616,20 @@ paths:
           schema:
             $ref: '#/definitions/RouteErrorResponse'
       summary: Adds a new route to the routing table or updates an existing route.
-        Route ID can be given in the body. If it is omitted a hash will be calculates
+        Route ID can be given in the body. If it is omitted a hash will be calculated
         and used instead.
       tags:
       - routes
-  /v1/orgs/{orgid}/applications/{appid}/routes:
+  /v1/orgs/{orgId}/applications/{appId}/routes/{routeId}/event:
     post:
-      operationId: postRoute
+      operationId: postRouteEvent
       parameters:
-      - description: Route configuration including sender, receiver and optional filter
-          chain.
-        in: body
-        name: Body
+      - description: Route ID
+        in: path
+        name: routeId
         required: true
-        schema:
-          $ref: '#/definitions/RouteConfig'
+        type: string
+        x-go-name: RouteId
       - description: App ID
         in: path
         name: appId
@@ -547,18 +644,31 @@ paths:
         x-go-name: OrgId
       responses:
         "200":
-          description: RouteResponse
+          description: SuccessResponse
           schema:
-            $ref: '#/definitions/RouteResponse'
+            $ref: '#/definitions/SuccessResponse'
         "500":
-          description: RouteErrorResponse
+          description: ErrorResponse
           schema:
-            $ref: '#/definitions/RouteErrorResponse'
-      summary: Adds a new route to the routing table or updates an existing route.
-        Route ID can be given in the body. If it is omitted a hash will be calculates
-        and used instead.
+            $ref: '#/definitions/ErrorResponse'
+      summary: Injects a test event into an existing route.
       tags:
       - routes
+  /v1/orgs/{orgId}/applications/{appId}/senders:
+    get:
+      operationId: getSenders
+      responses:
+        "200":
+          description: SendersResponse
+          schema:
+            $ref: '#/definitions/SendersResponse'
+        "500":
+          description: SendersErrorResponse
+          schema:
+            $ref: '#/definitions/SendersErrorResponse'
+      summary: Gets list of all senders currently present for a single tenant.
+      tags:
+      - plugins
   /v1/receivers:
     get:
       operationId: getAllReceivers
@@ -641,6 +751,10 @@ responses:
     description: Item response containing a filters error.
     schema:
       $ref: '#/definitions/FiltersErrorResponse'
+  postRouteEventResponse:
+    description: Item response containing a message.
+    schema:
+      $ref: '#/definitions/ErrorResponse'
   receiversErrorResponse:
     description: Item response containing a receivers error.
     schema:
@@ -696,7 +810,11 @@ responses:
       $ref: '#/definitions/VersionResponse'
 schemes:
 - https
+security:
+- Bearer: []
 securityDefinitions:
-  basic:
-    type: basic
+  Bearer:
+    in: header
+    name: Authorization
+    type: apiKey
 swagger: "2.0"

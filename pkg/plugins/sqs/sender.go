@@ -35,6 +35,7 @@ import (
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/global"
 	"go.opentelemetry.io/otel/metric/unit"
+	"os"
 	"time"
 )
 
@@ -72,6 +73,7 @@ func NewSender(tid tenant.Id, plugin string, name string, config interface{}, se
 		logger: event.GetEventLogger(),
 	}
 	s.initPlugin()
+	hostname, _ := os.Hostname()
 	// metric recorders
 	meter := global.Meter(rtsemconv.EARSMeterName)
 	commonLabels := []attribute.KeyValue{
@@ -80,6 +82,7 @@ func NewSender(tid tenant.Id, plugin string, name string, config interface{}, se
 		attribute.String(rtsemconv.EARSAppIdLabel, s.tid.AppId),
 		attribute.String(rtsemconv.EARSOrgIdLabel, s.tid.OrgId),
 		attribute.String(rtsemconv.SQSQueueUrlLabel, s.config.QueueUrl),
+		attribute.String(rtsemconv.HostnameLabel, hostname),
 	}
 	s.eventSuccessCounter = metric.Must(meter).
 		NewInt64Counter(
