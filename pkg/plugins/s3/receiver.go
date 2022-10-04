@@ -19,6 +19,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/credentials"
+	"github.com/aws/aws-sdk-go/aws/credentials/stscreds"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/aws/aws-sdk-go/service/s3/s3manager"
@@ -68,6 +70,7 @@ func NewReceiver(tid tenant.Id, plugin string, name string, config interface{}, 
 		tid:     tid,
 		logger:  event.GetEventLogger(),
 		stopped: true,
+		secrets: secrets,
 	}
 	r.initPlugin()
 	hostname, _ := os.Hostname()
@@ -105,15 +108,25 @@ func (r *Receiver) initPlugin() error {
 	r.Lock()
 	defer r.Unlock()
 	var err error
-	r.session, err = session.NewSession(&aws.Config{
-		Region: aws.String(r.config.Region),
-	})
-	if nil != err {
+	sess, err := session.NewSession()
+	if err != nil {
 		return err
 	}
-	_, err = r.session.Config.Credentials.Get()
+	var creds *credentials.Credentials
+	if r.config.AWSRoleARN != "" {
+		creds = stscreds.NewCredentials(sess, r.config.AWSRoleARN)
+	} else if r.config.AWSAccessKeyId != "" && r.config.AWSSecretAccessKey != "" {
+		creds = credentials.NewStaticCredentials(r.secrets.Secret(r.config.AWSAccessKeyId), r.secrets.Secret(r.config.AWSSecretAccessKey), "")
+	} else {
+		creds = sess.Config.Credentials
+	}
+	sess, err = session.NewSession(&aws.Config{Region: aws.String(r.config.AWSRegion), Credentials: creds})
 	if nil != err {
-		return err
+		return &S3Error{op: "NewSession", err: err}
+	}
+	_, err = sess.Config.Credentials.Get()
+	if nil != err {
+		return &S3Error{op: "GetCredentials", err: err}
 	}
 	r.s3Service = s3.New(r.session)
 	r.done = make(chan struct{})

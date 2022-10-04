@@ -27,8 +27,8 @@ func (rc *ReceiverConfig) WithDefaults() ReceiverConfig {
 	if cfg.AcknowledgeTimeout == nil {
 		cfg.AcknowledgeTimeout = DefaultReceiverConfig.AcknowledgeTimeout
 	}
-	if cfg.Region == "" {
-		cfg.Region = DefaultReceiverConfig.Region
+	if cfg.AWSRegion == "" {
+		cfg.AWSRegion = DefaultReceiverConfig.AWSRegion
 	}
 	return cfg
 }
@@ -62,9 +62,18 @@ const receiverSchema = `
                 "path": {
                     "type": "string"
                 },
-                "region": {
+				"awsRoleARN": {
                     "type": "string"
-                },
+				},
+				"awsAccessKeyId": {
+                    "type": "string"
+				},
+				"awsSecretAccessKey": {
+                    "type": "string"
+				},
+				"awsRegion": {
+                    "type": "string"
+				},
                 "acknowledgeTimeout": {
                     "type": "integer"
                 }
