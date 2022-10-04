@@ -18,6 +18,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws/endpoints"
 	"github.com/aws/aws-sdk-go/service/sqs"
 	"github.com/rs/zerolog"
+	"github.com/xmidt-org/ears/pkg/errs"
 	"github.com/xmidt-org/ears/pkg/event"
 	"github.com/xmidt-org/ears/pkg/secret"
 	"github.com/xmidt-org/ears/pkg/tenant"
@@ -114,6 +115,10 @@ var DefaultSenderConfig = SenderConfig{
 	MaxNumberOfMessages: pointer.Int(10),
 	SendTimeout:         pointer.Int(1),
 	DelaySeconds:        pointer.Int(0),
+	AWSRoleARN:          "",
+	AWSSecretAccessKey:  "",
+	AWSAccessKeyId:      "",
+	AWSRegion:           endpoints.UsWest2RegionID,
 }
 
 // SenderConfig can be passed into NewSender() in order to configure
@@ -123,6 +128,10 @@ type SenderConfig struct {
 	MaxNumberOfMessages *int   `json:"maxNumberOfMessages,omitempty"`
 	SendTimeout         *int   `json:"sendTimeout,omitempty"`
 	DelaySeconds        *int   `json:"delaySeconds,omitempty"`
+	AWSRoleARN          string `json:"awsRoleARN,omitempty"`
+	AWSAccessKeyId      string `json:"awsAccessKeyId,omitempty"`
+	AWSSecretAccessKey  string `json:"awsSecretAccessKey,omitempty"`
+	AWSRegion           string `json:"awsRegion,omitempty"`
 }
 
 type Sender struct {
@@ -136,9 +145,23 @@ type Sender struct {
 	logger              *zerolog.Logger
 	eventBatch          []event.Event
 	done                chan struct{}
+	secrets             secret.Vault
 	eventSuccessCounter metric.BoundInt64Counter
 	eventFailureCounter metric.BoundInt64Counter
 	eventBytesCounter   metric.BoundInt64Counter
 	eventProcessingTime metric.BoundInt64Histogram
 	eventSendOutTime    metric.BoundInt64Histogram
+}
+
+type SQSError struct {
+	op  string
+	err error
+}
+
+func (e *SQSError) Error() string {
+	return errs.String("KinesisError", map[string]interface{}{"op": e.op}, e.err)
+}
+
+func (e *SQSError) Unwrap() error {
+	return e.err
 }
