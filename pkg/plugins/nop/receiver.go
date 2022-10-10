@@ -19,16 +19,11 @@ import (
 	"fmt"
 	"github.com/goccy/go-yaml"
 	"github.com/rs/zerolog"
-	"github.com/xmidt-org/ears/internal/pkg/rtsemconv"
 	"github.com/xmidt-org/ears/pkg/event"
 	pkgplugin "github.com/xmidt-org/ears/pkg/plugin"
 	"github.com/xmidt-org/ears/pkg/receiver"
 	"github.com/xmidt-org/ears/pkg/secret"
 	"github.com/xmidt-org/ears/pkg/tenant"
-	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/metric"
-	"go.opentelemetry.io/otel/metric/global"
-	"go.opentelemetry.io/otel/metric/unit"
 	"os"
 )
 
@@ -65,30 +60,6 @@ func NewReceiver(tid tenant.Id, plugin string, name string, config interface{}, 
 		logger:  logger,
 		stopped: true,
 	}
-	// metric recorders
-	meter := global.Meter(rtsemconv.EARSMeterName)
-	commonLabels := []attribute.KeyValue{
-		attribute.String(rtsemconv.EARSPluginTypeLabel, rtsemconv.EARSPluginTypeNopReceiver),
-		attribute.String(rtsemconv.EARSPluginNameLabel, r.Name()),
-		attribute.String(rtsemconv.EARSAppIdLabel, r.tid.AppId),
-		attribute.String(rtsemconv.EARSOrgIdLabel, r.tid.OrgId),
-	}
-	r.eventSuccessCounter = metric.Must(meter).
-		NewInt64Counter(
-			rtsemconv.EARSMetricEventSuccess,
-			metric.WithDescription("measures the number of successful events"),
-		).Bind(commonLabels...)
-	r.eventFailureCounter = metric.Must(meter).
-		NewInt64Counter(
-			rtsemconv.EARSMetricEventFailure,
-			metric.WithDescription("measures the number of unsuccessful events"),
-		).Bind(commonLabels...)
-	r.eventBytesCounter = metric.Must(meter).
-		NewInt64Counter(
-			rtsemconv.EARSMetricEventBytes,
-			metric.WithDescription("measures the number of event bytes processed"),
-			metric.WithUnit(unit.Bytes),
-		).Bind(commonLabels...)
 	return r, nil
 }
 
@@ -116,9 +87,6 @@ func (r *Receiver) StopReceiving(ctx context.Context) error {
 	r.Lock()
 	defer r.Unlock()
 	if !r.stopped && r.done != nil {
-		r.eventSuccessCounter.Unbind()
-		r.eventFailureCounter.Unbind()
-		r.eventBytesCounter.Unbind()
 		close(r.done)
 		r.stopped = true
 	}
