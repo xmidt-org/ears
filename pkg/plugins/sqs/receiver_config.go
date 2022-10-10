@@ -51,6 +51,9 @@ func (rc *ReceiverConfig) WithDefaults() ReceiverConfig {
 	if cfg.TracePayloadOnNack == nil {
 		cfg.TracePayloadOnNack = DefaultReceiverConfig.TracePayloadOnNack
 	}
+	if cfg.AWSRegion == "" {
+		cfg.AWSRegion = DefaultReceiverConfig.AWSRegion
+	}
 	return cfg
 }
 

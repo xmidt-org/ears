@@ -18,7 +18,8 @@ import (
 	"context"
 	"encoding/json"
 	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/endpoints"
+	"github.com/aws/aws-sdk-go/aws/credentials"
+	"github.com/aws/aws-sdk-go/aws/credentials/stscreds"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/kinesis"
 	"github.com/goccy/go-yaml"
@@ -62,11 +63,12 @@ func NewSender(tid tenant.Id, plugin string, name string, config interface{}, se
 		return nil, err
 	}
 	s := &Sender{
-		name:   name,
-		plugin: plugin,
-		tid:    tid,
-		config: cfg,
-		logger: event.GetEventLogger(),
+		name:    name,
+		plugin:  plugin,
+		tid:     tid,
+		config:  cfg,
+		logger:  event.GetEventLogger(),
+		secrets: secrets,
 	}
 	s.initPlugin()
 	hostname, _ := os.Hostname()
@@ -114,15 +116,25 @@ func NewSender(tid tenant.Id, plugin string, name string, config interface{}, se
 func (s *Sender) initPlugin() error {
 	s.Lock()
 	defer s.Unlock()
-	sess, err := session.NewSession(&aws.Config{
-		Region: aws.String(endpoints.UsWest2RegionID),
-	})
+	sess, err := session.NewSession()
 	if nil != err {
-		return err
+		return &KinesisError{op: "NewSession", err: err}
+	}
+	var creds *credentials.Credentials
+	if s.config.AWSRoleARN != "" {
+		creds = stscreds.NewCredentials(sess, s.config.AWSRoleARN)
+	} else if s.config.AWSAccessKeyId != "" && s.config.AWSSecretAccessKey != "" {
+		creds = credentials.NewStaticCredentials(s.secrets.Secret(s.config.AWSAccessKeyId), s.secrets.Secret(s.config.AWSSecretAccessKey), "")
+	} else {
+		creds = sess.Config.Credentials
+	}
+	sess, err = session.NewSession(&aws.Config{Region: aws.String(s.config.AWSRegion), Credentials: creds})
+	if nil != err {
+		return &KinesisError{op: "NewSession", err: err}
 	}
 	_, err = sess.Config.Credentials.Get()
 	if nil != err {
-		return err
+		return &KinesisError{op: "GetCredentials", err: err}
 	}
 	s.kinesisService = kinesis.New(sess)
 	_, err = s.kinesisService.DescribeStream(&kinesis.DescribeStreamInput{StreamName: aws.String(s.config.StreamName)})

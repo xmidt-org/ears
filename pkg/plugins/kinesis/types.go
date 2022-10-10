@@ -128,6 +128,10 @@ var DefaultSenderConfig = SenderConfig{
 	SendTimeout:         pointer.Int(1),
 	PartitionKey:        "",
 	PartitionKeyPath:    "",
+	AWSRoleARN:          "",
+	AWSSecretAccessKey:  "",
+	AWSAccessKeyId:      "",
+	AWSRegion:           endpoints.UsWest2RegionID,
 }
 
 type SenderConfig struct {
@@ -136,6 +140,10 @@ type SenderConfig struct {
 	SendTimeout         *int   `json:"sendTimeout,omitempty"`
 	PartitionKey        string `json:"partitionKey,omitempty"`
 	PartitionKeyPath    string `json:"partitionKeyPath,omitempty"`
+	AWSRoleARN          string `json:"awsRoleARN,omitempty"`
+	AWSAccessKeyId      string `json:"awsAccessKeyId,omitempty"`
+	AWSSecretAccessKey  string `json:"awsSecretAccessKey,omitempty"`
+	AWSRegion           string `json:"awsRegion,omitempty"`
 }
 
 type Sender struct {
@@ -149,6 +157,7 @@ type Sender struct {
 	logger              *zerolog.Logger
 	eventBatch          []event.Event
 	done                chan struct{}
+	secrets             secret.Vault
 	eventSuccessCounter metric.BoundInt64Counter
 	eventFailureCounter metric.BoundInt64Counter
 	eventBytesCounter   metric.BoundInt64Counter

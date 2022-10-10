@@ -683,8 +683,8 @@ func (r *Receiver) Receive(next receiver.NextFn) error {
 	r.next = next
 	r.Unlock()
 	sess, err := session.NewSession()
-	if err != nil {
-		return err
+	if nil != err {
+		return &KinesisError{op: "NewSession", err: err}
 	}
 	var creds *credentials.Credentials
 	if r.config.AWSRoleARN != "" {
