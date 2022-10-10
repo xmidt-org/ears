@@ -343,8 +343,8 @@ func (r *Receiver) Receive(next receiver.NextFn) error {
 	r.Unlock()
 	// create sqs session
 	sess, err := session.NewSession()
-	if err != nil {
-		return err
+	if nil != err {
+		return &SQSError{op: "NewSession", err: err}
 	}
 	var creds *credentials.Credentials
 	if r.config.AWSRoleARN != "" {
@@ -356,11 +356,11 @@ func (r *Receiver) Receive(next receiver.NextFn) error {
 	}
 	sess, err = session.NewSession(&aws.Config{Region: aws.String(r.config.AWSRegion), Credentials: creds})
 	if nil != err {
-		return err
+		return &SQSError{op: "NewSession", err: err}
 	}
 	_, err = sess.Config.Credentials.Get()
 	if nil != err {
-		return err
+		return &SQSError{op: "GetCredentials", err: err}
 	}
 	for i := 0; i < *r.config.ReceiverPoolSize; i++ {
 		r.logger.Info().Str("op", "SQS.Receive").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Int("workerNum", i).Msg("launching receiver pool thread")

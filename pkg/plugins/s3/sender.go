@@ -17,7 +17,10 @@ package s3
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/credentials"
+	"github.com/aws/aws-sdk-go/aws/credentials/stscreds"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/aws/aws-sdk-go/service/s3/s3manager"
@@ -62,15 +65,15 @@ func NewSender(tid tenant.Id, plugin string, name string, config interface{}, se
 		return nil, err
 	}
 	s := &Sender{
-		name:   name,
-		plugin: plugin,
-		tid:    tid,
-		config: cfg,
-		logger: event.GetEventLogger(),
+		name:    name,
+		plugin:  plugin,
+		tid:     tid,
+		config:  cfg,
+		logger:  event.GetEventLogger(),
+		secrets: secrets,
 	}
 	s.initPlugin()
 	hostname, _ := os.Hostname()
-
 	// metric recorders
 	meter := global.Meter(rtsemconv.EARSMeterName)
 	commonLabels := []attribute.KeyValue{
@@ -116,17 +119,28 @@ func (s *Sender) initPlugin() error {
 	s.Lock()
 	defer s.Unlock()
 	var err error
-	s.session, err = session.NewSession(&aws.Config{
-		Region: aws.String(s.config.Region),
-	})
+	sess, err := session.NewSession()
 	if nil != err {
-		return err
+		return &S3Error{op: "NewSession", err: err}
 	}
-	_, err = s.session.Config.Credentials.Get()
+	var creds *credentials.Credentials
+	if s.config.AWSRoleARN != "" {
+		creds = stscreds.NewCredentials(sess, s.config.AWSRoleARN)
+	} else if s.config.AWSAccessKeyId != "" && s.config.AWSSecretAccessKey != "" {
+		creds = credentials.NewStaticCredentials(s.secrets.Secret(s.config.AWSAccessKeyId), s.secrets.Secret(s.config.AWSSecretAccessKey), "")
+	} else {
+		creds = sess.Config.Credentials
+	}
+	sess, err = session.NewSession(&aws.Config{Region: aws.String(s.config.AWSRegion), Credentials: creds})
 	if nil != err {
-		return err
+		return &S3Error{op: "NewSession", err: err}
 	}
-	s.s3Service = s3.New(s.session)
+	_, err = sess.Config.Credentials.Get()
+	if nil != err {
+		return &S3Error{op: "GetCredentials", err: err}
+	}
+	s.s3Service = s3.New(sess)
+	s.session = sess
 	s.done = make(chan struct{})
 	return nil
 }
@@ -161,15 +175,21 @@ func (s *Sender) Send(evt event.Event) {
 	s.eventBytesCounter.Add(evt.Context(), int64(len(buf)))
 	s.eventProcessingTime.Record(evt.Context(), time.Since(evt.Created()).Milliseconds())
 	start := time.Now()
-	fileName := s.config.FileName
-	if fileName == "" {
-		v, _, _ := evt.GetPathValue(s.config.FilePath)
-		str, ok := v.(string)
-		if ok {
-			fileName = str
-		}
+	fp, _, _ := evt.Evaluate(s.config.FilePath)
+	filePath, ok := fp.(string)
+	if !ok {
+		s.eventFailureCounter.Add(evt.Context(), 1)
+		evt.Nack(errors.New("s3 file path not a string"))
+		return
 	}
-	path := filepath.Join(s.config.Path, fileName)
+	fn, _, _ := evt.Evaluate(s.config.FileName)
+	fileName, ok := fn.(string)
+	if !ok {
+		s.eventFailureCounter.Add(evt.Context(), 1)
+		evt.Nack(errors.New("s3 file name not a string"))
+		return
+	}
+	path := filepath.Join(filePath, fileName)
 	uploader := s3manager.NewUploader(s.session)
 	_, err = uploader.Upload(&s3manager.UploadInput{
 		Bucket: aws.String(s.config.Bucket),

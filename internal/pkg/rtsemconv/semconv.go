@@ -27,6 +27,7 @@ const (
 	EARSPluginNameLabel = "pluginName"
 	EARSPluginTypeLabel = "pluginType"
 
+	EARSPluginTypeNopSender     = "nopSender"
 	EARSPluginTypeDebugSender   = "debugSender"
 	EARSPluginTypeSQSSender     = "sqsSender"
 	EARSPluginTypeKinesisSender = "kinesisSender"
@@ -38,11 +39,11 @@ const (
 	EARSPluginTypeMetricFilter = "metricFilter"
 	EARSPluginTypeTtlFilter    = "ttlFilter"
 
+	EARSPluginTypeNopReceiver     = "nopReceiver"
 	EARSPluginTypeDebugReceiver   = "debugReceiver"
 	EARSPluginTypeSQSReceiver     = "sqsReceiver"
 	EARSPluginTypeKinesisReceiver = "kinesisReceiver"
 	EARSPluginTypeKafkaReceiver   = "kafkaReceiver"
-	EARSPluginTypeGearsReceiver   = "gearsReceiver"
 	EARSPluginTypeHttpReceiver    = "httpReceiver"
 	EARSPluginTypeRedisReceiver   = "redisReceiver"
 
