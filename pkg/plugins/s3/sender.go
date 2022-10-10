@@ -17,6 +17,7 @@ package s3
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/credentials/stscreds"
@@ -174,15 +175,21 @@ func (s *Sender) Send(evt event.Event) {
 	s.eventBytesCounter.Add(evt.Context(), int64(len(buf)))
 	s.eventProcessingTime.Record(evt.Context(), time.Since(evt.Created()).Milliseconds())
 	start := time.Now()
-	fileName := s.config.FileName
-	if fileName == "" {
-		v, _, _ := evt.GetPathValue(s.config.FilePath)
-		str, ok := v.(string)
-		if ok {
-			fileName = str
-		}
+	fp, _, _ := evt.Evaluate(s.config.FilePath)
+	filePath, ok := fp.(string)
+	if !ok {
+		s.eventFailureCounter.Add(evt.Context(), 1)
+		evt.Nack(errors.New("s3 file path not a string"))
+		return
 	}
-	path := filepath.Join(s.config.Path, fileName)
+	fn, _, _ := evt.Evaluate(s.config.FileName)
+	fileName, ok := fn.(string)
+	if !ok {
+		s.eventFailureCounter.Add(evt.Context(), 1)
+		evt.Nack(errors.New("s3 file name not a string"))
+		return
+	}
+	path := filepath.Join(filePath, fileName)
 	uploader := s3manager.NewUploader(s.session)
 	_, err = uploader.Upload(&s3manager.UploadInput{
 		Bucket: aws.String(s.config.Bucket),
