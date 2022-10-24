@@ -108,6 +108,9 @@ func (sc *DefaultJWTConsumer) VerifyToken(ctx context.Context, token string, api
 			}
 		}
 	}
+	if tid == nil {
+		return nil, "", errors.New("missing tenant")
+	}
 	// otherwise check if this is an app client
 	foundClientId := false
 	tenantConfig, err := sc.tenantStorer.GetConfig(ctx, *tid)
