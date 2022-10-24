@@ -8,6 +8,7 @@
 [![GitHub Release](https://img.shields.io/github/release/xmidt-org/ears.svg)](CHANGELOG.md)
 [![GoDoc](https://pkg.go.dev/badge/github.com/xmidt-org/ears)](https://pkg.go.dev/github.com/xmidt-org/ears)
 
+
 ## Summary
 
 A simple scalable routing service to usher events from an input plugin (for example, Kafka) to an output plugin (for example, AWS SQS).
@@ -23,6 +24,7 @@ Kinesis etc. but also makes the development of third party plugins easy.
 
 Our Kanban Board can be found [here](https://github.com/orgs/xmidt-org/projects/3).
 
+
 ## User Guide
 
 * [Routes](docs/userguide/routes.md)
@@ -36,10 +38,12 @@ Our Kanban Board can be found [here](https://github.com/orgs/xmidt-org/projects/
 * [Sender Plugins Reference](docs/userguide/senders.md)
 * [Plugin Developer Guide](docs/userguide/plugindev.md)
 
+
 ## References
 
 * [swagger.yaml](internal/pkg/app/swagger.yaml)
 * [ears.yaml](docs/userguide/config.md)
+
 
 ## Contributing
 
