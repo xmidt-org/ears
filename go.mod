@@ -33,7 +33,7 @@ require (
 	github.com/spf13/viper v1.8.1
 	github.com/xeipuuv/gojsonpointer v0.0.0-20190905194746-02993c407bfb // indirect
 	github.com/xeipuuv/gojsonschema v1.2.0
-	github.com/xorcare/pointer v1.2.1
+	github.com/xorcare/pointer v1.2.2
 	go.opentelemetry.io/contrib/instrumentation/github.com/Shopify/sarama/otelsarama v0.23.0
 	go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux v0.23.0
 	go.opentelemetry.io/contrib/propagators v0.22.0
