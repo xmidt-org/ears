@@ -502,8 +502,8 @@ github.com/xeipuuv/gojsonreference v0.0.0-20180127040603-bd5ef7bd5415 h1:EzJWgHo
 github.com/xeipuuv/gojsonreference v0.0.0-20180127040603-bd5ef7bd5415/go.mod h1:GwrjFmJcFw6At/Gs6z4yjiIwzuJ1/+UwLxMQDVQXShQ=
 github.com/xeipuuv/gojsonschema v1.2.0 h1:LhYJRs+L4fBtjZUfuSZIKGeVu0QRy8e5Xi7D17UxZ74=
 github.com/xeipuuv/gojsonschema v1.2.0/go.mod h1:anYRn/JVcOK2ZgGU+IjEV4nwlhoK5sQluxsYJ78Id3Y=
-github.com/xorcare/pointer v1.2.1 h1:iJKGuxJcv37Ikp3DE/w9y5qYUMlRL+jJS5GekvbVUVc=
-github.com/xorcare/pointer v1.2.1/go.mod h1:azsKh7oVwYB7C1o8P284fG8MvtErX/F5/dqXiaj71ak=
+github.com/xorcare/pointer v1.2.2 h1:zjD77b5DTehClND4MK+9dDE0DcpFIZisAJ/+yVJvKYA=
+github.com/xorcare/pointer v1.2.2/go.mod h1:azsKh7oVwYB7C1o8P284fG8MvtErX/F5/dqXiaj71ak=
 github.com/xrash/smetrics v0.0.0-20201216005158-039620a65673/go.mod h1:N3UwUGtsrSj3ccvlPHLoLsHnpR27oXr4ZE984MbSER8=
 github.com/yuin/goldmark v1.1.25/go.mod h1:3hX8gzYuyVAZsxl0MRgGTJEmQBFcNTphYh9decYSb74=
 github.com/yuin/goldmark v1.1.27/go.mod h1:3hX8gzYuyVAZsxl0MRgGTJEmQBFcNTphYh9decYSb74=
