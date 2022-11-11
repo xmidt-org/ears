@@ -47,6 +47,9 @@ func (c Config) WithDefaults() *Config {
 	if c.AsString == nil {
 		cfg.AsString = DefaultConfig.AsString
 	}
+	if c.LogKey == "" {
+		cfg.LogKey = DefaultConfig.LogKey
+	}
 	return &cfg
 }
 

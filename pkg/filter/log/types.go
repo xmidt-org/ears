@@ -25,12 +25,14 @@ type Config struct {
 	Path     string `json:"path,omitempty"`
 	Tag      string `json:"tag,omitempty"`
 	AsString *bool  `json:"asString,omitempty"`
+	LogKey   string `json:"logKey,omitempty"`
 }
 
 var DefaultConfig = Config{
 	Path:     "",
 	Tag:      "",
 	AsString: pointer.Bool(true),
+	LogKey:   "payload",
 }
 
 type Filter struct {
