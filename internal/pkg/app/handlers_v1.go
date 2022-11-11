@@ -17,6 +17,7 @@ package app
 import (
 	"context"
 	"embed"
+	"encoding/json"
 	"errors"
 	"github.com/goccy/go-yaml"
 	"github.com/xmidt-org/ears/internal/pkg/jwt"
@@ -202,7 +203,7 @@ func (a *APIManager) sendEventHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var payload interface{}
-	err = yaml.Unmarshal(body, &payload)
+	err = json.Unmarshal(body, &payload)
 	if err != nil {
 		log.Ctx(ctx).Error().Str("op", "sendEventHandler").Msg(err.Error())
 		a.addRouteFailureRecorder.Add(ctx, 1.0)
