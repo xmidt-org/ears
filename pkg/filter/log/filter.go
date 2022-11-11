@@ -67,6 +67,9 @@ func (f *Filter) Filter(evt event.Event) []event.Event {
 		obj, _, _ = evt.GetPathValue(f.config.Path)
 	}
 	buf, err := json.Marshal(obj)
+	if _, ok := obj.(string); ok {
+		buf = []byte(obj.(string))
+	}
 	if err != nil {
 		log.Ctx(evt.Context()).Error().Str("op", "filter").Str("filterType", "log").Str("name", f.Name()).Msg(err.Error())
 	} else {
