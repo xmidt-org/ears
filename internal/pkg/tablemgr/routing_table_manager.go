@@ -211,13 +211,13 @@ func (r *DefaultRoutingTableManager) RemoveRoute(ctx context.Context, tid tenant
 	return storageErr
 }
 
-func (r *DefaultRoutingTableManager) RouteEvent(ctx context.Context, tid tenant.Id, routeId string, payload interface{}) error {
+func (r *DefaultRoutingTableManager) RouteEvent(ctx context.Context, tid tenant.Id, routeId string, payload interface{}) (string, error) {
 	lrw, ok := r.liveRouteMap[tid.KeyWithRoute(routeId)]
 	if !ok {
-		return errors.New("no route " + routeId)
+		return "", errors.New("no route " + routeId)
 	}
 	if lrw.Receiver == nil {
-		return errors.New("no receiver for route " + routeId)
+		return "", errors.New("no receiver for route " + routeId)
 	}
 	sctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	e, err := event.New(sctx, payload, event.WithAck(
@@ -232,10 +232,12 @@ func (r *DefaultRoutingTableManager) RouteEvent(ctx context.Context, tid tenant.
 		event.WithTracePayloadOnNack(false),
 	)
 	if err != nil {
-		return errors.New("bad test event for route " + routeId)
+		return "", errors.New("bad test event for route " + routeId)
 	}
+	traceId, _, _ := e.GetPathValue("trace.id")
+	traceIdStr, _ := traceId.(string)
 	lrw.Receiver.Trigger(e)
-	return nil
+	return traceIdStr, nil
 }
 
 func (r *DefaultRoutingTableManager) AddRoute(ctx context.Context, routeConfig *route.Config) error {
