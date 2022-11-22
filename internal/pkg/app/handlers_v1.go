@@ -188,12 +188,22 @@ func (a *APIManager) sendEventHandler(w http.ResponseWriter, r *http.Request) {
 		resp.Respond(ctx, w, doYaml(r))
 		return
 	}
-	_, err := a.tenantStorer.GetConfig(ctx, *tid)
+	tenantConfig, err := a.tenantStorer.GetConfig(ctx, *tid)
 	if err != nil {
 		log.Ctx(ctx).Error().Str("op", "sendEventHandler").Str("error", err.Error()).Msg("error getting tenant config")
 		resp := ErrorResponse(convertToApiError(ctx, err))
 		resp.Respond(ctx, w, doYaml(r))
 		return
+	}
+	if !tenantConfig.OpenEventApi {
+		bearerToken := getBearerToken(r)
+		_, _, authErr := jwtMgr.VerifyToken(ctx, bearerToken, r.URL.Path, r.Method, tid)
+		if authErr != nil {
+			log.Ctx(ctx).Error().Str("op", "sendEventHandler").Str("error", authErr.Error()).Msg("authorization error")
+			resp := ErrorResponse(convertToApiError(ctx, authErr))
+			resp.Respond(ctx, w, doYaml(r))
+			return
+		}
 	}
 	body, err := ioutil.ReadAll(r.Body)
 	if err != nil {

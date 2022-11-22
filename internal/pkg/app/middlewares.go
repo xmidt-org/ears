@@ -27,6 +27,7 @@ import (
 	"go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux"
 	"go.opentelemetry.io/contrib/propagators/b3"
 	"net/http"
+	"regexp"
 	"strings"
 )
 
@@ -96,16 +97,22 @@ func authenticateMiddleware(next http.Handler) http.Handler {
 			vars := mux.Vars(r)
 			tid, tenantErr = getTenant(ctx, vars)
 			if tenantErr != nil {
-				log.Ctx(ctx).Error().Str("op", "deleteTenantConfigHandler").Str("error", tenantErr.Error()).Msg("orgId or appId empty")
+				log.Ctx(ctx).Error().Str("op", "authenticateMiddleware").Str("error", tenantErr.Error()).Msg("orgId or appId empty")
 				resp := ErrorResponse(tenantErr)
 				resp.Respond(ctx, w, doYaml(r))
+				return
+			}
+			// do not authenticate event API calls here
+			eventUrl := regexp.MustCompile(`^\/ears\/v1\/orgs\/[a-zA-Z][a-zA-Z0-9_\-\.]*\/applications\/[a-zA-Z][a-zA-Z0-9_\-\.]*\/routes\/[a-zA-Z][a-zA-Z0-9_\-\.]*\/event$`)
+			if eventUrl.MatchString(r.URL.Path) {
+				next.ServeHTTP(w, r)
 				return
 			}
 		}
 		bearerToken := getBearerToken(r)
 		_, _, authErr := jwtMgr.VerifyToken(ctx, bearerToken, r.URL.Path, r.Method, tid)
 		if authErr != nil {
-			log.Ctx(ctx).Error().Str("op", "deleteTenantConfigHandler").Str("error", authErr.Error()).Msg("authorization error")
+			log.Ctx(ctx).Error().Str("op", "authenticateMiddleware").Str("error", authErr.Error()).Msg("authorization error")
 			resp := ErrorResponse(convertToApiError(ctx, authErr))
 			resp.Respond(ctx, w, doYaml(r))
 			return
