@@ -1,7 +1,7 @@
 {
   "id" : "x100",
   "userId" : "boris",
-  "name" : "simple_route",
+  "name" : "simple/route",
   "receiver" : {
     "plugin" : "debug",
     "name" : "mydebug",
