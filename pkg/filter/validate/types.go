@@ -27,7 +27,7 @@ type Config struct {
 }
 
 var DefaultConfig = Config{
-	Path:   "generic",
+	Path:   ".",
 	Schema: map[string]interface{}{},
 }
 
