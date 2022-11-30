@@ -23,15 +23,18 @@ import (
 	"github.com/xmidt-org/ears/internal/pkg/rtsemconv"
 	"github.com/xmidt-org/ears/pkg/logs"
 	"github.com/xmidt-org/ears/pkg/panics"
+	"github.com/xmidt-org/ears/pkg/route"
 	"github.com/xmidt-org/ears/pkg/tenant"
 	"go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux"
 	"go.opentelemetry.io/contrib/propagators/b3"
 	"net/http"
+	"regexp"
 	"strings"
 )
 
 var middlewareLogger *zerolog.Logger
 var jwtMgr jwt.JWTConsumer
+var eventUrlValidator = regexp.MustCompile(`^\/ears\/v1\/orgs\/` + tenant.ORG_ID_REGEX + `\/applications\/` + tenant.APP_ID_REGEX + `\/routes\/` + route.ROUTE_ID_REGEX + `\/event$`)
 
 func NewMiddleware(logger *zerolog.Logger, jwtManager jwt.JWTConsumer) []func(next http.Handler) http.Handler {
 	middlewareLogger = logger
@@ -96,16 +99,21 @@ func authenticateMiddleware(next http.Handler) http.Handler {
 			vars := mux.Vars(r)
 			tid, tenantErr = getTenant(ctx, vars)
 			if tenantErr != nil {
-				log.Ctx(ctx).Error().Str("op", "deleteTenantConfigHandler").Str("error", tenantErr.Error()).Msg("orgId or appId empty")
+				log.Ctx(ctx).Error().Str("op", "authenticateMiddleware").Str("error", tenantErr.Error()).Msg("orgId or appId empty")
 				resp := ErrorResponse(tenantErr)
 				resp.Respond(ctx, w, doYaml(r))
+				return
+			}
+			// do not authenticate event API calls here
+			if eventUrlValidator.MatchString(r.URL.Path) {
+				next.ServeHTTP(w, r)
 				return
 			}
 		}
 		bearerToken := getBearerToken(r)
 		_, _, authErr := jwtMgr.VerifyToken(ctx, bearerToken, r.URL.Path, r.Method, tid)
 		if authErr != nil {
-			log.Ctx(ctx).Error().Str("op", "deleteTenantConfigHandler").Str("error", authErr.Error()).Msg("authorization error")
+			log.Ctx(ctx).Error().Str("op", "authenticateMiddleware").Str("error", authErr.Error()).Msg("authorization error")
 			resp := ErrorResponse(convertToApiError(ctx, authErr))
 			resp.Respond(ctx, w, doYaml(r))
 			return
