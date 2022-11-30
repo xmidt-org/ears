@@ -35,6 +35,7 @@ import (
 	"go.opentelemetry.io/otel/trace"
 	"io/ioutil"
 	"net/http"
+	"regexp"
 	"strings"
 
 	"github.com/gorilla/mux"
@@ -45,6 +46,11 @@ import (
 
 //go:embed ears
 var WebsiteFS embed.FS
+
+var (
+	appIdValidator = regexp.MustCompile(tenant.APP_ID_REGEX)
+	orgIdValidator = regexp.MustCompile(tenant.ORG_ID_REGEX)
+)
 
 type APIManager struct {
 	muxRouter                  *mux.Router
@@ -170,6 +176,16 @@ func getTenant(ctx context.Context, vars map[string]string) (*tenant.Id, ApiErro
 		} else {
 			err = &BadRequestError{"appId empty", nil}
 		}
+		return nil, err
+	}
+	if !appIdValidator.MatchString(appId) {
+		var err ApiError
+		err = &BadRequestError{"invalid app ID " + appId, nil}
+		return nil, err
+	}
+	if !orgIdValidator.MatchString(orgId) {
+		var err ApiError
+		err = &BadRequestError{"invalid org ID " + orgId, nil}
 		return nil, err
 	}
 	span := trace.SpanFromContext(ctx)

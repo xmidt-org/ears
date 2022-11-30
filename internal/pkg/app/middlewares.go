@@ -34,6 +34,7 @@ import (
 
 var middlewareLogger *zerolog.Logger
 var jwtMgr jwt.JWTConsumer
+var eventUrlValidator = regexp.MustCompile(`^\/ears\/v1\/orgs\/` + tenant.ORG_ID_REGEX + `\/applications\/` + tenant.APP_ID_REGEX + `\/routes\/` + route.ROUTE_ID_REGEX + `\/event$`)
 
 func NewMiddleware(logger *zerolog.Logger, jwtManager jwt.JWTConsumer) []func(next http.Handler) http.Handler {
 	middlewareLogger = logger
@@ -104,8 +105,7 @@ func authenticateMiddleware(next http.Handler) http.Handler {
 				return
 			}
 			// do not authenticate event API calls here
-			eventUrl := regexp.MustCompile(`^\/ears\/v1\/orgs\/` + tenant.ORG_ID_REGEX + `\/applications\/` + tenant.APP_ID_REGEX + `\/routes\/` + route.ROUTE_ID_REGEX + `\/event$`)
-			if eventUrl.MatchString(r.URL.Path) {
+			if eventUrlValidator.MatchString(r.URL.Path) {
 				next.ServeHTTP(w, r)
 				return
 			}
