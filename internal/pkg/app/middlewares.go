@@ -23,6 +23,7 @@ import (
 	"github.com/xmidt-org/ears/internal/pkg/rtsemconv"
 	"github.com/xmidt-org/ears/pkg/logs"
 	"github.com/xmidt-org/ears/pkg/panics"
+	"github.com/xmidt-org/ears/pkg/route"
 	"github.com/xmidt-org/ears/pkg/tenant"
 	"go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux"
 	"go.opentelemetry.io/contrib/propagators/b3"
@@ -103,7 +104,7 @@ func authenticateMiddleware(next http.Handler) http.Handler {
 				return
 			}
 			// do not authenticate event API calls here
-			eventUrl := regexp.MustCompile(`^\/ears\/v1\/orgs\/[a-zA-Z][a-zA-Z0-9_\-\.]*\/applications\/[a-zA-Z][a-zA-Z0-9_\-\.]*\/routes\/[a-zA-Z][a-zA-Z0-9_\-\.]*\/event$`)
+			eventUrl := regexp.MustCompile(`^\/ears\/v1\/orgs\/` + tenant.ORG_ID_REGEX + `\/applications\/` + tenant.APP_ID_REGEX + `\/routes\/` + route.ROUTE_ID_REGEX + `\/event$`)
 			if eventUrl.MatchString(r.URL.Path) {
 				next.ServeHTTP(w, r)
 				return
