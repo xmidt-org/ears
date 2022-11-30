@@ -28,6 +28,8 @@ import (
 	"github.com/xmidt-org/ears/pkg/tenant"
 )
 
+const ROUTE_ID_REGEX = `^[a-zA-Z0-9][a-zA-Z0-9_\-\.]*[a-zA-Z0-9]$`
+
 type Router interface {
 	Run(r receiver.Receiver, f filter.Filterer, s sender.Sender) error
 	Stop(ctx context.Context) error
@@ -74,7 +76,7 @@ func (pc *PluginConfig) Validate(ctx context.Context) error {
 		return errors.New("missing plugin type configuration")
 	}
 	if pc.Name != "" {
-		validName := regexp.MustCompile(`^[a-zA-Z][a-zA-Z0-9]*$`)
+		validName := regexp.MustCompile(ROUTE_ID_REGEX)
 		if !validName.MatchString(pc.Name) {
 			return errors.New("invalid plugin name " + pc.Name)
 		}
@@ -104,8 +106,11 @@ func (rc *Config) Validate(ctx context.Context) error {
 	if rc.Id == "" {
 		return errors.New("missing ID for plugin configuration")
 	}
+	validName := regexp.MustCompile(ROUTE_ID_REGEX)
+	if !validName.MatchString(rc.Id) {
+		return errors.New("invalid route ID " + rc.Id)
+	}
 	if rc.Name != "" {
-		validName := regexp.MustCompile(`^[a-zA-Z][a-zA-Z0-9]*$`)
 		if !validName.MatchString(rc.Name) {
 			return errors.New("invalid route name " + rc.Name)
 		}

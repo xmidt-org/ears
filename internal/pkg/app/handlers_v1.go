@@ -35,6 +35,7 @@ import (
 	"go.opentelemetry.io/otel/trace"
 	"io/ioutil"
 	"net/http"
+	"regexp"
 	"strings"
 
 	"github.com/gorilla/mux"
@@ -45,6 +46,11 @@ import (
 
 //go:embed ears
 var WebsiteFS embed.FS
+
+var (
+	appIdValidator = regexp.MustCompile(tenant.APP_ID_REGEX)
+	orgIdValidator = regexp.MustCompile(tenant.ORG_ID_REGEX)
+)
 
 type APIManager struct {
 	muxRouter                  *mux.Router
@@ -172,6 +178,16 @@ func getTenant(ctx context.Context, vars map[string]string) (*tenant.Id, ApiErro
 		}
 		return nil, err
 	}
+	if !appIdValidator.MatchString(appId) {
+		var err ApiError
+		err = &BadRequestError{"invalid app ID " + appId, nil}
+		return nil, err
+	}
+	if !orgIdValidator.MatchString(orgId) {
+		var err ApiError
+		err = &BadRequestError{"invalid org ID " + orgId, nil}
+		return nil, err
+	}
 	span := trace.SpanFromContext(ctx)
 	span.SetAttributes(rtsemconv.EARSOrgId.String(orgId))
 	span.SetAttributes(rtsemconv.EARSAppId.String(appId))
@@ -188,12 +204,22 @@ func (a *APIManager) sendEventHandler(w http.ResponseWriter, r *http.Request) {
 		resp.Respond(ctx, w, doYaml(r))
 		return
 	}
-	_, err := a.tenantStorer.GetConfig(ctx, *tid)
+	tenantConfig, err := a.tenantStorer.GetConfig(ctx, *tid)
 	if err != nil {
 		log.Ctx(ctx).Error().Str("op", "sendEventHandler").Str("error", err.Error()).Msg("error getting tenant config")
 		resp := ErrorResponse(convertToApiError(ctx, err))
 		resp.Respond(ctx, w, doYaml(r))
 		return
+	}
+	if !tenantConfig.OpenEventApi {
+		bearerToken := getBearerToken(r)
+		_, _, authErr := jwtMgr.VerifyToken(ctx, bearerToken, r.URL.Path, r.Method, tid)
+		if authErr != nil {
+			log.Ctx(ctx).Error().Str("op", "sendEventHandler").Str("error", authErr.Error()).Msg("authorization error")
+			resp := ErrorResponse(convertToApiError(ctx, authErr))
+			resp.Respond(ctx, w, doYaml(r))
+			return
+		}
 	}
 	body, err := ioutil.ReadAll(r.Body)
 	if err != nil {
