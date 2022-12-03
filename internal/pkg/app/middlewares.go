@@ -23,7 +23,6 @@ import (
 	"github.com/xmidt-org/ears/internal/pkg/rtsemconv"
 	"github.com/xmidt-org/ears/pkg/logs"
 	"github.com/xmidt-org/ears/pkg/panics"
-	"github.com/xmidt-org/ears/pkg/route"
 	"github.com/xmidt-org/ears/pkg/tenant"
 	"go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux"
 	"go.opentelemetry.io/contrib/propagators/b3"
@@ -34,7 +33,7 @@ import (
 
 var middlewareLogger *zerolog.Logger
 var jwtMgr jwt.JWTConsumer
-var eventUrlValidator = regexp.MustCompile(`^\/ears\/v1\/orgs\/` + tenant.ORG_ID_REGEX + `\/applications\/` + tenant.APP_ID_REGEX + `\/routes\/` + route.ROUTE_ID_REGEX + `\/event$`)
+var eventUrlValidator = regexp.MustCompile(`^\/ears\/v1\/orgs\/[a-zA-Z0-9][a-zA-Z0-9_\-]*[a-zA-Z0-9]\/applications\/[a-zA-Z0-9][a-zA-Z0-9_\-]*[a-zA-Z0-9]\/routes\/[a-zA-Z0-9][a-zA-Z0-9_\-\.]*[a-zA-Z0-9]\/event$`)
 
 func NewMiddleware(logger *zerolog.Logger, jwtManager jwt.JWTConsumer) []func(next http.Handler) http.Handler {
 	middlewareLogger = logger
