@@ -18,6 +18,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"github.com/boriwo/deepcopy"
 	"github.com/rs/zerolog/log"
@@ -39,7 +40,10 @@ var (
 )
 
 const (
-	HTTP_AUTH_TYPE_BASIC = "basic"
+	HTTP_AUTH_TYPE_BASIC  = "basic"
+	HTTP_AUTH_TYPE_SAT    = "sat"
+	HTTP_AUTH_TYPE_OAUTH  = "oauth"
+	HTTP_AUTH_TYPE_OAUTH2 = "oauth2"
 )
 
 func NewFilter(tid tenant.Id, plugin string, name string, config interface{}, secrets secret.Vault) (*Filter, error) {
@@ -195,13 +199,20 @@ func (f *Filter) hitEndpoint(ctx context.Context, evt event.Event) (string, int,
 	for hk, hv := range headers {
 		req.Header.Set(hk, hv)
 	}
-	//TODO: support SAT and OAuth
 	if f.config.Auth.Type == HTTP_AUTH_TYPE_BASIC {
 		password := f.secrets.Secret(f.config.Auth.Password)
 		if password == "" {
 			password = f.config.Auth.Password
 		}
 		req.SetBasicAuth(f.config.Auth.Username, password)
+	} else if f.config.Auth.Type == HTTP_AUTH_TYPE_SAT {
+		return "", 0, errors.New("sat auth not supported")
+	} else if f.config.Auth.Type == HTTP_AUTH_TYPE_OAUTH {
+		return "", 0, errors.New("oauth auth not supported")
+	} else if f.config.Auth.Type == HTTP_AUTH_TYPE_OAUTH2 {
+		return "", 0, errors.New("oauth2 auth not supported")
+	} else if f.config.Auth.Type != "" {
+		return "", 0, errors.New("invalid auth type " + f.config.Auth.Type)
 	}
 	// send request
 	resp, err := client.Do(req)
