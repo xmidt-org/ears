@@ -37,6 +37,7 @@ import (
 	"github.com/xmidt-org/ears/pkg/plugins/match"
 	"github.com/xmidt-org/ears/pkg/plugins/merge"
 	"github.com/xmidt-org/ears/pkg/plugins/metric"
+	"github.com/xmidt-org/ears/pkg/plugins/modify"
 	"github.com/xmidt-org/ears/pkg/plugins/nop"
 	"github.com/xmidt-org/ears/pkg/plugins/pass"
 	"github.com/xmidt-org/ears/pkg/plugins/redis"
@@ -171,6 +172,10 @@ func ProvidePluginManager(in PluginIn) (PluginOut, error) {
 		{
 			name:   "ttl",
 			plugin: toArr(ttl.NewPluginVersion("ttl", "", ""))[0].(pkgplugin.Pluginer),
+		},
+		{
+			name:   "modify",
+			plugin: toArr(modify.NewPluginVersion("modify", "", ""))[0].(pkgplugin.Pluginer),
 		},
 		{
 			name:   "trace",
