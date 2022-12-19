@@ -21,7 +21,6 @@ import (
 	"github.com/xmidt-org/ears/pkg/filter"
 	"github.com/xmidt-org/ears/pkg/secret"
 	"github.com/xmidt-org/ears/pkg/tenant"
-	"go.opentelemetry.io/otel/trace"
 	"strings"
 )
 
@@ -64,12 +63,13 @@ func (f *Filter) Filter(evt event.Event) []event.Event {
 	for _, p := range allPaths {
 		obj, _, _ := evt.GetPathValue(p)
 		if obj == nil {
-			log.Ctx(evt.Context()).Error().Str("op", "filter").Str("filterType", "modify").Str("name", f.Name()).Msg("nil object at " + p)
+			continue
+			/*log.Ctx(evt.Context()).Error().Str("op", "filter").Str("filterType", "modify").Str("name", f.Name()).Msg("nil object at " + p)
 			if span := trace.SpanFromContext(evt.Context()); span != nil {
 				span.AddEvent("nil object at " + p)
 			}
 			evt.Ack()
-			return []event.Event{}
+			return []event.Event{}*/
 		}
 		switch strObj := obj.(type) {
 		case string:
@@ -79,16 +79,18 @@ func (f *Filter) Filter(evt event.Event) []event.Event {
 				evt.SetPathValue(p, strings.ToLower(strObj), false)
 			}
 		default:
-			log.Ctx(evt.Context()).Error().Str("op", "filter").Str("filterType", "modify").Str("name", f.Name()).Msg("not string type at " + p)
+			continue
+			/*log.Ctx(evt.Context()).Error().Str("op", "filter").Str("filterType", "modify").Str("name", f.Name()).Msg("not string type at " + p)
 			if span := trace.SpanFromContext(evt.Context()); span != nil {
 				span.AddEvent("not string type at " + p)
 			}
 			evt.Ack()
-			return []event.Event{}
+			return []event.Event{}*/
 		}
 	}
 	return []event.Event{evt}
 }
+
 func (f *Filter) Config() interface{} {
 	if f == nil {
 		return Config{}
