@@ -22,6 +22,7 @@ import (
 	yaml "github.com/goccy/go-yaml"
 	"github.com/gorilla/mux"
 	"github.com/rs/zerolog/log"
+	"github.com/xmidt-org/ears/internal/pkg/config"
 	"github.com/xmidt-org/ears/internal/pkg/jwt"
 	"github.com/xmidt-org/ears/internal/pkg/plugin"
 	"github.com/xmidt-org/ears/internal/pkg/quota"
@@ -67,6 +68,9 @@ type APIManager struct {
 	addRouteFailureRecorder    metric.BoundFloat64Counter
 	removeRouteSuccessRecorder metric.BoundFloat64Counter
 	removeRouteFailureRecorder metric.BoundFloat64Counter
+	globalWebhookOrg           string
+	globalWebhookApp           string
+	globalWebhookRouteId       string
 }
 
 type CachedTenantConfig struct {
@@ -119,7 +123,7 @@ func (c *TenantCache) GetTenant(tenantId string) *tenant.Config {
 	return &item.Config
 }
 
-func NewAPIManager(routingMgr tablemgr.RoutingTableManager, tenantStorer tenant.TenantStorer, quotaManager *quota.QuotaManager, jwtManager jwt.JWTConsumer) (*APIManager, error) {
+func NewAPIManager(routingMgr tablemgr.RoutingTableManager, tenantStorer tenant.TenantStorer, quotaManager *quota.QuotaManager, jwtManager jwt.JWTConsumer, config config.Config) (*APIManager, error) {
 	api := &APIManager{
 		muxRouter:       mux.NewRouter(),
 		routingTableMgr: routingMgr,
@@ -128,9 +132,17 @@ func NewAPIManager(routingMgr tablemgr.RoutingTableManager, tenantStorer tenant.
 		jwtManager:      jwtManager,
 		tenantCache:     NewTenantCache(TENANT_CACHE_TTL_SECS),
 	}
+
+	if config != nil {
+		api.globalWebhookApp = config.GetString("ears.api.webhook.app")
+		api.globalWebhookOrg = config.GetString("ears.api.webhook.org")
+		api.globalWebhookRouteId = config.GetString("ears.api.webhook.routeId")
+	}
+
 	api.muxRouter.PathPrefix("/ears/openapi").Handler(
 		http.FileServer(http.FS(WebsiteFS)),
 	)
+
 	api.muxRouter.HandleFunc("/ears/version", api.versionHandler).Methods(http.MethodGet)
 
 	api.muxRouter.HandleFunc("/ears/v1/orgs/{orgId}/applications/{appId}/routes/{routeId}", api.addRouteHandler).Methods(http.MethodPut)
@@ -253,11 +265,17 @@ func getTenant(ctx context.Context, vars map[string]string) (*tenant.Id, ApiErro
 func (a *APIManager) webhookHandler(w http.ResponseWriter, r *http.Request) {
 	// Solution A: Internally forward request to correct handler function and set necessary URL vars.
 	// This solution is the most efficient but also the least flexible due to hard coding.
-	//TODO: consider taking vars from ears.config
+	ctx := r.Context()
+	if a.globalWebhookOrg == "" || a.globalWebhookApp == "" || a.globalWebhookRouteId == "" {
+		log.Ctx(ctx).Error().Str("op", "webhookHandler").Str("error", "no global webhook configured").Msg("no global webhook configured")
+		resp := ErrorResponse(convertToApiError(ctx, errors.New("no global webhook configured")))
+		resp.Respond(ctx, w, doYaml(r))
+		return
+	}
 	r = mux.SetURLVars(r, map[string]string{
-		"orgId":   "comcast",
-		"appId":   "gears",
-		"routeId": "gearsWebhookRoute",
+		"orgId":   a.globalWebhookOrg,
+		"appId":   a.globalWebhookApp,
+		"routeId": a.globalWebhookRouteId,
 	})
 	a.sendEventHandler(w, r)
 	// Solution B: Forward request via network stack. Does create an extra hop but it allows for a more

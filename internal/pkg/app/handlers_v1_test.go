@@ -650,7 +650,7 @@ func setupRestApi(config config.Config, storageMgr route.RouteStorer, setupQuota
 		}
 	}
 	jwtMgr, _ := jwt.NewJWTConsumer("", nil, false, "", "", nil, nil, nil)
-	apiMgr, err := NewAPIManager(routingMgr, tenantStorer, quotaMgr, jwtMgr)
+	apiMgr, err := NewAPIManager(routingMgr, tenantStorer, quotaMgr, jwtMgr, nil)
 	if err != nil {
 		return &EarsRuntime{config, nil, nil, storageMgr, nil, nil}, err
 	}
@@ -766,7 +766,7 @@ func TestRestVersionHandler(t *testing.T) {
 	w := httptest.NewRecorder()
 	r := httptest.NewRequest(http.MethodGet, "/version", nil)
 	jwtMgr, _ := jwt.NewJWTConsumer("", nil, false, "", "", nil, nil, nil)
-	api, err := NewAPIManager(&tablemgr.DefaultRoutingTableManager{}, nil, nil, jwtMgr)
+	api, err := NewAPIManager(&tablemgr.DefaultRoutingTableManager{}, nil, nil, jwtMgr, nil)
 	if err != nil {
 		t.Fatalf("Fail to setup api manager: %s\n", err.Error())
 	}
