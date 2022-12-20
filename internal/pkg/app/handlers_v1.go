@@ -20,6 +20,8 @@ import (
 	"encoding/json"
 	"errors"
 	yaml "github.com/goccy/go-yaml"
+	"github.com/gorilla/mux"
+	"github.com/rs/zerolog/log"
 	"github.com/xmidt-org/ears/internal/pkg/jwt"
 	"github.com/xmidt-org/ears/internal/pkg/plugin"
 	"github.com/xmidt-org/ears/internal/pkg/quota"
@@ -37,15 +39,17 @@ import (
 	"net/http"
 	"regexp"
 	"strings"
-
-	"github.com/gorilla/mux"
-	"github.com/rs/zerolog/log"
+	"time"
 
 	"github.com/xmidt-org/ears/pkg/route"
 )
 
 //go:embed ears
 var WebsiteFS embed.FS
+
+const (
+	TENANT_CACHE_TTL_SECS = 20
+)
 
 var (
 	appIdValidator = regexp.MustCompile(tenant.APP_ID_REGEX)
@@ -58,10 +62,61 @@ type APIManager struct {
 	tenantStorer               tenant.TenantStorer
 	quotaManager               *quota.QuotaManager
 	jwtManager                 jwt.JWTConsumer
+	tenantCache                *TenantCache
 	addRouteSuccessRecorder    metric.BoundFloat64Counter
 	addRouteFailureRecorder    metric.BoundFloat64Counter
 	removeRouteSuccessRecorder metric.BoundFloat64Counter
 	removeRouteFailureRecorder metric.BoundFloat64Counter
+}
+
+type CachedTenantConfig struct {
+	tenant.Config
+	Ts int64
+}
+
+type TenantCache struct {
+	cache   map[string]*CachedTenantConfig
+	ttlSecs int
+}
+
+func NewTenantCache(ttlSecs int) *TenantCache {
+	tenantCache := TenantCache{
+		cache:   make(map[string]*CachedTenantConfig),
+		ttlSecs: ttlSecs,
+	}
+	return &tenantCache
+}
+
+func (c *TenantCache) SetTenant(tenantConfig *tenant.Config) {
+	if tenantConfig == nil {
+		return
+	}
+	if c.cache == nil {
+		return
+	}
+	item := CachedTenantConfig{
+		Config: *tenantConfig,
+		Ts:     time.Now().Unix(),
+	}
+	c.cache[tenantConfig.Tenant.Key()] = &item
+}
+
+func (c *TenantCache) GetTenant(tenantId string) *tenant.Config {
+	if tenantId == "" {
+		return nil
+	}
+	if c.cache == nil {
+		return nil
+	}
+	item, ok := c.cache[tenantId]
+	if !ok {
+		return nil
+	}
+	if time.Now().Unix()-item.Ts > TENANT_CACHE_TTL_SECS {
+		delete(c.cache, tenantId)
+		return nil
+	}
+	return &item.Config
 }
 
 func NewAPIManager(routingMgr tablemgr.RoutingTableManager, tenantStorer tenant.TenantStorer, quotaManager *quota.QuotaManager, jwtManager jwt.JWTConsumer) (*APIManager, error) {
@@ -71,6 +126,7 @@ func NewAPIManager(routingMgr tablemgr.RoutingTableManager, tenantStorer tenant.
 		tenantStorer:    tenantStorer,
 		quotaManager:    quotaManager,
 		jwtManager:      jwtManager,
+		tenantCache:     NewTenantCache(TENANT_CACHE_TTL_SECS),
 	}
 	api.muxRouter.PathPrefix("/ears/openapi").Handler(
 		http.FileServer(http.FS(WebsiteFS)),
@@ -181,13 +237,11 @@ func getTenant(ctx context.Context, vars map[string]string) (*tenant.Id, ApiErro
 		return nil, err
 	}
 	if !appIdValidator.MatchString(appId) {
-		var err ApiError
-		err = &BadRequestError{"invalid app ID " + appId, nil}
+		err := &BadRequestError{"invalid app ID " + appId, nil}
 		return nil, err
 	}
 	if !orgIdValidator.MatchString(orgId) {
-		var err ApiError
-		err = &BadRequestError{"invalid org ID " + orgId, nil}
+		err := &BadRequestError{"invalid org ID " + orgId, nil}
 		return nil, err
 	}
 	span := trace.SpanFromContext(ctx)
@@ -209,8 +263,8 @@ func (a *APIManager) webhookHandler(w http.ResponseWriter, r *http.Request) {
 	// Solution B: Forward request via network stack. Does create an extra hop but it allows for a more
 	// flexible implementation where we load the from and to URls to be proxied from ears.config.
 	/*ctx := r.Context()
-	//TODO: read source and forward URLS including host and protocol from ears.config
-	proxyReq, err := http.NewRequest("POST", "/ears/v1/orgs/comcast/applications/gears/routes/gearsWebhookRoute/event", r.Body)
+	// read source and forward URLS including host and protocol from ears.config
+	proxyReq, err := http.NewRequest("POST", "http://localhost:3000/ears/v1/orgs/comcast/applications/gears/routes/gearsWebhookRoute/event", r.Body)
 	if err != nil {
 		log.Ctx(ctx).Error().Str("op", "webhookHandler").Str("error", err.Error()).Msg("error creating forward request")
 		resp := ErrorResponse(convertToApiError(ctx, err))
@@ -223,7 +277,7 @@ func (a *APIManager) webhookHandler(w http.ResponseWriter, r *http.Request) {
 			proxyReq.Header.Add(k, v)
 		}
 	}
-	//TODO: setup client elsewhere, set transport and timeout etc.
+	// setup client elsewhere, set transport and timeout etc.
 	client := &http.Client{}
 	res, err := client.Do(proxyReq)
 	if err != nil {
@@ -254,13 +308,19 @@ func (a *APIManager) sendEventHandler(w http.ResponseWriter, r *http.Request) {
 		resp.Respond(ctx, w, doYaml(r))
 		return
 	}
-	tenantConfig, err := a.tenantStorer.GetConfig(ctx, *tid)
-	if err != nil {
-		log.Ctx(ctx).Error().Str("op", "sendEventHandler").Str("error", err.Error()).Msg("error getting tenant config")
-		resp := ErrorResponse(convertToApiError(ctx, err))
-		resp.Respond(ctx, w, doYaml(r))
-		return
+	tenantConfig := a.tenantCache.GetTenant(tid.Key())
+	if tenantConfig == nil {
+		var err error
+		tenantConfig, err = a.tenantStorer.GetConfig(ctx, *tid)
+		if err != nil {
+			log.Ctx(ctx).Error().Str("op", "sendEventHandler").Str("error", err.Error()).Msg("error getting tenant config")
+			resp := ErrorResponse(convertToApiError(ctx, err))
+			resp.Respond(ctx, w, doYaml(r))
+			return
+		}
+		a.tenantCache.SetTenant(tenantConfig)
 	}
+	// authenticate here if necessary (middleware does not authenticate this API)
 	if !tenantConfig.OpenEventApi {
 		bearerToken := getBearerToken(r)
 		_, _, authErr := jwtMgr.VerifyToken(ctx, bearerToken, r.URL.Path, r.Method, tid)
