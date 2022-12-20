@@ -19,7 +19,7 @@ import (
 	"embed"
 	"encoding/json"
 	"errors"
-	"github.com/goccy/go-yaml"
+	yaml "github.com/goccy/go-yaml"
 	"github.com/xmidt-org/ears/internal/pkg/jwt"
 	"github.com/xmidt-org/ears/internal/pkg/plugin"
 	"github.com/xmidt-org/ears/internal/pkg/quota"
@@ -104,6 +104,8 @@ func NewAPIManager(routingMgr tablemgr.RoutingTableManager, tenantStorer tenant.
 	api.muxRouter.HandleFunc("/ears/v1/receivers", api.getAllReceiversHandler).Methods(http.MethodGet)
 	api.muxRouter.HandleFunc("/ears/v1/filters", api.getAllFiltersHandler).Methods(http.MethodGet)
 	api.muxRouter.HandleFunc("/ears/v1/fragments", api.getAllFragmentsHandler).Methods(http.MethodGet)
+
+	api.muxRouter.HandleFunc("/ears/v1/events", api.webhookHandler).Methods(http.MethodPost)
 	// metrics
 	// where should meters live (api manager, uberfx, global variables,...)?
 	meter := global.Meter(rtsemconv.EARSMeterName)
@@ -192,6 +194,54 @@ func getTenant(ctx context.Context, vars map[string]string) (*tenant.Id, ApiErro
 	span.SetAttributes(rtsemconv.EARSOrgId.String(orgId))
 	span.SetAttributes(rtsemconv.EARSAppId.String(appId))
 	return &tenant.Id{OrgId: orgId, AppId: appId}, nil
+}
+
+func (a *APIManager) webhookHandler(w http.ResponseWriter, r *http.Request) {
+	// Solution A: Internally forward request to correct handler function and set necessary URL vars.
+	// This solution is the most efficient but also the least flexible due to hard coding.
+	//TODO: consider taking vars from ears.config
+	r = mux.SetURLVars(r, map[string]string{
+		"orgId":   "comcast",
+		"appId":   "gears",
+		"routeId": "gearsWebhookRoute",
+	})
+	a.sendEventHandler(w, r)
+	// Solution B: Forward request via network stack. Does create an extra hop but it allows for a more
+	// flexible implementation where we load the from and to URls to be proxied from ears.config.
+	/*ctx := r.Context()
+	//TODO: read source and forward URLS including host and protocol from ears.config
+	proxyReq, err := http.NewRequest("POST", "/ears/v1/orgs/comcast/applications/gears/routes/gearsWebhookRoute/event", r.Body)
+	if err != nil {
+		log.Ctx(ctx).Error().Str("op", "webhookHandler").Str("error", err.Error()).Msg("error creating forward request")
+		resp := ErrorResponse(convertToApiError(ctx, err))
+		resp.Respond(ctx, w, doYaml(r))
+		return
+	}
+	// copy headers (including auth headers)
+	for k, vv := range r.Header {
+		for _, v := range vv {
+			proxyReq.Header.Add(k, v)
+		}
+	}
+	//TODO: setup client elsewhere, set transport and timeout etc.
+	client := &http.Client{}
+	res, err := client.Do(proxyReq)
+	if err != nil {
+		log.Ctx(ctx).Error().Str("op", "webhookHandler").Str("error", err.Error()).Msg("error forwarding request")
+		resp := ErrorResponse(convertToApiError(ctx, err))
+		resp.Respond(ctx, w, doYaml(r))
+		return
+	}
+	body, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		log.Ctx(ctx).Error().Str("op", "webhookHandler").Msg(err.Error())
+		resp := ErrorResponse(&InternalServerError{err})
+		resp.Respond(ctx, w, doYaml(r))
+		return
+	}
+	r.Body.Close()
+	w.WriteHeader(res.StatusCode)
+	w.Write(body)*/
 }
 
 func (a *APIManager) sendEventHandler(w http.ResponseWriter, r *http.Request) {
