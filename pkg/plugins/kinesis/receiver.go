@@ -444,14 +444,18 @@ func (r *Receiver) startShardReceiver(svc *kinesis.Kinesis, stream *kinesis.Desc
 		attribute.String(rtsemconv.KinesisStreamNameLabel, r.config.StreamName),
 		attribute.Int(rtsemconv.KinesisShardIdxLabel, shardIdx),
 	}
-
 	r.eventLagMillis = metric.Must(meter).
 		NewInt64Histogram(
 			rtsemconv.EARSMetricMillisBehindLatest,
 			metric.WithDescription("measures the number of milliseconds current event is behind tip of stream"),
 			metric.WithUnit(unit.Milliseconds),
 		).Bind(commonLabels...)
-
+	r.eventTrueLagMillis = metric.Must(meter).
+		NewInt64Histogram(
+			rtsemconv.EARSMetricTrueLagMillis,
+			metric.WithDescription("measures the number of milliseconds current event is behind tip of stream"),
+			metric.WithUnit(unit.Milliseconds),
+		).Bind(commonLabels...)
 	// this is a non-enhanced consumer that will only consume from one shard
 	// n is number of worker in pool
 	go func() {
