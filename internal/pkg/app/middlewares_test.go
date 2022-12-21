@@ -44,7 +44,7 @@ func TestInitRequestMiddleware(t *testing.T) {
 	validator := &Validator{func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
 		log.Ctx(ctx).Debug().Msg("test")
-		listener.AssertLastLogLine(t, "tx.traceId", "123456")
+		listener.AssertLastLogLine(t, "tx.traceId", "00000000000000000000000000000000")
 	}}
 
 	//3rd middleware should be the InitRequestMiddleware
@@ -52,8 +52,6 @@ func TestInitRequestMiddleware(t *testing.T) {
 
 	w := httptest.NewRecorder()
 	r := httptest.NewRequest(http.MethodGet, "/", nil)
-	r.Header.Set("X-B3-TraceId", "123456")
-
 	m.ServeHTTP(w, r)
 
 	//Test Case 2
