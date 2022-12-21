@@ -15,7 +15,6 @@
 package app
 
 import (
-	"github.com/google/uuid"
 	"github.com/gorilla/mux"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
@@ -26,6 +25,7 @@ import (
 	"github.com/xmidt-org/ears/pkg/tenant"
 	"go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux"
 	"go.opentelemetry.io/contrib/propagators/b3"
+	"go.opentelemetry.io/otel/trace"
 	"net/http"
 	"regexp"
 	"strings"
@@ -63,10 +63,8 @@ func initRequestMiddleware(next http.Handler) http.Handler {
 			}
 		}()
 
-		traceId := r.Header.Get(HeaderTraceId)
-		if traceId == "" {
-			traceId = uuid.New().String()
-		}
+		//extract any trace information
+		traceId := trace.SpanFromContext(subCtx).SpanContext().TraceID().String()
 		logs.StrToLogCtx(subCtx, rtsemconv.EarsLogTraceIdKey, traceId)
 
 		log.Ctx(subCtx).Debug().Msg("initializeRequestMiddleware")
