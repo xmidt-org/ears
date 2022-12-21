@@ -34,7 +34,6 @@ import (
 var middlewareLogger *zerolog.Logger
 var jwtMgr jwt.JWTConsumer
 var eventUrlValidator = regexp.MustCompile(`^\/ears\/v1\/orgs\/[a-zA-Z0-9][a-zA-Z0-9_\-]*[a-zA-Z0-9]\/applications\/[a-zA-Z0-9][a-zA-Z0-9_\-]*[a-zA-Z0-9]\/routes\/[a-zA-Z0-9][a-zA-Z0-9_\-\.]*[a-zA-Z0-9]\/event$`)
-var b3Propagator = b3.New()
 
 func NewMiddleware(logger *zerolog.Logger, jwtManager jwt.JWTConsumer) []func(next http.Handler) http.Handler {
 	middlewareLogger = logger
