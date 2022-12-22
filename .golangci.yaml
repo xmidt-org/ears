@@ -148,6 +148,9 @@ issues:
     - path: pkg/filter/decode/decode\.go
       linters:
         - funlen
+    - path: pkg/filter/ws/webservice\.go
+      linters:
+        - funlen
     - path: internal/pkg/jwt/types\.go
       text: "Potential hardcoded credentials"
       linters:

@@ -37,9 +37,13 @@ type Config struct {
 }
 
 type Auth struct {
-	Type     string `json:"type,omitempty"`
-	Username string `json:"username,omitempty"`
-	Password string `json:"password,omitempty"`
+	Type         string   `json:"type,omitempty"`
+	Username     string   `json:"username,omitempty"`     // basic auth
+	Password     string   `json:"password,omitempty"`     // basic auth
+	ClientID     string   `json:"clientId,omitempty"`     // oauth2
+	ClientSecret string   `json:"clientSecret,omitempty"` // oauth2
+	TokenURL     string   `json:"tokenUrl,omitempty"`     // oauth2
+	Scopes       []string `json:"scopes,omitempty"`       // oauth2
 }
 
 var DefaultConfig = Config{

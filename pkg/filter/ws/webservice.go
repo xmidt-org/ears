@@ -218,17 +218,31 @@ func (f *Filter) hitEndpoint(ctx context.Context, evt event.Event) (string, int,
 	} else if f.config.Auth.Type == HTTP_AUTH_TYPE_OAUTH {
 		return "", 0, errors.New("oauth auth not supported")
 	} else if f.config.Auth.Type == HTTP_AUTH_TYPE_OAUTH2 {
-		//TODO: must restore standard client after call
-		//TODO: cache oauth clients
-		//TODO: get secrets from config file
-		conf := &clientcredentials.Config{
-			ClientID:     "",
-			ClientSecret: "",
-			TokenURL:     "",
-			Scopes:       []string{},
+		var ok bool
+		f.RLock()
+		client, ok = f.clients[HTTP_AUTH_TYPE_OAUTH2+"-"+url]
+		f.RUnlock()
+		if !ok {
+			conf := &clientcredentials.Config{
+				ClientID:     f.secrets.Secret(f.config.Auth.ClientID),
+				ClientSecret: f.secrets.Secret(f.config.Auth.ClientSecret),
+				TokenURL:     f.secrets.Secret(f.config.Auth.TokenURL),
+				Scopes:       f.config.Auth.Scopes,
+			}
+			if conf.ClientID == "" {
+				conf.ClientID = f.config.Auth.ClientID
+			}
+			if conf.ClientSecret == "" {
+				conf.ClientSecret = f.config.Auth.ClientSecret
+			}
+			if conf.TokenURL == "" {
+				conf.TokenURL = f.config.Auth.TokenURL
+			}
+			client = conf.Client(context.Background())
+			f.Lock()
+			f.clients[HTTP_AUTH_TYPE_OAUTH2+"-"+url] = client
+			f.Unlock()
 		}
-		client = conf.Client(context.Background())
-		//return "", 0, errors.New("oauth2 auth not supported")
 	} else if f.config.Auth.Type == "" {
 		var ok bool
 		f.RLock()
