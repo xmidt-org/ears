@@ -26,10 +26,12 @@ import (
 	"github.com/xmidt-org/ears/pkg/receiver"
 	"github.com/xmidt-org/ears/pkg/secret"
 	"github.com/xmidt-org/ears/pkg/tenant"
+	"go.opentelemetry.io/contrib/propagators/b3"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/global"
 	"go.opentelemetry.io/otel/metric/unit"
+	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/trace"
 	"io/ioutil"
 	"net/http"
@@ -96,16 +98,14 @@ func NewReceiver(tid tenant.Id, plugin string, name string, config interface{}, 
 	return r, nil
 }
 
-func (r *Receiver) GetTraceId(req *http.Request) string {
-	return req.Header.Get("traceId")
-}
-
 func (r *Receiver) Receive(next receiver.NextFn) error {
 	r.next = next
 	mux := http.NewServeMux()
 	port := *r.config.Port
 	r.logger.Info().Int("port", port).Str("path", r.config.Path).Msg("starting http receiver")
 	r.srv = &http.Server{Addr: fmt.Sprintf(":%d", port), Handler: mux}
+	b3Propagator := b3.New()
+
 	mux.HandleFunc(r.config.Path, func(w http.ResponseWriter, req *http.Request) {
 		if r.config.Method != "" && !strings.EqualFold(r.config.Method, strings.ToLower(req.Method)) {
 			r.logger.Error().Str("method", req.Method).Msg("unexpected method error")
@@ -124,6 +124,10 @@ func (r *Receiver) Receive(next receiver.NextFn) error {
 			return
 		}
 		ctx, cancel := context.WithTimeout(context.Background(), time.Duration(5)*time.Second)
+
+		//extract any trace information
+		ctx = b3Propagator.Extract(ctx, propagation.HeaderCarrier(req.Header))
+
 		r.eventBytesCounter.Add(ctx, int64(len(b)))
 		var wg sync.WaitGroup
 		wg.Add(1)
@@ -180,11 +184,6 @@ func (r *Receiver) Receive(next receiver.NextFn) error {
 		)
 		if err != nil {
 			r.logger.Error().Str("error", err.Error()).Msg("error creating event")
-		}
-		traceId := r.GetTraceId(req)
-		if traceId != "" {
-			subCtx := context.WithValue(event.Context(), "traceId", traceId)
-			event.SetContext(subCtx)
 		}
 		next(event)
 		wg.Wait()
