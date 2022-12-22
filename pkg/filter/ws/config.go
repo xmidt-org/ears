@@ -108,6 +108,39 @@ const filterSchema = `
     "$schema": "http://json-schema.org/draft-06/schema#",
     "$ref": "#/definitions/FilterConfig",
     "definitions": {
+		"AuthConfig": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+                "type": {
+                    "type": "string"
+                },
+                "username": {
+                    "type": "string"
+                },
+                "password": {
+                    "type": "string"
+                },
+                "clientId": {
+                    "type": "string"
+                },
+                "clientSecret": {
+                    "type": "string"
+                },
+                "tokenUrl": {
+                    "type": "string"
+                },
+                "scopes": {
+ 					"type": "array",
+      				"items": {
+        				"type": "string"
+      				}             
+				}
+            },
+            "required": [
+            ],
+            "title": "AuthConfig"
+		},
         "FilterConfig": {
             "type": "object",
             "additionalProperties": false,
@@ -125,7 +158,8 @@ const filterSchema = `
                     "type": "string"
 				},
 				"method": {
-                    "type": "string"
+                    "type": "string",
+					"enum": ["GET", "PUT", "POST", "DELETE"]
 				},
 				"body": {
                     "type": "string"
@@ -138,7 +172,7 @@ const filterSchema = `
 					"default": false
 				},
 				"auth": {
-                    "type": "object"
+                    "$ref": "#/definitions/AuthConfig"
 				}
             },
             "required": [
