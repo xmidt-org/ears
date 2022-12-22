@@ -65,18 +65,7 @@ func (c Config) WithDefaults() *Config {
 }
 
 func (c *Config) Validate() error {
-	/*_, err := url.ParseRequestURI(c.Url)
-	if err != nil {
-		return err
-	}
-	switch c.Method {
-	case "GET":
-	case "PUT":
-	case "POST":
-	case "DELETE":
-	default:
-		return errors.New("unknown method " + c.Method)
-	}*/
+	//TODO: validate properly
 	return nil
 }
 
