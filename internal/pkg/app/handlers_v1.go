@@ -40,6 +40,7 @@ import (
 	"net/http"
 	"regexp"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/xmidt-org/ears/pkg/route"
@@ -81,6 +82,7 @@ type CachedTenantConfig struct {
 type TenantCache struct {
 	cache   map[string]*CachedTenantConfig
 	ttlSecs int
+	sync.RWMutex
 }
 
 func NewTenantCache(ttlSecs int) *TenantCache {
@@ -102,7 +104,9 @@ func (c *TenantCache) SetTenant(tenantConfig *tenant.Config) {
 		Config: *tenantConfig,
 		Ts:     time.Now().Unix(),
 	}
+	c.Lock()
 	c.cache[tenantConfig.Tenant.Key()] = &item
+	c.Unlock()
 }
 
 func (c *TenantCache) GetTenant(tenantId string) *tenant.Config {
@@ -112,7 +116,9 @@ func (c *TenantCache) GetTenant(tenantId string) *tenant.Config {
 	if c.cache == nil {
 		return nil
 	}
+	c.RLock()
 	item, ok := c.cache[tenantId]
+	c.RUnlock()
 	if !ok {
 		return nil
 	}
@@ -173,6 +179,8 @@ func NewAPIManager(routingMgr tablemgr.RoutingTableManager, tenantStorer tenant.
 	api.muxRouter.HandleFunc("/ears/v1/filters", api.getAllFiltersHandler).Methods(http.MethodGet)
 	api.muxRouter.HandleFunc("/ears/v1/fragments", api.getAllFragmentsHandler).Methods(http.MethodGet)
 
+	// for backward compatibility during transition period
+	api.muxRouter.HandleFunc("/eel/v1/events", api.webhookHandler).Methods(http.MethodPost)
 	api.muxRouter.HandleFunc("/ears/v1/events", api.webhookHandler).Methods(http.MethodPost)
 	// metrics
 	// where should meters live (api manager, uberfx, global variables,...)?

@@ -87,7 +87,8 @@ func authenticateMiddleware(next http.Handler) http.Handler {
 			return
 		}
 		var tid *tenant.Id
-		if strings.HasPrefix(r.URL.Path, "/ears/v1/events") {
+		if strings.HasPrefix(r.URL.Path, "/eel/v1/events") ||
+			strings.HasPrefix(r.URL.Path, "/ears/v1/events") {
 			// do not authenticate event API calls here (will be authenticated in API code if needed)
 			next.ServeHTTP(w, r)
 			return
