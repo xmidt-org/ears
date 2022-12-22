@@ -18,6 +18,8 @@ import (
 	"github.com/xmidt-org/ears/pkg/secret"
 	"github.com/xmidt-org/ears/pkg/tenant"
 	"github.com/xorcare/pointer"
+	"net/http"
+	"sync"
 )
 
 // Config can be passed into NewFilter() in order to configure
@@ -58,4 +60,6 @@ type Filter struct {
 	plugin  string
 	tid     tenant.Id
 	secrets secret.Vault
+	clients map[string]*http.Client
+	sync.RWMutex
 }
