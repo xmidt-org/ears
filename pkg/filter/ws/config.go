@@ -113,7 +113,8 @@ const filterSchema = `
             "additionalProperties": false,
             "properties": {
                 "type": {
-                    "type": "string"
+                    "type": "string",
+					"enum": ["", "basic", "sat", "oauth", "oauth2"]
                 },
                 "username": {
                     "type": "string"
