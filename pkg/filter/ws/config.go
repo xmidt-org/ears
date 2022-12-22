@@ -15,6 +15,8 @@
 package ws
 
 import (
+	"fmt"
+	"github.com/xeipuuv/gojsonschema"
 	"github.com/xmidt-org/ears/pkg/config"
 	pkgconfig "github.com/xmidt-org/ears/pkg/config"
 	"github.com/xmidt-org/ears/pkg/errs"
@@ -65,7 +67,15 @@ func (c Config) WithDefaults() *Config {
 }
 
 func (c *Config) Validate() error {
-	//TODO: validate properly
+	schema := gojsonschema.NewStringLoader(filterSchema)
+	doc := gojsonschema.NewGoLoader(*c)
+	result, err := gojsonschema.Validate(schema, doc)
+	if err != nil {
+		return err
+	}
+	if !result.Valid() {
+		return fmt.Errorf(fmt.Sprintf("%+v", result.Errors()))
+	}
 	return nil
 }
 
@@ -92,3 +102,52 @@ func (c *Config) JSON() (string, error) {
 func (c *Config) FromJSON(in string) error {
 	return config.FromJSON(in, c)
 }
+
+const filterSchema = `
+{
+    "$schema": "http://json-schema.org/draft-06/schema#",
+    "$ref": "#/definitions/FilterConfig",
+    "definitions": {
+        "FilterConfig": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+                "toPath": {
+                    "type": "string"
+                },
+				"fromPath": {
+                    "type": "string"
+				},
+				"url": {
+                    "type": "string"
+				},
+				"urlPath": {
+                    "type": "string"
+				},
+				"method": {
+                    "type": "string"
+				},
+				"body": {
+                    "type": "string"
+				},
+				"headers": {
+                    "type": "object"
+				},
+				"emptyPathValueRequired" : {
+					"type": "boolean",
+					"default": false
+				},
+				"auth": {
+                    "type": "object"
+				}
+            },
+            "required": [
+                "url",
+				"toPath",
+				"method"
+            ],
+            "title": "FilterConfig"
+        }
+    }
+}
+`
