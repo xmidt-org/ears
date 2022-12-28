@@ -85,7 +85,12 @@ func authenticateMiddleware(next http.Handler) http.Handler {
 			return
 		}
 		var tid *tenant.Id
-		if strings.HasPrefix(r.URL.Path, "/ears/v1/routes") ||
+		if strings.HasPrefix(r.URL.Path, "/eel/v1/events") ||
+			strings.HasPrefix(r.URL.Path, "/ears/v1/events") {
+			// do not authenticate event API calls here (will be authenticated in API code if needed)
+			next.ServeHTTP(w, r)
+			return
+		} else if strings.HasPrefix(r.URL.Path, "/ears/v1/routes") ||
 			strings.HasPrefix(r.URL.Path, "/ears/v1/senders") ||
 			strings.HasPrefix(r.URL.Path, "/ears/v1/receivers") ||
 			strings.HasPrefix(r.URL.Path, "/ears/v1/filters") ||
@@ -101,7 +106,7 @@ func authenticateMiddleware(next http.Handler) http.Handler {
 				resp.Respond(ctx, w, doYaml(r))
 				return
 			}
-			// do not authenticate event API calls here
+			// do not authenticate event API calls here (will be authenticated in API code if needed)
 			if eventUrlValidator.MatchString(r.URL.Path) {
 				next.ServeHTTP(w, r)
 				return

@@ -215,13 +215,19 @@ func (r *DefaultRoutingTableManager) RouteEvent(ctx context.Context, tid tenant.
 	if lrw.Receiver == nil {
 		return "", errors.New("no receiver for route " + routeId)
 	}
-	sctx, cancel := context.WithTimeout(ctx, 5*time.Second)
-	e, err := event.New(sctx, payload, event.WithAck(
+	var wg sync.WaitGroup
+	wg.Add(1)
+	//sctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	//sctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	// no need to cancel context here because RouteEvent is only used synchronously via API call
+	e, err := event.New(ctx, payload, event.WithAck(
 		func(evt event.Event) {
-			cancel()
+			wg.Done()
+			//cancel()
 		}, func(evt event.Event, err error) {
 			r.logger.Error().Str("op", "routeTestEvent").Msg("failed to process message: " + err.Error())
-			cancel()
+			wg.Done()
+			//cancel()
 		}),
 		event.WithOtelTracing("routeTestEvent"),
 		event.WithTenant(tid),
@@ -233,6 +239,7 @@ func (r *DefaultRoutingTableManager) RouteEvent(ctx context.Context, tid tenant.
 	traceId, _, _ := e.GetPathValue("trace.id")
 	traceIdStr, _ := traceId.(string)
 	lrw.Receiver.Trigger(e)
+	wg.Wait()
 	return traceIdStr, nil
 }
 

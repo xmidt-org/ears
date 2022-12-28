@@ -65,11 +65,13 @@ func TestEventBasic(t *testing.T) {
 func TestEventGetPath(t *testing.T) {
 	ctx := context.Background()
 	payload := map[string]interface{}{
-		"field1": "abcd",
-		"field2": 1234,
-		"field3": []interface{}{"a", "b", "c"},
-		"field4": []interface{}{map[string]interface{}{"a": "aa", "b": "bb", "c": "cc"}},
-		"field5": []interface{}{[]interface{}{"a", "b", "c"}},
+		"field1":  "abcd",
+		"field2":  1234,
+		"field3":  []interface{}{"a", "b", "c"},
+		"field4":  []interface{}{map[string]interface{}{"a": "aa", "b": "bb", "c": "cc"}},
+		"field5":  []interface{}{[]interface{}{"a", "b", "c"}},
+		"field10": map[string]interface{}{"a": map[string]interface{}{"key": "value", "foo": "bar"}, "b": "bb", "c": "cc"},
+		"field11": map[string]interface{}{"a": map[string]interface{}{"key.with.dots": "value", "foo": "bar"}, "b": "bb", "c": "cc"},
 	}
 	e, err := event.New(ctx, payload)
 	if err != nil {
@@ -143,6 +145,18 @@ func TestEventGetPath(t *testing.T) {
 	path = ".field7[0]"
 	v, _, _ = e.GetPathValue(path)
 	if v.(string) != "x" {
+		t.Errorf("bad path value %s\n", path)
+	}
+	//
+	path = ".field10.a.key"
+	v, _, _ = e.GetPathValue(path)
+	if v.(string) != "value" {
+		t.Errorf("bad path value %s\n", path)
+	}
+	//
+	path = `.field11.a.key\.with\.dots`
+	v, _, _ = e.GetPathValue(path)
+	if v.(string) != "value" {
 		t.Errorf("bad path value %s\n", path)
 	}
 }

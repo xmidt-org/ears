@@ -18,6 +18,8 @@ import (
 	"github.com/xmidt-org/ears/pkg/secret"
 	"github.com/xmidt-org/ears/pkg/tenant"
 	"github.com/xorcare/pointer"
+	"net/http"
+	"sync"
 )
 
 // Config can be passed into NewFilter() in order to configure
@@ -35,9 +37,13 @@ type Config struct {
 }
 
 type Auth struct {
-	Type     string `json:"type,omitempty"`
-	Username string `json:"username,omitempty"`
-	Password string `json:"password,omitempty"`
+	Type         string   `json:"type,omitempty"`
+	Username     string   `json:"username,omitempty"`     // basic auth
+	Password     string   `json:"password,omitempty"`     // basic auth
+	ClientID     string   `json:"clientId,omitempty"`     // oauth2
+	ClientSecret string   `json:"clientSecret,omitempty"` // oauth2
+	TokenURL     string   `json:"tokenUrl,omitempty"`     // oauth2
+	Scopes       []string `json:"scopes,omitempty"`       // oauth2
 }
 
 var DefaultConfig = Config{
@@ -58,4 +64,6 @@ type Filter struct {
 	plugin  string
 	tid     tenant.Id
 	secrets secret.Vault
+	clients map[string]*http.Client
+	sync.RWMutex
 }

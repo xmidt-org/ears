@@ -19,7 +19,10 @@ import (
 	"embed"
 	"encoding/json"
 	"errors"
-	"github.com/goccy/go-yaml"
+	yaml "github.com/goccy/go-yaml"
+	"github.com/gorilla/mux"
+	"github.com/rs/zerolog/log"
+	"github.com/xmidt-org/ears/internal/pkg/config"
 	"github.com/xmidt-org/ears/internal/pkg/jwt"
 	"github.com/xmidt-org/ears/internal/pkg/plugin"
 	"github.com/xmidt-org/ears/internal/pkg/quota"
@@ -37,15 +40,18 @@ import (
 	"net/http"
 	"regexp"
 	"strings"
-
-	"github.com/gorilla/mux"
-	"github.com/rs/zerolog/log"
+	"sync"
+	"time"
 
 	"github.com/xmidt-org/ears/pkg/route"
 )
 
 //go:embed ears
 var WebsiteFS embed.FS
+
+const (
+	TENANT_CACHE_TTL_SECS = 30
+)
 
 var (
 	appIdValidator = regexp.MustCompile(tenant.APP_ID_REGEX)
@@ -58,23 +64,92 @@ type APIManager struct {
 	tenantStorer               tenant.TenantStorer
 	quotaManager               *quota.QuotaManager
 	jwtManager                 jwt.JWTConsumer
+	tenantCache                *TenantCache
 	addRouteSuccessRecorder    metric.BoundFloat64Counter
 	addRouteFailureRecorder    metric.BoundFloat64Counter
 	removeRouteSuccessRecorder metric.BoundFloat64Counter
 	removeRouteFailureRecorder metric.BoundFloat64Counter
+	globalWebhookOrg           string
+	globalWebhookApp           string
+	globalWebhookRouteId       string
+	sync.RWMutex
 }
 
-func NewAPIManager(routingMgr tablemgr.RoutingTableManager, tenantStorer tenant.TenantStorer, quotaManager *quota.QuotaManager, jwtManager jwt.JWTConsumer) (*APIManager, error) {
+type CachedTenantConfig struct {
+	tenant.Config
+	Ts int64
+}
+
+type TenantCache struct {
+	cache   map[string]*CachedTenantConfig
+	ttlSecs int
+	sync.RWMutex
+}
+
+func NewTenantCache(ttlSecs int) *TenantCache {
+	tenantCache := TenantCache{
+		cache:   make(map[string]*CachedTenantConfig),
+		ttlSecs: ttlSecs,
+	}
+	return &tenantCache
+}
+
+func (c *TenantCache) SetTenant(tenantConfig *tenant.Config) {
+	if tenantConfig == nil {
+		return
+	}
+	if c.cache == nil {
+		return
+	}
+	item := CachedTenantConfig{
+		Config: *tenantConfig,
+		Ts:     time.Now().Unix(),
+	}
+	c.Lock()
+	c.cache[tenantConfig.Tenant.Key()] = &item
+	c.Unlock()
+}
+
+func (c *TenantCache) GetTenant(tenantId string) *tenant.Config {
+	if tenantId == "" {
+		return nil
+	}
+	if c.cache == nil {
+		return nil
+	}
+	c.RLock()
+	item, ok := c.cache[tenantId]
+	c.RUnlock()
+	if !ok {
+		return nil
+	}
+	if time.Now().Unix()-item.Ts > TENANT_CACHE_TTL_SECS {
+		delete(c.cache, tenantId)
+		return nil
+	}
+	return &item.Config
+}
+
+func NewAPIManager(routingMgr tablemgr.RoutingTableManager, tenantStorer tenant.TenantStorer, quotaManager *quota.QuotaManager, jwtManager jwt.JWTConsumer, config config.Config) (*APIManager, error) {
 	api := &APIManager{
 		muxRouter:       mux.NewRouter(),
 		routingTableMgr: routingMgr,
 		tenantStorer:    tenantStorer,
 		quotaManager:    quotaManager,
 		jwtManager:      jwtManager,
+		tenantCache:     NewTenantCache(TENANT_CACHE_TTL_SECS),
 	}
+
+	if config != nil {
+		api.globalWebhookApp = config.GetString("ears.api.webhook.app")
+		api.globalWebhookOrg = config.GetString("ears.api.webhook.org")
+		api.globalWebhookRouteId = config.GetString("ears.api.webhook.routeId")
+	}
+
 	api.muxRouter.PathPrefix("/ears/openapi").Handler(
 		http.FileServer(http.FS(WebsiteFS)),
 	)
+
 	api.muxRouter.HandleFunc("/ears/version", api.versionHandler).Methods(http.MethodGet)
 
 	api.muxRouter.HandleFunc("/ears/v1/orgs/{orgId}/applications/{appId}/routes/{routeId}", api.addRouteHandler).Methods(http.MethodPut)
@@ -104,6 +179,10 @@ func NewAPIManager(routingMgr tablemgr.RoutingTableManager, tenantStorer tenant.
 	api.muxRouter.HandleFunc("/ears/v1/receivers", api.getAllReceiversHandler).Methods(http.MethodGet)
 	api.muxRouter.HandleFunc("/ears/v1/filters", api.getAllFiltersHandler).Methods(http.MethodGet)
 	api.muxRouter.HandleFunc("/ears/v1/fragments", api.getAllFragmentsHandler).Methods(http.MethodGet)
+
+	// for backward compatibility during transition period
+	api.muxRouter.HandleFunc("/eel/v1/events", api.webhookHandler).Methods(http.MethodPost)
+	api.muxRouter.HandleFunc("/ears/v1/events", api.webhookHandler).Methods(http.MethodPost)
 	// metrics
 	// where should meters live (api manager, uberfx, global variables,...)?
 	meter := global.Meter(rtsemconv.EARSMeterName)
@@ -179,19 +258,71 @@ func getTenant(ctx context.Context, vars map[string]string) (*tenant.Id, ApiErro
 		return nil, err
 	}
 	if !appIdValidator.MatchString(appId) {
-		var err ApiError
-		err = &BadRequestError{"invalid app ID " + appId, nil}
+		err := &BadRequestError{"invalid app ID " + appId, nil}
 		return nil, err
 	}
 	if !orgIdValidator.MatchString(orgId) {
-		var err ApiError
-		err = &BadRequestError{"invalid org ID " + orgId, nil}
+		err := &BadRequestError{"invalid org ID " + orgId, nil}
 		return nil, err
 	}
 	span := trace.SpanFromContext(ctx)
 	span.SetAttributes(rtsemconv.EARSOrgId.String(orgId))
 	span.SetAttributes(rtsemconv.EARSAppId.String(appId))
 	return &tenant.Id{OrgId: orgId, AppId: appId}, nil
+}
+
+func (a *APIManager) webhookHandler(w http.ResponseWriter, r *http.Request) {
+	// Solution A: Internally forward request to correct handler function and set necessary URL vars.
+	// This solution is the most efficient but also the least flexible due to hard coding.
+	ctx := r.Context()
+	if a.globalWebhookOrg == "" || a.globalWebhookApp == "" || a.globalWebhookRouteId == "" {
+		log.Ctx(ctx).Error().Str("op", "webhookHandler").Str("error", "no global webhook configured").Msg("no global webhook configured")
+		resp := ErrorResponse(convertToApiError(ctx, errors.New("no global webhook configured")))
+		resp.Respond(ctx, w, doYaml(r))
+		return
+	}
+	r = mux.SetURLVars(r, map[string]string{
+		"orgId":   a.globalWebhookOrg,
+		"appId":   a.globalWebhookApp,
+		"routeId": a.globalWebhookRouteId,
+	})
+	a.sendEventHandler(w, r)
+	// Solution B: Forward request via network stack. Does create an extra hop but it allows for a more
+	// flexible implementation where we load the from and to URls to be proxied from ears.config.
+	/*ctx := r.Context()
+	// read source and forward URLS including host and protocol from ears.config
+	proxyReq, err := http.NewRequest("POST", "http://localhost:3000/ears/v1/orgs/comcast/applications/gears/routes/gearsWebhookRoute/event", r.Body)
+	if err != nil {
+		log.Ctx(ctx).Error().Str("op", "webhookHandler").Str("error", err.Error()).Msg("error creating forward request")
+		resp := ErrorResponse(convertToApiError(ctx, err))
+		resp.Respond(ctx, w, doYaml(r))
+		return
+	}
+	// copy headers (including auth headers)
+	for k, vv := range r.Header {
+		for _, v := range vv {
+			proxyReq.Header.Add(k, v)
+		}
+	}
+	// setup client elsewhere, set transport and timeout etc.
+	client := &http.Client{}
+	res, err := client.Do(proxyReq)
+	if err != nil {
+		log.Ctx(ctx).Error().Str("op", "webhookHandler").Str("error", err.Error()).Msg("error forwarding request")
+		resp := ErrorResponse(convertToApiError(ctx, err))
+		resp.Respond(ctx, w, doYaml(r))
+		return
+	}
+	body, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		log.Ctx(ctx).Error().Str("op", "webhookHandler").Msg(err.Error())
+		resp := ErrorResponse(&InternalServerError{err})
+		resp.Respond(ctx, w, doYaml(r))
+		return
+	}
+	r.Body.Close()
+	w.WriteHeader(res.StatusCode)
+	w.Write(body)*/
 }
 
 func (a *APIManager) sendEventHandler(w http.ResponseWriter, r *http.Request) {
@@ -204,13 +335,21 @@ func (a *APIManager) sendEventHandler(w http.ResponseWriter, r *http.Request) {
 		resp.Respond(ctx, w, doYaml(r))
 		return
 	}
-	tenantConfig, err := a.tenantStorer.GetConfig(ctx, *tid)
-	if err != nil {
-		log.Ctx(ctx).Error().Str("op", "sendEventHandler").Str("error", err.Error()).Msg("error getting tenant config")
-		resp := ErrorResponse(convertToApiError(ctx, err))
-		resp.Respond(ctx, w, doYaml(r))
-		return
+	a.Lock()
+	tenantConfig := a.tenantCache.GetTenant(tid.Key())
+	if tenantConfig == nil {
+		var err error
+		tenantConfig, err = a.tenantStorer.GetConfig(ctx, *tid)
+		if err != nil {
+			log.Ctx(ctx).Error().Str("op", "sendEventHandler").Str("error", err.Error()).Msg("error getting tenant config")
+			resp := ErrorResponse(convertToApiError(ctx, err))
+			resp.Respond(ctx, w, doYaml(r))
+			return
+		}
+		a.tenantCache.SetTenant(tenantConfig)
 	}
+	a.Unlock()
+	// authenticate here if necessary (middleware does not authenticate this API)
 	if !tenantConfig.OpenEventApi {
 		bearerToken := getBearerToken(r)
 		_, _, authErr := jwtMgr.VerifyToken(ctx, bearerToken, r.URL.Path, r.Method, tid)
