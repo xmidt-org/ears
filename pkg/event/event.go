@@ -385,6 +385,15 @@ func (e *event) Evaluate(expression interface{}) (interface{}, interface{}, stri
 	return expression, nil, ""
 }
 
+func (e *event) splitPath(path string) []string {
+	path = strings.Replace(path, `\.`, `\\`, -1)
+	segments := strings.Split(path, ".")
+	for i, _ := range segments {
+		segments[i] = strings.Replace(segments[i], `\\`, `.`, -1)
+	}
+	return segments
+}
+
 func (e *event) GetPathValue(path string) (interface{}, interface{}, string) {
 	if path == TRACE+".id" {
 		traceId := trace.SpanFromContext(e.ctx).SpanContext().TraceID().String()
@@ -422,7 +431,7 @@ func (e *event) GetPathValue(path string) (interface{}, interface{}, string) {
 	var parent interface{}
 	var key string
 	var ok bool
-	segments := strings.Split(path, ".")
+	segments := e.splitPath(path)
 	if len(segments) < 2 {
 		return nil, nil, ""
 	}
@@ -483,7 +492,7 @@ func (e *event) SetPathValue(path string, val interface{}, createPath bool) (int
 	var parent interface{}
 	var key string
 	var ok bool
-	segments := strings.Split(path, ".")
+	segments := e.splitPath(path)
 	for i := 1; i < len(segments); i++ {
 		s := segments[i]
 		if s == "" {
