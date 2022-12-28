@@ -50,7 +50,7 @@ import (
 var WebsiteFS embed.FS
 
 const (
-	TENANT_CACHE_TTL_SECS = 20
+	TENANT_CACHE_TTL_SECS = 30
 )
 
 var (
@@ -72,6 +72,7 @@ type APIManager struct {
 	globalWebhookOrg           string
 	globalWebhookApp           string
 	globalWebhookRouteId       string
+	sync.RWMutex
 }
 
 type CachedTenantConfig struct {
@@ -334,6 +335,7 @@ func (a *APIManager) sendEventHandler(w http.ResponseWriter, r *http.Request) {
 		resp.Respond(ctx, w, doYaml(r))
 		return
 	}
+	a.Lock()
 	tenantConfig := a.tenantCache.GetTenant(tid.Key())
 	if tenantConfig == nil {
 		var err error
@@ -346,6 +348,7 @@ func (a *APIManager) sendEventHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		a.tenantCache.SetTenant(tenantConfig)
 	}
+	a.Unlock()
 	// authenticate here if necessary (middleware does not authenticate this API)
 	if !tenantConfig.OpenEventApi {
 		bearerToken := getBearerToken(r)
