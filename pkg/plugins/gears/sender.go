@@ -463,6 +463,9 @@ func (s *Sender) Send(e event.Event) {
 	}
 	message := make(map[string]interface{}, 0)
 	message["op"] = "process"
+	if s.config.Uses != "" {
+		message["uses"] = s.config.Uses
+	}
 	message["payload"] = e.Payload()
 	envelope := make(map[string]interface{}, 0)
 	envelope["message"] = message

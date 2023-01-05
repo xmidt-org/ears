@@ -87,6 +87,9 @@ const senderSchema = `
                 "app": {
                     "type": "string"
                 },
+                "uses": {
+                    "type": "string"
+                },
                 "partner": {
                     "type": "string"
                 },
