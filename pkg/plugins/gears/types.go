@@ -49,7 +49,7 @@ func NewPluginVersion(name string, version string, commitID string) (*pkgplugin.
 
 var DefaultSenderConfig = SenderConfig{
 	Brokers:             "localhost:9092",
-	Topic:               "quickstart-events",
+	Topic:               "",
 	ChannelBufferSize:   pointer.Int(0),
 	Username:            "",
 	Password:            "",
@@ -62,6 +62,7 @@ var DefaultSenderConfig = SenderConfig{
 	Location:            "",
 	App:                 "",
 	Partner:             "",
+	Uses:                "",
 }
 
 // SenderConfig can be passed into NewSender() in order to configure
@@ -83,7 +84,8 @@ type SenderConfig struct {
 	CompressionLevel    *int                 `json:"compressionLevel,omitempty"`
 	Location            interface{}          `json:"location,omitempty"` // gears config: string or array of strings, may contain path
 	App                 string               `json:"app,omitempty"`      // gears config
-	Partner             string               `json:"partner,omitempty"`  // gers config
+	Partner             string               `json:"partner,omitempty"`  // gears config
+	Uses                string               `json:"uses,omitempty"`     // gears config
 }
 
 type DynamicMetricLabel struct {
