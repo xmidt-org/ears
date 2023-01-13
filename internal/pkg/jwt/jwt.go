@@ -3,10 +3,13 @@ package jwt
 import (
 	"context"
 	"crypto/rsa"
+	"encoding/base64"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"github.com/xmidt-org/ears/pkg/tenant"
 	"io"
+	"math/big"
 	"net/http"
 	"strings"
 	"time"
@@ -74,14 +77,48 @@ func (sc *DefaultJWTConsumer) getPublicKey(kid string) (*rsa.PublicKey, error) {
 		//ctx.Logger().Error("op", "JWTConsumer.getKeyData", "stage", "client.DoRequest", "status", status)
 		return nil, fmt.Errorf("Invalid status code: %d\n", resp.StatusCode)
 	}
-	pub, err = jwt.ParseRSAPublicKeyFromPEM(bs)
-	if nil != err {
-		//ctx.Logger().Error("op", "JWTConsumer.getKeyData", "stage", "decode", "err", err)
-		return nil, err
+	if strings.Contains(sc.publicKeyEndpoint, "v2") {
+		pub, err = convertJwkToPublicKey(bs)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		pub, err = jwt.ParseRSAPublicKeyFromPEM(bs)
+		if nil != err {
+			return nil, err
+		}
 	}
 	sc.keys[kid] = pub
 	return pub, nil
 }
+
+func convertJwkToPublicKey(input []byte) (*rsa.PublicKey, error) {
+	jwk := map[string]string{}
+	json.Unmarshal([]byte(input), &jwk)
+
+	// decode the base64 bytes for n
+	nb, err := base64.RawURLEncoding.DecodeString(jwk["n"])
+	if err != nil {
+		return nil, err
+	}
+
+	e := 0
+	// The default exponent is usually 65537, so just compare the
+	// base64 for [1,0,1] or [0,1,0,1]
+	if jwk["e"] == "AQAB" || jwk["e"] == "AAEAAQ" {
+		e = 65537
+	} else {
+		// need to decode "e" as a big-endian int
+		return nil, errors.New("need to deocde e:" + jwk["e"])
+	}
+
+	pk := &rsa.PublicKey{
+		N: new(big.Int).SetBytes(nb),
+		E: e,
+	}
+	return pk, nil
+}
+
 
 // VerifyToken validates a give token for an optional list of clientIds / "subjects" (use empty array if any client id ok) and
 // for a given domain, component, api and method (api and method are encoded in the claim)
@@ -154,7 +191,7 @@ func (sc *DefaultJWTConsumer) extractToken(token string) ([]string, string, []st
 		err error
 	)
 	// only allow RS256 to avoid hmac attack, please see details at https://auth0.com/blog/critical-vulnerabilities-in-json-web-token-libraries/
-	parser := &jwt.Parser{ValidMethods: []string{"RS256"}}
+	parser := &jwt.Parser{ValidMethods: []string{"RS256", "ES256"}}
 	sat, err = parser.Parse(token, func(token *jwt.Token) (interface{}, error) {
 		if o, has := token.Header["kid"]; has {
 			return sc.getPublicKey(o.(string))
