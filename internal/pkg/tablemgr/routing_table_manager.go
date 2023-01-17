@@ -25,6 +25,7 @@ import (
 	"github.com/xmidt-org/ears/internal/pkg/plugin"
 	"github.com/xmidt-org/ears/internal/pkg/rtsemconv"
 	"github.com/xmidt-org/ears/internal/pkg/syncer"
+	"github.com/xmidt-org/ears/pkg/event"
 	"github.com/xmidt-org/ears/pkg/fragments"
 	"github.com/xmidt-org/ears/pkg/logs"
 	"github.com/xmidt-org/ears/pkg/route"
@@ -132,11 +133,9 @@ func (r *DefaultRoutingTableManager) registerAndRunRoute(ctx context.Context, ro
 	defer span.End()
 	var err error
 	// check if route already exists, check if this is an update etc.
-
 	r.Lock()
 	existingLiveRoute, ok := r.liveRouteMap[routeConfig.TenantId.KeyWithRoute(routeConfig.Id)]
 	r.Unlock()
-
 	if ok && existingLiveRoute.Config.Hash(ctx) == routeConfig.Hash(ctx) {
 		log.Ctx(ctx).Info().Str("op", "registerAndRunRoute").Str("routeId", routeConfig.Id).Msg("identical route exists with same hash and same ID")
 		return nil
@@ -149,7 +148,6 @@ func (r *DefaultRoutingTableManager) registerAndRunRoute(ctx context.Context, ro
 			log.Ctx(ctx).Error().Str("op", "registerAndRunRoute").Str("routeId", routeConfig.Id).Msg(err.Error())
 		}
 	}
-
 	// An identical route already exists under a different ID.
 	// It would be ok to simply create another route here because plugin manager will ensure we share receiver and sender
 	// plugin for performance. However, simply creating another route would cause event duplication. Instead we need to
@@ -161,7 +159,6 @@ func (r *DefaultRoutingTableManager) registerAndRunRoute(ctx context.Context, ro
 	// out of the flow and use a dedicated route management UI.
 	r.Lock()
 	defer r.Unlock()
-
 	existingLiveRoute, ok = r.routeHashMap[routeConfig.Hash(ctx)]
 	if ok {
 		// we simply increment the reference count of an already existing route and are done here
@@ -208,6 +205,42 @@ func (r *DefaultRoutingTableManager) RemoveRoute(ctx context.Context, tid tenant
 		return &RouteRegistrationError{registrationErr}
 	}
 	return storageErr
+}
+
+func (r *DefaultRoutingTableManager) RouteEvent(ctx context.Context, tid tenant.Id, routeId string, payload interface{}) (string, error) {
+	lrw, ok := r.liveRouteMap[tid.KeyWithRoute(routeId)]
+	if !ok {
+		return "", errors.New("no route " + routeId)
+	}
+	if lrw.Receiver == nil {
+		return "", errors.New("no receiver for route " + routeId)
+	}
+	var wg sync.WaitGroup
+	wg.Add(1)
+	//sctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	//sctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	// no need to cancel context here because RouteEvent is only used synchronously via API call
+	e, err := event.New(ctx, payload, event.WithAck(
+		func(evt event.Event) {
+			wg.Done()
+			//cancel()
+		}, func(evt event.Event, err error) {
+			r.logger.Error().Str("op", "routeTestEvent").Msg("failed to process message: " + err.Error())
+			wg.Done()
+			//cancel()
+		}),
+		event.WithOtelTracing("routeTestEvent"),
+		event.WithTenant(tid),
+		event.WithTracePayloadOnNack(false),
+	)
+	if err != nil {
+		return "", errors.New("bad test event for route " + routeId)
+	}
+	traceId, _, _ := e.GetPathValue("trace.id")
+	traceIdStr, _ := traceId.(string)
+	lrw.Receiver.Trigger(e)
+	wg.Wait()
+	return traceIdStr, nil
 }
 
 func (r *DefaultRoutingTableManager) AddRoute(ctx context.Context, routeConfig *route.Config) error {
@@ -283,12 +316,10 @@ func (r *DefaultRoutingTableManager) AddRoute(ctx context.Context, routeConfig *
 	if err != nil {
 		return &RouteValidationError{err}
 	}
-
 	err = r.registerAndRunRoute(ctx, routeConfig)
 	if err != nil {
 		return &RouteRegistrationError{err}
 	}
-
 	// currently storage layer handles created and updated timestamps
 	err = r.storageMgr.SetRoute(ctx, *routeConfig)
 	if err != nil {

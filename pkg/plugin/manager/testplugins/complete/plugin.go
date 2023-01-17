@@ -123,3 +123,6 @@ func (p *plugin) Plugin() string {
 func (p *plugin) Tenant() tenant.Id {
 	return tenant.Id{OrgId: "myorg", AppId: "myapp"}
 }
+
+func (p *plugin) Trigger(e event.Event) {
+}

@@ -206,7 +206,9 @@ func (r *Receiver) Trigger(e event.Event) {
 	r.Lock()
 	next := r.next
 	r.Unlock()
-	next(e)
+	if next != nil {
+		next(e)
+	}
 }
 
 func (r *Receiver) Config() interface{} {

@@ -17,7 +17,9 @@ package transform
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/mohae/deepcopy"
+	//"github.com/mohae/deepcopy"
+	//"github.com/gohobby/deepcopy"
+	"github.com/boriwo/deepcopy"
 	"github.com/rs/zerolog/log"
 	"github.com/xmidt-org/ears/pkg/event"
 	"github.com/xmidt-org/ears/pkg/filter"
@@ -60,6 +62,15 @@ func (f *Filter) Filter(evt event.Event) []event.Event {
 	if f.config.Transformation == nil {
 		events = append(events, evt)
 	} else {
+		err := evt.DeepCopy()
+		if err != nil {
+			log.Ctx(evt.Context()).Error().Str("op", "filter").Str("filterType", "transform").Str("name", f.Name()).Msg(err.Error())
+			if span := trace.SpanFromContext(evt.Context()); span != nil {
+				span.AddEvent(err.Error())
+			}
+			evt.Ack()
+			return []event.Event{}
+		}
 		obj, _, _ := evt.GetPathValue(f.config.FromPath)
 		a := []interface{}{obj}
 		isArray := false
@@ -75,16 +86,23 @@ func (f *Filter) Filter(evt event.Event) []event.Event {
 				if span := trace.SpanFromContext(evt.Context()); span != nil {
 					span.AddEvent(err.Error())
 				}
-				// we move on here, so no ack
-				//evt.Ack()
-				return events
+				evt.Ack()
+				return []event.Event{}
 			}
-			thisTransform := deepcopy.Copy(f.config.Transformation)
+			thisTransform := deepcopy.DeepCopy(f.config.Transformation)
 			transform(subEvt, thisTransform, nil, "", -1)
 			if isArray {
-				evt.SetPathValue(fmt.Sprintf("%s[%d]", f.config.ToPath, idx), thisTransform, true)
+				_, _, err = evt.SetPathValue(fmt.Sprintf("%s[%d]", f.config.ToPath, idx), thisTransform, true)
 			} else {
-				evt.SetPathValue(f.config.ToPath, thisTransform, true)
+				_, _, err = evt.SetPathValue(f.config.ToPath, thisTransform, true)
+			}
+			if err != nil {
+				log.Ctx(evt.Context()).Error().Str("op", "filter").Str("filterType", "transform").Str("name", f.Name()).Msg(err.Error())
+				if span := trace.SpanFromContext(evt.Context()); span != nil {
+					span.AddEvent(err.Error())
+				}
+				evt.Ack()
+				return []event.Event{}
 			}
 		}
 		events = append(events, evt)
@@ -116,7 +134,7 @@ func transform(evt event.Event, t interface{}, parent interface{}, key string, i
 			}
 			path := tt[si+1 : ei]
 			v, _, _ := evt.GetPathValue(path)
-			v = deepcopy.Copy(v)
+			v = deepcopy.DeepCopy(v)
 			if !(si == 0 && ei == len(tt)-1) {
 				switch vt := v.(type) {
 				case string:

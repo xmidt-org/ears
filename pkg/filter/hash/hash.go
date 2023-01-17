@@ -60,7 +60,12 @@ func (f *Filter) Filter(evt event.Event) []event.Event {
 		})
 		return nil
 	}
-	obj, _, _ := evt.GetPathValue(f.config.FromPath)
+	var obj interface{}
+	if f.config.From != "" {
+		obj, _, _ = evt.Evaluate(f.config.From)
+	} else {
+		obj, _, _ = evt.GetPathValue(f.config.FromPath)
+	}
 	if obj == nil {
 		log.Ctx(evt.Context()).Error().Str("op", "filter").Str("filterType", "hash").Str("name", f.Name()).Msg("cannot hash nil object at " + f.config.FromPath)
 		if span := trace.SpanFromContext(evt.Context()); span != nil {
@@ -159,7 +164,24 @@ func (f *Filter) Filter(evt event.Event) []event.Event {
 	if f.config.ToPath != "" {
 		path = f.config.ToPath
 	}
-	evt.SetPathValue(path, output, true)
+	err = evt.DeepCopy()
+	if err != nil {
+		log.Ctx(evt.Context()).Error().Str("op", "filter").Str("filterType", "hash").Str("name", f.Name()).Msg(err.Error())
+		if span := trace.SpanFromContext(evt.Context()); span != nil {
+			span.AddEvent(err.Error())
+		}
+		evt.Ack()
+		return []event.Event{}
+	}
+	_, _, err = evt.SetPathValue(path, output, true)
+	if err != nil {
+		log.Ctx(evt.Context()).Error().Str("op", "filter").Str("filterType", "hash").Str("name", f.Name()).Msg(err.Error())
+		if span := trace.SpanFromContext(evt.Context()); span != nil {
+			span.AddEvent(err.Error())
+		}
+		evt.Ack()
+		return []event.Event{}
+	}
 	log.Ctx(evt.Context()).Debug().Str("op", "filter").Str("filterType", "hash").Str("name", f.Name()).Msg("hash")
 	return []event.Event{evt}
 }

@@ -19,6 +19,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/credentials"
+	"github.com/aws/aws-sdk-go/aws/credentials/stscreds"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/sqs"
 	"github.com/goccy/go-yaml"
@@ -71,6 +73,7 @@ func NewReceiver(tid tenant.Id, plugin string, name string, config interface{}, 
 		tid:     tid,
 		logger:  event.GetEventLogger(),
 		stopped: true,
+		secrets: secrets,
 	}
 	hostname, _ := os.Hostname()
 	// metric recorders
@@ -168,7 +171,7 @@ func (r *Receiver) startReceiveWorker(svc *sqs.SQS, n int) {
 						Str("stackTrace", panicErr.StackTrace()).Msg("A panic has occurred while batch deleting messages")
 				}
 			}()
-			deleteBatch := make([]*sqs.DeleteMessageBatchRequestEntry, 0)
+			deleteMap := make(map[string]*sqs.DeleteMessageBatchRequestEntry, 0)
 			for {
 				var delEntry *sqs.DeleteMessageBatchRequestEntry
 				select {
@@ -178,10 +181,14 @@ func (r *Receiver) startReceiveWorker(svc *sqs.SQS, n int) {
 					delEntry = nil
 				}
 				if delEntry != nil && !*r.config.NeverDelete {
-					deleteBatch = append(deleteBatch, delEntry)
+					// collect in map to avoid duplicate IDs
+					deleteMap[*delEntry.Id] = delEntry
 				}
-
-				if len(deleteBatch) >= *r.config.MaxNumberOfMessages || (delEntry == nil && len(deleteBatch) > 0) {
+				if len(deleteMap) >= *r.config.MaxNumberOfMessages || (delEntry == nil && len(deleteMap) > 0) {
+					deleteBatch := make([]*sqs.DeleteMessageBatchRequestEntry, 0)
+					for _, de := range deleteMap {
+						deleteBatch = append(deleteBatch, de)
+					}
 					deleteParams := &sqs.DeleteMessageBatchInput{
 						Entries:  deleteBatch,
 						QueueUrl: aws.String(r.config.QueueUrl),
@@ -198,7 +205,7 @@ func (r *Receiver) startReceiveWorker(svc *sqs.SQS, n int) {
 							r.logger.Info().Str("op", "SQS.receiveWorker").Int("batchSize", len(deleteBatch)).Int("workerNum", n).Msg("deleted message " + (*entry.Id))
 						}*/
 					}
-					deleteBatch = make([]*sqs.DeleteMessageBatchRequestEntry, 0)
+					deleteMap = make(map[string]*sqs.DeleteMessageBatchRequestEntry, 0)
 				}
 				r.Lock()
 				stopNow := r.stopped
@@ -278,7 +285,6 @@ func (r *Receiver) startReceiveWorker(svc *sqs.SQS, n int) {
 					cancel()
 					continue
 				}
-
 				r.eventBytesCounter.Add(ctx, int64(len(*message.Body)))
 				e, err := event.New(ctx, payload, event.WithMetadataKeyValue("sqsMessage", *message), event.WithAck(
 					func(e event.Event) {
@@ -336,15 +342,25 @@ func (r *Receiver) Receive(next receiver.NextFn) error {
 	r.next = next
 	r.Unlock()
 	// create sqs session
-	sess, err := session.NewSession(&aws.Config{
-		Region: aws.String(r.config.Region),
-	})
+	sess, err := session.NewSession()
 	if nil != err {
-		return err
+		return &SQSError{op: "NewSession", err: err}
+	}
+	var creds *credentials.Credentials
+	if r.config.AWSRoleARN != "" {
+		creds = stscreds.NewCredentials(sess, r.config.AWSRoleARN)
+	} else if r.config.AWSAccessKeyId != "" && r.config.AWSSecretAccessKey != "" {
+		creds = credentials.NewStaticCredentials(r.secrets.Secret(r.config.AWSAccessKeyId), r.secrets.Secret(r.config.AWSSecretAccessKey), "")
+	} else {
+		creds = sess.Config.Credentials
+	}
+	sess, err = session.NewSession(&aws.Config{Region: aws.String(r.config.AWSRegion), Credentials: creds})
+	if nil != err {
+		return &SQSError{op: "NewSession", err: err}
 	}
 	_, err = sess.Config.Credentials.Get()
 	if nil != err {
-		return err
+		return &SQSError{op: "GetCredentials", err: err}
 	}
 	for i := 0; i < *r.config.ReceiverPoolSize; i++ {
 		r.logger.Info().Str("op", "SQS.Receive").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Int("workerNum", i).Msg("launching receiver pool thread")
@@ -387,7 +403,9 @@ func (r *Receiver) Trigger(e event.Event) {
 	r.Lock()
 	next := r.next
 	r.Unlock()
-	next(e)
+	if next != nil {
+		next(e)
+	}
 }
 
 func (r *Receiver) Config() interface{} {

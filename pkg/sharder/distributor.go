@@ -18,7 +18,6 @@ import (
 	"github.com/xmidt-org/ears/pkg/event"
 	"github.com/xmidt-org/ears/pkg/panics"
 	"math/rand"
-	"sort"
 	"strconv"
 	"time"
 )
@@ -92,7 +91,6 @@ func (c *SimpleHashDistributor) nodeMonitor() {
 			if err != nil || aliveNodes == nil {
 				continue
 			}
-			sort.Strings(aliveNodes)
 			var change bool
 			c.Lock()
 			if len(aliveNodes) != len(c.nodes) {
@@ -123,21 +121,39 @@ func (c *SimpleHashDistributor) Nodes() []string {
 	return c.nodes
 }
 
+func (c *SimpleHashDistributor) cloneShardConfig(sc ShardConfig) ShardConfig {
+	var csc ShardConfig
+	csc.Identity = sc.Identity
+	csc.NumShards = sc.NumShards
+	if sc.OwnedShards != nil {
+		csc.OwnedShards = make([]string, 0)
+		csc.OwnedShards = append(csc.OwnedShards, sc.OwnedShards...)
+	}
+	return csc
+}
+
 func (c *SimpleHashDistributor) publishChanges() {
-	// c.Lock() is held by nodeMonitor() before calling us
 	if len(c.nodes) == 0 {
+		c.Lock()
 		c.ShardConfig.OwnedShards = nil
-		c.updateChan <- c.ShardConfig
+		sc := c.cloneShardConfig(c.ShardConfig)
+		c.Unlock()
+		c.updateChan <- sc
 		return
 	}
 	changeFlag := c.hashShards()
 	if changeFlag {
-		c.updateChan <- c.ShardConfig
+		c.Lock()
+		sc := c.cloneShardConfig(c.ShardConfig)
+		c.Unlock()
+		c.updateChan <- sc
 		return
 	}
 }
 
 func (c *SimpleHashDistributor) hashShards() bool {
+	c.Lock()
+	defer c.Unlock()
 	var myShards []string
 	var myPeerIndex int
 	for i, peer := range c.nodes {

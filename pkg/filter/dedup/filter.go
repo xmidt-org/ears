@@ -70,7 +70,11 @@ func (f *Filter) Filter(evt event.Event) []event.Event {
 	}
 	buf, err := json.Marshal(obj)
 	if err != nil {
-		evt.Nack(err)
+		log.Ctx(evt.Context()).Error().Str("op", "filter").Str("filterType", "dedup").Str("name", f.Name()).Msg(err.Error())
+		if span := trace.SpanFromContext(evt.Context()); span != nil {
+			span.AddEvent(err.Error())
+		}
+		evt.Ack()
 		return []event.Event{}
 	}
 	evtHash := fmt.Sprintf("%x", md5.Sum(buf))

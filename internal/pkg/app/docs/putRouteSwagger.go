@@ -15,7 +15,7 @@
 package docs
 
 // swagger:route PUT /v1/orgs/{orgId}/applications/{appId}/routes/{routeId} routes putRoute
-// Adds a new route to the routing table or updates an existing route. Route ID can be given in the body. If it is omitted a hash will be calculates and used instead.
+// Adds a new route to the routing table or updates an existing route. Route ID can be given in the body. If it is omitted a hash will be calculated and used instead.
 // responses:
 //   200: RouteResponse
 //   500: RouteErrorResponse
@@ -25,6 +25,20 @@ package docs
 type routeResponseWrapper struct {
 	// in: body
 	Body RouteResponse
+}
+
+// Item response containing a message.
+// swagger:response postRouteEventResponse
+type successResponseWrapper struct {
+	// in: body
+	Body SuccessResponse
+}
+
+// Item response containing a message.
+// swagger:response postRouteEventResponse
+type errorResponseWrapper struct {
+	// in: body
+	Body ErrorResponse
 }
 
 // Item response containing a route error.
@@ -42,7 +56,7 @@ type routeParamWrapper struct {
 	Body RouteConfig
 }
 
-// swagger:parameters putRoute getRoute deleteRoute
+// swagger:parameters putRoute getRoute deleteRoute postRouteEvent
 type routeIdParamWrapper struct {
 	// Route ID
 	// in: path
@@ -53,6 +67,16 @@ type routeIdParamWrapper struct {
 type RouteResponse struct {
 	Status responseStatus `json:"status"`
 	Item   RouteConfig    `json:"item"`
+}
+
+type SuccessResponse struct {
+	Status responseStatus `json:"status"`
+	Item   string         `json:"item"`
+}
+
+type ErrorResponse struct {
+	Status responseStatus `json:"status"`
+	Item   string         `json:"item"`
 }
 
 type RouteErrorResponse struct {

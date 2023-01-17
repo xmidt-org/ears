@@ -1,13 +1,13 @@
 # Event Async Routing Service (EARS)
 
 [![Build Status](https://github.com/xmidt-org/ears/actions/workflows/ci.yml/badge.svg)](https://github.com/xmidt-org/ears/actions/workflows/ci.yml)
-[![Dependency Updateer](https://github.com/xmidt-org/ears/actions/workflows/updater.yml/badge.svg)](https://github.com/xmidt-org/ears/actions/workflows/updater.yml)
 [![codecov.io](http://codecov.io/github/xmidt-org/ears/coverage.svg?branch=main)](http://codecov.io/github/xmidt-org/ears?branch=main)
 [![Go Report Card](https://goreportcard.com/badge/github.com/xmidt-org/ears)](https://goreportcard.com/report/github.com/xmidt-org/ears)
 [![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=xmidt-org_ears&metric=alert_status)](https://sonarcloud.io/dashboard?id=xmidt-org_ears)
 [![Apache V2 License](http://img.shields.io/badge/license-Apache%20V2-blue.svg)](https://github.com/xmidt-org/ears/blob/main/LICENSE)
 [![GitHub Release](https://img.shields.io/github/release/xmidt-org/ears.svg)](CHANGELOG.md)
 [![GoDoc](https://pkg.go.dev/badge/github.com/xmidt-org/ears)](https://pkg.go.dev/github.com/xmidt-org/ears)
+
 
 ## Summary
 
@@ -24,6 +24,7 @@ Kinesis etc. but also makes the development of third party plugins easy.
 
 Our Kanban Board can be found [here](https://github.com/orgs/xmidt-org/projects/3).
 
+
 ## User Guide
 
 * [Routes](docs/userguide/routes.md)
@@ -37,10 +38,12 @@ Our Kanban Board can be found [here](https://github.com/orgs/xmidt-org/projects/
 * [Sender Plugins Reference](docs/userguide/senders.md)
 * [Plugin Developer Guide](docs/userguide/plugindev.md)
 
+
 ## References
 
 * [swagger.yaml](internal/pkg/app/swagger.yaml)
 * [ears.yaml](docs/userguide/config.md)
+
 
 ## Contributing
 

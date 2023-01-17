@@ -15,6 +15,8 @@
 package ws
 
 import (
+	"fmt"
+	"github.com/xeipuuv/gojsonschema"
 	"github.com/xmidt-org/ears/pkg/config"
 	pkgconfig "github.com/xmidt-org/ears/pkg/config"
 	"github.com/xmidt-org/ears/pkg/errs"
@@ -65,18 +67,15 @@ func (c Config) WithDefaults() *Config {
 }
 
 func (c *Config) Validate() error {
-	/*_, err := url.ParseRequestURI(c.Url)
+	schema := gojsonschema.NewStringLoader(filterSchema)
+	doc := gojsonschema.NewGoLoader(*c)
+	result, err := gojsonschema.Validate(schema, doc)
 	if err != nil {
 		return err
 	}
-	switch c.Method {
-	case "GET":
-	case "PUT":
-	case "POST":
-	case "DELETE":
-	default:
-		return errors.New("unknown method " + c.Method)
-	}*/
+	if !result.Valid() {
+		return fmt.Errorf(fmt.Sprintf("%+v", result.Errors()))
+	}
 	return nil
 }
 
@@ -103,3 +102,87 @@ func (c *Config) JSON() (string, error) {
 func (c *Config) FromJSON(in string) error {
 	return config.FromJSON(in, c)
 }
+
+const filterSchema = `
+{
+    "$schema": "http://json-schema.org/draft-06/schema#",
+    "$ref": "#/definitions/FilterConfig",
+    "definitions": {
+		"AuthConfig": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+                "type": {
+                    "type": "string",
+					"enum": ["", "basic", "sat", "oauth", "oauth2"]
+                },
+                "username": {
+                    "type": "string"
+                },
+                "password": {
+                    "type": "string"
+                },
+                "clientId": {
+                    "type": "string"
+                },
+                "clientSecret": {
+                    "type": "string"
+                },
+                "tokenUrl": {
+                    "type": "string"
+                },
+                "scopes": {
+ 					"type": "array",
+      				"items": {
+        				"type": "string"
+      				}             
+				}
+            },
+            "required": [
+            ],
+            "title": "AuthConfig"
+		},
+        "FilterConfig": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+                "toPath": {
+                    "type": "string"
+                },
+				"fromPath": {
+                    "type": "string"
+				},
+				"url": {
+                    "type": "string"
+				},
+				"urlPath": {
+                    "type": "string"
+				},
+				"method": {
+                    "type": "string",
+					"enum": ["GET", "PUT", "POST", "DELETE"]
+				},
+				"body": {
+                    "type": "string"
+				},
+				"headers": {
+                    "type": "object"
+				},
+				"emptyPathValueRequired" : {
+					"type": "boolean",
+					"default": false
+				},
+				"auth": {
+                    "$ref": "#/definitions/AuthConfig"
+				}
+            },
+            "required": [
+                "url",
+				"toPath",
+				"method"
+            ],
+            "title": "FilterConfig"
+        }
+    }
+}
+`

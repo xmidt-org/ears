@@ -14,7 +14,7 @@
 
 package docs
 
-// swagger:parameters putRoute postRoute getRoute deleteRoute putTenant getTenant deleteTenant
+// swagger:parameters putRoute postRoute getRoute deleteRoute putTenant getTenant deleteTenant postRouteEvent
 type appIdParamWrapper struct {
 	// App ID
 	// in: path
@@ -22,7 +22,7 @@ type appIdParamWrapper struct {
 	AppId string `json:"appId"`
 }
 
-// swagger:parameters putRoute postRoute getRoute deleteRoute putTenant getTenant deleteTenant
+// swagger:parameters putRoute postRoute getRoute deleteRoute putTenant getTenant deleteTenant postRouteEvent
 type orgIdParamWrapper struct {
 	// Org ID
 	// in: path
