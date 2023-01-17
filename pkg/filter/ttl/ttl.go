@@ -97,14 +97,14 @@ func (f *Filter) Filter(evt event.Event) []event.Event {
 	}
 	evtTs = evtTs * float64(*f.config.NanoFactor)
 	nowNanos := time.Now().UnixNano()
-	if int64(evtTs) > nowNanos {
+	/*if int64(evtTs) > nowNanos {
 		log.Ctx(evt.Context()).Error().Str("op", "filter").Str("filterType", "ttl").Str("name", f.Name()).Msg("event from the future at path " + f.config.Path)
 		if span := trace.SpanFromContext(evt.Context()); span != nil {
 			span.AddEvent("event from the future at path " + f.config.Path)
 		}
 		evt.Ack()
 		return []event.Event{}
-	}
+	}*/
 	// ttl is in milliseconds, so we need to convert the timestamp nanos
 	if (nowNanos-int64(evtTs))/1e6 >= int64(*f.config.Ttl) {
 		log.Ctx(evt.Context()).Info().Str("op", "filter").Str("filterType", "ttl").Str("name", f.Name()).Msg("event ttl expired")

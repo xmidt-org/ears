@@ -56,7 +56,8 @@ func (f *Filter) Filter(evt event.Event) []event.Event {
 	}
 	obj, _, _ := evt.GetPathValue(f.config.FromPath)
 	if obj == nil {
-		log.Ctx(evt.Context()).Error().Str("op", "filter").Str("filterType", "regex").Str("name", f.Name()).Msg("nil object at " + f.config.FromPath)
+		buf, _ := json.Marshal(evt.Payload())
+		log.Ctx(evt.Context()).Error().Str("op", "filter").Str("filterType", "regex").Str("name", f.Name()).RawJSON("payload", buf).Msg("nil object at " + f.config.FromPath)
 		if span := trace.SpanFromContext(evt.Context()); span != nil {
 			span.AddEvent("nil object at " + f.config.FromPath)
 		}
@@ -83,7 +84,11 @@ func (f *Filter) Filter(evt event.Event) []event.Event {
 	}
 	r, err := regexp.Compile(f.config.Regex)
 	if err != nil {
-		evt.Nack(err)
+		log.Ctx(evt.Context()).Error().Str("op", "filter").Str("filterType", "regex").Str("name", f.Name()).Msg(err.Error())
+		if span := trace.SpanFromContext(evt.Context()); span != nil {
+			span.AddEvent(err.Error())
+		}
+		evt.Ack()
 		return []event.Event{}
 	}
 	var output string
@@ -96,7 +101,24 @@ func (f *Filter) Filter(evt event.Event) []event.Event {
 	if f.config.ToPath != "" {
 		path = f.config.ToPath
 	}
-	evt.SetPathValue(path, output, true)
+	err = evt.DeepCopy()
+	if err != nil {
+		log.Ctx(evt.Context()).Error().Str("op", "filter").Str("filterType", "regex").Str("name", f.Name()).Msg(err.Error())
+		if span := trace.SpanFromContext(evt.Context()); span != nil {
+			span.AddEvent(err.Error())
+		}
+		evt.Ack()
+		return []event.Event{}
+	}
+	_, _, err = evt.SetPathValue(path, output, true)
+	if err != nil {
+		log.Ctx(evt.Context()).Error().Str("op", "filter").Str("filterType", "regex").Str("name", f.Name()).Msg(err.Error())
+		if span := trace.SpanFromContext(evt.Context()); span != nil {
+			span.AddEvent(err.Error())
+		}
+		evt.Ack()
+		return []event.Event{}
+	}
 	log.Ctx(evt.Context()).Debug().Str("op", "filter").Str("filterType", "regex").Str("name", f.Name()).Msg("regex")
 	return []event.Event{evt}
 }

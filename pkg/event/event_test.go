@@ -16,9 +16,11 @@ package event_test
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"github.com/xmidt-org/ears/internal/pkg/ack"
 	"github.com/xmidt-org/ears/pkg/event"
+	"io/ioutil"
 	"reflect"
 	"testing"
 	"time"
@@ -63,11 +65,13 @@ func TestEventBasic(t *testing.T) {
 func TestEventGetPath(t *testing.T) {
 	ctx := context.Background()
 	payload := map[string]interface{}{
-		"field1": "abcd",
-		"field2": 1234,
-		"field3": []interface{}{"a", "b", "c"},
-		"field4": []interface{}{map[string]interface{}{"a": "aa", "b": "bb", "c": "cc"}},
-		"field5": []interface{}{[]interface{}{"a", "b", "c"}},
+		"field1":  "abcd",
+		"field2":  1234,
+		"field3":  []interface{}{"a", "b", "c"},
+		"field4":  []interface{}{map[string]interface{}{"a": "aa", "b": "bb", "c": "cc"}},
+		"field5":  []interface{}{[]interface{}{"a", "b", "c"}},
+		"field10": map[string]interface{}{"a": map[string]interface{}{"key": "value", "foo": "bar"}, "b": "bb", "c": "cc"},
+		"field11": map[string]interface{}{"a": map[string]interface{}{"key.with.dots": "value", "foo": "bar"}, "b": "bb", "c": "cc"},
 	}
 	e, err := event.New(ctx, payload)
 	if err != nil {
@@ -143,6 +147,45 @@ func TestEventGetPath(t *testing.T) {
 	if v.(string) != "x" {
 		t.Errorf("bad path value %s\n", path)
 	}
+	//
+	path = ".field10.a.key"
+	v, _, _ = e.GetPathValue(path)
+	if v.(string) != "value" {
+		t.Errorf("bad path value %s\n", path)
+	}
+	//
+	path = `.field11.a.key\.with\.dots`
+	v, _, _ = e.GetPathValue(path)
+	if v.(string) != "value" {
+		t.Errorf("bad path value %s\n", path)
+	}
+}
+
+func BenchmarkCloneEvent(b *testing.B) {
+	ctx := context.Background()
+	buf, err := ioutil.ReadFile("event.json")
+	if err != nil {
+		b.Fatal(err)
+	}
+	b.Log("event size", len(buf), "test size", b.N)
+	var payload map[string]interface{}
+	err = json.Unmarshal(buf, &payload)
+	if err != nil {
+		b.Fatal(err)
+	}
+	for i := 0; i < b.N; i++ {
+		e1, err := event.New(ctx, payload)
+		if err != nil {
+			b.Errorf("failed to create new event %s\n", err.Error())
+		}
+		e2, err := e1.Clone(ctx)
+		if err != nil {
+			b.Errorf("failed to clone new event %s\n", err.Error())
+		}
+		e2.DeepCopy()
+		e2.Ack()
+		e1.Ack()
+	}
 }
 
 func TestCloneEvent(t *testing.T) {
@@ -165,6 +208,7 @@ func TestCloneEvent(t *testing.T) {
 	if err != nil {
 		t.Errorf("Fail to clone new event %s\n", err.Error())
 	}
+	e2.DeepCopy()
 
 	payload2, ok := e2.Payload().(map[string]interface{})
 	if !ok {

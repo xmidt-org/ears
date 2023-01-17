@@ -71,6 +71,8 @@ var DefaultReceiverConfig = ReceiverConfig{
 	MaxCheckpointAgeSeconds: pointer.Int(86400),
 	UseCheckpoint:           pointer.Bool(true),
 	UseShardMonitor:         pointer.Bool(false),
+	StartingTimestamp:       pointer.Int64(0),
+	StartingSequenceNumber:  "",
 }
 
 type ReceiverConfig struct {
@@ -87,6 +89,8 @@ type ReceiverConfig struct {
 	UseCheckpoint           *bool  `json:"useCheckpoint,omitempty"`
 	MaxCheckpointAgeSeconds *int   `json:"maxCheckpointAgeSeconds,omitempty"`
 	UseShardMonitor         *bool  `json:"useShardMonitor,omitempty"`
+	StartingSequenceNumber  string `json:"startingSequenceNumber,omitempty"`
+	StartingTimestamp       *int64 `json:"startingTimestamp,omitempty"`
 }
 
 type Receiver struct {
@@ -115,6 +119,7 @@ type Receiver struct {
 	eventFailureCounter            metric.BoundInt64Counter
 	eventBytesCounter              metric.BoundInt64Counter
 	eventLagMillis                 metric.BoundInt64Histogram
+	eventTrueLagMillis             metric.BoundInt64Histogram
 }
 
 var DefaultSenderConfig = SenderConfig{
@@ -123,6 +128,10 @@ var DefaultSenderConfig = SenderConfig{
 	SendTimeout:         pointer.Int(1),
 	PartitionKey:        "",
 	PartitionKeyPath:    "",
+	AWSRoleARN:          "",
+	AWSSecretAccessKey:  "",
+	AWSAccessKeyId:      "",
+	AWSRegion:           endpoints.UsWest2RegionID,
 }
 
 type SenderConfig struct {
@@ -131,6 +140,10 @@ type SenderConfig struct {
 	SendTimeout         *int   `json:"sendTimeout,omitempty"`
 	PartitionKey        string `json:"partitionKey,omitempty"`
 	PartitionKeyPath    string `json:"partitionKeyPath,omitempty"`
+	AWSRoleARN          string `json:"awsRoleARN,omitempty"`
+	AWSAccessKeyId      string `json:"awsAccessKeyId,omitempty"`
+	AWSSecretAccessKey  string `json:"awsSecretAccessKey,omitempty"`
+	AWSRegion           string `json:"awsRegion,omitempty"`
 }
 
 type Sender struct {
@@ -144,6 +157,7 @@ type Sender struct {
 	logger              *zerolog.Logger
 	eventBatch          []event.Event
 	done                chan struct{}
+	secrets             secret.Vault
 	eventSuccessCounter metric.BoundInt64Counter
 	eventFailureCounter metric.BoundInt64Counter
 	eventBytesCounter   metric.BoundInt64Counter

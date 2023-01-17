@@ -42,6 +42,7 @@ import (
 	"github.com/xmidt-org/ears/pkg/plugins/decode"
 	"github.com/xmidt-org/ears/pkg/plugins/dedup"
 	"github.com/xmidt-org/ears/pkg/plugins/encode"
+	"github.com/xmidt-org/ears/pkg/plugins/gears"
 	"github.com/xmidt-org/ears/pkg/plugins/hash"
 	http_plugin "github.com/xmidt-org/ears/pkg/plugins/http"
 	"github.com/xmidt-org/ears/pkg/plugins/js"
@@ -52,6 +53,8 @@ import (
 	"github.com/xmidt-org/ears/pkg/plugins/match"
 	"github.com/xmidt-org/ears/pkg/plugins/merge"
 	"github.com/xmidt-org/ears/pkg/plugins/metric"
+	"github.com/xmidt-org/ears/pkg/plugins/modify"
+	"github.com/xmidt-org/ears/pkg/plugins/nop"
 	"github.com/xmidt-org/ears/pkg/plugins/pass"
 	goredis "github.com/xmidt-org/ears/pkg/plugins/redis"
 	"github.com/xmidt-org/ears/pkg/plugins/regex"
@@ -488,6 +491,10 @@ func setupRestApi(config config.Config, storageMgr route.RouteStorer, setupQuota
 		plugin pkgplugin.Pluginer
 	}{
 		{
+			name:   "nop",
+			plugin: toArr(nop.NewPluginVersion("nop", "", ""))[0].(pkgplugin.Pluginer),
+		},
+		{
 			name:   "debug",
 			plugin: toArr(debug.NewPluginVersion("debug", "", ""))[0].(pkgplugin.Pluginer),
 		},
@@ -510,6 +517,10 @@ func setupRestApi(config config.Config, storageMgr route.RouteStorer, setupQuota
 		{
 			name:   "kafka",
 			plugin: toArr(kafka.NewPluginVersion("kafka", "", ""))[0].(pkgplugin.Pluginer),
+		},
+		{
+			name:   "gears",
+			plugin: toArr(gears.NewPluginVersion("gears", "", ""))[0].(pkgplugin.Pluginer),
 		},
 		{
 			name:   "match",
@@ -558,6 +569,10 @@ func setupRestApi(config config.Config, storageMgr route.RouteStorer, setupQuota
 		{
 			name:   "ttl",
 			plugin: toArr(ttl.NewPluginVersion("ttl", "", ""))[0].(pkgplugin.Pluginer),
+		},
+		{
+			name:   "modify",
+			plugin: toArr(modify.NewPluginVersion("modify", "", ""))[0].(pkgplugin.Pluginer),
 		},
 		{
 			name:   "trace",
@@ -635,7 +650,7 @@ func setupRestApi(config config.Config, storageMgr route.RouteStorer, setupQuota
 		}
 	}
 	jwtMgr, _ := jwt.NewJWTConsumer("", nil, false, "", "", nil, nil, nil)
-	apiMgr, err := NewAPIManager(routingMgr, tenantStorer, quotaMgr, jwtMgr)
+	apiMgr, err := NewAPIManager(routingMgr, tenantStorer, quotaMgr, jwtMgr, nil)
 	if err != nil {
 		return &EarsRuntime{config, nil, nil, storageMgr, nil, nil}, err
 	}
@@ -751,7 +766,7 @@ func TestRestVersionHandler(t *testing.T) {
 	w := httptest.NewRecorder()
 	r := httptest.NewRequest(http.MethodGet, "/version", nil)
 	jwtMgr, _ := jwt.NewJWTConsumer("", nil, false, "", "", nil, nil, nil)
-	api, err := NewAPIManager(&tablemgr.DefaultRoutingTableManager{}, nil, nil, jwtMgr)
+	api, err := NewAPIManager(&tablemgr.DefaultRoutingTableManager{}, nil, nil, jwtMgr, nil)
 	if err != nil {
 		t.Fatalf("Fail to setup api manager: %s\n", err.Error())
 	}

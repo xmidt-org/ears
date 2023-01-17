@@ -27,16 +27,19 @@ const (
 	EARSPluginNameLabel = "pluginName"
 	EARSPluginTypeLabel = "pluginType"
 
+	EARSPluginTypeNopSender     = "nopSender"
 	EARSPluginTypeDebugSender   = "debugSender"
 	EARSPluginTypeSQSSender     = "sqsSender"
 	EARSPluginTypeKinesisSender = "kinesisSender"
 	EARSPluginTypeKafkaSender   = "kafkaSender"
+	EARSPluginTypeGearsSender   = "gearsSender"
 	EARSPluginTypeHttpSender    = "httpSender"
 	EARSPluginTypeRedisSender   = "redisSender"
 
 	EARSPluginTypeMetricFilter = "metricFilter"
 	EARSPluginTypeTtlFilter    = "ttlFilter"
 
+	EARSPluginTypeNopReceiver     = "nopReceiver"
 	EARSPluginTypeDebugReceiver   = "debugReceiver"
 	EARSPluginTypeSQSReceiver     = "sqsReceiver"
 	EARSPluginTypeKinesisReceiver = "kinesisReceiver"
@@ -56,6 +59,7 @@ const (
 	EARSMetricRemoveRouteSuccess  = "ears.removeRouteSuccess"
 	EARSMetricRemoveRouteFailure  = "ears.removeRouteFailure"
 	EARSMetricMillisBehindLatest  = "ears.millisBehindLatest"
+	EARSMetricTrueLagMillis       = "ears.trueLagMillis"
 
 	EARSRouteId    = attribute.Key("ears.routeId")
 	EARSFragmentId = attribute.Key("ears.fragmentId")

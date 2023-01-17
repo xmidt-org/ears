@@ -28,6 +28,9 @@ func (sc SenderConfig) WithDefaults() SenderConfig {
 	if cfg.SendTimeout == nil {
 		cfg.SendTimeout = DefaultSenderConfig.SendTimeout
 	}
+	if cfg.AWSRegion == "" {
+		cfg.AWSRegion = DefaultReceiverConfig.AWSRegion
+	}
 	return cfg
 }
 
@@ -63,6 +66,18 @@ const senderSchema = `
                 "partitionKeyPath": {
                     "type": "string"
                 },
+				"awsRoleARN": {
+                    "type": "string"
+				},
+				"awsAccessKeyId": {
+                    "type": "string"
+				},
+				"awsSecretAccessKey": {
+                    "type": "string"
+				},
+				"awsRegion": {
+                    "type": "string"
+				},
 				"maxNumberOfMessages": {
                     "type": "integer", 
 					"minimum": 1,
