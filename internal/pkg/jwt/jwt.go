@@ -119,7 +119,6 @@ func convertJwkToPublicKey(input []byte) (*rsa.PublicKey, error) {
 	return pk, nil
 }
 
-
 // VerifyToken validates a give token for an optional list of clientIds / "subjects" (use empty array if any client id ok) and
 // for a given domain, component, api and method (api and method are encoded in the claim)
 func (sc *DefaultJWTConsumer) VerifyToken(ctx context.Context, token string, api string, method string, tid *tenant.Id) ([]string, string, error) {
@@ -144,6 +143,10 @@ func (sc *DefaultJWTConsumer) VerifyToken(ctx context.Context, token string, api
 				return partners, sub, nil
 			}
 		}
+	}
+	// if this is not an admin client we must know the tenant info
+	if tid == nil {
+		return nil, "", &UnauthorizedError{MissingTenantId}
 	}
 	// otherwise check if this is an app client
 	foundClientId := false
