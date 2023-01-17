@@ -16,6 +16,7 @@ package plugin
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
@@ -68,7 +69,8 @@ type manager struct {
 // === Initialization ================================================
 
 const (
-	defaultNextFnDeadline = 5 * time.Second
+	defaultNextFnDeadline      = 5 * time.Second
+	pluginRegistrationDeadline = 5 * time.Second
 )
 
 func NewManager(options ...ManagerOption) (Manager, error) {
@@ -140,12 +142,25 @@ func (m *manager) RegisterReceiver(
 	defer m.Unlock()
 
 	r, ok := m.receivers[key]
+
 	if !ok {
+
 		var secrets secret.Vault
 		if m.secrets != nil {
 			secrets = appsecret.NewTenantConfigVault(tid, m.secrets)
 		}
-		r, err = ns.NewReceiver(tid, plugin, name, config, secrets)
+
+		receiverChan := make(chan pkgreceiver.Receiver, 1)
+		go func() {
+			r, err = ns.NewReceiver(tid, plugin, name, config, secrets)
+			receiverChan <- r
+		}()
+		select {
+		case rcv := <-receiverChan:
+			r = rcv
+		case <-time.After(pluginRegistrationDeadline):
+			err = errors.New("receiver registration timed out")
+		}
 		if err != nil {
 			return nil, &RegistrationError{
 				Message: "could not create new receiver",
@@ -269,7 +284,10 @@ func (m *manager) next(receiverKey string, e pkgevent.Event) {
 		subCtx := logs.SubCtx(e.Context())
 		logs.StrToLogCtx(subCtx, "wid", wid)
 		logs.StrToLogCtx(subCtx, "receiverKey", receiverKey)
+		// clone creates a new event with a new sub ack tree but does not create a deepcopy of payload and metadata
+		// instead we are doing late deepcopy when we come across mutating filters in the route
 		childEvt, err := e.Clone(subCtx)
+		//childEvt.DeepCopy()
 		if err != nil {
 			e.Nack(err)
 		} else {
@@ -279,7 +297,7 @@ func (m *manager) next(receiverKey string, e pkgevent.Event) {
 					if p != nil {
 						panicErr := panics.ToError(p)
 						log.Ctx(evt.Context()).Error().Str("op", "nextRoute").Str("error", panicErr.Error()).
-							Str("stackTrace", panicErr.StackTrace()).Msg("A panic has occurred")
+							Str("stackTrace", panicErr.StackTrace()).Msg("a panic has occurred")
 					}
 				}()
 				//log.Ctx(evt.Context()).Debug().Str("op", "nextRoute").Msg("sending event to next route")
@@ -403,12 +421,25 @@ func (m *manager) RegisterFilter(
 	defer m.Unlock()
 
 	f, ok := m.filters[key]
+
 	if !ok {
+
 		var secrets secret.Vault
 		if m.secrets != nil {
 			secrets = appsecret.NewTenantConfigVault(tid, m.secrets)
 		}
-		f, err = factory.NewFilterer(tid, plugin, name, config, secrets)
+
+		filterChan := make(chan pkgfilter.Filterer, 1)
+		go func() {
+			f, err = factory.NewFilterer(tid, plugin, name, config, secrets)
+			filterChan <- f
+		}()
+		select {
+		case flt := <-filterChan:
+			f = flt
+		case <-time.After(pluginRegistrationDeadline):
+			err = errors.New("filter registration timed out")
+		}
 		if err != nil {
 			return nil, &RegistrationError{
 				Message: "could not create new filterer",
@@ -557,12 +588,25 @@ func (m *manager) RegisterSender(
 	defer m.Unlock()
 
 	s, ok := m.senders[key]
+
 	if !ok {
+
 		var secrets secret.Vault
 		if m.secrets != nil {
 			secrets = appsecret.NewTenantConfigVault(tid, m.secrets)
 		}
-		s, err = ns.NewSender(tid, plugin, name, config, secrets)
+
+		senderChan := make(chan pkgsender.Sender, 1)
+		go func() {
+			s, err = ns.NewSender(tid, plugin, name, config, secrets)
+			senderChan <- s
+		}()
+		select {
+		case snd := <-senderChan:
+			s = snd
+		case <-time.After(pluginRegistrationDeadline):
+			err = errors.New("sender registration timed out")
+		}
 		if err != nil {
 			return nil, &RegistrationError{
 				Message: "could not create sender",

@@ -23,7 +23,9 @@ import (
 	"github.com/xmidt-org/ears/pkg/tenant"
 	"github.com/xorcare/pointer"
 	"go.opentelemetry.io/otel/metric"
+	"go.opentelemetry.io/otel/propagation"
 	"net/http"
+	"sync"
 )
 
 var _ sender.Sender = (*Sender)(nil)
@@ -83,6 +85,7 @@ var DefaultReceiverConfig = ReceiverConfig{
 }
 
 type Receiver struct {
+	sync.Mutex
 	logger              *zerolog.Logger
 	srv                 *http.Server
 	config              ReceiverConfig
@@ -92,6 +95,7 @@ type Receiver struct {
 	eventSuccessCounter metric.BoundInt64Counter
 	eventFailureCounter metric.BoundInt64Counter
 	eventBytesCounter   metric.BoundInt64Counter
+	next                receiver.NextFn
 }
 
 type SenderConfig struct {
@@ -110,6 +114,7 @@ type Sender struct {
 	eventBytesCounter   metric.BoundInt64Counter
 	eventProcessingTime metric.BoundInt64Histogram
 	eventSendOutTime    metric.BoundInt64Histogram
+	b3Propagator        propagation.TextMapPropagator
 }
 
 type BadHttpStatusError struct {

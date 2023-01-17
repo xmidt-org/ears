@@ -77,7 +77,24 @@ func (f *Filter) Filter(evt event.Event) []event.Event {
 	if f.config.ToPath != "" {
 		path = f.config.ToPath
 	}
-	evt.SetPathValue(path, output, true)
+	err = evt.DeepCopy()
+	if err != nil {
+		log.Ctx(evt.Context()).Error().Str("op", "filter").Str("filterType", "encode").Str("name", f.Name()).Msg(err.Error())
+		if span := trace.SpanFromContext(evt.Context()); span != nil {
+			span.AddEvent(err.Error())
+		}
+		evt.Ack()
+		return []event.Event{}
+	}
+	_, _, err = evt.SetPathValue(path, output, true)
+	if err != nil {
+		log.Ctx(evt.Context()).Error().Str("op", "filter").Str("filterType", "encode").Str("name", f.Name()).Msg(err.Error())
+		if span := trace.SpanFromContext(evt.Context()); span != nil {
+			span.AddEvent(err.Error())
+		}
+		evt.Ack()
+		return []event.Event{}
+	}
 	log.Ctx(evt.Context()).Debug().Str("op", "filter").Str("filterType", "encode").Str("name", f.Name()).Msg("encode")
 	return []event.Event{evt}
 }

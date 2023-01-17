@@ -18,14 +18,16 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
-	"github.com/mohae/deepcopy"
+	"github.com/boriwo/deepcopy"
 	"github.com/rs/zerolog/log"
 	"github.com/xmidt-org/ears/pkg/event"
 	"github.com/xmidt-org/ears/pkg/filter"
 	"github.com/xmidt-org/ears/pkg/secret"
 	"github.com/xmidt-org/ears/pkg/tenant"
 	"go.opentelemetry.io/otel/trace"
+	"golang.org/x/oauth2/clientcredentials"
 	"io/ioutil"
 	"net"
 	"net/http"
@@ -33,13 +35,11 @@ import (
 	"time"
 )
 
-var (
-	tr     *http.Transport
-	client *http.Client
-)
-
 const (
-	HTTP_AUTH_TYPE_BASIC = "basic"
+	HTTP_AUTH_TYPE_BASIC  = "basic"
+	HTTP_AUTH_TYPE_SAT    = "sat"
+	HTTP_AUTH_TYPE_OAUTH  = "oauth"
+	HTTP_AUTH_TYPE_OAUTH2 = "oauth2"
 )
 
 func NewFilter(tid tenant.Id, plugin string, name string, config interface{}, secrets secret.Vault) (*Filter, error) {
@@ -60,6 +60,7 @@ func NewFilter(tid tenant.Id, plugin string, name string, config interface{}, se
 		plugin:  plugin,
 		tid:     tid,
 		secrets: secrets,
+		clients: make(map[string]*http.Client),
 	}
 	return f, nil
 }
@@ -98,7 +99,24 @@ func (f *Filter) Filter(evt event.Event) []event.Event {
 		resEvt, _ := event.New(evt.Context(), resObj)
 		resObj, _, _ = resEvt.GetPathValue(f.config.FromPath)
 	}
-	evt.SetPathValue(f.config.ToPath, resObj, true)
+	err = evt.DeepCopy()
+	if err != nil {
+		log.Ctx(evt.Context()).Error().Str("op", "filter").Str("filterType", "ws").Str("name", f.Name()).Msg(err.Error())
+		if span := trace.SpanFromContext(evt.Context()); span != nil {
+			span.AddEvent(err.Error())
+		}
+		evt.Ack()
+		return []event.Event{}
+	}
+	_, _, err = evt.SetPathValue(f.config.ToPath, resObj, true)
+	if err != nil {
+		log.Ctx(evt.Context()).Error().Str("op", "filter").Str("filterType", "ws").Str("name", f.Name()).Msg(err.Error())
+		if span := trace.SpanFromContext(evt.Context()); span != nil {
+			span.AddEvent(err.Error())
+		}
+		evt.Ack()
+		return []event.Event{}
+	}
 	log.Ctx(evt.Context()).Debug().Str("op", "filter").Str("filterType", "ws").Str("name", f.Name()).Msg("ws")
 	return []event.Event{evt}
 }
@@ -131,7 +149,7 @@ func (f *Filter) evalStr(evt event.Event, tt string) string {
 		}
 		path := tt[si+1 : ei]
 		v, _, _ := evt.GetPathValue(path)
-		v = deepcopy.Copy(v)
+		v = deepcopy.DeepCopy(v)
 		if !(si == 0 && ei == len(tt)-1) {
 			switch vt := v.(type) {
 			case string:
@@ -178,13 +196,69 @@ func (f *Filter) hitEndpoint(ctx context.Context, evt event.Event) (string, int,
 	for hk, hv := range headers {
 		req.Header.Set(hk, hv)
 	}
-	//TODO: support SAT and OAuth
+	var client *http.Client
 	if f.config.Auth.Type == HTTP_AUTH_TYPE_BASIC {
 		password := f.secrets.Secret(f.config.Auth.Password)
 		if password == "" {
 			password = f.config.Auth.Password
 		}
 		req.SetBasicAuth(f.config.Auth.Username, password)
+		var ok bool
+		f.RLock()
+		client, ok = f.clients[HTTP_AUTH_TYPE_BASIC]
+		f.RUnlock()
+		if !ok {
+			client = InitHttpTransportWithDialer()
+			f.Lock()
+			f.clients[HTTP_AUTH_TYPE_BASIC] = client
+			f.Unlock()
+		}
+	} else if f.config.Auth.Type == HTTP_AUTH_TYPE_SAT {
+		return "", 0, errors.New("sat auth not supported")
+	} else if f.config.Auth.Type == HTTP_AUTH_TYPE_OAUTH {
+		return "", 0, errors.New("oauth auth not supported")
+	} else if f.config.Auth.Type == HTTP_AUTH_TYPE_OAUTH2 {
+		var ok bool
+		f.RLock()
+		client, ok = f.clients[HTTP_AUTH_TYPE_OAUTH2+"-"+url]
+		f.RUnlock()
+		if !ok {
+			conf := &clientcredentials.Config{
+				ClientID:     f.secrets.Secret(f.config.Auth.ClientID),
+				ClientSecret: f.secrets.Secret(f.config.Auth.ClientSecret),
+				TokenURL:     f.secrets.Secret(f.config.Auth.TokenURL),
+				Scopes:       f.config.Auth.Scopes,
+			}
+			if conf.ClientID == "" {
+				conf.ClientID = f.config.Auth.ClientID
+			}
+			if conf.ClientSecret == "" {
+				conf.ClientSecret = f.config.Auth.ClientSecret
+			}
+			if conf.TokenURL == "" {
+				conf.TokenURL = f.config.Auth.TokenURL
+			}
+			client = conf.Client(context.Background())
+			f.Lock()
+			f.clients[HTTP_AUTH_TYPE_OAUTH2+"-"+url] = client
+			f.Unlock()
+		}
+	} else if f.config.Auth.Type == "" {
+		var ok bool
+		f.RLock()
+		client, ok = f.clients[HTTP_AUTH_TYPE_BASIC]
+		f.RUnlock()
+		if !ok {
+			client = InitHttpTransportWithDialer()
+			f.Lock()
+			f.clients[HTTP_AUTH_TYPE_BASIC] = client
+			f.Unlock()
+		}
+	} else {
+		return "", 0, errors.New("invalid auth type " + f.config.Auth.Type)
+	}
+	if client == nil {
+		return "", 0, errors.New("no client found for auth type " + f.config.Auth.Type)
 	}
 	// send request
 	resp, err := client.Do(req)
@@ -207,17 +281,13 @@ func (f *Filter) hitEndpoint(ctx context.Context, evt event.Event) (string, int,
 	return string(body), resp.StatusCode, nil
 }
 
-func init() {
+func InitHttpTransportWithDialer() *http.Client {
 	var dialer net.Dialer
-	InitHttpTransportWithDial(dialer.Dial)
-}
-
-func InitHttpTransportWithDial(dial func(network, addr string) (net.Conn, error)) {
-	tr = &http.Transport{
+	tr := &http.Transport{
 		MaxIdleConnsPerHost:   100,
 		ResponseHeaderTimeout: 1000 * time.Millisecond,
 		Proxy:                 http.ProxyFromEnvironment,
-		Dial:                  dial,
+		Dial:                  dialer.Dial,
 	}
 	go func() {
 		for {
@@ -225,6 +295,7 @@ func InitHttpTransportWithDial(dial func(network, addr string) (net.Conn, error)
 			tr.CloseIdleConnections()
 		}
 	}()
-	client = &http.Client{Transport: tr}
+	client := &http.Client{Transport: tr}
 	client.Timeout = 3000 * time.Millisecond
+	return client
 }

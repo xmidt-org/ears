@@ -4,19 +4,19 @@
   "numInstances": 3,
   "storageType": "",
   "table" : {
-    "useCaseOneRoute": {
+    "simpleFilterHashRouteTwo": {
       "seq": 0,
       "disabled": false,
       "routeFiles": [
-        "useCaseOneRoute"
+        "simpleFilterHashRouteTwo"
       ],
       "waitMs": 1000,
       "events": [
         {
-          "senderRouteFiles": "useCaseOneRoute",
-          "expectedEventCount": 1,
+          "senderRouteFiles": "simpleFilterHashRouteTwo",
+          "expectedEventCount": 5,
           "expectedEventIndex": 0,
-          "expectedEventPayloadFile": "event15"
+          "expectedEventPayloadFile": "event22"
         }
       ]
     }

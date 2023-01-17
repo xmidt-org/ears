@@ -25,13 +25,16 @@ import (
 	"github.com/xmidt-org/ears/pkg/secret"
 	"github.com/xmidt-org/ears/pkg/sender"
 	"github.com/xmidt-org/ears/pkg/tenant"
+	"go.opentelemetry.io/contrib/propagators/b3"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/global"
 	"go.opentelemetry.io/otel/metric/unit"
+	"go.opentelemetry.io/otel/propagation"
 	"io"
 	"io/ioutil"
 	"net/http"
+	"os"
 	"time"
 )
 
@@ -72,12 +75,14 @@ func NewSender(tid tenant.Id, plugin string, name string, config interface{}, se
 		tid:    tid,
 	}
 	// metric recorders
+	hostname, _ := os.Hostname()
 	meter := global.Meter(rtsemconv.EARSMeterName)
 	commonLabels := []attribute.KeyValue{
 		attribute.String(rtsemconv.EARSPluginTypeLabel, rtsemconv.EARSPluginTypeHttpSender),
 		attribute.String(rtsemconv.EARSPluginNameLabel, s.Name()),
 		attribute.String(rtsemconv.EARSAppIdLabel, s.tid.AppId),
 		attribute.String(rtsemconv.EARSOrgIdLabel, s.tid.OrgId),
+		attribute.String(rtsemconv.HostnameLabel, hostname),
 	}
 	s.eventSuccessCounter = metric.Must(meter).
 		NewInt64Counter(
@@ -107,11 +112,9 @@ func NewSender(tid tenant.Id, plugin string, name string, config interface{}, se
 			metric.WithDescription("measures the time ears spends to send an event to a downstream data sink"),
 			metric.WithUnit(unit.Milliseconds),
 		).Bind(commonLabels...)
-	return s, nil
-}
 
-func (s *Sender) SetTraceId(r *http.Request, traceId string) {
-	r.Header.Set("traceId", traceId)
+	s.b3Propagator = b3.New()
+	return s, nil
 }
 
 func (s *Sender) Send(event event.Event) {
@@ -131,10 +134,8 @@ func (s *Sender) Send(event event.Event) {
 		return
 	}
 	ctx := event.Context()
-	traceId := ctx.Value("traceId")
-	if traceId != nil {
-		s.SetTraceId(req, traceId.(string))
-	}
+	s.b3Propagator.Inject(ctx, propagation.HeaderCarrier(req.Header))
+
 	start := time.Now()
 	resp, err := s.client.Do(req)
 	s.eventSendOutTime.Record(event.Context(), time.Since(start).Milliseconds())

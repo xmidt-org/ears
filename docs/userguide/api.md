@@ -110,6 +110,12 @@ POST /ears/v1/orgs/{orgId}/applications/{appId}/routes {routeBody}
 GET /ears/v1/orgs/{orgId}/applications/{appId}/routes
 ```
 
+### Send Single Event To Route
+
+```
+POST /ears/v1/orgs/{orgId}/applications/{appId}/routes/{routeId}/event {eventBody}
+```
+
 ## Admin APIs
 
 ### Get All Routes

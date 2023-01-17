@@ -3,6 +3,15 @@ consumes:
 - application/json
 - application/yaml
 definitions:
+  ErrorResponse:
+    properties:
+      item:
+        type: string
+        x-go-name: Item
+      status:
+        $ref: '#/definitions/responseStatus'
+    type: object
+    x-go-package: github.com/xmidt-org/ears/internal/pkg/app/docs
   FilterStatus:
     properties:
       Config:
@@ -216,6 +225,15 @@ definitions:
           $ref: '#/definitions/SenderStatus'
         type: object
         x-go-name: Items
+      status:
+        $ref: '#/definitions/responseStatus'
+    type: object
+    x-go-package: github.com/xmidt-org/ears/internal/pkg/app/docs
+  SuccessResponse:
+    properties:
+      item:
+        type: string
+        x-go-name: Item
       status:
         $ref: '#/definitions/responseStatus'
     type: object
@@ -451,6 +469,42 @@ paths:
         a single tenant.
       tags:
       - routes
+    post:
+      operationId: postRoute
+      parameters:
+      - description: Route configuration including sender, receiver and optional filter
+          chain.
+        in: body
+        name: Body
+        required: true
+        schema:
+          $ref: '#/definitions/RouteConfig'
+      - description: App ID
+        in: path
+        name: appId
+        required: true
+        type: string
+        x-go-name: AppId
+      - description: Org ID
+        in: path
+        name: orgId
+        required: true
+        type: string
+        x-go-name: OrgId
+      responses:
+        "200":
+          description: RouteResponse
+          schema:
+            $ref: '#/definitions/RouteResponse'
+        "500":
+          description: RouteErrorResponse
+          schema:
+            $ref: '#/definitions/RouteErrorResponse'
+      summary: Adds a new route to the routing table or updates an existing route.
+        Route ID can be given in the body. If it is omitted a hash will be calculated
+        and used instead.
+      tags:
+      - routes
   /v1/orgs/{orgId}/applications/{appId}/routes/{routeId}:
     delete:
       operationId: deleteRoute
@@ -562,8 +616,42 @@ paths:
           schema:
             $ref: '#/definitions/RouteErrorResponse'
       summary: Adds a new route to the routing table or updates an existing route.
-        Route ID can be given in the body. If it is omitted a hash will be calculates
+        Route ID can be given in the body. If it is omitted a hash will be calculated
         and used instead.
+      tags:
+      - routes
+  /v1/orgs/{orgId}/applications/{appId}/routes/{routeId}/event:
+    post:
+      operationId: postRouteEvent
+      parameters:
+      - description: Route ID
+        in: path
+        name: routeId
+        required: true
+        type: string
+        x-go-name: RouteId
+      - description: App ID
+        in: path
+        name: appId
+        required: true
+        type: string
+        x-go-name: AppId
+      - description: Org ID
+        in: path
+        name: orgId
+        required: true
+        type: string
+        x-go-name: OrgId
+      responses:
+        "200":
+          description: SuccessResponse
+          schema:
+            $ref: '#/definitions/SuccessResponse'
+        "500":
+          description: ErrorResponse
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+      summary: Injects a test event into an existing route.
       tags:
       - routes
   /v1/orgs/{orgId}/applications/{appId}/senders:
@@ -581,43 +669,6 @@ paths:
       summary: Gets list of all senders currently present for a single tenant.
       tags:
       - plugins
-  /v1/orgs/{orgid}/applications/{appid}/routes:
-    post:
-      operationId: postRoute
-      parameters:
-      - description: Route configuration including sender, receiver and optional filter
-          chain.
-        in: body
-        name: Body
-        required: true
-        schema:
-          $ref: '#/definitions/RouteConfig'
-      - description: App ID
-        in: path
-        name: appId
-        required: true
-        type: string
-        x-go-name: AppId
-      - description: Org ID
-        in: path
-        name: orgId
-        required: true
-        type: string
-        x-go-name: OrgId
-      responses:
-        "200":
-          description: RouteResponse
-          schema:
-            $ref: '#/definitions/RouteResponse'
-        "500":
-          description: RouteErrorResponse
-          schema:
-            $ref: '#/definitions/RouteErrorResponse'
-      summary: Adds a new route to the routing table or updates an existing route.
-        Route ID can be given in the body. If it is omitted a hash will be calculates
-        and used instead.
-      tags:
-      - routes
   /v1/receivers:
     get:
       operationId: getAllReceivers
@@ -700,6 +751,10 @@ responses:
     description: Item response containing a filters error.
     schema:
       $ref: '#/definitions/FiltersErrorResponse'
+  postRouteEventResponse:
+    description: Item response containing a message.
+    schema:
+      $ref: '#/definitions/ErrorResponse'
   receiversErrorResponse:
     description: Item response containing a receivers error.
     schema:
