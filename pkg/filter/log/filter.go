@@ -67,13 +67,16 @@ func (f *Filter) Filter(evt event.Event) []event.Event {
 		obj, _, _ = evt.GetPathValue(f.config.Path)
 	}
 	buf, err := json.Marshal(obj)
+	if _, ok := obj.(string); ok {
+		buf = []byte(obj.(string))
+	}
 	if err != nil {
 		log.Ctx(evt.Context()).Error().Str("op", "filter").Str("filterType", "log").Str("name", f.Name()).Msg(err.Error())
 	} else {
 		if *f.config.AsString {
-			log.Ctx(evt.Context()).Info().Str("op", "filter").Str("filterType", "log").Str("name", f.Name()).Str("event", string(buf)).Msg("log")
+			log.Ctx(evt.Context()).Info().Str("op", "filter").Str("filterType", "log").Str("tag", f.config.Tag).Str("name", f.Name()).Str(f.config.LogKey, string(buf)).Msg("log")
 		} else {
-			log.Ctx(evt.Context()).Info().Str("op", "filter").Str("filterType", "log").Str("name", f.Name()).RawJSON("event", buf).Msg("log")
+			log.Ctx(evt.Context()).Info().Str("op", "filter").Str("filterType", "log").Str("tag", f.config.Tag).Str("name", f.Name()).RawJSON(f.config.LogKey, buf).Msg("log")
 		}
 	}
 	return []event.Event{evt}

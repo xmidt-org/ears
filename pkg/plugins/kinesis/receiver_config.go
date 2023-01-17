@@ -48,6 +48,9 @@ func (rc *ReceiverConfig) WithDefaults() ReceiverConfig {
 	if cfg.UseShardMonitor == nil {
 		cfg.UseShardMonitor = DefaultReceiverConfig.UseShardMonitor
 	}
+	if cfg.StartingTimestamp == nil {
+		cfg.StartingTimestamp = DefaultReceiverConfig.StartingTimestamp
+	}
 	return cfg
 }
 
@@ -110,6 +113,12 @@ const receiverSchema = `
 				"enhancedFanOut" : {
 					"type": "boolean",
 					"default": false
+				},
+				"startingTimestamp": {
+                    "type": "integer"
+				},
+				"startingSequenceNumber": {
+                    "type": "string"
 				},
 				"useCheckpoint" : {
 					"type": "boolean",

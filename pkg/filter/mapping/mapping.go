@@ -16,7 +16,7 @@ package mapping
 
 import (
 	"fmt"
-	"github.com/mohae/deepcopy"
+	"github.com/boriwo/deepcopy"
 	"github.com/rs/zerolog/log"
 	"github.com/xmidt-org/ears/pkg/event"
 	"github.com/xmidt-org/ears/pkg/filter"
@@ -56,6 +56,15 @@ func (f *Filter) Filter(evt event.Event) []event.Event {
 		return nil
 	}
 	log.Ctx(evt.Context()).Debug().Str("op", "filter").Str("filterType", "mapping").Str("name", f.Name()).Msg("mapping")
+	err := evt.DeepCopy()
+	if err != nil {
+		log.Ctx(evt.Context()).Error().Str("op", "filter").Str("filterType", "mapping").Str("name", f.Name()).Msg(err.Error())
+		if span := trace.SpanFromContext(evt.Context()); span != nil {
+			span.AddEvent(err.Error())
+		}
+		evt.Ack()
+		return []event.Event{}
+	}
 	isArray := false
 	elem, _, _ := evt.GetPathValue(f.config.ArrayPath)
 	iterator := []interface{}{elem}
@@ -101,10 +110,10 @@ func (f *Filter) Filter(evt event.Event) []event.Event {
 			}
 			if reflect.DeepEqual(obj, from) && f.compare(currEvent, m.Comparison) {
 				if isArray {
-					currEvent.SetPathValue(f.config.Path, deepcopy.Copy(to), true)
+					currEvent.SetPathValue(f.config.Path, deepcopy.DeepCopy(to), true)
 					evt.SetPathValue(f.config.ArrayPath+fmt.Sprintf("[%d]", idx), currEvent.Payload(), true)
 				} else {
-					evt.SetPathValue(f.config.Path, deepcopy.Copy(to), true)
+					evt.SetPathValue(f.config.Path, deepcopy.DeepCopy(to), true)
 				}
 				mapped = true
 			}
@@ -120,10 +129,10 @@ func (f *Filter) Filter(evt event.Event) []event.Event {
 				}
 			}
 			if isArray {
-				currEvent.SetPathValue(f.config.Path, deepcopy.Copy(defVal), true)
+				currEvent.SetPathValue(f.config.Path, deepcopy.DeepCopy(defVal), true)
 				evt.SetPathValue(f.config.ArrayPath+fmt.Sprintf("[%d]", idx), currEvent.Payload(), true)
 			} else {
-				evt.SetPathValue(f.config.Path, deepcopy.Copy(defVal), true)
+				evt.SetPathValue(f.config.Path, deepcopy.DeepCopy(defVal), true)
 			}
 		}
 	}

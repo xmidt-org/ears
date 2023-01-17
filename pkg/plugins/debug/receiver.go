@@ -17,6 +17,7 @@ package debug
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"github.com/goccy/go-yaml"
 	"github.com/rs/zerolog"
 	"github.com/xmidt-org/ears/internal/pkg/rtsemconv"
@@ -28,8 +29,6 @@ import (
 	"go.opentelemetry.io/otel/metric/unit"
 	"os"
 	"sync"
-
-	"fmt"
 	"time"
 
 	"github.com/xmidt-org/ears/pkg/event"
@@ -131,7 +130,9 @@ func (r *Receiver) Receive(next receiver.NextFn) error {
 			return
 		}
 		eventsDone := &sync.WaitGroup{}
-		eventsDone.Add(*r.config.Rounds)
+		if *r.config.Rounds > 0 {
+			eventsDone.Add(*r.config.Rounds)
+		}
 		for count := *r.config.Rounds; count != 0; {
 			select {
 			case <-r.done:
@@ -141,12 +142,16 @@ func (r *Receiver) Receive(next receiver.NextFn) error {
 				r.eventBytesCounter.Add(ctx, int64(len(buf)))
 				e, err := event.New(ctx, r.config.Payload, event.WithAck(
 					func(evt event.Event) {
-						eventsDone.Done()
+						if *r.config.Rounds > 0 {
+							eventsDone.Done()
+						}
 						r.eventSuccessCounter.Add(ctx, 1)
 						cancel()
 					}, func(evt event.Event, err error) {
 						r.logger.Error().Str("op", "debug.Receive").Msg("failed to process message: " + err.Error())
-						eventsDone.Done()
+						if *r.config.Rounds > 0 {
+							eventsDone.Done()
+						}
 						r.eventFailureCounter.Add(ctx, 1)
 						cancel()
 					}),
@@ -193,7 +198,9 @@ func (r *Receiver) Trigger(e event.Event) {
 	next := r.next
 	r.Unlock()
 	r.history.Add(e)
-	next(e)
+	if next != nil {
+		next(e)
+	}
 }
 
 func (r *Receiver) History() []event.Event {

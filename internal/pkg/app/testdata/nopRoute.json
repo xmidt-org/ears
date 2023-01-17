@@ -1,0 +1,18 @@
+{
+  "id": "nop101",
+  "orgId": "comcast",
+  "appId": "xh",
+  "userId": "boris",
+  "name": "nopRoute",
+  "receiver": {
+    "plugin": "nop",
+    "name": "myNopReceiver"
+  },
+  "sender": {
+    "plugin": "nop",
+    "name": "myNopSender",
+    "config": {
+    }
+  },
+  "deliveryMode": "whoCares"
+}

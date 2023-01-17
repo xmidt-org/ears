@@ -20,6 +20,7 @@ import "github.com/xmidt-org/ears/pkg/tenant"
 // the behavior of the sender.
 type Config struct {
 	FromPath      string `json:"fromPath,omitempty"`
+	From          string `json:"from,omitempty"`
 	ToPath        string `json:"toPath,omitempty"`
 	HashAlgorithm string `json:"hashAlgorithm,omitempty"`
 	Key           string `json:"key,omitempty"`      // optional key for certain hash algorithms
@@ -28,6 +29,7 @@ type Config struct {
 
 var DefaultConfig = Config{
 	FromPath:      "",
+	From:          "",
 	ToPath:        "",
 	HashAlgorithm: "md5",
 	Key:           "",

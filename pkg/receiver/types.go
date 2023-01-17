@@ -57,7 +57,8 @@ type Receiver interface {
 	// StopReceiving will stop the receiver from receiving events.
 	// This will cause Receive to return.
 	StopReceiving(ctx context.Context) error
-	//
+	// Send a test event into the route
+	Trigger(e event.Event)
 	//
 	Config() interface{}
 	Name() string

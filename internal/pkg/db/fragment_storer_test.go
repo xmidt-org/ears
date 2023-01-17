@@ -119,7 +119,7 @@ func testFragmentStorer(s fragments.FragmentStorer, t *testing.T) {
 	time.Sleep(500 * time.Millisecond)
 
 	//Test Case: tenant does not exist
-	f, err := s.GetFragment(ctx, tenant.Id{OrgId: "myOrg", AppId: "myApp"}, "does_not_exist")
+	_, err := s.GetFragment(ctx, tenant.Id{OrgId: "myOrg", AppId: "myApp"}, "does_not_exist")
 	if err == nil {
 		t.Fatalf("Expect an error but instead get no error")
 	}
@@ -140,7 +140,7 @@ func testFragmentStorer(s fragments.FragmentStorer, t *testing.T) {
 		t.Fatalf("SetFragment error: %s\n", err.Error())
 	}
 
-	f, err = s.GetFragment(ctx, fragmentTestCases[0].tenantId, config.FragmentName)
+	f, err := s.GetFragment(ctx, fragmentTestCases[0].tenantId, config.FragmentName)
 	if err != nil {
 		t.Fatalf("GetFragment test error: %s\n", err.Error())
 	}
@@ -149,7 +149,7 @@ func testFragmentStorer(s fragments.FragmentStorer, t *testing.T) {
 	g.AssertJson(t, "fragment", f)
 
 	//Test Case: route does not exist
-	f, err = s.GetFragment(ctx, tenant.Id{OrgId: "myOrg", AppId: "myApp"}, "does_not_exist")
+	_, err = s.GetFragment(ctx, tenant.Id{OrgId: "myOrg", AppId: "myApp"}, "does_not_exist")
 	if err == nil {
 		t.Fatalf("Expect an error but instead get no error")
 	}
@@ -235,7 +235,7 @@ func testFragmentStorer(s fragments.FragmentStorer, t *testing.T) {
 		t.Fatalf("DeleteFRagment error: %s\n", err.Error())
 	}
 
-	f, err = s.GetFragment(ctx, fragmentTestCases[2].tenantId, fragmentTestCases[2].fragmentId)
+	_, err = s.GetFragment(ctx, fragmentTestCases[2].tenantId, fragmentTestCases[2].fragmentId)
 	if err == nil {
 		t.Fatalf("GetFragment expect an error but instead get no error")
 	}

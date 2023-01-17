@@ -20,6 +20,7 @@ package event
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"github.com/google/uuid"
 	"github.com/rs/zerolog"
 	"github.com/xmidt-org/ears/internal/pkg/ack"
@@ -35,7 +36,9 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/mohae/deepcopy"
+	//"github.com/mohae/deepcopy"
+	//"github.com/gohobby/deepcopy"
+	"github.com/boriwo/deepcopy"
 )
 
 type event struct {
@@ -50,6 +53,7 @@ type event struct {
 	tracePayloadOnNack bool
 	tracePayload       interface{}
 	created            time.Time
+	deepcopied         bool
 }
 
 type EventOption func(*event) error
@@ -154,7 +158,8 @@ func WithTracePayloadOnNack(tracePayloadOnNack bool) EventOption {
 	return func(e *event) error {
 		e.tracePayloadOnNack = tracePayloadOnNack
 		if tracePayloadOnNack {
-			e.tracePayload = deepcopy.Copy(e.payload)
+			e.tracePayload = deepcopy.DeepCopy(e.payload)
+
 		}
 		return nil
 	}
@@ -350,6 +355,45 @@ func (e *event) getChildElement(curr interface{}, segment string) (interface{}, 
 	return nil, nil, "", -1
 }
 
+func (e *event) Evaluate(expression interface{}) (interface{}, interface{}, string) {
+	switch expr := expression.(type) {
+	case string:
+		for {
+			si := strings.Index(expr, "{")
+			ei := strings.Index(expr, "}")
+			if si < 0 || ei < 0 {
+				break
+			}
+			path := expr[si+1 : ei]
+			v, pr, ky := e.GetPathValue(path)
+			v = deepcopy.DeepCopy(v)
+			if si == 0 && ei == len(expr)-1 {
+				return v, pr, ky
+			}
+			switch vt := v.(type) {
+			case string:
+				expr = expr[0:si] + vt + expr[ei+1:]
+			default:
+				sv, _ := json.Marshal(vt)
+				expr = expr[0:si] + string(sv) + expr[ei+1:]
+			}
+		}
+		return expr, nil, ""
+	default:
+		return expression, nil, ""
+	}
+	return expression, nil, ""
+}
+
+func (e *event) splitPath(path string) []string {
+	path = strings.Replace(path, `\.`, `\\`, -1)
+	segments := strings.Split(path, ".")
+	for i, _ := range segments {
+		segments[i] = strings.Replace(segments[i], `\\`, `.`, -1)
+	}
+	return segments
+}
+
 func (e *event) GetPathValue(path string) (interface{}, interface{}, string) {
 	if path == TRACE+".id" {
 		traceId := trace.SpanFromContext(e.ctx).SpanContext().TraceID().String()
@@ -387,7 +431,7 @@ func (e *event) GetPathValue(path string) (interface{}, interface{}, string) {
 	var parent interface{}
 	var key string
 	var ok bool
-	segments := strings.Split(path, ".")
+	segments := e.splitPath(path)
 	if len(segments) < 2 {
 		return nil, nil, ""
 	}
@@ -408,7 +452,10 @@ func (e *event) GetPathValue(path string) (interface{}, interface{}, string) {
 	return obj, parent, key
 }
 
-func (e *event) SetPathValue(path string, val interface{}, createPath bool) (interface{}, string) {
+func (e *event) SetPathValue(path string, val interface{}, createPath bool) (interface{}, string, error) {
+	if e.ack != nil && e.ack.IsAcked() {
+		return nil, "", &ack.AlreadyAckedError{}
+	}
 	obj := e.Payload()
 	if strings.HasPrefix(path, METADATA+".") || path == METADATA {
 		metaObj := e.Metadata()
@@ -417,7 +464,7 @@ func (e *event) SetPathValue(path string, val interface{}, createPath bool) (int
 				e.SetMetadata(make(map[string]interface{}))
 				obj = e.Metadata()
 			} else {
-				return nil, ""
+				return nil, "", errors.New("path " + path + " does not exist")
 			}
 		} else {
 			obj = metaObj
@@ -430,22 +477,22 @@ func (e *event) SetPathValue(path string, val interface{}, createPath bool) (int
 		path = PAYLOAD
 	}
 	if path == PAYLOAD || path == PAYLOAD+"." {
-		e.SetPayload(val)
-		return nil, ""
+		err := e.SetPayload(val)
+		return nil, "", err
 	} else if path == METADATA || path == METADATA+"." {
 		valMap, ok := val.(map[string]interface{})
 		if ok {
 			e.SetMetadata(valMap)
 		}
-		return nil, ""
+		return nil, "", errors.New("bad metadata")
 	}
 	if !strings.HasPrefix(path, PAYLOAD+".") && !strings.HasPrefix(path, METADATA+".") {
-		return nil, ""
+		return nil, "", errors.New("bad path " + path)
 	}
 	var parent interface{}
 	var key string
 	var ok bool
-	segments := strings.Split(path, ".")
+	segments := e.splitPath(path)
 	for i := 1; i < len(segments); i++ {
 		s := segments[i]
 		if s == "" {
@@ -462,7 +509,7 @@ func (e *event) SetPathValue(path string, val interface{}, createPath bool) (int
 				parent.(map[string]interface{})[key] = make(map[string]interface{})
 				obj = parent.(map[string]interface{})[key]
 			} else {
-				return nil, ""
+				return nil, "", errors.New("invalid path " + path)
 			}
 		}
 	}
@@ -491,7 +538,7 @@ func (e *event) SetPathValue(path string, val interface{}, createPath bool) (int
 			obj[key] = val
 		}
 	}
-	return parent, key
+	return parent, key, nil
 }
 
 func (e *event) Context() context.Context {
@@ -519,6 +566,7 @@ func (e *event) Nack(err error) {
 }
 
 func (e *event) Clone(ctx context.Context) (Event, error) {
+	// clone shallow
 	var subTree ack.SubTree
 	if e.ack != nil {
 		var err error
@@ -527,15 +575,9 @@ func (e *event) Clone(ctx context.Context) (Event, error) {
 			return nil, err
 		}
 	}
-	//Very fast according to the following benchmark:
-	//https://xuri.me/2018/06/17/deep-copy-object-with-reflecting-or-gob-in-go.html
-	//Unclear if all types are supported:
-	//https://github.com/mohae/deepcopy/blob/master/deepcopy.go#L45-L46
-	newPayloadCopy := deepcopy.Copy(e.payload)
-	newMetadtaCopy := deepcopy.Copy(e.metadata).(map[string]interface{})
 	return &event{
-		payload:  newPayloadCopy,
-		metadata: newMetadtaCopy,
+		payload:  e.Payload(),
+		metadata: e.Metadata(),
 		ctx:      ctx,
 		ack:      subTree,
 		eid:      e.eid,
@@ -543,3 +585,62 @@ func (e *event) Clone(ctx context.Context) (Event, error) {
 		created:  e.created,
 	}, nil
 }
+
+func (e *event) DeepCopy() error {
+	// only deepcopy once per clone
+	if e.deepcopied {
+		return nil
+	}
+	e.deepcopied = true
+	// gohobby deepcopy without reflection
+	// benchmark for 1.7 kb event: 6,000 ns / op
+	e.payload = deepcopy.DeepCopy(e.payload)
+	e.metadata = deepcopy.DeepCopy(e.metadata).(map[string]interface{})
+	return nil
+}
+
+/*func (e *event) DeepCopy() error {
+	if e.deepcopied {
+		return nil
+	}
+	e.deepcopied = true
+	// mohae deepcopy using reflection
+	// very fast according to the following benchmark:
+	// https://xuri.me/2018/06/17/deep-copy-object-with-reflecting-or-gob-in-go.html
+	// unclear if all types are supported:
+	// https://github.com/mohae/deepcopy/blob/master/deepcopy.go#L45-L46
+	// benchmark for 1.7 kb event: 29,000 ns / op
+	e.payload = deepcopy.Copy(e.payload)
+	e.metadata = deepcopy.Copy(e.metadata).(map[string]interface{})
+	return nil
+}*/
+
+/*func (e *event) DeepCopy() error {
+	if e.deepcopied {
+		return nil
+	}
+	e.deepcopied = true
+	// trivial json serialization / deserialization implementation
+	// benchmark for 1.7 kb event: 35,000 ns / op
+	buf, err := json.Marshal(e.Payload())
+	if err != nil {
+		return err
+	}
+	var payload interface{}
+	err = json.Unmarshal(buf, &payload)
+	if err != nil {
+		return err
+	}
+	buf, err = json.Marshal(e.Metadata())
+	if err != nil {
+		return err
+	}
+	var metadata map[string]interface{}
+	err = json.Unmarshal(buf, &metadata)
+	if err != nil {
+		return err
+	}
+	e.payload = payload
+	e.metadata = metadata
+	return nil
+}*/

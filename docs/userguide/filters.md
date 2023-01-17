@@ -64,6 +64,7 @@ array elements is currently not supported.
 ## Standard Library Of Filter Plugins
 
 * match
+* mapping
 * decode
 * encode
 * transform
@@ -74,9 +75,11 @@ array elements is currently not supported.
 * log
 * unwrap
 * ttl
+* validate
 * trace
+* dedup
 
-## Match
+## match
 
 ### Description
 
@@ -139,7 +142,30 @@ _ExactArrayMatch_, if set to true, requires arrays in the pattern to match exact
 and same values. If set to false the payload may contain additional elements in the array not present in the 
 pattern. Default is true.
 
-## Decode
+## mapping
+
+### Description
+
+Map values in event payload to other values.
+
+### Filter Config
+
+```
+{
+  "plugin" : "mapping",
+  "config" : {
+    "path" : "metadata.sensorType.value",
+    "map" : [
+      {
+        "from" :  null,
+        "to":  "none"
+      }
+    ]
+  }
+}
+```
+
+## decode
 
 ### Description
 
@@ -176,7 +202,7 @@ Omitting configs for default behavior we can reduce this to:
 }
 ```
 
-## Encode
+## encode
 
 ### Description
 
@@ -217,7 +243,7 @@ Omitting configs for default behavior we can reduce this to:
 
 Basic structural transformations of event payloads and or metadata. Existing fields can be moved around
 or filtered. We are using transformation by example syntax for the transformed event and dot-delimited path
-syntax to choose from the original event. The filter supports the `ToPath` config which you can use
+syntax to choose from the original event. The filter supports the `fromPath` and `toPath` configs which you can use
 to move arbitrary pieces of data between the payload and the metadata section of the event.
 
 ### Example
@@ -377,13 +403,21 @@ Relying on default config values this reduces to:
 
 ### Description
 
-Logs the current payload and metadata values of the event. For debug purposes only.
+Logs the current payload and metadata values of the event. For debug purposes only. Several optional 
+parameters can be used to choose a subset of the payload, modify the log key and to control whether 
+the data should be logged as JSON or as string.
 
 ### Filter Config
 
 ```
 {
-  "plugin" : "log"
+  "plugin" : "log",
+  "config" : {
+    "path" : "payload.some.key",
+    "tag" : "",
+    "logKey": "payload",
+    "asString" : true
+  }
 }
 ```
 
@@ -427,6 +461,24 @@ Expire events that arte older than five minutes.
     "path" : ".content.timestamp",
     "nanoFactor" : 1,
     "ttl" : 300000
+  }
+}
+```
+
+## validate
+
+### Description
+
+Validate payload against JSON schema.
+
+### Filter Config
+
+```
+{
+  "plugin" : "validate",
+  "config" : {
+    "path" : ".",
+    "schema" : {...}
   }
 }
 ```
