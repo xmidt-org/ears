@@ -10,6 +10,7 @@ const (
 	MissingCapabilities    = "missing jwt capabilities"
 	NoMatchingCapabilities = "no matching jwt capabilities"
 	MissingClientId        = "missing jwt client id"
+	MissingTenantId        = "missing tenant id"
 	UnauthorizedClientId   = "unauthorized jwt client id"
 	UnauthorizedPartnerId  = "unauthorized jwt partner id"
 	NoAllowedPartners      = "no allowed partners"
