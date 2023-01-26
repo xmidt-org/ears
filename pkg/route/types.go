@@ -58,6 +58,7 @@ type Config struct {
 	Id           string         `json:"id,omitempty"`           // route ID
 	TenantId     tenant.Id      `json:"tenant,omitempty"`       // TenantId. Derived from URL path. Should not be marshaled
 	UserId       string         `json:"userId,omitempty"`       // user ID / author of route
+	Region       string         `json:"region,omitempty"`       // optional region of route for active-active scenarios - if present, route will only be active in a single region
 	Name         string         `json:"name,omitempty"`         // optional unique name for route
 	Desc         string         `json:"desc,omitempty"`         // optional description for route
 	Origin       string         `json:"origin,omitempty"`       // optional reference to route owner, e.g. Flow ID in case of Gears
