@@ -128,6 +128,11 @@ func (r *DefaultRoutingTableManager) unregisterAndStopRoute(ctx context.Context,
 }
 
 func (r *DefaultRoutingTableManager) registerAndRunRoute(ctx context.Context, routeConfig *route.Config) error {
+	// if route is not meant for this region, ignore it!
+	if routeConfig.Region != "" && r.config.GetString("ears.region") != routeConfig.Region {
+		log.Ctx(ctx).Info().Str("op", "registerAndRunRoute").Str("region", r.config.GetString("ears.region")).Str("routeRegion", routeConfig.Region).Str("routeId", routeConfig.Id).Msg("ignore route meant for different region")
+		return nil
+	}
 	tracer := otel.Tracer(rtsemconv.EARSTracerName)
 	ctx, span := tracer.Start(ctx, "registerAndRunRoute")
 	defer span.End()
@@ -150,9 +155,9 @@ func (r *DefaultRoutingTableManager) registerAndRunRoute(ctx context.Context, ro
 	}
 	// An identical route already exists under a different ID.
 	// It would be ok to simply create another route here because plugin manager will ensure we share receiver and sender
-	// plugin for performance. However, simply creating another route would cause event duplication. Instead we need to
+	// plugin for performance. However, simply creating another route would cause event duplication. Instead, we need to
 	// have a route level reference counter. Need to performance test this approach with large number of routes.
-	// While this approach will work functionally it may not scale well in practice. Remember: We will have millions of identical
+	// While this approach will work functionally, it may not scale well in practice. Remember: We will have millions of identical
 	// routes (with different route IDs!) in Xfi. This will lead to millions of entries in the internal hashmap and worse yet,
 	// millions of entries in the storage layer. I still believe it may be simpler and faster to force the route ID to be
 	// the route hash, use an internal reference counter and give up on idempotency. An alternative would be to take route creation

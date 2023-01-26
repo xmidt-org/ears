@@ -128,11 +128,6 @@ func init() {
 				Default: "us-west-2", LookupKey: "ears.region",
 				Description: "region",
 			},
-			cli.Argument{
-				Name: "port", Shorthand: "", Type: cli.ArgTypeInt,
-				Default: 3000, LookupKey: "ears.api.port",
-				Description: "API port",
-			},
 
 			cli.Argument{
 				Name: "routeStorageType", Shorthand: "", Type: cli.ArgTypeString,
