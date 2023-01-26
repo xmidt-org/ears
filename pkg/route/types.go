@@ -145,7 +145,7 @@ func (pc *PluginConfig) Hash(ctx context.Context) string {
 //Hash returns the md5 hash of a route config
 func (pc *Config) Hash(ctx context.Context) string {
 	// notably the route id is not part of the hash as the id might be the hash itself
-	str := pc.TenantId.OrgId + pc.TenantId.AppId + pc.Name + pc.DeliveryMode + pc.UserId
+	str := pc.TenantId.OrgId + pc.TenantId.AppId + pc.Name + pc.DeliveryMode + pc.UserId + pc.Region
 	str += pc.Receiver.Hash(ctx)
 	str += pc.Sender.Hash(ctx)
 	if pc.FilterChain != nil {
