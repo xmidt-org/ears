@@ -59,6 +59,7 @@ type Config struct {
 	TenantId     tenant.Id      `json:"tenant,omitempty"`       // TenantId. Derived from URL path. Should not be marshaled
 	UserId       string         `json:"userId,omitempty"`       // user ID / author of route
 	Region       string         `json:"region,omitempty"`       // optional region of route for active-active scenarios - if present, route will only be active in a single region
+	Inactive     bool           `json:"inactive,omitempty"`     // if true, route will not execute
 	Name         string         `json:"name,omitempty"`         // optional unique name for route
 	Desc         string         `json:"desc,omitempty"`         // optional description for route
 	Origin       string         `json:"origin,omitempty"`       // optional reference to route owner, e.g. Flow ID in case of Gears
@@ -146,6 +147,9 @@ func (pc *PluginConfig) Hash(ctx context.Context) string {
 func (pc *Config) Hash(ctx context.Context) string {
 	// notably the route id is not part of the hash as the id might be the hash itself
 	str := pc.TenantId.OrgId + pc.TenantId.AppId + pc.Name + pc.DeliveryMode + pc.UserId + pc.Region
+	if pc.Inactive {
+		str += "off"
+	}
 	str += pc.Receiver.Hash(ctx)
 	str += pc.Sender.Hash(ctx)
 	if pc.FilterChain != nil {

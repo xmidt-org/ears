@@ -133,6 +133,11 @@ func (r *DefaultRoutingTableManager) registerAndRunRoute(ctx context.Context, ro
 		log.Ctx(ctx).Info().Str("op", "registerAndRunRoute").Str("region", r.config.GetString("ears.region")).Str("routeRegion", routeConfig.Region).Str("routeId", routeConfig.Id).Msg("ignore route meant for different region")
 		return nil
 	}
+	// do not start inactive routes
+	if routeConfig.Inactive {
+		log.Ctx(ctx).Info().Str("op", "registerAndRunRoute").Str("routeId", routeConfig.Id).Msg("ignore inactive route")
+		return nil
+	}
 	tracer := otel.Tracer(rtsemconv.EARSTracerName)
 	ctx, span := tracer.Start(ctx, "registerAndRunRoute")
 	defer span.End()
