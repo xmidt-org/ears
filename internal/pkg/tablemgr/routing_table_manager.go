@@ -128,16 +128,6 @@ func (r *DefaultRoutingTableManager) unregisterAndStopRoute(ctx context.Context,
 }
 
 func (r *DefaultRoutingTableManager) registerAndRunRoute(ctx context.Context, routeConfig *route.Config) error {
-	// if route is not meant for this region, ignore it!
-	if routeConfig.Region != "" && r.config.GetString("ears.region") != routeConfig.Region {
-		log.Ctx(ctx).Info().Str("op", "registerAndRunRoute").Str("region", r.config.GetString("ears.region")).Str("routeRegion", routeConfig.Region).Str("routeId", routeConfig.Id).Msg("ignore route meant for different region")
-		return nil
-	}
-	// do not start inactive routes
-	if routeConfig.Inactive {
-		log.Ctx(ctx).Info().Str("op", "registerAndRunRoute").Str("routeId", routeConfig.Id).Msg("ignore inactive route")
-		return nil
-	}
 	tracer := otel.Tracer(rtsemconv.EARSTracerName)
 	ctx, span := tracer.Start(ctx, "registerAndRunRoute")
 	defer span.End()
@@ -157,6 +147,16 @@ func (r *DefaultRoutingTableManager) registerAndRunRoute(ctx context.Context, ro
 		if err != nil {
 			log.Ctx(ctx).Error().Str("op", "registerAndRunRoute").Str("routeId", routeConfig.Id).Msg(err.Error())
 		}
+	}
+	// if route is not meant for this region, ignore it!
+	if routeConfig.Region != "" && r.config.GetString("ears.region") != routeConfig.Region {
+		log.Ctx(ctx).Info().Str("op", "registerAndRunRoute").Str("region", r.config.GetString("ears.region")).Str("routeRegion", routeConfig.Region).Str("routeId", routeConfig.Id).Msg("ignore route meant for different region")
+		return nil
+	}
+	// do not start inactive routes
+	if routeConfig.Inactive {
+		log.Ctx(ctx).Info().Str("op", "registerAndRunRoute").Str("routeId", routeConfig.Id).Msg("ignore inactive route")
+		return nil
 	}
 	// An identical route already exists under a different ID.
 	// It would be ok to simply create another route here because plugin manager will ensure we share receiver and sender
@@ -343,12 +343,24 @@ func (r *DefaultRoutingTableManager) AddRoute(ctx context.Context, routeConfig *
 	return nil
 }
 
+func (r *DefaultRoutingTableManager) setRunningStatus(routes []route.Config) {
+	for idx, _ := range routes {
+		rid := routes[idx].TenantId.KeyWithRoute(routes[idx].Id)
+		if _, ok := r.liveRouteMap[rid]; ok {
+			routes[idx].Status = route.ROUTE_STATUS_RUNNING
+		}
+	}
+}
+
 func (r *DefaultRoutingTableManager) GetRoute(ctx context.Context, tid tenant.Id, routeId string) (*route.Config, error) {
-	route, err := r.storageMgr.GetRoute(ctx, tid, routeId)
+	rte, err := r.storageMgr.GetRoute(ctx, tid, routeId)
 	if err != nil {
 		return nil, err
 	}
-	return &route, nil
+	if _, ok := r.liveRouteMap[tid.KeyWithRoute(routeId)]; ok {
+		rte.Status = route.ROUTE_STATUS_RUNNING
+	}
+	return &rte, nil
 }
 
 func (r *DefaultRoutingTableManager) GetAllTenantRoutes(ctx context.Context, tenantId tenant.Id) ([]route.Config, error) {
@@ -356,6 +368,7 @@ func (r *DefaultRoutingTableManager) GetAllTenantRoutes(ctx context.Context, ten
 	if err != nil {
 		return nil, err
 	}
+	r.setRunningStatus(routes)
 	return routes, nil
 }
 
@@ -365,6 +378,7 @@ func (r *DefaultRoutingTableManager) GetAllRoutes(ctx context.Context) ([]route.
 	if err != nil {
 		return nil, err
 	}
+	r.setRunningStatus(routes)
 	return routes, nil
 }
 
@@ -477,7 +491,6 @@ func (r *DefaultRoutingTableManager) IsSynchronized() (bool, error) {
 
 func (r *DefaultRoutingTableManager) SynchronizeAllRoutes() (int, error) {
 	ctx := logs.SubLoggerCtx(context.Background(), r.logger)
-
 	storedRoutes, err := r.storageMgr.GetAllRoutes(ctx)
 	if err != nil {
 		return 0, err
@@ -513,10 +526,14 @@ func (r *DefaultRoutingTableManager) SynchronizeAllRoutes() (int, error) {
 	for _, storedRoute := range storedRoutes {
 		_, ok := lrm[storedRoute.TenantId.KeyWithRoute(storedRoute.Id)]
 		if !ok {
-			log.Ctx(ctx).Error().Str("op", "synchronize").Str("routeId", storedRoute.Id).Str("keyWithRoute", storedRoute.TenantId.KeyWithRoute(storedRoute.Id)).Msg("missing route started")
-			rc := storedRoute
-			r.registerAndRunRoute(ctx, &rc)
-			mutated++
+			if !storedRoute.Inactive {
+				if storedRoute.Region == "" || storedRoute.Region == r.config.GetString("ears.region") {
+					log.Ctx(ctx).Error().Str("op", "synchronize").Str("routeId", storedRoute.Id).Str("keyWithRoute", storedRoute.TenantId.KeyWithRoute(storedRoute.Id)).Msg("missing route started")
+					rc := storedRoute
+					r.registerAndRunRoute(ctx, &rc)
+					mutated++
+				}
+			}
 		}
 	}
 	return mutated, nil
