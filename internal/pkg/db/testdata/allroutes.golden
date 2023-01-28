@@ -6,6 +6,7 @@
       "appId": "myApp"
     },
     "userId": "mchiang",
+    "inactive": false,
     "name": "differentName",
     "receiver": {},
     "sender": {},
@@ -18,6 +19,7 @@
       "appId": "myApp2"
     },
     "userId": "bwolf",
+    "inactive": false,
     "name": "myName2",
     "receiver": {},
     "sender": {

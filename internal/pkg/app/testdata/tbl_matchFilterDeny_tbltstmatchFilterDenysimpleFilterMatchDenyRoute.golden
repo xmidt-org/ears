@@ -17,6 +17,7 @@
       }
     ],
     "id": "f104",
+    "inactive": false,
     "name": "tbltstmatchFilterDenysimpleFilterMatchDenyRoute",
     "receiver": {
       "config": {

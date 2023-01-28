@@ -15,6 +15,7 @@
       }
     ],
     "id": "batch101",
+    "inactive": false,
     "name": "tbltstsimpleFilterBatchRoutesimpleBatchFilterRoute",
     "receiver": {
       "config": {
