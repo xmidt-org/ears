@@ -17,6 +17,7 @@
       }
     ],
     "id": "f103",
+    "inactive": false,
     "name": "simpleMatchAllowFilterRoute",
     "receiver": {
       "config": {

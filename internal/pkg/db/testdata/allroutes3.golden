@@ -6,6 +6,7 @@
       "appId": "myApp3"
     },
     "userId": "tgattis",
+    "inactive": false,
     "name": "myName3",
     "receiver": {},
     "sender": {
@@ -24,6 +25,7 @@
       "appId": "myApp3"
     },
     "userId": "tgattis",
+    "inactive": false,
     "name": "myName4",
     "receiver": {},
     "sender": {

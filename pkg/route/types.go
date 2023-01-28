@@ -29,6 +29,8 @@ import (
 )
 
 const ROUTE_ID_REGEX = `^[a-zA-Z0-9][a-zA-Z0-9_\-\.]*[a-zA-Z0-9]$`
+const ROUTE_STATUS_RUNNING = "running"
+const ROUTE_STATUS_STOPPED = "stopped"
 
 type Router interface {
 	Run(r receiver.Receiver, f filter.Filterer, s sender.Sender) error
@@ -58,6 +60,9 @@ type Config struct {
 	Id           string         `json:"id,omitempty"`           // route ID
 	TenantId     tenant.Id      `json:"tenant,omitempty"`       // TenantId. Derived from URL path. Should not be marshaled
 	UserId       string         `json:"userId,omitempty"`       // user ID / author of route
+	Region       string         `json:"region,omitempty"`       // optional region of route for active-active scenarios - if present, route will only be active in a single region
+	Inactive     bool           `json:"inactive"`               // if true, route will not execute
+	Status       string         `json:"status,omitempty"`       // a route running on this instance will have status running, otherwise status will be stopped
 	Name         string         `json:"name,omitempty"`         // optional unique name for route
 	Desc         string         `json:"desc,omitempty"`         // optional description for route
 	Origin       string         `json:"origin,omitempty"`       // optional reference to route owner, e.g. Flow ID in case of Gears
@@ -144,7 +149,10 @@ func (pc *PluginConfig) Hash(ctx context.Context) string {
 //Hash returns the md5 hash of a route config
 func (pc *Config) Hash(ctx context.Context) string {
 	// notably the route id is not part of the hash as the id might be the hash itself
-	str := pc.TenantId.OrgId + pc.TenantId.AppId + pc.Name + pc.DeliveryMode + pc.UserId
+	str := pc.TenantId.OrgId + pc.TenantId.AppId + pc.Name + pc.DeliveryMode + pc.UserId + pc.Region
+	if pc.Inactive {
+		str += "off"
+	}
 	str += pc.Receiver.Hash(ctx)
 	str += pc.Sender.Hash(ctx)
 	if pc.FilterChain != nil {

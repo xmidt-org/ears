@@ -13,6 +13,7 @@
       }
     ],
     "id": "fragment101",
+    "inactive": false,
     "name": "simpleRegexFilterRoute",
     "receiver": {
       "config": {
@@ -36,6 +37,7 @@
       "fragmentName": "debugSender",
       "plugin": "debug"
     },
+    "status": "running",
     "tenant": {
       "appId": "myapp",
       "orgId": "myorg"

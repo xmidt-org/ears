@@ -6,6 +6,7 @@
   "item": {
     "deliveryMode": "whoCares",
     "id": "r100",
+    "inactive": false,
     "name": "simpleRoute",
     "receiver": {
       "config": {

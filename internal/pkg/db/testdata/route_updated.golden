@@ -5,6 +5,7 @@
     "appId": "myApp"
   },
   "userId": "mchiang",
+  "inactive": false,
   "name": "differentName",
   "receiver": {},
   "sender": {},

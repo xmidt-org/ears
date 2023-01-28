@@ -13,6 +13,7 @@
       }
     ],
     "id": "dedup101",
+    "inactive": false,
     "name": "tbltstsimpleFilterDedupRoutesimpleDedupFilterRoute",
     "receiver": {
       "config": {

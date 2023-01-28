@@ -46,6 +46,7 @@
       }
     ],
     "id": "mapper101",
+    "inactive": false,
     "name": "tbltstsimpleFilterMappingRoutesimpleFilterMappingRoute",
     "receiver": {
       "config": {
