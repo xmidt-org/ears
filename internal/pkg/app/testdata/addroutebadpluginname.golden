@@ -2,6 +2,7 @@
   "item": {
     "deliveryMode": "whoCares",
     "id": "x101",
+    "inactive": false,
     "name": "simpleRoute",
     "receiver": {
       "config": {

@@ -15,6 +15,7 @@
       }
     ],
     "id": "f1000",
+    "inactive": false,
     "name": "tbltstsimpleFilterJsDropRoutesimpleFilterJsDropRoute",
     "receiver": {
       "config": {

@@ -15,6 +15,7 @@
       }
     ],
     "id": "f101",
+    "inactive": false,
     "name": "simpleFilterDeepSplitRoute",
     "receiver": {
       "config": {

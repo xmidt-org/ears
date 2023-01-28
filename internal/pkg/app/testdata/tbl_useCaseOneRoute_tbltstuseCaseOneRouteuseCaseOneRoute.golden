@@ -104,6 +104,7 @@
       }
     ],
     "id": "u101",
+    "inactive": false,
     "name": "tbltstuseCaseOneRouteuseCaseOneRoute",
     "receiver": {
       "config": {

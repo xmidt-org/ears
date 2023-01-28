@@ -15,6 +15,7 @@
       }
     ],
     "id": "f108",
+    "inactive": false,
     "name": "simpleFilterSplitRoute",
     "receiver": {
       "config": {
