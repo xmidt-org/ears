@@ -17,6 +17,7 @@
       }
     ],
     "id": "regex102",
+    "inactive": false,
     "name": "tbltstsimpleFilterRegexReplaceAllRoutesimpleRegexReplaceAllFilterRoute",
     "receiver": {
       "config": {

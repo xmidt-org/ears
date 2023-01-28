@@ -114,6 +114,22 @@ func init() {
 				Description: "API port",
 			},
 			cli.Argument{
+				Name: "env", Shorthand: "", Type: cli.ArgTypeString,
+				Default: "local", LookupKey: "ears.env",
+				Description: "environment",
+			},
+			cli.Argument{
+				Name: "hostname", Shorthand: "", Type: cli.ArgTypeString,
+				Default: "bw1", LookupKey: "ears.hostname",
+				Description: "hostname",
+			},
+			cli.Argument{
+				Name: "region", Shorthand: "", Type: cli.ArgTypeString,
+				Default: "us-west-2", LookupKey: "ears.region",
+				Description: "region",
+			},
+
+			cli.Argument{
 				Name: "routeStorageType", Shorthand: "", Type: cli.ArgTypeString,
 				Default: "inmemory", LookupKey: "ears.storage.route.type",
 				Description: "persistence layer storage type for routes (inmemory, dynamodb)",
@@ -128,6 +144,7 @@ func init() {
 				Default: "dev.ears.routes", LookupKey: "ears.storage.route.table",
 				Description: "route dynamodb table name",
 			},
+
 			cli.Argument{
 				Name: "tenantStorageType", Shorthand: "", Type: cli.ArgTypeString,
 				Default: "inmemory", LookupKey: "ears.storage.tenant.type",

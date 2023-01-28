@@ -3,6 +3,7 @@
     {
       "deliveryMode": "whoCares",
       "id": "r100",
+      "inactive": false,
       "name": "simpleRoute",
       "receiver": {
         "config": {
@@ -25,6 +26,7 @@
         "name": "simpleRouteSender",
         "plugin": "debug"
       },
+      "status": "running",
       "tenant": {
         "appId": "myapp",
         "orgId": "myorg"

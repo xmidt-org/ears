@@ -6,6 +6,7 @@
   "item": {
     "deliveryMode": "whoCares",
     "id": "r104",
+    "inactive": false,
     "name": "tbltstsimpleRouteBsimpleRouteB",
     "receiver": {
       "config": {
