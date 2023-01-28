@@ -30,6 +30,7 @@ import (
 
 const ROUTE_ID_REGEX = `^[a-zA-Z0-9][a-zA-Z0-9_\-\.]*[a-zA-Z0-9]$`
 const ROUTE_STATUS_RUNNING = "running"
+const ROUTE_STATUS_STOPPED = "stopped"
 
 type Router interface {
 	Run(r receiver.Receiver, f filter.Filterer, s sender.Sender) error
@@ -61,7 +62,7 @@ type Config struct {
 	UserId       string         `json:"userId,omitempty"`       // user ID / author of route
 	Region       string         `json:"region,omitempty"`       // optional region of route for active-active scenarios - if present, route will only be active in a single region
 	Inactive     bool           `json:"inactive"`               // if true, route will not execute
-	Status       string         `json:"status"`                 // a route running on this instance will have status running, otherwise status will be blank
+	Status       string         `json:"status,omitempty"`       // a route running on this instance will have status running, otherwise status will be stopped
 	Name         string         `json:"name,omitempty"`         // optional unique name for route
 	Desc         string         `json:"desc,omitempty"`         // optional description for route
 	Origin       string         `json:"origin,omitempty"`       // optional reference to route owner, e.g. Flow ID in case of Gears
