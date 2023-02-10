@@ -120,7 +120,7 @@ func init() {
 			},
 			cli.Argument{
 				Name: "hostname", Shorthand: "", Type: cli.ArgTypeString,
-				Default: "bw1", LookupKey: "ears.hostname",
+				Default: "", LookupKey: "ears.hostname",
 				Description: "hostname",
 			},
 			cli.Argument{
