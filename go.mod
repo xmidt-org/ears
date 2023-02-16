@@ -49,6 +49,7 @@ require (
 	go.opentelemetry.io/otel/sdk/metric v0.23.0
 	go.opentelemetry.io/otel/trace v1.0.0-RC3
 	go.uber.org/atomic v1.9.0 // indirect
+	go.uber.org/dig v1.16.1 // indirect
 	go.uber.org/fx v1.19.1
 	go.uber.org/multierr v1.7.0 // indirect
 	golang.org/x/net v0.5.0
