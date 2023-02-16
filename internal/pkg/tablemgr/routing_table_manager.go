@@ -346,7 +346,10 @@ func (r *DefaultRoutingTableManager) AddRoute(ctx context.Context, routeConfig *
 func (r *DefaultRoutingTableManager) setRunningStatus(routes []route.Config) {
 	for idx, _ := range routes {
 		rid := routes[idx].TenantId.KeyWithRoute(routes[idx].Id)
-		if _, ok := r.liveRouteMap[rid]; ok {
+		r.Lock()
+		_, ok := r.liveRouteMap[rid]
+		r.Unlock()
+		if ok {
 			routes[idx].Status = route.ROUTE_STATUS_RUNNING
 		} else {
 			routes[idx].Status = route.ROUTE_STATUS_STOPPED
@@ -359,7 +362,10 @@ func (r *DefaultRoutingTableManager) GetRoute(ctx context.Context, tid tenant.Id
 	if err != nil {
 		return nil, err
 	}
-	if _, ok := r.liveRouteMap[tid.KeyWithRoute(routeId)]; ok {
+	r.Lock()
+	_, ok := r.liveRouteMap[tid.KeyWithRoute(routeId)]
+	r.Unlock()
+	if ok {
 		rte.Status = route.ROUTE_STATUS_RUNNING
 	} else {
 		rte.Status = route.ROUTE_STATUS_STOPPED
