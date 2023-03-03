@@ -241,7 +241,12 @@ func (s *Sender) setConfig(config *sarama.Config) error {
 }
 
 func (s *Sender) NewSyncProducers(count int) ([]sarama.SyncProducer, sarama.Client, error) {
-	brokers := strings.Split(s.config.Brokers, ",")
+	brokersStr := s.secrets.Secret(s.config.Brokers)
+	if brokersStr == "" {
+		brokersStr = s.config.Brokers
+	}
+
+	brokers := strings.Split(brokersStr, ",")
 	config := sarama.NewConfig()
 	config.Producer.Partitioner = NewManualHashPartitioner
 	config.Producer.RequiredAcks = sarama.WaitForLocal //as long as one broker gets it
