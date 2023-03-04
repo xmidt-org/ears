@@ -86,7 +86,12 @@ func NewReceiver(tid tenant.Id, plugin string, name string, config interface{}, 
 	if err != nil {
 		return nil, err
 	}
-	client, err := sarama.NewConsumerGroup(strings.Split(r.config.Brokers, ","), r.config.GroupId, saramaConfig)
+
+	brokers := secrets.Secret(r.config.Brokers)
+	if brokers == "" {
+		brokers = r.config.Brokers
+	}
+	client, err := sarama.NewConsumerGroup(strings.Split(brokers, ","), r.config.GroupId, saramaConfig)
 	if nil != err {
 		return nil, err
 	}
