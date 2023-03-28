@@ -23,6 +23,9 @@ import (
 	"crypto/x509"
 	"encoding/json"
 	"fmt"
+	"strings"
+	"time"
+
 	"github.com/Shopify/sarama"
 	"github.com/rs/zerolog/log"
 	"github.com/xmidt-org/ears/internal/pkg/rtsemconv"
@@ -35,8 +38,6 @@ import (
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/global"
 	"go.opentelemetry.io/otel/metric/unit"
-	"strings"
-	"time"
 
 	"github.com/goccy/go-yaml"
 	"github.com/xmidt-org/ears/pkg/event"
@@ -247,9 +248,10 @@ func (r *Receiver) getSaramaConfig(commitIntervalSec int) (*sarama.Config, error
 		caAuthorityPool := x509.NewCertPool()
 		caAuthorityPool.AppendCertsFromPEM([]byte(caCert))
 		tlsConfig := &tls.Config{
-			Certificates: []tls.Certificate{keypair},
-			RootCAs:      caAuthorityPool,
-			MinVersion:   tls.VersionTLS12,
+			Certificates:       []tls.Certificate{keypair},
+			RootCAs:            caAuthorityPool,
+			MinVersion:         tls.VersionTLS12,
+			InsecureSkipVerify: true,
 		}
 		config.Net.TLS.Enable = true
 		config.Net.TLS.Config = tlsConfig
