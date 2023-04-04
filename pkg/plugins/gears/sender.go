@@ -266,6 +266,11 @@ func (s *Sender) setConfig(config *sarama.Config) error {
 }
 
 func (s *Sender) NewSyncProducers(count int) ([]sarama.SyncProducer, sarama.Client, error) {
+	brokersStr := s.secrets.Secret(s.config.Brokers)
+	if brokersStr == "" {
+		brokersStr = s.config.Brokers
+	}
+
 	brokers := strings.Split(s.config.Brokers, ",")
 	config := sarama.NewConfig()
 	config.Producer.Partitioner = NewManualHashPartitioner
