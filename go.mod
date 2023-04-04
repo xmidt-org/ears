@@ -4,7 +4,7 @@ go 1.16
 
 require (
 	github.com/Shopify/sarama v1.38.1
-	github.com/aws/aws-sdk-go v1.44.213
+	github.com/aws/aws-sdk-go v1.44.228
 	github.com/boriwo/deepcopy v0.0.0-20220804211148-d5122121a902
 	github.com/dop251/goja v0.0.0-20210912140721-ac5354e9a820
 	github.com/fatih/color v1.12.0 // indirect
@@ -19,7 +19,7 @@ require (
 	github.com/gopherjs/gopherjs v0.0.0-20181103185306-d547d1d9531e // indirect
 	github.com/gorilla/mux v1.8.0
 	github.com/hashicorp/golang-lru v0.5.4
-	github.com/onsi/gomega v1.27.2
+	github.com/onsi/gomega v1.27.5
 	github.com/pelletier/go-toml v1.9.4 // indirect
 	github.com/pierrec/lz4 v2.6.1+incompatible // indirect
 	github.com/pkg/errors v0.9.1
@@ -51,8 +51,8 @@ require (
 	go.uber.org/atomic v1.9.0 // indirect
 	go.uber.org/fx v1.19.2
 	go.uber.org/multierr v1.7.0 // indirect
-	golang.org/x/net v0.7.0
-	golang.org/x/oauth2 v0.5.0
+	golang.org/x/net v0.8.0
+	golang.org/x/oauth2 v0.6.0
 	golang.org/x/time v0.3.0
 	gopkg.in/ini.v1 v1.63.0 // indirect
 	gopkg.in/yaml.v2 v2.4.0
