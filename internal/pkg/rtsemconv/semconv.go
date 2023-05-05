@@ -16,7 +16,7 @@ package rtsemconv
 
 import (
 	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/semconv/v1.4.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.4.0"
 )
 
 const (
@@ -35,6 +35,7 @@ const (
 	EARSPluginTypeGearsSender   = "gearsSender"
 	EARSPluginTypeHttpSender    = "httpSender"
 	EARSPluginTypeRedisSender   = "redisSender"
+	EARSPluginTypeDiscordSender = "discordSender"
 
 	EARSPluginTypeMetricFilter = "metricFilter"
 	EARSPluginTypeTtlFilter    = "ttlFilter"
@@ -46,6 +47,7 @@ const (
 	EARSPluginTypeKafkaReceiver   = "kafkaReceiver"
 	EARSPluginTypeHttpReceiver    = "httpReceiver"
 	EARSPluginTypeRedisReceiver   = "redisReceiver"
+	EARSPluginTypeDiscordReceiver = "discordReceiver"
 
 	EARSMetricEventSuccess        = "ears.eventSuccess"
 	EARSMetricEventFailure        = "ears.eventFailure"
