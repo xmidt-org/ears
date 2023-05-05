@@ -16,6 +16,7 @@ package pluginmanagerfx
 
 import (
 	"fmt"
+
 	"github.com/rs/zerolog"
 	p "github.com/xmidt-org/ears/internal/pkg/plugin"
 	"github.com/xmidt-org/ears/internal/pkg/quota"
@@ -25,6 +26,7 @@ import (
 	"github.com/xmidt-org/ears/pkg/plugins/debug"
 	"github.com/xmidt-org/ears/pkg/plugins/decode"
 	"github.com/xmidt-org/ears/pkg/plugins/dedup"
+	"github.com/xmidt-org/ears/pkg/plugins/discord"
 	"github.com/xmidt-org/ears/pkg/plugins/encode"
 	"github.com/xmidt-org/ears/pkg/plugins/gears"
 	"github.com/xmidt-org/ears/pkg/plugins/hash"
@@ -112,6 +114,10 @@ func ProvidePluginManager(in PluginIn) (PluginOut, error) {
 		{
 			name:   "kinesis",
 			plugin: toArr(kinesis.NewPluginVersion("kinesis", "", ""))[0].(pkgplugin.Pluginer),
+		},
+		{
+			name:   "discord",
+			plugin: toArr(discord.NewPluginVersion("discord", "", ""))[0].(pkgplugin.Pluginer),
 		},
 		{
 			name:   "redis",
