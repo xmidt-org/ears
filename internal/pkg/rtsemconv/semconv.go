@@ -48,6 +48,7 @@ const (
 	EARSPluginTypeHttpReceiver    = "httpReceiver"
 	EARSPluginTypeRedisReceiver   = "redisReceiver"
 	EARSPluginTypeDiscordReceiver = "discordReceiver"
+	EARSPluginTypeSyslogReceiver  = "syslogReceiver"
 
 	EARSMetricEventSuccess        = "ears.eventSuccess"
 	EARSMetricEventFailure        = "ears.eventFailure"

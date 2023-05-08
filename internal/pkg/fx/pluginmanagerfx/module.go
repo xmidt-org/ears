@@ -48,6 +48,7 @@ import (
 	"github.com/xmidt-org/ears/pkg/plugins/sample"
 	"github.com/xmidt-org/ears/pkg/plugins/split"
 	"github.com/xmidt-org/ears/pkg/plugins/sqs"
+	"github.com/xmidt-org/ears/pkg/plugins/syslog"
 	"github.com/xmidt-org/ears/pkg/plugins/trace"
 	"github.com/xmidt-org/ears/pkg/plugins/transform"
 	"github.com/xmidt-org/ears/pkg/plugins/ttl"
@@ -226,6 +227,10 @@ func ProvidePluginManager(in PluginIn) (PluginOut, error) {
 		{
 			name:   "http",
 			plugin: toArr(http.NewPluginVersion("http", "", ""))[0].(pkgplugin.Pluginer),
+		},
+		{
+			name:   "syslog",
+			plugin: toArr(syslog.NewPluginVersion("syslog", "", ""))[0].(pkgplugin.Pluginer),
 		},
 	}
 
