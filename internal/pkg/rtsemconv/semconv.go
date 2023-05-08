@@ -35,6 +35,7 @@ const (
 	EARSPluginTypeGearsSender   = "gearsSender"
 	EARSPluginTypeHttpSender    = "httpSender"
 	EARSPluginTypeRedisSender   = "redisSender"
+	EARSPluginTypeDiscordSender = "discordSender"
 
 	EARSPluginTypeMetricFilter = "metricFilter"
 	EARSPluginTypeTtlFilter    = "ttlFilter"
@@ -46,6 +47,7 @@ const (
 	EARSPluginTypeKafkaReceiver   = "kafkaReceiver"
 	EARSPluginTypeHttpReceiver    = "httpReceiver"
 	EARSPluginTypeRedisReceiver   = "redisReceiver"
+	EARSPluginTypeDiscordReceiver = "discordReceiver"
 	EARSPluginTypeSyslogReceiver  = "syslogReceiver"
 
 	EARSMetricEventSuccess        = "ears.eventSuccess"
