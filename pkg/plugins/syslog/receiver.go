@@ -222,6 +222,8 @@ func NewSyslogServer(addr string) *SyslogServer {
 }
 
 func (r *Receiver) Receive(next receiver.NextFn) error {
+	r.next = next
+
 	addr := r.config.Port
 	r.syslogServer = NewSyslogServer(addr)
 
