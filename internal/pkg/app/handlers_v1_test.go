@@ -20,6 +20,14 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io/ioutil"
+	"net/http"
+	"net/http/httptest"
+	"os"
+	"strings"
+	"testing"
+	"time"
+
 	"github.com/goccy/go-yaml"
 	"github.com/rs/zerolog/log"
 	goldie "github.com/sebdah/goldie/v2"
@@ -62,6 +70,7 @@ import (
 	"github.com/xmidt-org/ears/pkg/plugins/sample"
 	"github.com/xmidt-org/ears/pkg/plugins/split"
 	"github.com/xmidt-org/ears/pkg/plugins/sqs"
+	"github.com/xmidt-org/ears/pkg/plugins/syslog"
 	"github.com/xmidt-org/ears/pkg/plugins/trace"
 	"github.com/xmidt-org/ears/pkg/plugins/transform"
 	"github.com/xmidt-org/ears/pkg/plugins/ttl"
@@ -70,13 +79,6 @@ import (
 	"github.com/xmidt-org/ears/pkg/plugins/ws"
 	"github.com/xmidt-org/ears/pkg/route"
 	"github.com/xmidt-org/ears/pkg/tenant"
-	"io/ioutil"
-	"net/http"
-	"net/http/httptest"
-	"os"
-	"strings"
-	"testing"
-	"time"
 )
 
 //const Version = "v1.0.2"
@@ -617,6 +619,10 @@ func setupRestApi(config config.Config, storageMgr route.RouteStorer, setupQuota
 		{
 			name:   "http",
 			plugin: toArr(http_plugin.NewPluginVersion("http", "", ""))[0].(pkgplugin.Pluginer),
+		},
+		{
+			name:   "syslog",
+			plugin: toArr(syslog.NewPluginVersion("syslog", "", ""))[0].(pkgplugin.Pluginer),
 		},
 	}
 	for _, plug := range defaultPlugins {
