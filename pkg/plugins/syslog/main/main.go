@@ -30,7 +30,7 @@ var (
 	GitCommit  = ""
 )
 
-var Plugin, PluginErr = encode.NewPluginVersion(Name, GitVersion, GitCommit)
+var Plugin, PluginErr = syslog.NewPluginVersion(Name, GitVersion, GitCommit)
 
 // for golangci-lint
 var _ = Plugin
