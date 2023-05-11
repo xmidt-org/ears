@@ -134,10 +134,16 @@ func (r *Receiver) messageCreate(s *discordgo.Session, m *discordgo.MessageCreat
 	// accepts messages with non-empty content
 	if m.Content != "" {
 		msg, _ := json.Marshal(m)
-		fmt.Println((string(msg)))
 		r.event = m.Message
+		var payload interface{}
+		err := json.Unmarshal(msg, &payload)
+		if err != nil {
+			r.logger.Error().Str("op", "discord.startReceiver").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Msg("cannot parse message :" + err.Error())
+			return
+		}
+
 		ctx, cancel := context.WithTimeout(context.Background(), time.Duration(5)*time.Second)
-		e, err := event.New(ctx, r.event, event.WithMetadataKeyValue("discordMessage", 1), event.WithAck(
+		e, err := event.New(ctx, payload, event.WithMetadataKeyValue("discordMessage", 1), event.WithAck(
 			func(e event.Event) {
 				r.eventSuccessCounter.Add(ctx, 1)
 				cancel()
