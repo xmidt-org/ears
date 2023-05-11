@@ -1,0 +1,22 @@
+{
+  "id": "syslog1",
+  "userId": "boris",
+  "name": "syslog1",
+  "receiver": {
+    "plugin": "syslog",
+    "name": "syslogReceiver",
+    "config": {
+      "port": ":7531"
+    }
+  },
+  "sender": {
+    "plugin": "debug",
+    "name": "sysloDebug",
+    "config": {
+      "destination": "stdout"
+    }
+  },
+  "filterChain": [
+  ]
+}
+

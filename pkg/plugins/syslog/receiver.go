@@ -88,9 +88,8 @@ const (
 )
 
 type SyslogServer struct {
-	conn     *net.UDPConn
-	Addr     string
-	Messages chan []byte
+	conn *net.UDPConn
+	Addr string
 }
 
 func NewReceiver(tid tenant.Id, plugin string, name string, config interface{}, secrets secret.Vault) (receiver.Receiver, error) {
@@ -216,33 +215,36 @@ func (r *Receiver) parseSyslogMessage(msg string) ([]byte, error) {
 
 func NewSyslogServer(addr string) *SyslogServer {
 	return &SyslogServer{
-		Addr:     addr,
-		Messages: make(chan []byte),
+		Addr: addr,
 	}
 }
 
+//
+// test with:
+//
+// echo "<13>Apr 20 15:04:06 hostname myapp: message" | nc -u -w1 127.0.0.1 7531
+//
+
 func (r *Receiver) Receive(next receiver.NextFn) error {
 	r.next = next
-
 	addr := r.config.Port
+	if !strings.HasPrefix(addr, ":") {
+		addr = ":" + addr
+	}
 	r.syslogServer = NewSyslogServer(addr)
-
 	udpAddr, err := net.ResolveUDPAddr("udp", r.syslogServer.Addr)
 	if err != nil {
 		r.logger.Error().Str("op", "syslog.Receive").Str("error", "error resolving UDP address").Msg(err.Error())
 	}
-
 	r.syslogServer.conn, err = net.ListenUDP("udp", udpAddr)
 	if err != nil {
 		r.logger.Error().Str("op", "syslog.Receive").Str("error", "error listening to UDP address").Msg(err.Error())
 	}
-
 	r.logger.Info().Str("op", "syslog.Receive").Msg(fmt.Sprintf("syslog plugin listening on port %s", r.config.Port))
-
 	scanner := bufio.NewScanner(r.syslogServer.conn)
 	for scanner.Scan() {
 		message := scanner.Text()
-		r.logger.Info().Str("op", "syslog.Receive").Str("info", "message_received").Msg(message)
+		r.logger.Debug().Str("op", "syslog.Receive").Str("info", "message_received").Msg(message)
 		go func() {
 			parsedMessage, err := r.parseSyslogMessage(message)
 			if err != nil {
@@ -267,7 +269,7 @@ func (r *Receiver) Receive(next receiver.NextFn) error {
 						event.WithOtelTracing(r.Name()))
 					if err != nil {
 						cancel()
-						r.logger.Error().Str("op", "syslog.receiveWorker").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Msg("cannot create event: " + err.Error())
+						r.logger.Error().Str("op", "syslog.Receive").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Msg("cannot create event: " + err.Error())
 						//return
 					}
 					r.Trigger(e)
@@ -276,12 +278,9 @@ func (r *Receiver) Receive(next receiver.NextFn) error {
 			}
 		}()
 	}
-
 	if err := scanner.Err(); err != nil {
-		r.logger.Error().Str("op", "syslog.parseSyslogMessage").Msg(fmt.Sprintf("Scanner error: %s", err))
-		return errors.New(fmt.Sprintf("syslog scanner error: %s", err))
+		r.logger.Error().Str("op", "syslog.Receive").Msg(fmt.Sprintf("Scanner error: %s", err))
 	}
-
 	return nil
 }
 
