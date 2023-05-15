@@ -331,6 +331,98 @@ Default Values:
 }
 ```
 
+### Discord Receiver Plugin
+This plugin is to use discord Gateway API to listen to discord messages that happens in Discord server(s) through a user created Discord bot, so a botToken is required for plugin config.
+It's very unlikely that a personal Discord bot gets assigned more than 1 shard, so the sharded implementation for this plugin is mainly for occassion that user needs to run Ears in a multi-instance enviroment.
+If you want to perform event filtering or transformation, a common discord message event looks like this:
+```
+{
+	"id": "11111111111111111111",
+	"channel_id": "222222222222222222",
+	"guild_id": "3333333333333333333",
+	"content": "hey",
+	"timestamp": "2023-05-11T07:09:09.256Z",
+	"edited_timestamp": null,
+	"mention_roles": [],
+	"tts": false,
+	"mention_everyone": false,
+	"author": {
+		"id": "227684442083295233",
+		"email": "",
+		"username": "Jane.Doe",
+		"avatar": "",
+		"locale": "",
+		"discriminator": "1234",
+		"token": "",
+		"verified": false,
+		"mfa_enabled": false,
+		"banner": "",
+		"accent_color": 0,
+		"bot": false,
+		"public_flags": 0,
+		"premium_type": 0,
+		"system": false,
+		"flags": 0
+	},
+	"attachments": [],
+	"embeds": [],
+	"mentions": [],
+	"reactions": null,
+	"pinned": false,
+	"type": 0,
+	"webhook_id": "",
+	"member": {
+		"guild_id": "",
+		"joined_at": "2023-04-06T20:08:28.761Z",
+		"nick": "",
+		"deaf": false,
+		"mute": false,
+		"avatar": "",
+		"user": null,
+		"roles": [],
+		"premium_since": null,
+		"pending": false,
+		"permissions": "0",
+		"communication_disabled_until": null
+	},
+	"mention_channels": null,
+	"activity": null,
+	"application": null,
+	"message_reference": null,
+	"referenced_message": null,
+	"interaction": null,
+	"flags": 0,
+	"sticker_items": null
+}
+```
+
+Example Configuration:
+
+```
+{
+	"botToken": "xxxxxxxxxxxxxxxxxxxxxxxxxx",
+    "useShardMonitor": true
+}
+```
+
+Parameters:
+
+```
+type ReceiverConfig struct {
+	BotToken        string `json:"botToken"`
+	UseShardMonitor *bool  `json:"useShardMonitor,omitempty"`
+}
+```
+
+Default Values:
+
+```
+{
+	"botToken": "",
+    "useShardMonitor": false
+}
+```
+
 ### Debug Receiver Plugin
 
 Use this receiver plugin as a data source for debugging purposes. The debug receiver plugin can produce an arbitrary 
