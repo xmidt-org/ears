@@ -271,7 +271,7 @@ Example Configuration:
 
 ```
 {
-	"botToken": "xxxxxxxxxxxxxxxxxxxxxxxxxx",
+  "botToken": "xxxxxxxxxxxxxxxxxxxxxxxxxx",
 }
 ```
 
@@ -279,7 +279,7 @@ Parameters:
 
 ```
 type SenderConfig struct {
-	BotToken        string `json:"botToken"`
+  BotToken        string `json:"botToken"`
 }
 ```
 

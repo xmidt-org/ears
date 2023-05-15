@@ -332,7 +332,7 @@ Default Values:
 ```
 
 ### Discord Receiver Plugin
-This plugin is to use discord Gateway API to listen to discord messages that happens in Discord server(s) through a user created Discord bot, so a botToken is required for plugin config.
+This plugin is to use the Discord Gateway API to listen to discord messages that happens in Discord server(s) through a user created Discord bot, so a botToken is required for plugin config.
 It's very unlikely that a personal Discord bot gets assigned more than 1 shard, so the sharded implementation for this plugin is mainly for occassion that user needs to run Ears in a multi-instance enviroment.
 If you want to perform event filtering or transformation, a common discord message event looks like this:
 ```
@@ -401,7 +401,7 @@ Example Configuration:
 ```
 {
 	"botToken": "xxxxxxxxxxxxxxxxxxxxxxxxxx",
-    "useShardMonitor": true
+	"useShardMonitor": true
 }
 ```
 
@@ -419,7 +419,7 @@ Default Values:
 ```
 {
 	"botToken": "",
-    "useShardMonitor": false
+	"useShardMonitor": false
 }
 ```
 
