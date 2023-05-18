@@ -7,4 +7,6 @@ updates:
     ignore:
       - dependency-name: "go.opentelemetry.io*"
       - dependency-name: "*otel*"
+      - dependency-name: "*sarama*"
+
 
