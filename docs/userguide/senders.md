@@ -265,6 +265,32 @@ Default Values:
 }
 ```
 
+### Discord Sender Plugin
+
+Example Configuration:
+
+```
+{
+  "botToken": "xxxxxxxxxxxxxxxxxxxxxxxxxx",
+}
+```
+
+Parameters:
+
+```
+type SenderConfig struct {
+  BotToken        string `json:"botToken"`
+}
+```
+
+Default Values:
+
+```
+{
+  "botToken": ""
+}
+```
+
 ### Debug Sender Plugin
 
 Use this sender plugin as a data sink for debugging purposes. The debug sender plugin can print payloads to stdout

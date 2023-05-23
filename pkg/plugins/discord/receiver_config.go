@@ -55,7 +55,11 @@ const receiverSchema = `
             "properties": {
                 "botToken": {
                     "type": "string"
-                }
+                },
+				"useShardMonitor": {
+					"type": "boolean",
+					"default": false
+				}
             },
             "required": [
 				"botToken"

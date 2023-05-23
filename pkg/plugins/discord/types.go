@@ -22,7 +22,9 @@ import (
 	pkgplugin "github.com/xmidt-org/ears/pkg/plugin"
 	"github.com/xmidt-org/ears/pkg/receiver"
 	"github.com/xmidt-org/ears/pkg/sender"
+	"github.com/xmidt-org/ears/pkg/sharder"
 	"github.com/xmidt-org/ears/pkg/tenant"
+	"github.com/xorcare/pointer"
 	"go.opentelemetry.io/otel/metric"
 )
 
@@ -50,7 +52,8 @@ func NewPluginVersion(name string, version string, commitID string) (*pkgplugin.
 }
 
 type ReceiverConfig struct {
-	BotToken string `json:"botToken"`
+	BotToken        string `json:"botToken"`
+	UseShardMonitor *bool  `json:"useShardMonitor,omitempty"`
 }
 
 type SenderConfig struct {
@@ -59,7 +62,8 @@ type SenderConfig struct {
 }
 
 var DefaultReceiverConfig = ReceiverConfig{
-	BotToken: "",
+	BotToken:        "",
+	UseShardMonitor: pointer.Bool(false),
 }
 
 type Sender struct {
@@ -77,15 +81,22 @@ type Sender struct {
 
 type Receiver struct {
 	sync.Mutex
-	sess                *discordgo.Session
-	logger              *zerolog.Logger
-	config              ReceiverConfig
-	name                string
-	plugin              string
-	tid                 tenant.Id
-	event               *discordgo.Message
-	eventSuccessCounter metric.BoundInt64Counter
-	eventFailureCounter metric.BoundInt64Counter
-	eventBytesCounter   metric.BoundInt64Counter
-	next                receiver.NextFn
+	stopped                        bool
+	shardDistributor               sharder.ShardDistributor
+	shardMonitorStopChannel        chan bool
+	shardUpdateListenerStopChannel chan bool
+	shardConfig                    sharder.ShardConfig
+	stopChannelMap                 map[int]chan bool
+	sess                           *discordgo.Session
+	shardsCount                    *int
+	logger                         *zerolog.Logger
+	config                         ReceiverConfig
+	name                           string
+	plugin                         string
+	tid                            tenant.Id
+	event                          *discordgo.Message
+	eventSuccessCounter            metric.BoundInt64Counter
+	eventFailureCounter            metric.BoundInt64Counter
+	eventBytesCounter              metric.BoundInt64Counter
+	next                           receiver.NextFn
 }

@@ -18,20 +18,31 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strconv"
 	"time"
 
 	"github.com/bwmarrin/discordgo"
 	"github.com/goccy/go-yaml"
+	"github.com/rs/zerolog/log"
 	"github.com/xmidt-org/ears/internal/pkg/rtsemconv"
 	"github.com/xmidt-org/ears/pkg/event"
+	"github.com/xmidt-org/ears/pkg/panics"
 	pkgplugin "github.com/xmidt-org/ears/pkg/plugin"
 	"github.com/xmidt-org/ears/pkg/receiver"
 	"github.com/xmidt-org/ears/pkg/secret"
+	"github.com/xmidt-org/ears/pkg/sharder"
 	"github.com/xmidt-org/ears/pkg/tenant"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/global"
 	"go.opentelemetry.io/otel/metric/unit"
+)
+
+const (
+	errorTimeoutSecShort   = 1
+	errorTimeoutSecLong    = 5
+	monitorTimeoutSecShort = 10
+	monitorTimeoutSecLong  = 30
 )
 
 func NewReceiver(tid tenant.Id, plugin string, name string, config interface{}, secrets secret.Vault) (receiver.Receiver, error) {
@@ -58,11 +69,13 @@ func NewReceiver(tid tenant.Id, plugin string, name string, config interface{}, 
 		return nil, err
 	}
 	r := &Receiver{
-		config: cfg,
-		name:   name,
-		plugin: plugin,
-		tid:    tid,
-		logger: event.GetEventLogger(),
+		config:                         cfg,
+		name:                           name,
+		plugin:                         plugin,
+		tid:                            tid,
+		logger:                         event.GetEventLogger(),
+		shardMonitorStopChannel:        make(chan bool),
+		shardUpdateListenerStopChannel: make(chan bool),
 	}
 
 	// metric recorders
@@ -93,6 +106,139 @@ func NewReceiver(tid tenant.Id, plugin string, name string, config interface{}, 
 	return r, nil
 }
 
+func (r *Receiver) getStopChannel(shardIdx int) chan bool {
+	var c chan bool
+	r.Lock()
+	c = r.stopChannelMap[shardIdx]
+	r.Unlock()
+	return c
+}
+
+func (r *Receiver) stopShardReceiver(shardIdx int) {
+	if shardIdx < 0 {
+		r.Lock()
+		m := r.stopChannelMap
+		for _, stopChan := range m {
+			go func(stopChan chan bool) { stopChan <- true }(stopChan)
+		}
+		r.Unlock()
+	} else {
+		stopChan := r.getStopChannel(shardIdx)
+		if stopChan != nil {
+			stopChan <- true
+		}
+	}
+}
+
+func (r *Receiver) shardMonitor(distributor sharder.ShardDistributor) {
+	r.logger.Info().Str("op", "Discord.shardMonitor").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Msg("starting shard monitor")
+	go func() {
+		defer func() {
+			p := recover()
+			if p != nil {
+				panicErr := panics.ToError(p)
+				r.logger.Error().Str("op", "Discord.shardMonitor").Str("error", panicErr.Error()).
+					Str("stackTrace", panicErr.StackTrace()).Msg("a panic has occurred in shard monitor")
+			}
+		}()
+		for {
+			// the stop function will wait for 5 sec in case the shard monitor is busy describing the stream and not waiting on the channel
+			select {
+			case <-r.shardMonitorStopChannel:
+				r.logger.Info().Str("op", "Discord.shardMonitor").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Msg("stopping shard monitor")
+				return
+			//use long to avoid potential discord rate limit
+			case <-time.After(monitorTimeoutSecLong * time.Second):
+			}
+			if !*r.config.UseShardMonitor {
+				continue
+			}
+			sess, _ := discordgo.New("Bot " + r.config.BotToken)
+			gatewayResp, err := sess.GatewayBot()
+			if err != nil {
+				r.logger.Error().Str("op", "Discord.shardMonitor").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Msg("cannot get number of shards: " + err.Error())
+				continue
+			}
+			if gatewayResp.Shards == 0 {
+				continue
+			}
+			update := false
+			if gatewayResp.Shards != *r.shardsCount {
+				update = true
+			}
+			if update {
+				r.logger.Info().Str("op", "Discord.shardMonitor").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Int("numShards", gatewayResp.Shards).Msg("update number of shards")
+				r.shardsCount = &gatewayResp.Shards
+				distributor.UpdateNumberShards(gatewayResp.Shards)
+			}
+		}
+	}()
+}
+
+func (r *Receiver) shardUpdateListener(distributor sharder.ShardDistributor) {
+	go func() {
+		defer func() {
+			p := recover()
+			if p != nil {
+				panicErr := panics.ToError(p)
+				r.logger.Error().Str("op", "Discord.shardUpdateListener").Str("error", panicErr.Error()).
+					Str("stackTrace", panicErr.StackTrace()).Msg("a panic has occurred in shard update listener")
+			}
+		}()
+		for {
+			select {
+			case config := <-distributor.Updates():
+				r.logger.Info().Str("op", "Discord.shardUpdateListener").Str("identity", config.Identity).Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Msg("shard update received")
+				r.updateShards(config)
+			case <-r.shardUpdateListenerStopChannel:
+				r.logger.Info().Str("op", "Discord.shardUpdateListener").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Msg("stopping shard update listener")
+				return
+			}
+		}
+	}()
+}
+
+func (r *Receiver) updateShards(newShards sharder.ShardConfig) {
+	// shut down old shards not needed any more
+	for _, oldShardStr := range r.shardConfig.OwnedShards {
+		shutDown := true
+		for _, newShardStr := range newShards.OwnedShards {
+			if newShardStr == oldShardStr {
+				shutDown = false
+			}
+		}
+		if shutDown {
+			shardIdx, err := strconv.Atoi(oldShardStr)
+			if err != nil {
+				continue
+			}
+			r.logger.Info().Str("op", "Discord.UpdateShards").Str("identity", newShards.Identity).Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Int("shardIdx", shardIdx).Msg("stopping shard consumer")
+			r.stopShardReceiver(shardIdx)
+		}
+	}
+	// start new shards
+	for _, newShardStr := range newShards.OwnedShards {
+		startUp := true
+		for _, oldShardStr := range r.shardConfig.OwnedShards {
+			if newShardStr == oldShardStr {
+				startUp = false
+			}
+		}
+		if startUp {
+			shardIdx, err := strconv.Atoi(newShardStr)
+			if err != nil {
+				r.logger.Error().Str("op", "Discord.UpdateShards").Str("identity", newShards.Identity).Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Int("shardIdx", shardIdx).Msg(err.Error())
+				continue
+			}
+
+			r.logger.Info().Str("op", "Discord.UpdateShards").Str("identity", newShards.Identity).Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Int("shardIdx", shardIdx).Msg("launching shard consumer")
+			r.startShardReceiver(shardIdx)
+
+		}
+	}
+	r.shardConfig = newShards
+}
+
 func (r *Receiver) Receive(next receiver.NextFn) error {
 	r.next = next
 	if r == nil {
@@ -105,23 +251,68 @@ func (r *Receiver) Receive(next receiver.NextFn) error {
 			Err: fmt.Errorf("next cannot be nil"),
 		}
 	}
-
+	sharderConfig := sharder.DefaultControllerConfig()
+	var err error
+	r.shardDistributor, err = sharder.GetDefaultHashDistributor(sharderConfig.NodeName, 1, sharderConfig.StorageConfig)
+	if err != nil {
+		return err
+	}
 	r.sess, _ = discordgo.New("Bot " + r.config.BotToken)
-	r.logger.Info().Msg("starting discord receiver")
+	gatewayResp, err := r.sess.GatewayBot()
+	if err != nil {
+		return err
+	}
+	r.shardsCount = &gatewayResp.Shards
+	r.shardUpdateListener(r.shardDistributor)
+	r.shardMonitor(r.shardDistributor)
 
+	if err != nil {
+		return err
+	}
+	return nil
+
+}
+
+func (r *Receiver) startShardReceiver(shardIdx int) error {
+
+	totalShardNum := *r.shardsCount
 	// Register the messageCreate func as a callback for MessageCreate events.
 	r.sess.AddHandler(r.messageCreate)
 
 	// In this example, we only care about receiving message events.
 	r.sess.Identify.Intents = discordgo.IntentsGuildMessages
-	r.sess.Identify.Shard = &[2]int{0, 1}
+	r.sess.Identify.Shard = &[2]int{shardIdx, totalShardNum}
+	r.logger.Info().Msg("starting discord receiver")
 	return r.sess.Open()
 }
 
 func (r *Receiver) StopReceiving(ctx context.Context) error {
+	r.Lock()
+	stopped := r.stopped
+	r.stopped = true
+	r.Unlock()
+	if !stopped {
+		// check if there is a shard monitor to stop
+		cleanupShardMonitor := false
+		select {
+		case r.shardMonitorStopChannel <- true:
+			cleanupShardMonitor = true
+		case <-time.After(errorTimeoutSecLong * time.Second):
+			cleanupShardMonitor = false
+		}
+		if cleanupShardMonitor {
+			log.Ctx(ctx).Info().Str("op", "StopReceiving").Str("name", r.name).Msg("cleaning up shard monitor and distributor")
+			r.shardUpdateListenerStopChannel <- true
+			r.stopShardReceiver(-1)
+			r.shardDistributor.Stop()
+		}
+	}
 	if r.sess != nil {
 		r.logger.Info().Msg("shutting down discord receiver")
-		return r.sess.Close()
+		err := r.sess.Close()
+		if err != nil {
+			return err
+		}
 	}
 	return nil
 }
@@ -138,7 +329,7 @@ func (r *Receiver) messageCreate(s *discordgo.Session, m *discordgo.MessageCreat
 		var payload interface{}
 		err := json.Unmarshal(msg, &payload)
 		if err != nil {
-			r.logger.Error().Str("op", "discord.startReceiver").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Msg("cannot parse message :" + err.Error())
+			r.logger.Error().Str("op", "Discord.startReceiver").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Msg("cannot parse message :" + err.Error())
 			return
 		}
 

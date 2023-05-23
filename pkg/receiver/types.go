@@ -16,6 +16,7 @@ package receiver
 
 import (
 	"context"
+
 	"github.com/xmidt-org/ears/pkg/secret"
 	"github.com/xmidt-org/ears/pkg/tenant"
 
