@@ -25,7 +25,7 @@ require (
 	github.com/hashicorp/golang-lru v0.5.4
 	github.com/jcmturner/gokrb5/v8 v8.4.3 // indirect
 	github.com/klauspost/compress v1.15.14 // indirect
-	github.com/onsi/gomega v1.27.7
+	github.com/onsi/gomega v1.27.8
 	github.com/pelletier/go-toml v1.9.4 // indirect
 	github.com/pkg/errors v0.9.1
 	github.com/rs/zerolog v1.29.1
