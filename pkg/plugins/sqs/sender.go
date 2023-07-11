@@ -128,7 +128,15 @@ func (s *Sender) initPlugin() error {
 	if s.config.AWSRoleARN != "" {
 		creds = stscreds.NewCredentials(sess, s.config.AWSRoleARN)
 	} else if s.config.AWSAccessKeyId != "" && s.config.AWSSecretAccessKey != "" {
-		creds = credentials.NewStaticCredentials(s.secrets.Secret(s.config.AWSAccessKeyId), s.secrets.Secret(s.config.AWSSecretAccessKey), "")
+		awsAccessKeyId := s.secrets.Secret(s.config.AWSAccessKeyId)
+		if awsAccessKeyId == "" {
+			awsAccessKeyId = s.config.AWSAccessKeyId
+		}
+		awsSecretAccessKey := s.secrets.Secret(s.config.AWSSecretAccessKey)
+		if awsSecretAccessKey == "" {
+			awsSecretAccessKey = s.config.AWSSecretAccessKey
+		}
+		creds = credentials.NewStaticCredentials(awsAccessKeyId, awsSecretAccessKey, "")
 	} else {
 		creds = sess.Config.Credentials
 	}
