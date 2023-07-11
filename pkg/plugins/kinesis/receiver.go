@@ -694,7 +694,15 @@ func (r *Receiver) Receive(next receiver.NextFn) error {
 	if r.config.AWSRoleARN != "" {
 		creds = stscreds.NewCredentials(sess, r.config.AWSRoleARN)
 	} else if r.config.AWSAccessKeyId != "" && r.config.AWSSecretAccessKey != "" {
-		creds = credentials.NewStaticCredentials(r.secrets.Secret(r.config.AWSAccessKeyId), r.secrets.Secret(r.config.AWSSecretAccessKey), "")
+		awsAccessKeyId := r.secrets.Secret(r.config.AWSAccessKeyId)
+		if awsAccessKeyId == "" {
+			awsAccessKeyId = r.config.AWSAccessKeyId
+		}
+		awsSecretAccessKey := r.secrets.Secret(r.config.AWSSecretAccessKey)
+		if awsSecretAccessKey == "" {
+			awsSecretAccessKey = r.config.AWSSecretAccessKey
+		}
+		creds = credentials.NewStaticCredentials(awsAccessKeyId, awsSecretAccessKey, "")
 	} else {
 		creds = sess.Config.Credentials
 	}
