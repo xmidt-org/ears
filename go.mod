@@ -4,13 +4,10 @@ go 1.16
 
 require (
 	github.com/Shopify/sarama v1.38.1
-	github.com/Shopify/toxiproxy/v2 v2.5.0 // indirect
-	github.com/aws/aws-sdk-go v1.44.298
+	github.com/aws/aws-sdk-go v1.44.299
 	github.com/boriwo/deepcopy v0.0.0-20220804211148-d5122121a902
 	github.com/bwmarrin/discordgo v0.27.1
 	github.com/dop251/goja v0.0.0-20210912140721-ac5354e9a820
-	github.com/eapache/go-resiliency v1.3.0 // indirect
-	github.com/eapache/go-xerial-snappy v0.0.0-20230111030713-bf00bc1b83b6 // indirect
 	github.com/fatih/color v1.12.0 // indirect
 	github.com/fsnotify/fsnotify v1.5.1 // indirect
 	github.com/go-ozzo/ozzo-validation/v4 v4.3.0
@@ -23,8 +20,6 @@ require (
 	github.com/gopherjs/gopherjs v0.0.0-20181103185306-d547d1d9531e // indirect
 	github.com/gorilla/mux v1.8.0
 	github.com/hashicorp/golang-lru v0.5.4
-	github.com/jcmturner/gokrb5/v8 v8.4.3 // indirect
-	github.com/klauspost/compress v1.15.14 // indirect
 	github.com/onsi/gomega v1.27.8
 	github.com/pelletier/go-toml v1.9.4 // indirect
 	github.com/pkg/errors v0.9.1
@@ -36,7 +31,6 @@ require (
 	github.com/spf13/cobra v1.7.0
 	github.com/spf13/pflag v1.0.5
 	github.com/spf13/viper v1.8.1
-	github.com/stretchr/testify v1.8.1 // indirect
 	github.com/xeipuuv/gojsonpointer v0.0.0-20190905194746-02993c407bfb // indirect
 	github.com/xeipuuv/gojsonschema v1.2.0
 	github.com/xorcare/pointer v1.2.2
