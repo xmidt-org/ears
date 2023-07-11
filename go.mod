@@ -3,7 +3,7 @@ module github.com/xmidt-org/ears
 go 1.16
 
 require (
-	github.com/Shopify/sarama v1.30.1
+	github.com/Shopify/sarama v1.38.1
 	github.com/Shopify/toxiproxy/v2 v2.5.0 // indirect
 	github.com/aws/aws-sdk-go v1.44.298
 	github.com/boriwo/deepcopy v0.0.0-20220804211148-d5122121a902
