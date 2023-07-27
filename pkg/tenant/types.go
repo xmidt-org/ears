@@ -59,6 +59,7 @@ type Config struct {
 	Tenant       Id       `json:"tenant"`                 // tenant id
 	Quota        Quota    `json:"quota"`                  // tenant quota
 	ClientIds    []string `json:"clientIds,omitempty"`    // jwt subjects or client IDs
+	ClientSecret string   `json:"clientSecret"`           // client secret for first client id in list, needed to make calls to credentials API
 	OpenEventApi bool     `json:"openEventApi,omitempty"` // if true, allow unauthenticated calls to the event API for routes under that tenant
 	Modified     int64    `json:"modified,omitempty"`     // last time when the tenant config is modified
 }

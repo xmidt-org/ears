@@ -63,6 +63,7 @@ type manager struct {
 	logger *zerolog.Logger
 
 	quotaManager *quota.QuotaManager
+	tenantStorer *tenant.TenantStorer
 	secrets      secret.Vault
 }
 
@@ -147,7 +148,7 @@ func (m *manager) RegisterReceiver(
 
 		var secrets secret.Vault
 		if m.secrets != nil {
-			secrets = appsecret.NewTenantConfigVault(tid, m.secrets)
+			secrets = appsecret.NewTenantConfigVault(tid, m.secrets, m.tenantStorer)
 		}
 
 		receiverChan := make(chan pkgreceiver.Receiver, 1)
@@ -426,7 +427,7 @@ func (m *manager) RegisterFilter(
 
 		var secrets secret.Vault
 		if m.secrets != nil {
-			secrets = appsecret.NewTenantConfigVault(tid, m.secrets)
+			secrets = appsecret.NewTenantConfigVault(tid, m.secrets, m.tenantStorer)
 		}
 
 		filterChan := make(chan pkgfilter.Filterer, 1)
@@ -592,8 +593,9 @@ func (m *manager) RegisterSender(
 	if !ok {
 
 		var secrets secret.Vault
+
 		if m.secrets != nil {
-			secrets = appsecret.NewTenantConfigVault(tid, m.secrets)
+			secrets = appsecret.NewTenantConfigVault(tid, m.secrets, m.tenantStorer)
 		}
 
 		senderChan := make(chan pkgsender.Sender, 1)
