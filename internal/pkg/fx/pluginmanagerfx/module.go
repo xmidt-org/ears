@@ -74,7 +74,7 @@ type PluginIn struct {
 	Logger       *zerolog.Logger
 	QuotaManager *quota.QuotaManager
 	Secrets      secret.Vault
-	TenantStorer *tenant.TenantStorer
+	TenantStorer tenant.TenantStorer
 }
 
 type PluginOut struct {

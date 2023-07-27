@@ -63,7 +63,7 @@ type manager struct {
 	logger *zerolog.Logger
 
 	quotaManager *quota.QuotaManager
-	tenantStorer *tenant.TenantStorer
+	tenantStorer tenant.TenantStorer
 	secrets      secret.Vault
 }
 

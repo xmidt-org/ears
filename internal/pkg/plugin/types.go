@@ -81,7 +81,7 @@ func WithLogger(l *zerolog.Logger) ManagerOption {
 	}
 }
 
-func WithTenantStorer(t *tenant.TenantStorer) ManagerOption {
+func WithTenantStorer(t tenant.TenantStorer) ManagerOption {
 	return func(m *manager) error {
 		m.tenantStorer = t
 		return nil

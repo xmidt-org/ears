@@ -227,24 +227,25 @@ func (s *Sender) setConfig(config *sarama.Config) error {
 		config.ChannelBufferSize = *s.config.ChannelBufferSize
 	}
 	config.Net.TLS.Enable = s.config.TLSEnable
+	ctx := context.Background()
 	if "" != s.config.Username {
 		config.Net.TLS.Enable = true
 		config.Net.SASL.Enable = true
 		config.Net.SASL.User = s.config.Username
-		config.Net.SASL.Password = s.secrets.Secret(s.config.Password)
+		config.Net.SASL.Password = s.secrets.Secret(ctx, s.config.Password)
 		if config.Net.SASL.Password == "" {
 			config.Net.SASL.Password = s.config.Password
 		}
 	} else if "" != s.config.AccessCert {
-		accessCert := s.secrets.Secret(s.config.AccessCert)
+		accessCert := s.secrets.Secret(ctx, s.config.AccessCert)
 		if accessCert == "" {
 			accessCert = s.config.AccessCert
 		}
-		accessKey := s.secrets.Secret(s.config.AccessKey)
+		accessKey := s.secrets.Secret(ctx, s.config.AccessKey)
 		if accessKey == "" {
 			accessKey = s.config.AccessKey
 		}
-		caCert := s.secrets.Secret(s.config.CACert)
+		caCert := s.secrets.Secret(ctx, s.config.CACert)
 		if caCert == "" {
 			caCert = s.config.CACert
 		}
@@ -267,11 +268,11 @@ func (s *Sender) setConfig(config *sarama.Config) error {
 }
 
 func (s *Sender) NewSyncProducers(count int) ([]sarama.SyncProducer, sarama.Client, error) {
-	brokersStr := s.secrets.Secret(s.config.Brokers)
+	ctx := context.Background()
+	brokersStr := s.secrets.Secret(ctx, s.config.Brokers)
 	if brokersStr == "" {
 		brokersStr = s.config.Brokers
 	}
-
 	brokers := strings.Split(brokersStr, ",")
 	config := sarama.NewConfig()
 	config.Producer.Partitioner = NewManualHashPartitioner

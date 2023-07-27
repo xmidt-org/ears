@@ -174,7 +174,7 @@ func (f *Filter) evalStr(evt event.Event, tt string) string {
 func (f *Filter) hitEndpoint(ctx context.Context, evt event.Event) (string, int, error) {
 	e1 := f.evalStr(evt, f.config.Url)
 	e2 := f.evalStr(evt, f.config.UrlPath)
-	url := f.secrets.Secret(e1)
+	url := f.secrets.Secret(ctx, e1)
 	if url == "" {
 		url = e1
 	}
@@ -198,7 +198,7 @@ func (f *Filter) hitEndpoint(ctx context.Context, evt event.Event) (string, int,
 	}
 	var client *http.Client
 	if f.config.Auth.Type == HTTP_AUTH_TYPE_BASIC {
-		password := f.secrets.Secret(f.config.Auth.Password)
+		password := f.secrets.Secret(ctx, f.config.Auth.Password)
 		if password == "" {
 			password = f.config.Auth.Password
 		}
@@ -224,9 +224,9 @@ func (f *Filter) hitEndpoint(ctx context.Context, evt event.Event) (string, int,
 		f.RUnlock()
 		if !ok {
 			conf := &clientcredentials.Config{
-				ClientID:     f.secrets.Secret(f.config.Auth.ClientID),
-				ClientSecret: f.secrets.Secret(f.config.Auth.ClientSecret),
-				TokenURL:     f.secrets.Secret(f.config.Auth.TokenURL),
+				ClientID:     f.secrets.Secret(ctx, f.config.Auth.ClientID),
+				ClientSecret: f.secrets.Secret(ctx, f.config.Auth.ClientSecret),
+				TokenURL:     f.secrets.Secret(ctx, f.config.Auth.TokenURL),
 				Scopes:       f.config.Auth.Scopes,
 			}
 			if conf.ClientID == "" {
