@@ -13,14 +13,11 @@ import (
 	"time"
 )
 
-//TODO: ensure credentials api support is optional
 //TODO: blank out client secret in getTenantAPI
-//TODO: get credentials
 //TODO: unit tests
-//TODO: support sat in http plugin
 //TODO: return key instead of blank when not a secret (adjust usage)
 //TODO: treat every config as potentially dynamic evaluation or secret
-//TODO: manage http client better
+//TODO: support sat in http and ws plugins
 
 //ConfigVault provides secrets from ears app configuration
 type ConfigVault struct {
@@ -83,7 +80,7 @@ type (
 )
 
 const SAT_URL = "https://sat-prod.codebig2.net/oauth/token"
-const CREDENTIAL_URL = "https://{{env}}.gears.comcast.com/v2/applications/{{app}}/credentials/{{key}}"
+const CREDENTIAL_URL = "https://{{env}}gears.comcast.com/v2/applications/{{app}}/credentials/{{key}}"
 
 var satToken SatToken
 
@@ -101,6 +98,10 @@ func (v *ConfigVault) Secret(ctx context.Context, key string) string {
 	} else {
 		return ""
 	}
+}
+
+func (v *ConfigVault) GetConfig(ctx context.Context, key string) string {
+	return v.config.GetString(key)
 }
 
 type TenantConfigVault struct {
@@ -167,6 +168,10 @@ func (v *TenantConfigVault) getSatBearerToken(ctx context.Context) string {
 	return satToken.TokenType + " " + satToken.AccessToken
 }
 
+func (v *TenantConfigVault) GetConfig(ctx context.Context, key string) string {
+	return v.parentVault.GetConfig(ctx, key)
+}
+
 func (v *TenantConfigVault) getCredential(ctx context.Context, key string, credentialType string, field string) (*Credential, error) {
 	token := v.getSatBearerToken(ctx)
 	if token == "" {
@@ -177,8 +182,12 @@ func (v *TenantConfigVault) getCredential(ctx context.Context, key string, crede
 			Timeout: 10 * time.Second,
 		}
 	}
+	env := v.GetConfig(ctx, "ears.env") + "."
+	if env == "prod." {
+		env = ""
+	}
 	url := CREDENTIAL_URL
-	url = strings.Replace(url, "{{env}}", "qa", -1)
+	url = strings.Replace(url, "{{env}}", env, -1)
 	url = strings.Replace(url, "{{app}}", v.tid.AppId, -1)
 	url = strings.Replace(url, "{{key}}", key, -1)
 	req, err := http.NewRequest("GET", url, nil)
@@ -205,27 +214,43 @@ func (v *TenantConfigVault) getCredential(ctx context.Context, key string, crede
 	return &cred.Item, nil
 }
 
-/*func populateCred(item Cred, cred *Credential) {
-	cred.Name = item.Name
-	cred.Type = item.Type
-	cred.Ttl = item.Ttl
-	switch cred.Type {
-	case "autobahn":
-		cred.Autobahn = item.Data.Autobahn
-	case "basic":
-		cred.Basic = item.Data.Basic
-	case "generic":
-		cred.Basic = item.Data.Generic
-	case "ssh":
-		cred.Basic = item.Data.SSH
-	case "oauth1":
-		cred.Oauth = item.Data.OAuth1
-	case "oauth2":
-		cred.Oauth = item.Data.OAuth2
-	case "sat":
-		cred.Oauth = item.Data.SAT
+func (c *Credential) GetSecret() (string, string) {
+	if c.Data.Generic.Secret != "" {
+		return "generic", c.Data.Generic.Secret
+	} else if c.Data.SAT.Secret != "" {
+		return "sat", c.Data.SAT.Secret
+	} else if c.Data.SSH.Secret != "" {
+		return "ssh", c.Data.SSH.Secret
+	} else if c.Data.Basic.Secret != "" {
+		return "basic", c.Data.Basic.Secret
+	} else if c.Data.OAuth1.Secret != "" {
+		return "oauth1", c.Data.OAuth1.Secret
+	} else if c.Data.OAuth2.Secret != "" {
+		return "oauth2", c.Data.OAuth2.Secret
+	} else if c.Data.Autobahn.Secret != "" {
+		return "autobahn", c.Data.Autobahn.Secret
 	}
-}*/
+	return "unknown", ""
+}
+
+func (c *Credential) GetId() (string, string) {
+	if c.Data.Generic.Secret != "" {
+		return "generic", c.Data.Generic.Id
+	} else if c.Data.SAT.Secret != "" {
+		return "sat", c.Data.SAT.Id
+	} else if c.Data.SSH.Secret != "" {
+		return "ssh", c.Data.SSH.Id
+	} else if c.Data.Basic.Secret != "" {
+		return "basic", c.Data.Basic.Id
+	} else if c.Data.OAuth1.Secret != "" {
+		return "oauth1", c.Data.OAuth1.Id
+	} else if c.Data.OAuth2.Secret != "" {
+		return "oauth2", c.Data.OAuth2.Id
+	} else if c.Data.Autobahn.Secret != "" {
+		return "autobahn", c.Data.Autobahn.Id
+	}
+	return "unknown", ""
+}
 
 func (v *TenantConfigVault) Secret(ctx context.Context, key string) string {
 	if strings.HasPrefix(key, secret.ProtocolSecret) {
@@ -242,7 +267,8 @@ func (v *TenantConfigVault) Secret(ctx context.Context, key string) string {
 		if err != nil {
 			return ""
 		}
-		return credential.Data.Generic.Secret
+		_, secret := credential.GetSecret()
+		return secret
 	} else {
 		return ""
 	}
