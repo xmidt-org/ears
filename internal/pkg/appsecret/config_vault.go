@@ -17,11 +17,15 @@ func NewConfigVault(config config.Config) secret.Vault {
 }
 
 func (v *ConfigVault) Secret(key string) string {
-	if !strings.HasPrefix(key, secret.Protocol) {
+	if strings.HasPrefix(key, secret.ProtocolSecret) {
+		configKey := "ears.secrets." + key[len(secret.ProtocolSecret):]
+		return v.config.GetString(configKey)
+	} else if strings.HasPrefix(key, secret.ProtocolCredential) {
+		// credentials API must always be tenant specific
+		return ""
+	} else {
 		return ""
 	}
-	configKey := "ears.secrets." + key[len(secret.Protocol):]
-	return v.config.GetString(configKey)
 }
 
 type TenantConfigVault struct {
@@ -37,15 +41,19 @@ func NewTenantConfigVault(tid tenant.Id, parentVault secret.Vault) secret.Vault 
 }
 
 func (v *TenantConfigVault) Secret(key string) string {
-	if !strings.HasPrefix(key, secret.Protocol) {
+	if strings.HasPrefix(key, secret.ProtocolSecret) {
+		configKey := secret.ProtocolSecret + v.tid.OrgId + "." + v.tid.AppId + "." + key[len(secret.ProtocolSecret):]
+		val := v.parentVault.Secret(configKey)
+		if val != "" {
+			return val
+		}
+		// try again with global key/secrets
+		configKey = secret.ProtocolSecret + "all.all." + key[len(secret.ProtocolSecret):]
+		return v.parentVault.Secret(configKey)
+	} else if strings.HasPrefix(key, secret.ProtocolCredential) {
+		//TODO: query credentials API here
+		return ""
+	} else {
 		return ""
 	}
-	configKey := key[0:len(secret.Protocol)] + v.tid.OrgId + "." + v.tid.AppId + "." + key[len(secret.Protocol):]
-	val := v.parentVault.Secret(configKey)
-	if val != "" {
-		return val
-	}
-	//try again with global key/secrets
-	configKey = key[0:len(secret.Protocol)] + "all.all." + key[len(secret.Protocol):]
-	return v.parentVault.Secret(configKey)
 }
