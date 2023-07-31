@@ -176,6 +176,8 @@ func (m *manager) RegisterReceiver(
 		m.receiversCount[key] = 0
 		m.receiversFn[key] = map[string]pkgreceiver.NextFn{}
 
+		c1 := make(chan error)
+
 		go func() {
 			err := r.Receive(func(e event.Event) {
 				defer func() {
@@ -186,7 +188,6 @@ func (m *manager) RegisterReceiver(
 							Str("stackTrace", panicErr.StackTrace()).Msg("A panic has occurred")
 					}
 				}()
-
 				if m.quotaManager != nil {
 					//ratelimit
 					tracer := otel.Tracer(rtsemconv.EARSTracerName)
@@ -202,11 +203,20 @@ func (m *manager) RegisterReceiver(
 				m.next(key, e)
 			})
 			if err != nil {
-				m.logger.Error().Str("op", "RegisterReceiver.Receive").Err(err).Str("key", key).Str("name", name).Msg("Error calling Receive function")
-
-				//TODO figure out if we need to cleanup the receiver (or how to)
+				c1 <- err
 			}
 		}()
+		select {
+		case err = <-c1:
+			m.logger.Error().Str("op", "RegisterReceiver.Receive").Err(err).Str("key", key).Str("name", name).Msg("Error calling Receive function")
+			return nil, &RegistrationError{
+				Message: "could not start receiver",
+				Plugin:  plugin,
+				Name:    name,
+				Err:     err,
+			}
+		case <-time.After(1 * time.Second):
+		}
 	}
 
 	u, err := uuid.NewRandom()
@@ -236,7 +246,6 @@ func (m *manager) RegisterReceiver(
 	log.Ctx(ctx).Info().Str("op", "RegisterReceiver").Str("key", key).Str("wid", w.id).Str("name", name).Msg("Receiver registered")
 
 	return w, nil
-
 }
 
 func (m *manager) Receivers() map[string]pkgreceiver.Receiver {

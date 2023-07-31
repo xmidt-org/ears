@@ -371,9 +371,18 @@ func (r *Receiver) Receive(next receiver.NextFn) error {
 	if nil != err {
 		return &SQSError{op: "GetCredentials", err: err}
 	}
+	svc := sqs.New(sess)
+	queueAttributesParams := &sqs.GetQueueAttributesInput{
+		QueueUrl:       aws.String(r.config.QueueUrl),
+		AttributeNames: []*string{aws.String(approximateNumberOfMessages)},
+	}
+	_, err = svc.GetQueueAttributes(queueAttributesParams)
+	if nil != err {
+		return &SQSError{op: "GetQueueAttributes", err: err}
+	}
 	for i := 0; i < *r.config.ReceiverPoolSize; i++ {
 		r.logger.Info().Str("op", "SQS.Receive").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Int("workerNum", i).Msg("launching receiver pool thread")
-		r.startReceiveWorker(sqs.New(sess), i)
+		r.startReceiveWorker(svc, i)
 	}
 	r.logger.Info().Str("op", "SQS.Receive").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Msg("waiting for receive done")
 	<-r.done

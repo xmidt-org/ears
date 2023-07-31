@@ -159,7 +159,7 @@ type SQSError struct {
 }
 
 func (e *SQSError) Error() string {
-	return errs.String("KinesisError", map[string]interface{}{"op": e.op}, e.err)
+	return errs.String("SQSError", map[string]interface{}{"op": e.op}, e.err)
 }
 
 func (e *SQSError) Unwrap() error {

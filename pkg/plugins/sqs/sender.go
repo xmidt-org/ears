@@ -74,7 +74,10 @@ func NewSender(tid tenant.Id, plugin string, name string, config interface{}, se
 		logger:  event.GetEventLogger(),
 		secrets: secrets,
 	}
-	s.initPlugin()
+	err = s.initPlugin()
+	if err != nil {
+		return nil, err
+	}
 	hostname, _ := os.Hostname()
 	// metric recorders
 	meter := global.Meter(rtsemconv.EARSMeterName)
@@ -150,6 +153,14 @@ func (s *Sender) initPlugin() error {
 		return &SQSError{op: "GetCredentials", err: err}
 	}
 	s.sqsService = sqs.New(sess)
+	queueAttributesParams := &sqs.GetQueueAttributesInput{
+		QueueUrl:       aws.String(s.config.QueueUrl),
+		AttributeNames: []*string{aws.String(approximateNumberOfMessages)},
+	}
+	_, err = s.sqsService.GetQueueAttributes(queueAttributesParams)
+	if nil != err {
+		return &SQSError{op: "GetQueueAttributes", err: err}
+	}
 	s.done = make(chan struct{})
 	s.startTimedSender()
 	return nil

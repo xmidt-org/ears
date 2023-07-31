@@ -34,6 +34,7 @@ var tenantTestCases = []TestCase{
 			Quota: tenant.Quota{
 				EventsPerSec: 10,
 			},
+			ClientSecret: "",
 		},
 	},
 	{
@@ -42,6 +43,7 @@ var tenantTestCases = []TestCase{
 			Quota: tenant.Quota{
 				EventsPerSec: 15,
 			},
+			ClientSecret: "",
 		},
 	},
 	{
@@ -50,6 +52,7 @@ var tenantTestCases = []TestCase{
 			Quota: tenant.Quota{
 				EventsPerSec: 30,
 			},
+			ClientSecret: "",
 		},
 	},
 }
