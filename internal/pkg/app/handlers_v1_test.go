@@ -1454,6 +1454,7 @@ func TestTenantConfig(t *testing.T) {
 			Path: "/orgs/yourorg/applications/yourapp",
 			Config: `
 				{
+					"clientSecret": "",
 					"quota": {
 						"eventsPerSec": 10
 					}
@@ -1464,6 +1465,7 @@ func TestTenantConfig(t *testing.T) {
 			Path: "/orgs/yourorg/applications/yourapp2",
 			Config: `
 				{
+					"clientSecret": "",
 					"quota": {
 						"eventsPerSec": 20
 					}
@@ -1474,6 +1476,7 @@ func TestTenantConfig(t *testing.T) {
 			Path: "/orgs/yourorg2/applications/yourapp",
 			Config: `
 				{
+					"clientSecret": "",
 					"quota": {
 						"eventsPerSec": 40
 					}
@@ -1484,6 +1487,7 @@ func TestTenantConfig(t *testing.T) {
 			Path: "/orgs/yourorg2/applications/yourapp2",
 			Config: `
 				{
+					"clientSecret": "",
 					"quota": {
 						"eventsPerSec": 80
 					}
@@ -1497,7 +1501,7 @@ func TestTenantConfig(t *testing.T) {
 	}
 	storageMgr, err := getStorageLayer(t, config, "inmemory")
 	if err != nil {
-		t.Fatalf("cannot get stroage manager: %s", err.Error())
+		t.Fatalf("cannot get storage manager: %s", err.Error())
 	}
 	runtime, err := setupRestApi(config, storageMgr, true)
 	if err != nil {
