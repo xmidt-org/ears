@@ -108,6 +108,7 @@ type Receiver struct {
 	eventFailureCounter metric.BoundInt64Counter
 	eventBytesCounter   metric.BoundInt64Counter
 	eventQueueDepth     metric.BoundInt64Histogram
+	sqs                 *sqs.SQS
 }
 
 var DefaultSenderConfig = SenderConfig{
