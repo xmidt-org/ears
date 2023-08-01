@@ -177,7 +177,7 @@ func (m *manager) RegisterReceiver(
 		m.receiversFn[key] = map[string]pkgreceiver.NextFn{}
 
 		go func() {
-			r.Receive(func(e event.Event) {
+			err := r.Receive(func(e event.Event) {
 				defer func() {
 					p := recover()
 					if p != nil {
@@ -200,6 +200,10 @@ func (m *manager) RegisterReceiver(
 				}
 				m.next(key, e)
 			})
+			if err != nil {
+				m.logger.Error().Str("op", "RegisterReceiver.Receive").Err(err).Str("key", key).Str("name", name).Msg("Error calling Receive function")
+				// most errors are captured during registration
+			}
 		}()
 	}
 	u, err := uuid.NewRandom()
