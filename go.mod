@@ -23,7 +23,7 @@ require (
 	github.com/onsi/gomega v1.27.10
 	github.com/pelletier/go-toml v1.9.4 // indirect
 	github.com/pkg/errors v0.9.1
-	github.com/rs/zerolog v1.29.1
+	github.com/rs/zerolog v1.30.0
 	github.com/sebdah/goldie/v2 v2.5.3
 	github.com/sergi/go-diff v1.1.0 // indirect
 	github.com/smartystreets/assertions v0.0.0-20190116191733-b6c0e53d7304 // indirect
