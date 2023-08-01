@@ -63,6 +63,7 @@ type manager struct {
 	logger *zerolog.Logger
 
 	quotaManager *quota.QuotaManager
+	tenantStorer tenant.TenantStorer
 	secrets      secret.Vault
 }
 
@@ -147,7 +148,7 @@ func (m *manager) RegisterReceiver(
 
 		var secrets secret.Vault
 		if m.secrets != nil {
-			secrets = appsecret.NewTenantConfigVault(tid, m.secrets)
+			secrets = appsecret.NewTenantConfigVault(tid, m.secrets, m.tenantStorer)
 		}
 
 		receiverChan := make(chan pkgreceiver.Receiver, 1)
@@ -185,7 +186,6 @@ func (m *manager) RegisterReceiver(
 							Str("stackTrace", panicErr.StackTrace()).Msg("A panic has occurred")
 					}
 				}()
-
 				if m.quotaManager != nil {
 					//ratelimit
 					tracer := otel.Tracer(rtsemconv.EARSTracerName)
@@ -202,12 +202,10 @@ func (m *manager) RegisterReceiver(
 			})
 			if err != nil {
 				m.logger.Error().Str("op", "RegisterReceiver.Receive").Err(err).Str("key", key).Str("name", name).Msg("Error calling Receive function")
-
-				//TODO figure out if we need to cleanup the receiver (or how to)
+				// most errors are captured during registration
 			}
 		}()
 	}
-
 	u, err := uuid.NewRandom()
 	if err != nil {
 		return nil, &RegistrationError{
@@ -217,7 +215,6 @@ func (m *manager) RegisterReceiver(
 			Err:     err,
 		}
 	}
-
 	w := &receiver{
 		id:       u.String(),
 		tid:      tid,
@@ -228,14 +225,10 @@ func (m *manager) RegisterReceiver(
 		receiver: r,
 		active:   true,
 	}
-
 	m.receiversWrapped[w.id] = w
 	m.receiversCount[key]++
-
 	log.Ctx(ctx).Info().Str("op", "RegisterReceiver").Str("key", key).Str("wid", w.id).Str("name", name).Msg("Receiver registered")
-
 	return w, nil
-
 }
 
 func (m *manager) Receivers() map[string]pkgreceiver.Receiver {
@@ -426,7 +419,7 @@ func (m *manager) RegisterFilter(
 
 		var secrets secret.Vault
 		if m.secrets != nil {
-			secrets = appsecret.NewTenantConfigVault(tid, m.secrets)
+			secrets = appsecret.NewTenantConfigVault(tid, m.secrets, m.tenantStorer)
 		}
 
 		filterChan := make(chan pkgfilter.Filterer, 1)
@@ -592,8 +585,9 @@ func (m *manager) RegisterSender(
 	if !ok {
 
 		var secrets secret.Vault
+
 		if m.secrets != nil {
-			secrets = appsecret.NewTenantConfigVault(tid, m.secrets)
+			secrets = appsecret.NewTenantConfigVault(tid, m.secrets, m.tenantStorer)
 		}
 
 		senderChan := make(chan pkgsender.Sender, 1)

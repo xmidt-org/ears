@@ -1,5 +1,6 @@
 {
   "item": {
+    "clientSecret": "",
     "quota": {
       "eventsPerSec": 80
     },

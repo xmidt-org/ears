@@ -124,14 +124,15 @@ func (s *Sender) initPlugin() error {
 		return &S3Error{op: "NewSession", err: err}
 	}
 	var creds *credentials.Credentials
+	ctx := context.Background()
 	if s.config.AWSRoleARN != "" {
 		creds = stscreds.NewCredentials(sess, s.config.AWSRoleARN)
 	} else if s.config.AWSAccessKeyId != "" && s.config.AWSSecretAccessKey != "" {
-		awsAccessKeyId := s.secrets.Secret(s.config.AWSAccessKeyId)
+		awsAccessKeyId := s.secrets.Secret(ctx, s.config.AWSAccessKeyId)
 		if awsAccessKeyId == "" {
 			awsAccessKeyId = s.config.AWSAccessKeyId
 		}
-		awsSecretAccessKey := s.secrets.Secret(s.config.AWSSecretAccessKey)
+		awsSecretAccessKey := s.secrets.Secret(ctx, s.config.AWSSecretAccessKey)
 		if awsSecretAccessKey == "" {
 			awsSecretAccessKey = s.config.AWSSecretAccessKey
 		}

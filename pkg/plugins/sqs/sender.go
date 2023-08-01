@@ -74,7 +74,10 @@ func NewSender(tid tenant.Id, plugin string, name string, config interface{}, se
 		logger:  event.GetEventLogger(),
 		secrets: secrets,
 	}
-	s.initPlugin()
+	err = s.initPlugin()
+	if err != nil {
+		return nil, err
+	}
 	hostname, _ := os.Hostname()
 	// metric recorders
 	meter := global.Meter(rtsemconv.EARSMeterName)
@@ -125,14 +128,15 @@ func (s *Sender) initPlugin() error {
 		return &SQSError{op: "NewSession", err: err}
 	}
 	var creds *credentials.Credentials
+	ctx := context.Background()
 	if s.config.AWSRoleARN != "" {
 		creds = stscreds.NewCredentials(sess, s.config.AWSRoleARN)
 	} else if s.config.AWSAccessKeyId != "" && s.config.AWSSecretAccessKey != "" {
-		awsAccessKeyId := s.secrets.Secret(s.config.AWSAccessKeyId)
+		awsAccessKeyId := s.secrets.Secret(ctx, s.config.AWSAccessKeyId)
 		if awsAccessKeyId == "" {
 			awsAccessKeyId = s.config.AWSAccessKeyId
 		}
-		awsSecretAccessKey := s.secrets.Secret(s.config.AWSSecretAccessKey)
+		awsSecretAccessKey := s.secrets.Secret(ctx, s.config.AWSSecretAccessKey)
 		if awsSecretAccessKey == "" {
 			awsSecretAccessKey = s.config.AWSSecretAccessKey
 		}
@@ -149,6 +153,14 @@ func (s *Sender) initPlugin() error {
 		return &SQSError{op: "GetCredentials", err: err}
 	}
 	s.sqsService = sqs.New(sess)
+	queueAttributesParams := &sqs.GetQueueAttributesInput{
+		QueueUrl:       aws.String(s.config.QueueUrl),
+		AttributeNames: []*string{aws.String(approximateNumberOfMessages)},
+	}
+	_, err = s.sqsService.GetQueueAttributes(queueAttributesParams)
+	if nil != err {
+		return &SQSError{op: "GetQueueAttributes", err: err}
+	}
 	s.done = make(chan struct{})
 	s.startTimedSender()
 	return nil

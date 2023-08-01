@@ -88,7 +88,7 @@ func NewReceiver(tid tenant.Id, plugin string, name string, config interface{}, 
 		return nil, err
 	}
 
-	brokers := secrets.Secret(r.config.Brokers)
+	brokers := secrets.Secret(ctx, r.config.Brokers)
 	if brokers == "" {
 		brokers = r.config.Brokers
 	}
@@ -219,25 +219,26 @@ func (r *Receiver) getSaramaConfig(commitIntervalSec int) (*sarama.Config, error
 		config.ChannelBufferSize = *r.config.ChannelBufferSize
 	}
 	config.Net.TLS.Enable = r.config.TLSEnable
+	ctx := context.Background()
 	if "" != r.config.Username {
 		config.Net.TLS.Enable = true
 		config.Net.SASL.Enable = true
 		config.Net.SASL.User = r.config.Username
-		config.Net.SASL.Password = r.secrets.Secret(r.config.Password)
+		config.Net.SASL.Password = r.secrets.Secret(ctx, r.config.Password)
 		if config.Net.SASL.Password == "" {
 			config.Net.SASL.Password = r.config.Password
 		}
 
 	} else if "" != r.config.AccessCert {
-		accessCert := r.secrets.Secret(r.config.AccessCert)
+		accessCert := r.secrets.Secret(ctx, r.config.AccessCert)
 		if accessCert == "" {
 			accessCert = r.config.AccessCert
 		}
-		accessKey := r.secrets.Secret(r.config.AccessKey)
+		accessKey := r.secrets.Secret(ctx, r.config.AccessKey)
 		if accessKey == "" {
 			accessKey = r.config.AccessKey
 		}
-		caCert := r.secrets.Secret(r.config.CACert)
+		caCert := r.secrets.Secret(ctx, r.config.CACert)
 		if caCert == "" {
 			caCert = r.config.CACert
 		}

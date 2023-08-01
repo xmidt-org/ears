@@ -75,6 +75,45 @@ func NewReceiver(tid tenant.Id, plugin string, name string, config interface{}, 
 		stopped: true,
 		secrets: secrets,
 	}
+	// create sqs session
+	sess, err := session.NewSession()
+	if nil != err {
+		return r, &SQSError{op: "NewSession", err: err}
+	}
+	var creds *credentials.Credentials
+	ctx := context.Background()
+	if r.config.AWSRoleARN != "" {
+		creds = stscreds.NewCredentials(sess, r.config.AWSRoleARN)
+	} else if r.config.AWSAccessKeyId != "" && r.config.AWSSecretAccessKey != "" {
+		awsAccessKeyId := r.secrets.Secret(ctx, r.config.AWSAccessKeyId)
+		if awsAccessKeyId == "" {
+			awsAccessKeyId = r.config.AWSAccessKeyId
+		}
+		awsSecretAccessKey := r.secrets.Secret(ctx, r.config.AWSSecretAccessKey)
+		if awsSecretAccessKey == "" {
+			awsSecretAccessKey = r.config.AWSSecretAccessKey
+		}
+		creds = credentials.NewStaticCredentials(awsAccessKeyId, awsSecretAccessKey, "")
+	} else {
+		creds = sess.Config.Credentials
+	}
+	sess, err = session.NewSession(&aws.Config{Region: aws.String(r.config.AWSRegion), Credentials: creds})
+	if nil != err {
+		return r, &SQSError{op: "NewSession", err: err}
+	}
+	_, err = sess.Config.Credentials.Get()
+	if nil != err {
+		return r, &SQSError{op: "GetCredentials", err: err}
+	}
+	r.sqs = sqs.New(sess)
+	queueAttributesParams := &sqs.GetQueueAttributesInput{
+		QueueUrl:       aws.String(r.config.QueueUrl),
+		AttributeNames: []*string{aws.String(approximateNumberOfMessages)},
+	}
+	_, err = r.sqs.GetQueueAttributes(queueAttributesParams)
+	if nil != err {
+		return r, &SQSError{op: "GetQueueAttributes", err: err}
+	}
 	hostname, _ := os.Hostname()
 	// metric recorders
 	meter := global.Meter(rtsemconv.EARSMeterName)
@@ -341,38 +380,9 @@ func (r *Receiver) Receive(next receiver.NextFn) error {
 	r.done = make(chan struct{})
 	r.next = next
 	r.Unlock()
-	// create sqs session
-	sess, err := session.NewSession()
-	if nil != err {
-		return &SQSError{op: "NewSession", err: err}
-	}
-	var creds *credentials.Credentials
-	if r.config.AWSRoleARN != "" {
-		creds = stscreds.NewCredentials(sess, r.config.AWSRoleARN)
-	} else if r.config.AWSAccessKeyId != "" && r.config.AWSSecretAccessKey != "" {
-		awsAccessKeyId := r.secrets.Secret(r.config.AWSAccessKeyId)
-		if awsAccessKeyId == "" {
-			awsAccessKeyId = r.config.AWSAccessKeyId
-		}
-		awsSecretAccessKey := r.secrets.Secret(r.config.AWSSecretAccessKey)
-		if awsSecretAccessKey == "" {
-			awsSecretAccessKey = r.config.AWSSecretAccessKey
-		}
-		creds = credentials.NewStaticCredentials(awsAccessKeyId, awsSecretAccessKey, "")
-	} else {
-		creds = sess.Config.Credentials
-	}
-	sess, err = session.NewSession(&aws.Config{Region: aws.String(r.config.AWSRegion), Credentials: creds})
-	if nil != err {
-		return &SQSError{op: "NewSession", err: err}
-	}
-	_, err = sess.Config.Credentials.Get()
-	if nil != err {
-		return &SQSError{op: "GetCredentials", err: err}
-	}
 	for i := 0; i < *r.config.ReceiverPoolSize; i++ {
 		r.logger.Info().Str("op", "SQS.Receive").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Int("workerNum", i).Msg("launching receiver pool thread")
-		r.startReceiveWorker(sqs.New(sess), i)
+		r.startReceiveWorker(r.sqs, i)
 	}
 	r.logger.Info().Str("op", "SQS.Receive").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Msg("waiting for receive done")
 	<-r.done

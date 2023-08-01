@@ -108,6 +108,7 @@ type Receiver struct {
 	eventFailureCounter metric.BoundInt64Counter
 	eventBytesCounter   metric.BoundInt64Counter
 	eventQueueDepth     metric.BoundInt64Histogram
+	sqs                 *sqs.SQS
 }
 
 var DefaultSenderConfig = SenderConfig{
@@ -159,7 +160,7 @@ type SQSError struct {
 }
 
 func (e *SQSError) Error() string {
-	return errs.String("KinesisError", map[string]interface{}{"op": e.op}, e.err)
+	return errs.String("SQSError", map[string]interface{}{"op": e.op}, e.err)
 }
 
 func (e *SQSError) Unwrap() error {
