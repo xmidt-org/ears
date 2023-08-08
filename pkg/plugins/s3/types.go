@@ -94,6 +94,11 @@ type Receiver struct {
 	eventSuccessCounter metric.BoundInt64Counter
 	eventFailureCounter metric.BoundInt64Counter
 	eventBytesCounter   metric.BoundInt64Counter
+	awsRoleArn          string
+	awsAccessKey        string
+	awsAccessSecret     string
+	awsRegion           string
+	bucket              string
 }
 
 var DefaultSenderConfig = SenderConfig{
@@ -137,6 +142,11 @@ type Sender struct {
 	eventBytesCounter   metric.BoundInt64Counter
 	eventProcessingTime metric.BoundInt64Histogram
 	eventSendOutTime    metric.BoundInt64Histogram
+	awsRoleArn          string
+	awsAccessKey        string
+	awsAccessSecret     string
+	awsRegion           string
+	bucket              string
 }
 
 type S3Error struct {
