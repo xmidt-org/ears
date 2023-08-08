@@ -109,6 +109,11 @@ type Receiver struct {
 	eventBytesCounter   metric.BoundInt64Counter
 	eventQueueDepth     metric.BoundInt64Histogram
 	sqs                 *sqs.SQS
+	queueUrl            string
+	awsRoleArn          string
+	awsAccessKey        string
+	awsAccessSecret     string
+	awsRegion           string
 }
 
 var DefaultSenderConfig = SenderConfig{
@@ -152,6 +157,11 @@ type Sender struct {
 	eventBytesCounter   metric.BoundInt64Counter
 	eventProcessingTime metric.BoundInt64Histogram
 	eventSendOutTime    metric.BoundInt64Histogram
+	queueUrl            string
+	awsRoleArn          string
+	awsAccessKey        string
+	awsAccessSecret     string
+	awsRegion           string
 }
 
 type SQSError struct {

@@ -13,12 +13,6 @@ import (
 	"time"
 )
 
-//TODO: blank out client secret in getTenantAPI
-//TODO: unit tests
-//TODO: return key instead of blank when not a secret (adjust usage)
-//TODO: treat every config as potentially dynamic evaluation or secret
-//TODO: support sat in http and ws plugins
-
 //ConfigVault provides secrets from ears app configuration
 type ConfigVault struct {
 	config config.Config
@@ -94,9 +88,9 @@ func (v *ConfigVault) Secret(ctx context.Context, key string) string {
 		return v.config.GetString(configKey)
 	} else if strings.HasPrefix(key, secret.ProtocolCredential) {
 		// credentials API must always be tenant specific
-		return ""
+		return key
 	} else {
-		return ""
+		return key
 	}
 }
 
@@ -260,7 +254,7 @@ func (c *Credential) GetGrantType() (string, string) {
 	} else if c.Data.OAuth2.GrantType != "" {
 		return "oauth2", c.Data.OAuth2.GrantType
 	}
-	return "unknown", ""
+	return "", ""
 }
 
 func (c *Credential) GetScope() (string, string) {
@@ -300,7 +294,7 @@ func (v *TenantConfigVault) Secret(ctx context.Context, key string) string {
 		keys := strings.Split(key, ".")
 		credential, err := v.getCredential(ctx, keys[0], "", "")
 		if err != nil {
-			return ""
+			return key
 		}
 		if len(keys) >= 2 {
 			if strings.ToLower(keys[1]) == "id" {
@@ -323,6 +317,6 @@ func (v *TenantConfigVault) Secret(ctx context.Context, key string) string {
 		_, secret := credential.GetSecret()
 		return secret
 	} else {
-		return ""
+		return key
 	}
 }
