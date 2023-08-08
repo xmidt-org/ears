@@ -120,6 +120,12 @@ type Receiver struct {
 	eventBytesCounter              metric.BoundInt64Counter
 	eventLagMillis                 metric.BoundInt64Histogram
 	eventTrueLagMillis             metric.BoundInt64Histogram
+	awsRoleArn                     string
+	awsAccessKey                   string
+	awsAccessSecret                string
+	awsRegion                      string
+	streamName                     string
+	consumerName                   string
 }
 
 var DefaultSenderConfig = SenderConfig{
@@ -163,6 +169,11 @@ type Sender struct {
 	eventBytesCounter   metric.BoundInt64Counter
 	eventProcessingTime metric.BoundInt64Histogram
 	eventSendOutTime    metric.BoundInt64Histogram
+	awsRoleArn          string
+	awsAccessKey        string
+	awsAccessSecret     string
+	awsRegion           string
+	streamName          string
 }
 
 type KinesisError struct {
