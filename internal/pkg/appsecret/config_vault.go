@@ -13,12 +13,6 @@ import (
 	"time"
 )
 
-//TODO: blank out client secret in getTenantAPI
-//TODO: unit tests
-//TODO: return key instead of blank when not a secret (adjust usage)
-//TODO: treat every config as potentially dynamic evaluation or secret
-//TODO: support sat in http and ws plugins
-
 //ConfigVault provides secrets from ears app configuration
 type ConfigVault struct {
 	config config.Config
@@ -94,9 +88,9 @@ func (v *ConfigVault) Secret(ctx context.Context, key string) string {
 		return v.config.GetString(configKey)
 	} else if strings.HasPrefix(key, secret.ProtocolCredential) {
 		// credentials API must always be tenant specific
-		return ""
+		return key
 	} else {
-		return ""
+		return key
 	}
 }
 
@@ -230,26 +224,59 @@ func (c *Credential) GetSecret() (string, string) {
 	} else if c.Data.Autobahn.Secret != "" {
 		return "autobahn", c.Data.Autobahn.Secret
 	}
-	return "unknown", ""
+	return "", ""
 }
 
 func (c *Credential) GetId() (string, string) {
-	if c.Data.Generic.Secret != "" {
+	if c.Data.Generic.Id != "" {
 		return "generic", c.Data.Generic.Id
-	} else if c.Data.SAT.Secret != "" {
+	} else if c.Data.SAT.Id != "" {
 		return "sat", c.Data.SAT.Id
-	} else if c.Data.SSH.Secret != "" {
+	} else if c.Data.SSH.Id != "" {
 		return "ssh", c.Data.SSH.Id
-	} else if c.Data.Basic.Secret != "" {
+	} else if c.Data.Basic.Id != "" {
 		return "basic", c.Data.Basic.Id
-	} else if c.Data.OAuth1.Secret != "" {
+	} else if c.Data.OAuth1.Id != "" {
 		return "oauth1", c.Data.OAuth1.Id
-	} else if c.Data.OAuth2.Secret != "" {
+	} else if c.Data.OAuth2.Id != "" {
 		return "oauth2", c.Data.OAuth2.Id
-	} else if c.Data.Autobahn.Secret != "" {
+	} else if c.Data.Autobahn.Id != "" {
 		return "autobahn", c.Data.Autobahn.Id
 	}
-	return "unknown", ""
+	return "", ""
+}
+
+func (c *Credential) GetGrantType() (string, string) {
+	if c.Data.SAT.GrantType != "" {
+		return "sat", c.Data.SAT.GrantType
+	} else if c.Data.OAuth1.GrantType != "" {
+		return "oauth1", c.Data.OAuth1.GrantType
+	} else if c.Data.OAuth2.GrantType != "" {
+		return "oauth2", c.Data.OAuth2.GrantType
+	}
+	return "", ""
+}
+
+func (c *Credential) GetScope() (string, string) {
+	if c.Data.SAT.Scope != "" {
+		return "sat", c.Data.SAT.Scope
+	} else if c.Data.OAuth1.Scope != "" {
+		return "oauth1", c.Data.OAuth1.Scope
+	} else if c.Data.OAuth2.Scope != "" {
+		return "oauth2", c.Data.OAuth2.Scope
+	}
+	return "", ""
+}
+
+func (c *Credential) GetIssuer() (string, string) {
+	if c.Data.SAT.Issuer != "" {
+		return "sat", c.Data.SAT.Issuer
+	} else if c.Data.OAuth1.Issuer != "" {
+		return "oauth1", c.Data.OAuth1.Issuer
+	} else if c.Data.OAuth2.Issuer != "" {
+		return "oauth2", c.Data.OAuth2.Issuer
+	}
+	return "", ""
 }
 
 func (v *TenantConfigVault) Secret(ctx context.Context, key string) string {
@@ -263,13 +290,33 @@ func (v *TenantConfigVault) Secret(ctx context.Context, key string) string {
 		configKey = secret.ProtocolSecret + "all.all." + key[len(secret.ProtocolSecret):]
 		return v.parentVault.Secret(ctx, configKey)
 	} else if strings.HasPrefix(key, secret.ProtocolCredential) {
-		credential, err := v.getCredential(ctx, key[len(secret.ProtocolCredential):], "", "")
+		key := key[len(secret.ProtocolCredential):]
+		keys := strings.Split(key, ".")
+		credential, err := v.getCredential(ctx, keys[0], "", "")
 		if err != nil {
-			return ""
+			return key
+		}
+		if len(keys) >= 2 {
+			if strings.ToLower(keys[1]) == "id" {
+				_, id := credential.GetId()
+				return id
+			}
+			if strings.ToLower(keys[1]) == "scope" {
+				_, id := credential.GetScope()
+				return id
+			}
+			if strings.ToLower(keys[1]) == "granttype" {
+				_, id := credential.GetGrantType()
+				return id
+			}
+			if strings.ToLower(keys[1]) == "issuer" {
+				_, id := credential.GetIssuer()
+				return id
+			}
 		}
 		_, secret := credential.GetSecret()
 		return secret
 	} else {
-		return ""
+		return key
 	}
 }

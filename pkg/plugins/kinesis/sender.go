@@ -62,13 +62,19 @@ func NewSender(tid tenant.Id, plugin string, name string, config interface{}, se
 	if err != nil {
 		return nil, err
 	}
+	ctx := context.Background()
 	s := &Sender{
-		name:    name,
-		plugin:  plugin,
-		tid:     tid,
-		config:  cfg,
-		logger:  event.GetEventLogger(),
-		secrets: secrets,
+		name:            name,
+		plugin:          plugin,
+		tid:             tid,
+		config:          cfg,
+		logger:          event.GetEventLogger(),
+		secrets:         secrets,
+		awsRoleArn:      secrets.Secret(ctx, cfg.AWSRoleARN),
+		awsAccessKey:    secrets.Secret(ctx, cfg.AWSAccessKeyId),
+		awsAccessSecret: secrets.Secret(ctx, cfg.AWSSecretAccessKey),
+		awsRegion:       secrets.Secret(ctx, cfg.AWSRegion),
+		streamName:      secrets.Secret(ctx, cfg.StreamName),
 	}
 	s.initPlugin()
 	hostname, _ := os.Hostname()
@@ -79,7 +85,7 @@ func NewSender(tid tenant.Id, plugin string, name string, config interface{}, se
 		attribute.String(rtsemconv.EARSPluginNameLabel, s.Name()),
 		attribute.String(rtsemconv.EARSAppIdLabel, s.tid.AppId),
 		attribute.String(rtsemconv.EARSOrgIdLabel, s.tid.OrgId),
-		attribute.String(rtsemconv.KinesisStreamNameLabel, s.config.StreamName),
+		attribute.String(rtsemconv.KinesisStreamNameLabel, s.streamName),
 		attribute.String(rtsemconv.HostnameLabel, hostname),
 	}
 	s.eventSuccessCounter = metric.Must(meter).
@@ -121,23 +127,14 @@ func (s *Sender) initPlugin() error {
 		return &KinesisError{op: "NewSession", err: err}
 	}
 	var creds *credentials.Credentials
-	ctx := context.Background()
-	if s.config.AWSRoleARN != "" {
-		creds = stscreds.NewCredentials(sess, s.config.AWSRoleARN)
-	} else if s.config.AWSAccessKeyId != "" && s.config.AWSSecretAccessKey != "" {
-		awsAccessKeyId := s.secrets.Secret(ctx, s.config.AWSAccessKeyId)
-		if awsAccessKeyId == "" {
-			awsAccessKeyId = s.config.AWSAccessKeyId
-		}
-		awsSecretAccessKey := s.secrets.Secret(ctx, s.config.AWSSecretAccessKey)
-		if awsSecretAccessKey == "" {
-			awsSecretAccessKey = s.config.AWSSecretAccessKey
-		}
-		creds = credentials.NewStaticCredentials(awsAccessKeyId, awsSecretAccessKey, "")
+	if s.awsRoleArn != "" {
+		creds = stscreds.NewCredentials(sess, s.awsRoleArn)
+	} else if s.awsAccessKey != "" && s.awsAccessSecret != "" {
+		creds = credentials.NewStaticCredentials(s.awsAccessKey, s.awsAccessSecret, "")
 	} else {
 		creds = sess.Config.Credentials
 	}
-	sess, err = session.NewSession(&aws.Config{Region: aws.String(s.config.AWSRegion), Credentials: creds})
+	sess, err = session.NewSession(&aws.Config{Region: aws.String(s.awsRegion), Credentials: creds})
 	if nil != err {
 		return &KinesisError{op: "NewSession", err: err}
 	}
@@ -146,7 +143,7 @@ func (s *Sender) initPlugin() error {
 		return &KinesisError{op: "GetCredentials", err: err}
 	}
 	s.kinesisService = kinesis.New(sess)
-	_, err = s.kinesisService.DescribeStream(&kinesis.DescribeStreamInput{StreamName: aws.String(s.config.StreamName)})
+	_, err = s.kinesisService.DescribeStream(&kinesis.DescribeStreamInput{StreamName: aws.String(s.streamName)})
 	if err != nil {
 		return err
 	}
@@ -232,7 +229,7 @@ func (s *Sender) send(events []event.Event) {
 	}
 	batchPut := kinesis.PutRecordsInput{
 		Records:    batchReqs,
-		StreamName: aws.String(s.config.StreamName),
+		StreamName: aws.String(s.streamName),
 	}
 	start := time.Now()
 	putResults, err := s.kinesisService.PutRecordsWithContext(events[0].Context(), &batchPut)

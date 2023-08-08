@@ -42,7 +42,6 @@ import (
 )
 
 //TODO: support headers
-//
 
 func NewSender(tid tenant.Id, plugin string, name string, config interface{}, secrets secret.Vault) (sender.Sender, error) {
 	var cfg SenderConfig
@@ -79,18 +78,17 @@ func NewSender(tid tenant.Id, plugin string, name string, config interface{}, se
 	if err != nil {
 		return nil, err
 	}
-
 	hostname, _ := os.Hostname()
+	ctx := context.Background()
 	meter := global.Meter(rtsemconv.EARSMeterName)
 	s.commonLabels = []attribute.KeyValue{
 		attribute.String(rtsemconv.EARSPluginTypeLabel, rtsemconv.EARSPluginTypeKafkaSender),
 		attribute.String(rtsemconv.EARSPluginNameLabel, s.Name()),
 		attribute.String(rtsemconv.EARSAppIdLabel, s.tid.AppId),
 		attribute.String(rtsemconv.EARSOrgIdLabel, s.tid.OrgId),
-		attribute.String(rtsemconv.KafkaTopicLabel, s.config.Topic),
+		attribute.String(rtsemconv.KafkaTopicLabel, s.secrets.Secret(ctx, s.config.Topic)),
 		attribute.String(rtsemconv.HostnameLabel, hostname),
 	}
-
 	s.eventSuccessCounter = metric.Must(meter).
 		NewInt64Counter(
 			rtsemconv.EARSMetricEventSuccess,
@@ -204,27 +202,18 @@ func (s *Sender) setConfig(config *sarama.Config) error {
 	}
 	config.Net.TLS.Enable = s.config.TLSEnable
 	ctx := context.Background()
-	if "" != s.config.Username {
+	if "" != s.secrets.Secret(ctx, s.config.Username) {
 		config.Net.TLS.Enable = true
 		config.Net.SASL.Enable = true
-		config.Net.SASL.User = s.config.Username
+		config.Net.SASL.User = s.secrets.Secret(ctx, s.config.Username)
 		config.Net.SASL.Password = s.secrets.Secret(ctx, s.config.Password)
 		if config.Net.SASL.Password == "" {
 			config.Net.SASL.Password = s.config.Password
 		}
-	} else if "" != s.config.AccessCert {
+	} else if "" != s.secrets.Secret(ctx, s.config.AccessCert) {
 		accessCert := s.secrets.Secret(ctx, s.config.AccessCert)
-		if accessCert == "" {
-			accessCert = s.config.AccessCert
-		}
 		accessKey := s.secrets.Secret(ctx, s.config.AccessKey)
-		if accessKey == "" {
-			accessKey = s.config.AccessKey
-		}
 		caCert := s.secrets.Secret(ctx, s.config.CACert)
-		if caCert == "" {
-			caCert = s.config.CACert
-		}
 		keypair, err := tls.X509KeyPair([]byte(accessCert), []byte(accessKey))
 		if err != nil {
 			return err
@@ -245,11 +234,7 @@ func (s *Sender) setConfig(config *sarama.Config) error {
 
 func (s *Sender) NewSyncProducers(count int) ([]sarama.SyncProducer, sarama.Client, error) {
 	ctx := context.Background()
-	brokersStr := s.secrets.Secret(ctx, s.config.Brokers)
-	if brokersStr == "" {
-		brokersStr = s.config.Brokers
-	}
-	brokers := strings.Split(brokersStr, ",")
+	brokers := strings.Split(s.secrets.Secret(ctx, s.config.Brokers), ",")
 	config := sarama.NewConfig()
 	config.Producer.Partitioner = NewManualHashPartitioner
 	config.Producer.RequiredAcks = sarama.WaitForLocal //as long as one broker gets it
@@ -389,7 +374,8 @@ func (s *Sender) Send(e event.Event) {
 	} else {
 		partition = *s.config.Partition
 	}
-	err = s.producer.SendMessage(e.Context(), s.config.Topic, partition, nil, buf, e)
+	ctx := context.Background()
+	err = s.producer.SendMessage(e.Context(), s.secrets.Secret(ctx, s.config.Topic), partition, nil, buf, e)
 	if err != nil {
 		log.Ctx(e.Context()).Error().Str("op", "kafka.Send").Str("name", s.Name()).Str("tid", s.Tenant().ToString()).Msg("failed to send message: " + err.Error())
 		s.eventFailureCounter.Add(e.Context(), 1, s.getAttributes(e, s.config.DynamicMetricLabels)...)

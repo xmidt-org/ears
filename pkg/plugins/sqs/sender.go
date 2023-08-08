@@ -61,18 +61,24 @@ func NewSender(tid tenant.Id, plugin string, name string, config interface{}, se
 			Err: err,
 		}
 	}
+	ctx := context.Background()
 	cfg = cfg.WithDefaults()
 	err = cfg.Validate()
 	if err != nil {
 		return nil, err
 	}
 	s := &Sender{
-		name:    name,
-		plugin:  plugin,
-		tid:     tid,
-		config:  cfg,
-		logger:  event.GetEventLogger(),
-		secrets: secrets,
+		name:            name,
+		plugin:          plugin,
+		tid:             tid,
+		config:          cfg,
+		logger:          event.GetEventLogger(),
+		secrets:         secrets,
+		queueUrl:        secrets.Secret(ctx, cfg.QueueUrl),
+		awsRoleArn:      secrets.Secret(ctx, cfg.AWSRoleARN),
+		awsAccessKey:    secrets.Secret(ctx, cfg.AWSAccessKeyId),
+		awsAccessSecret: secrets.Secret(ctx, cfg.AWSSecretAccessKey),
+		awsRegion:       secrets.Secret(ctx, cfg.AWSRegion),
 	}
 	err = s.initPlugin()
 	if err != nil {
@@ -128,23 +134,14 @@ func (s *Sender) initPlugin() error {
 		return &SQSError{op: "NewSession", err: err}
 	}
 	var creds *credentials.Credentials
-	ctx := context.Background()
-	if s.config.AWSRoleARN != "" {
-		creds = stscreds.NewCredentials(sess, s.config.AWSRoleARN)
-	} else if s.config.AWSAccessKeyId != "" && s.config.AWSSecretAccessKey != "" {
-		awsAccessKeyId := s.secrets.Secret(ctx, s.config.AWSAccessKeyId)
-		if awsAccessKeyId == "" {
-			awsAccessKeyId = s.config.AWSAccessKeyId
-		}
-		awsSecretAccessKey := s.secrets.Secret(ctx, s.config.AWSSecretAccessKey)
-		if awsSecretAccessKey == "" {
-			awsSecretAccessKey = s.config.AWSSecretAccessKey
-		}
-		creds = credentials.NewStaticCredentials(awsAccessKeyId, awsSecretAccessKey, "")
+	if s.awsRoleArn != "" {
+		creds = stscreds.NewCredentials(sess, s.awsRoleArn)
+	} else if s.awsAccessKey != "" && s.awsAccessSecret != "" {
+		creds = credentials.NewStaticCredentials(s.awsAccessKey, s.awsAccessSecret, "")
 	} else {
 		creds = sess.Config.Credentials
 	}
-	sess, err = session.NewSession(&aws.Config{Region: aws.String(s.config.AWSRegion), Credentials: creds})
+	sess, err = session.NewSession(&aws.Config{Region: aws.String(s.awsRegion), Credentials: creds})
 	if nil != err {
 		return &SQSError{op: "NewSession", err: err}
 	}
@@ -154,7 +151,7 @@ func (s *Sender) initPlugin() error {
 	}
 	s.sqsService = sqs.New(sess)
 	queueAttributesParams := &sqs.GetQueueAttributesInput{
-		QueueUrl:       aws.String(s.config.QueueUrl),
+		QueueUrl:       aws.String(s.queueUrl),
 		AttributeNames: []*string{aws.String(approximateNumberOfMessages)},
 	}
 	_, err = s.sqsService.GetQueueAttributes(queueAttributesParams)
@@ -240,7 +237,7 @@ func (s *Sender) send(events []event.Event) {
 	}
 	sqsSendBatchParams := &sqs.SendMessageBatchInput{
 		Entries:  entries,
-		QueueUrl: aws.String(s.config.QueueUrl),
+		QueueUrl: aws.String(s.queueUrl),
 	}
 	start := time.Now()
 	output, err := s.sqsService.SendMessageBatch(sqsSendBatchParams)

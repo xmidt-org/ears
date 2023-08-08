@@ -87,12 +87,7 @@ func NewReceiver(tid tenant.Id, plugin string, name string, config interface{}, 
 	if err != nil {
 		return nil, err
 	}
-
-	brokers := secrets.Secret(ctx, r.config.Brokers)
-	if brokers == "" {
-		brokers = r.config.Brokers
-	}
-	client, err := sarama.NewConsumerGroup(strings.Split(brokers, ","), r.config.GroupId, saramaConfig)
+	client, err := sarama.NewConsumerGroup(strings.Split(secrets.Secret(ctx, r.config.Brokers), ","), secrets.Secret(ctx, r.config.GroupId), saramaConfig)
 	if nil != err {
 		return nil, err
 	}
@@ -104,8 +99,8 @@ func NewReceiver(tid tenant.Id, plugin string, name string, config interface{}, 
 		attribute.String(rtsemconv.EARSPluginNameLabel, r.Name()),
 		attribute.String(rtsemconv.EARSAppIdLabel, r.tid.AppId),
 		attribute.String(rtsemconv.EARSOrgIdLabel, r.tid.OrgId),
-		attribute.String(rtsemconv.KafkaTopicLabel, r.config.Topic),
-		attribute.String(rtsemconv.KafkaGroupIdLabel, r.config.GroupId),
+		attribute.String(rtsemconv.KafkaTopicLabel, secrets.Secret(ctx, r.config.Topic)),
+		attribute.String(rtsemconv.KafkaGroupIdLabel, secrets.Secret(ctx, r.config.GroupId)),
 		attribute.String(rtsemconv.EARSReceiverName, r.name),
 	}
 	r.eventSuccessCounter = metric.Must(meter).
@@ -220,28 +215,15 @@ func (r *Receiver) getSaramaConfig(commitIntervalSec int) (*sarama.Config, error
 	}
 	config.Net.TLS.Enable = r.config.TLSEnable
 	ctx := context.Background()
-	if "" != r.config.Username {
+	if "" != r.secrets.Secret(ctx, r.config.Username) {
 		config.Net.TLS.Enable = true
 		config.Net.SASL.Enable = true
-		config.Net.SASL.User = r.config.Username
+		config.Net.SASL.User = r.secrets.Secret(ctx, r.config.Username)
 		config.Net.SASL.Password = r.secrets.Secret(ctx, r.config.Password)
-		if config.Net.SASL.Password == "" {
-			config.Net.SASL.Password = r.config.Password
-		}
-
-	} else if "" != r.config.AccessCert {
+	} else if "" != r.secrets.Secret(ctx, r.config.AccessCert) {
 		accessCert := r.secrets.Secret(ctx, r.config.AccessCert)
-		if accessCert == "" {
-			accessCert = r.config.AccessCert
-		}
 		accessKey := r.secrets.Secret(ctx, r.config.AccessKey)
-		if accessKey == "" {
-			accessKey = r.config.AccessKey
-		}
 		caCert := r.secrets.Secret(ctx, r.config.CACert)
-		if caCert == "" {
-			caCert = r.config.CACert
-		}
 		keypair, err := tls.X509KeyPair([]byte(accessCert), []byte(accessKey))
 		if err != nil {
 			return nil, err
@@ -296,7 +278,6 @@ func (r *Receiver) Receive(next receiver.NextFn) error {
 						Str("stackTrace", panicErr.StackTrace()).Msg("A panic has occurred while handling a message")
 				}
 			}()
-
 			// bail if context has been canceled
 			if r.ctx.Err() != nil {
 				r.logger.Info().Str("op", "kafka.Receive").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Msg("abandoning message due to canceled context")
@@ -313,10 +294,8 @@ func (r *Receiver) Receive(next receiver.NextFn) error {
 				return false
 			}
 			ctx, cancel := context.WithTimeout(context.Background(), time.Duration(5)*time.Second)
-
 			//extract otel tracing info
 			ctx = otel.GetTextMapPropagator().Extract(ctx, otelsarama.NewConsumerMessageCarrier(msg))
-
 			r.eventBytesCounter.Add(ctx, int64(len(msg.Value)))
 			e, err := event.New(ctx, pl, event.WithAck(
 				func(e event.Event) {

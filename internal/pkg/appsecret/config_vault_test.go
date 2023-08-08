@@ -34,8 +34,8 @@ func TestConfigVault(t *testing.T) {
 	g.Assert(t, "secret2", []byte(val))
 
 	val = v.Secret(ctx, "myorg.myapp.kafka.secret1")
-	if val != "" {
-		t.Fatalf("Expect empty secret, got %s\n", val)
+	if val != "myorg.myapp.kafka.secret1" {
+		t.Fatalf("expected non secret, got %s\n", val)
 	}
 
 	v = appsecret.NewTenantConfigVault(tenant.Id{OrgId: "myorg", AppId: "myapp"}, v, nil)
@@ -45,7 +45,7 @@ func TestConfigVault(t *testing.T) {
 	g.Assert(t, "secret2", []byte(val))
 
 	val = v.Secret(ctx, "kafka.secret1")
-	if val != "" {
-		t.Fatalf("Expect empty secret, got %s\n", val)
+	if val != "kafka.secret1" {
+		t.Fatalf("expected non secret, got %s\n", val)
 	}
 }

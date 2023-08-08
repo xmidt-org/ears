@@ -78,6 +78,7 @@ func NewReceiver(tid tenant.Id, plugin string, name string, config interface{}, 
 	if err != nil {
 		return nil, err
 	}
+	ctx := context.Background()
 	r := &Receiver{
 		config:                         cfg,
 		name:                           name,
@@ -88,6 +89,12 @@ func NewReceiver(tid tenant.Id, plugin string, name string, config interface{}, 
 		secrets:                        secrets,
 		shardMonitorStopChannel:        make(chan bool),
 		shardUpdateListenerStopChannel: make(chan bool),
+		awsRoleArn:                     secrets.Secret(ctx, cfg.AWSRoleARN),
+		awsAccessKey:                   secrets.Secret(ctx, cfg.AWSAccessKeyId),
+		awsAccessSecret:                secrets.Secret(ctx, cfg.AWSSecretAccessKey),
+		awsRegion:                      secrets.Secret(ctx, cfg.AWSRegion),
+		streamName:                     secrets.Secret(ctx, cfg.StreamName),
+		consumerName:                   secrets.Secret(ctx, cfg.ConsumerName),
 	}
 	r.Lock()
 	r.stopChannelMap = make(map[int]chan bool)
@@ -100,7 +107,7 @@ func NewReceiver(tid tenant.Id, plugin string, name string, config interface{}, 
 		attribute.String(rtsemconv.EARSPluginNameLabel, r.Name()),
 		attribute.String(rtsemconv.EARSAppIdLabel, r.tid.AppId),
 		attribute.String(rtsemconv.EARSOrgIdLabel, r.tid.OrgId),
-		attribute.String(rtsemconv.KinesisStreamNameLabel, r.config.StreamName),
+		attribute.String(rtsemconv.KinesisStreamNameLabel, r.streamName),
 		attribute.String(rtsemconv.HostnameLabel, hostname),
 	}
 	r.eventSuccessCounter = metric.Must(meter).
@@ -151,7 +158,7 @@ func (r *Receiver) stopShardReceiver(shardIdx int) {
 }
 
 func (r *Receiver) getCheckpointId(shardID int) string {
-	return r.name + "-" + r.config.ConsumerName + "-" + r.config.StreamName + "-" + strconv.Itoa(shardID)
+	return r.name + "-" + r.consumerName + "-" + r.streamName + "-" + strconv.Itoa(shardID)
 }
 
 func (r *Receiver) shardMonitor(svc *kinesis.Kinesis, distributor sharder.ShardDistributor) {
@@ -179,7 +186,7 @@ func (r *Receiver) shardMonitor(svc *kinesis.Kinesis, distributor sharder.ShardD
 				continue
 			}
 			stream, err := svc.DescribeStream(&kinesis.DescribeStreamInput{
-				StreamName: &r.config.StreamName,
+				StreamName: &r.streamName,
 			})
 			if err != nil {
 				r.logger.Error().Str("op", "Kinesis.shardMonitor").Str("stream", *r.stream.StreamDescription.StreamName).Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Msg("cannot get number of shards: " + err.Error())
@@ -247,7 +254,7 @@ func (r *Receiver) startShardReceiverEFO(svc *kinesis.Kinesis, stream *kinesis.D
 		attribute.String(rtsemconv.EARSPluginNameLabel, r.Name()),
 		attribute.String(rtsemconv.EARSAppIdLabel, r.tid.AppId),
 		attribute.String(rtsemconv.EARSOrgIdLabel, r.tid.OrgId),
-		attribute.String(rtsemconv.KinesisStreamNameLabel, r.config.StreamName),
+		attribute.String(rtsemconv.KinesisStreamNameLabel, r.streamName),
 		attribute.Int(rtsemconv.KinesisShardIdxLabel, shardIdx),
 	}
 	r.eventLagMillis = metric.Must(meter).
@@ -441,7 +448,7 @@ func (r *Receiver) startShardReceiver(svc *kinesis.Kinesis, stream *kinesis.Desc
 		attribute.String(rtsemconv.EARSPluginNameLabel, r.Name()),
 		attribute.String(rtsemconv.EARSAppIdLabel, r.tid.AppId),
 		attribute.String(rtsemconv.EARSOrgIdLabel, r.tid.OrgId),
-		attribute.String(rtsemconv.KinesisStreamNameLabel, r.config.StreamName),
+		attribute.String(rtsemconv.KinesisStreamNameLabel, r.streamName),
 		attribute.Int(rtsemconv.KinesisShardIdxLabel, shardIdx),
 	}
 	r.eventLagMillis = metric.Must(meter).
@@ -485,7 +492,7 @@ func (r *Receiver) startShardReceiver(svc *kinesis.Kinesis, stream *kinesis.Desc
 				ShardIteratorType: aws.String(r.config.ShardIteratorType),
 				// Timestamp:         aws.Time(startingTimestamp),
 				// StartingSequenceNumber: aws.String(""),
-				StreamName: aws.String(r.config.StreamName),
+				StreamName: aws.String(r.streamName),
 			}
 			if *r.config.UseCheckpoint {
 				sequenceId, lastUpdate, err := checkpoint.GetCheckpoint(checkpointId)
@@ -691,19 +698,10 @@ func (r *Receiver) Receive(next receiver.NextFn) error {
 		return &KinesisError{op: "NewSession", err: err}
 	}
 	var creds *credentials.Credentials
-	ctx := context.Background()
-	if r.config.AWSRoleARN != "" {
-		creds = stscreds.NewCredentials(sess, r.config.AWSRoleARN)
-	} else if r.config.AWSAccessKeyId != "" && r.config.AWSSecretAccessKey != "" {
-		awsAccessKeyId := r.secrets.Secret(ctx, r.config.AWSAccessKeyId)
-		if awsAccessKeyId == "" {
-			awsAccessKeyId = r.config.AWSAccessKeyId
-		}
-		awsSecretAccessKey := r.secrets.Secret(ctx, r.config.AWSSecretAccessKey)
-		if awsSecretAccessKey == "" {
-			awsSecretAccessKey = r.config.AWSSecretAccessKey
-		}
-		creds = credentials.NewStaticCredentials(awsAccessKeyId, awsSecretAccessKey, "")
+	if r.awsRoleArn != "" {
+		creds = stscreds.NewCredentials(sess, r.awsRoleArn)
+	} else if r.awsAccessKey != "" && r.awsAccessSecret != "" {
+		creds = credentials.NewStaticCredentials(r.awsAccessKey, r.awsAccessSecret, "")
 	} else {
 		creds = sess.Config.Credentials
 	}
@@ -718,7 +716,7 @@ func (r *Receiver) Receive(next receiver.NextFn) error {
 	httpClient := &http.Client{
 		Transport: tr,
 	}
-	sess, err = session.NewSession(&aws.Config{Region: aws.String(r.config.AWSRegion), Credentials: creds, HTTPClient: httpClient})
+	sess, err = session.NewSession(&aws.Config{Region: aws.String(r.awsRegion), Credentials: creds, HTTPClient: httpClient})
 	if nil != err {
 		return &KinesisError{op: "NewSession", err: err}
 	}
@@ -728,12 +726,12 @@ func (r *Receiver) Receive(next receiver.NextFn) error {
 	}
 	r.svc = kinesis.New(sess)
 	//r.svc = kinesis.New(sess, aws.NewConfig().WithLogLevel(aws.LogDebug))
-	r.stream, err = r.svc.DescribeStream(&kinesis.DescribeStreamInput{StreamName: aws.String(r.config.StreamName)})
+	r.stream, err = r.svc.DescribeStream(&kinesis.DescribeStreamInput{StreamName: aws.String(r.streamName)})
 	if err != nil {
 		return &KinesisError{op: "DescribeStream", err: err}
 	}
 	if *r.config.EnhancedFanOut {
-		r.consumer, err = r.registerStreamConsumer(r.svc, r.config.StreamName, r.config.ConsumerName)
+		r.consumer, err = r.registerStreamConsumer(r.svc, r.streamName, r.consumerName)
 		if err != nil {
 			return &KinesisError{op: "registerStreamConsumer", err: err}
 		}

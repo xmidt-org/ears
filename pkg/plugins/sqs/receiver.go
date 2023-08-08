@@ -63,17 +63,23 @@ func NewReceiver(tid tenant.Id, plugin string, name string, config interface{}, 
 	}
 	cfg = cfg.WithDefaults()
 	err = cfg.Validate()
+	ctx := context.Background()
 	if err != nil {
 		return nil, err
 	}
 	r := &Receiver{
-		config:  cfg,
-		name:    name,
-		plugin:  plugin,
-		tid:     tid,
-		logger:  event.GetEventLogger(),
-		stopped: true,
-		secrets: secrets,
+		config:          cfg,
+		name:            name,
+		plugin:          plugin,
+		tid:             tid,
+		logger:          event.GetEventLogger(),
+		stopped:         true,
+		secrets:         secrets,
+		queueUrl:        secrets.Secret(ctx, cfg.QueueUrl),
+		awsRoleArn:      secrets.Secret(ctx, cfg.AWSRoleARN),
+		awsAccessKey:    secrets.Secret(ctx, cfg.AWSAccessKeyId),
+		awsAccessSecret: secrets.Secret(ctx, cfg.AWSSecretAccessKey),
+		awsRegion:       secrets.Secret(ctx, cfg.AWSRegion),
 	}
 	// create sqs session
 	sess, err := session.NewSession()
@@ -81,23 +87,14 @@ func NewReceiver(tid tenant.Id, plugin string, name string, config interface{}, 
 		return r, &SQSError{op: "NewSession", err: err}
 	}
 	var creds *credentials.Credentials
-	ctx := context.Background()
-	if r.config.AWSRoleARN != "" {
-		creds = stscreds.NewCredentials(sess, r.config.AWSRoleARN)
-	} else if r.config.AWSAccessKeyId != "" && r.config.AWSSecretAccessKey != "" {
-		awsAccessKeyId := r.secrets.Secret(ctx, r.config.AWSAccessKeyId)
-		if awsAccessKeyId == "" {
-			awsAccessKeyId = r.config.AWSAccessKeyId
-		}
-		awsSecretAccessKey := r.secrets.Secret(ctx, r.config.AWSSecretAccessKey)
-		if awsSecretAccessKey == "" {
-			awsSecretAccessKey = r.config.AWSSecretAccessKey
-		}
-		creds = credentials.NewStaticCredentials(awsAccessKeyId, awsSecretAccessKey, "")
+	if r.awsRoleArn != "" {
+		creds = stscreds.NewCredentials(sess, r.awsRoleArn)
+	} else if r.awsAccessKey != "" && r.awsAccessSecret != "" {
+		creds = credentials.NewStaticCredentials(r.awsAccessKey, r.awsAccessSecret, "")
 	} else {
 		creds = sess.Config.Credentials
 	}
-	sess, err = session.NewSession(&aws.Config{Region: aws.String(r.config.AWSRegion), Credentials: creds})
+	sess, err = session.NewSession(&aws.Config{Region: aws.String(r.awsRegion), Credentials: creds})
 	if nil != err {
 		return r, &SQSError{op: "NewSession", err: err}
 	}
@@ -107,7 +104,7 @@ func NewReceiver(tid tenant.Id, plugin string, name string, config interface{}, 
 	}
 	r.sqs = sqs.New(sess)
 	queueAttributesParams := &sqs.GetQueueAttributesInput{
-		QueueUrl:       aws.String(r.config.QueueUrl),
+		QueueUrl:       aws.String(r.queueUrl),
 		AttributeNames: []*string{aws.String(approximateNumberOfMessages)},
 	}
 	_, err = r.sqs.GetQueueAttributes(queueAttributesParams)
@@ -122,7 +119,7 @@ func NewReceiver(tid tenant.Id, plugin string, name string, config interface{}, 
 		attribute.String(rtsemconv.EARSPluginNameLabel, r.Name()),
 		attribute.String(rtsemconv.EARSAppIdLabel, r.tid.AppId),
 		attribute.String(rtsemconv.EARSOrgIdLabel, r.tid.OrgId),
-		attribute.String(rtsemconv.SQSQueueUrlLabel, r.config.QueueUrl),
+		attribute.String(rtsemconv.SQSQueueUrlLabel, r.queueUrl),
 		attribute.String(rtsemconv.HostnameLabel, hostname),
 		attribute.String(rtsemconv.EARSReceiverName, r.name),
 	}
@@ -180,7 +177,7 @@ func (r *Receiver) startReceiveWorker(svc *sqs.SQS, n int) {
 			ctx := context.Background()
 			for {
 				queueAttributesParams := &sqs.GetQueueAttributesInput{
-					QueueUrl:       aws.String(r.config.QueueUrl),
+					QueueUrl:       aws.String(r.queueUrl),
 					AttributeNames: []*string{aws.String(approximateNumberOfMessages)},
 				}
 				queueAttributesResp, err := svc.GetQueueAttributes(queueAttributesParams)
@@ -230,7 +227,7 @@ func (r *Receiver) startReceiveWorker(svc *sqs.SQS, n int) {
 					}
 					deleteParams := &sqs.DeleteMessageBatchInput{
 						Entries:  deleteBatch,
-						QueueUrl: aws.String(r.config.QueueUrl),
+						QueueUrl: aws.String(r.queueUrl),
 					}
 					_, err := svc.DeleteMessageBatch(deleteParams)
 					if err != nil {
@@ -258,7 +255,7 @@ func (r *Receiver) startReceiveWorker(svc *sqs.SQS, n int) {
 		// receive messages
 		for {
 			sqsParams := &sqs.ReceiveMessageInput{
-				QueueUrl:              aws.String(r.config.QueueUrl),
+				QueueUrl:              aws.String(r.queueUrl),
 				MaxNumberOfMessages:   aws.Int64(int64(*r.config.MaxNumberOfMessages)),
 				VisibilityTimeout:     aws.Int64(int64(*r.config.VisibilityTimeout)),
 				WaitTimeSeconds:       aws.Int64(int64(*r.config.WaitTimeSeconds)),

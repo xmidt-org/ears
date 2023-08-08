@@ -63,14 +63,20 @@ func NewReceiver(tid tenant.Id, plugin string, name string, config interface{}, 
 	if err != nil {
 		return nil, err
 	}
+	ctx := context.Background()
 	r := &Receiver{
-		config:  cfg,
-		name:    name,
-		plugin:  plugin,
-		tid:     tid,
-		logger:  event.GetEventLogger(),
-		stopped: true,
-		secrets: secrets,
+		config:          cfg,
+		name:            name,
+		plugin:          plugin,
+		tid:             tid,
+		logger:          event.GetEventLogger(),
+		stopped:         true,
+		secrets:         secrets,
+		awsRoleArn:      secrets.Secret(ctx, cfg.AWSRoleARN),
+		awsAccessKey:    secrets.Secret(ctx, cfg.AWSAccessKeyId),
+		awsAccessSecret: secrets.Secret(ctx, cfg.AWSSecretAccessKey),
+		awsRegion:       secrets.Secret(ctx, cfg.AWSRegion),
+		bucket:          secrets.Secret(ctx, cfg.Bucket),
 	}
 	r.initPlugin()
 	hostname, _ := os.Hostname()
@@ -81,7 +87,7 @@ func NewReceiver(tid tenant.Id, plugin string, name string, config interface{}, 
 		attribute.String(rtsemconv.EARSPluginNameLabel, r.Name()),
 		attribute.String(rtsemconv.EARSAppIdLabel, r.tid.AppId),
 		attribute.String(rtsemconv.EARSOrgIdLabel, r.tid.OrgId),
-		attribute.String(rtsemconv.S3Bucket, r.config.Bucket),
+		attribute.String(rtsemconv.S3Bucket, r.bucket),
 		attribute.String(rtsemconv.HostnameLabel, hostname),
 		attribute.String(rtsemconv.EARSReceiverName, r.name),
 	}
@@ -113,23 +119,14 @@ func (r *Receiver) initPlugin() error {
 		return &S3Error{op: "NewSession", err: err}
 	}
 	var creds *credentials.Credentials
-	ctx := context.Background()
-	if r.config.AWSRoleARN != "" {
-		creds = stscreds.NewCredentials(sess, r.config.AWSRoleARN)
-	} else if r.config.AWSAccessKeyId != "" && r.config.AWSSecretAccessKey != "" {
-		awsAccessKeyId := r.secrets.Secret(ctx, r.config.AWSAccessKeyId)
-		if awsAccessKeyId == "" {
-			awsAccessKeyId = r.config.AWSAccessKeyId
-		}
-		awsSecretAccessKey := r.secrets.Secret(ctx, r.config.AWSSecretAccessKey)
-		if awsSecretAccessKey == "" {
-			awsSecretAccessKey = r.config.AWSSecretAccessKey
-		}
-		creds = credentials.NewStaticCredentials(awsAccessKeyId, awsSecretAccessKey, "")
+	if r.awsRoleArn != "" {
+		creds = stscreds.NewCredentials(sess, r.awsRoleArn)
+	} else if r.awsAccessKey != "" && r.awsAccessSecret != "" {
+		creds = credentials.NewStaticCredentials(r.awsAccessKey, r.awsAccessSecret, "")
 	} else {
 		creds = sess.Config.Credentials
 	}
-	sess, err = session.NewSession(&aws.Config{Region: aws.String(r.config.AWSRegion), Credentials: creds})
+	sess, err = session.NewSession(&aws.Config{Region: aws.String(r.awsRegion), Credentials: creds})
 	if nil != err {
 		return &S3Error{op: "NewSession", err: err}
 	}
@@ -161,7 +158,7 @@ func (r *Receiver) Receive(next receiver.NextFn) error {
 	r.next = next
 	r.Unlock()
 	params := &s3.ListObjectsV2Input{
-		Bucket: aws.String(r.config.Bucket),
+		Bucket: aws.String(r.bucket),
 		Prefix: aws.String(r.config.Path),
 	}
 	resp, err := r.s3Service.ListObjectsV2(params)
@@ -178,7 +175,7 @@ func (r *Receiver) Receive(next receiver.NextFn) error {
 		downloader := s3manager.NewDownloaderWithClient(r.s3Service)
 		downloader.Concurrency = 1
 		params := &s3.GetObjectInput{
-			Bucket: aws.String(r.config.Bucket),
+			Bucket: aws.String(r.bucket),
 			Key:    aws.String(item),
 		}
 		wabuf := aws.NewWriteAtBuffer([]byte{})
