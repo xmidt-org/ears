@@ -4,7 +4,7 @@ go 1.16
 
 require (
 	github.com/Shopify/sarama v1.38.1
-	github.com/aws/aws-sdk-go v1.44.319
+	github.com/aws/aws-sdk-go v1.44.320
 	github.com/boriwo/deepcopy v0.0.0-20220804211148-d5122121a902
 	github.com/bwmarrin/discordgo v0.27.1
 	github.com/dop251/goja v0.0.0-20210912140721-ac5354e9a820
