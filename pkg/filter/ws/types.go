@@ -59,11 +59,12 @@ var DefaultConfig = Config{
 }
 
 type Filter struct {
-	config  Config
-	name    string
-	plugin  string
-	tid     tenant.Id
-	secrets secret.Vault
-	clients map[string]*http.Client
+	config    Config
+	name      string
+	plugin    string
+	tid       tenant.Id
+	secrets   secret.Vault
+	clients   map[string]*http.Client
+	satTokens map[string]*SatToken
 	sync.RWMutex
 }

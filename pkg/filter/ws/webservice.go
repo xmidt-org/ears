@@ -40,6 +40,18 @@ const (
 	HTTP_AUTH_TYPE_SAT    = "sat"
 	HTTP_AUTH_TYPE_OAUTH  = "oauth"
 	HTTP_AUTH_TYPE_OAUTH2 = "oauth2"
+
+	SAT_URL = "https://sat-prod.codebig2.net/oauth/token"
+)
+
+type (
+	SatToken struct {
+		AccessToken string `json:"access_token"`
+		ExpiresIn   int    `json:"expires_in"`
+		Scope       string `json:"scope"`
+		TokenType   string `json:"token_type"`
+		ExpiresAt   int64  `json:"timestamp"`
+	}
 )
 
 func NewFilter(tid tenant.Id, plugin string, name string, config interface{}, secrets secret.Vault) (*Filter, error) {
@@ -55,12 +67,13 @@ func NewFilter(tid tenant.Id, plugin string, name string, config interface{}, se
 		return nil, err
 	}
 	f := &Filter{
-		config:  *cfg,
-		name:    name,
-		plugin:  plugin,
-		tid:     tid,
-		secrets: secrets,
-		clients: make(map[string]*http.Client),
+		config:    *cfg,
+		name:      name,
+		plugin:    plugin,
+		tid:       tid,
+		secrets:   secrets,
+		clients:   make(map[string]*http.Client),
+		satTokens: make(map[string]*SatToken),
 	}
 	return f, nil
 }
@@ -171,6 +184,51 @@ func (f *Filter) evalStr(evt event.Event, tt string) string {
 	return tt
 }
 
+func (f *Filter) getSatBearerToken(ctx context.Context, clientId string, clientSecret string) string {
+	//curl -s -X POST -H "X-Client-Id: ***" -H "X-Client-Secret: ***" -H "Cache-Control: no-cache" https://sat-prod.codebig2.net/oauth/token
+	//echo "Bearer $TOKEN"
+	f.Lock()
+	if time.Now().Unix() >= f.satTokens[clientId].ExpiresAt {
+		delete(f.satTokens, clientId)
+	}
+	f.Unlock()
+	if f.satTokens[clientId].AccessToken != "" {
+		f.Lock()
+		token := f.satTokens[clientId].TokenType + " " + f.satTokens[clientId].AccessToken
+		f.Unlock()
+		return token
+	}
+	httpClient := &http.Client{
+		Timeout: 10 * time.Second,
+	}
+	req, err := http.NewRequest("POST", SAT_URL, nil)
+	if err != nil {
+		return ""
+	}
+	req.Header.Add("X-Client-Id", clientId)
+	req.Header.Add("X-Client-Secret", clientSecret)
+	req.Header.Add("Cache-Control", "no-cache")
+	resp, err := httpClient.Do(req)
+	if err != nil {
+		return ""
+	}
+	buf, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return ""
+	}
+	defer resp.Body.Close()
+	var satToken SatToken
+	err = json.Unmarshal(buf, &satToken)
+	if err != nil {
+		return ""
+	}
+	satToken.ExpiresAt = time.Now().Unix() + int64(satToken.ExpiresIn)
+	f.Lock()
+	f.satTokens[clientId] = &satToken
+	f.Unlock()
+	return satToken.TokenType + " " + satToken.AccessToken
+}
+
 func (f *Filter) hitEndpoint(ctx context.Context, evt event.Event) (string, int, error) {
 	e1 := f.evalStr(evt, f.config.Url)
 	e2 := f.evalStr(evt, f.config.UrlPath)
@@ -214,7 +272,18 @@ func (f *Filter) hitEndpoint(ctx context.Context, evt event.Event) (string, int,
 			f.Unlock()
 		}
 	} else if f.config.Auth.Type == HTTP_AUTH_TYPE_SAT {
-		return "", 0, errors.New("sat auth not supported")
+		var ok bool
+		f.RLock()
+		client, ok = f.clients[HTTP_AUTH_TYPE_BASIC]
+		f.RUnlock()
+		if !ok {
+			client = InitHttpTransportWithDialer()
+			f.Lock()
+			f.clients[HTTP_AUTH_TYPE_BASIC] = client
+			f.Unlock()
+		}
+		token := f.getSatBearerToken(ctx, f.secrets.Secret(ctx, f.config.Auth.ClientID), f.secrets.Secret(ctx, f.config.Auth.ClientSecret))
+		req.Header.Add("Authorization", token)
 	} else if f.config.Auth.Type == HTTP_AUTH_TYPE_OAUTH {
 		return "", 0, errors.New("oauth auth not supported")
 	} else if f.config.Auth.Type == HTTP_AUTH_TYPE_OAUTH2 {
@@ -228,15 +297,6 @@ func (f *Filter) hitEndpoint(ctx context.Context, evt event.Event) (string, int,
 				ClientSecret: f.secrets.Secret(ctx, f.config.Auth.ClientSecret),
 				TokenURL:     f.secrets.Secret(ctx, f.config.Auth.TokenURL),
 				Scopes:       f.config.Auth.Scopes,
-			}
-			if conf.ClientID == "" {
-				conf.ClientID = f.config.Auth.ClientID
-			}
-			if conf.ClientSecret == "" {
-				conf.ClientSecret = f.config.Auth.ClientSecret
-			}
-			if conf.TokenURL == "" {
-				conf.TokenURL = f.config.Auth.TokenURL
 			}
 			client = conf.Client(context.Background())
 			f.Lock()
