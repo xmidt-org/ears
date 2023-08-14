@@ -92,28 +92,35 @@ type ReceiverConfig struct {
 
 type Receiver struct {
 	sync.Mutex
-	done                chan struct{}
-	stopped             bool
-	config              ReceiverConfig
-	name                string
-	plugin              string
-	tid                 tenant.Id
-	next                receiver.NextFn
-	logger              *zerolog.Logger
-	secrets             secret.Vault
-	receiveCount        int
-	deleteCount         int
-	startTime           time.Time
-	eventSuccessCounter metric.BoundInt64Counter
-	eventFailureCounter metric.BoundInt64Counter
-	eventBytesCounter   metric.BoundInt64Counter
-	eventQueueDepth     metric.BoundInt64Histogram
-	sqs                 *sqs.SQS
-	queueUrl            string
-	awsRoleArn          string
-	awsAccessKey        string
-	awsAccessSecret     string
-	awsRegion           string
+	done                          chan struct{}
+	stopped                       bool
+	config                        ReceiverConfig
+	name                          string
+	plugin                        string
+	tid                           tenant.Id
+	next                          receiver.NextFn
+	logger                        *zerolog.Logger
+	secrets                       secret.Vault
+	receiveCount                  int
+	deleteCount                   int
+	startTime                     time.Time
+	eventSuccessCounter           metric.BoundInt64Counter
+	eventFailureCounter           metric.BoundInt64Counter
+	eventBytesCounter             metric.BoundInt64Counter
+	eventQueueDepth               metric.BoundInt64Histogram
+	sqs                           *sqs.SQS
+	queueUrl                      string
+	awsRoleArn                    string
+	awsAccessKey                  string
+	awsAccessSecret               string
+	awsRegion                     string
+	successCounter                int
+	errorCounter                  int
+	successVelocityCounter        int
+	errorVelocityCounter          int
+	currentSuccessVelocityCounter int
+	currentErrorVelocityCounter   int
+	currentSec                    int
 }
 
 var DefaultSenderConfig = SenderConfig{

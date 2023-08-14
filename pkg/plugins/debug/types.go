@@ -78,18 +78,25 @@ type ReceiverConfig struct {
 
 type Receiver struct {
 	sync.Mutex
-	done                chan struct{}
-	stopped             bool
-	config              ReceiverConfig
-	name                string
-	plugin              string
-	tid                 tenant.Id
-	history             *history
-	next                receiver.NextFn
-	logger              zerolog.Logger
-	eventSuccessCounter metric.BoundInt64Counter
-	eventFailureCounter metric.BoundInt64Counter
-	eventBytesCounter   metric.BoundInt64Counter
+	done                          chan struct{}
+	stopped                       bool
+	config                        ReceiverConfig
+	name                          string
+	plugin                        string
+	tid                           tenant.Id
+	history                       *history
+	next                          receiver.NextFn
+	logger                        zerolog.Logger
+	successCounter                int
+	errorCounter                  int
+	successVelocityCounter        int
+	errorVelocityCounter          int
+	currentSuccessVelocityCounter int
+	currentErrorVelocityCounter   int
+	currentSec                    int
+	eventSuccessCounter           metric.BoundInt64Counter
+	eventFailureCounter           metric.BoundInt64Counter
+	eventBytesCounter             metric.BoundInt64Counter
 }
 
 type EventWriter interface {

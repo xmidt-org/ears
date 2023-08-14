@@ -126,6 +126,13 @@ type Receiver struct {
 	awsRegion                      string
 	streamName                     string
 	consumerName                   string
+	successCounter                 int
+	errorCounter                   int
+	successVelocityCounter         int
+	errorVelocityCounter           int
+	currentSuccessVelocityCounter  int
+	currentErrorVelocityCounter    int
+	currentSec                     int
 }
 
 var DefaultSenderConfig = SenderConfig{

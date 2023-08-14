@@ -252,7 +252,15 @@ func (m *manager) ReceiversStatus() map[string]ReceiverStatus {
 			status.ReferenceCount++
 			receivers[mapKey] = status
 		} else {
-			receivers[mapKey] = ReceiverStatus{Name: v.Name(), Plugin: v.Plugin(), Config: v.Config(), ReferenceCount: 1, Tid: v.tid}
+			receivers[mapKey] = ReceiverStatus{
+				Name:            v.Name(),
+				Plugin:          v.Plugin(),
+				Config:          v.Config(),
+				ReferenceCount:  1,
+				SuccessCount:    v.EventSuccessCount(),
+				ErrorCount:      v.EventErrorCount(),
+				SuccessVelocity: v.EventSuccessVelocity(),
+				ErrorVelocity:   v.EventErrorVelocity(), Tid: v.tid}
 		}
 	}
 	return receivers

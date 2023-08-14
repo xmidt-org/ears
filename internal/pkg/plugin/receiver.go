@@ -61,6 +61,22 @@ func (r *receiver) Tenant() tenant.Id {
 	return r.tid
 }
 
+func (r *receiver) EventSuccessCount() int {
+	return r.receiver.EventSuccessCount()
+}
+
+func (r *receiver) EventSuccessVelocity() int {
+	return r.receiver.EventSuccessVelocity()
+}
+
+func (r *receiver) EventErrorCount() int {
+	return r.receiver.EventErrorCount()
+}
+
+func (r *receiver) EventErrorVelocity() int {
+	return r.receiver.EventErrorVelocity()
+}
+
 func (r *receiver) Trigger(e event.Event) {
 	//r.receiver.Trigger(e)
 	r.Lock()

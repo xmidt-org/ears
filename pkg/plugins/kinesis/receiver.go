@@ -95,6 +95,7 @@ func NewReceiver(tid tenant.Id, plugin string, name string, config interface{}, 
 		awsRegion:                      secrets.Secret(ctx, cfg.AWSRegion),
 		streamName:                     secrets.Secret(ctx, cfg.StreamName),
 		consumerName:                   secrets.Secret(ctx, cfg.ConsumerName),
+		currentSec:                     time.Now().Second(),
 	}
 	r.Lock()
 	r.stopChannelMap = make(map[int]chan bool)
@@ -132,6 +133,30 @@ func NewReceiver(tid tenant.Id, plugin string, name string, config interface{}, 
 
 //TODO: generic solution for retry policy on nack
 //TODO: checkpoint to advance on nack after final retry
+
+func (r *Receiver) logSuccess() {
+	r.Lock()
+	r.successCounter++
+	if time.Now().Second() != r.currentSec {
+		r.successVelocityCounter = r.currentSuccessVelocityCounter
+		r.currentSuccessVelocityCounter = 0
+		r.currentSec = time.Now().Second()
+	}
+	r.currentSuccessVelocityCounter++
+	r.Unlock()
+}
+
+func (r *Receiver) logError() {
+	r.Lock()
+	r.errorCounter++
+	if time.Now().Second() != r.currentSec {
+		r.errorVelocityCounter = r.currentErrorVelocityCounter
+		r.currentErrorVelocityCounter = 0
+		r.currentSec = time.Now().Second()
+	}
+	r.currentErrorVelocityCounter++
+	r.Unlock()
+}
 
 func (r *Receiver) getStopChannel(shardIdx int) chan bool {
 	var c chan bool
@@ -815,4 +840,28 @@ func (r *Receiver) Plugin() string {
 
 func (r *Receiver) Tenant() tenant.Id {
 	return r.tid
+}
+
+func (r *Receiver) EventSuccessCount() int {
+	r.Lock()
+	defer r.Unlock()
+	return r.successCounter
+}
+
+func (r *Receiver) EventSuccessVelocity() int {
+	r.Lock()
+	defer r.Unlock()
+	return r.successVelocityCounter
+}
+
+func (r *Receiver) EventErrorCount() int {
+	r.Lock()
+	defer r.Unlock()
+	return r.errorCounter
+}
+
+func (r *Receiver) EventErrorVelocity() int {
+	r.Lock()
+	defer r.Unlock()
+	return r.errorVelocityCounter
 }

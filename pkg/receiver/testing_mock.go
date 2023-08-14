@@ -345,6 +345,22 @@ func (mock *ReceiverMock) Name() string {
 	return mock.NameFunc()
 }
 
+func (mock *ReceiverMock) EventSuccessCount() int {
+	return 0
+}
+
+func (mock *ReceiverMock) EventSuccessVelocity() int {
+	return 0
+}
+
+func (mock *ReceiverMock) EventErrorCount() int {
+	return 0
+}
+
+func (mock *ReceiverMock) EventErrorVelocity() int {
+	return 0
+}
+
 // NameCalls gets all the calls that were made to Name.
 // Check the length with:
 //     len(mockedReceiver.NameCalls())

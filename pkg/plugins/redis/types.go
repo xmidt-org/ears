@@ -66,21 +66,28 @@ type ReceiverConfig struct {
 
 type Receiver struct {
 	sync.Mutex
-	stopped             bool
-	redisClient         *redis.Client
-	pubsub              *redis.PubSub
-	done                chan struct{}
-	config              ReceiverConfig
-	name                string
-	plugin              string
-	tid                 tenant.Id
-	next                receiver.NextFn
-	logger              *zerolog.Logger
-	count               int
-	startTime           time.Time
-	eventSuccessCounter metric.BoundInt64Counter
-	eventFailureCounter metric.BoundInt64Counter
-	eventBytesCounter   metric.BoundInt64Counter
+	stopped                       bool
+	redisClient                   *redis.Client
+	pubsub                        *redis.PubSub
+	done                          chan struct{}
+	config                        ReceiverConfig
+	name                          string
+	plugin                        string
+	tid                           tenant.Id
+	next                          receiver.NextFn
+	logger                        *zerolog.Logger
+	count                         int
+	startTime                     time.Time
+	eventSuccessCounter           metric.BoundInt64Counter
+	eventFailureCounter           metric.BoundInt64Counter
+	eventBytesCounter             metric.BoundInt64Counter
+	successCounter                int
+	errorCounter                  int
+	successVelocityCounter        int
+	errorVelocityCounter          int
+	currentSuccessVelocityCounter int
+	currentErrorVelocityCounter   int
+	currentSec                    int
 }
 
 var DefaultSenderConfig = SenderConfig{

@@ -99,4 +99,11 @@ type Receiver struct {
 	eventFailureCounter            metric.BoundInt64Counter
 	eventBytesCounter              metric.BoundInt64Counter
 	next                           receiver.NextFn
+	successCounter                 int
+	errorCounter                   int
+	successVelocityCounter         int
+	errorVelocityCounter           int
+	currentSuccessVelocityCounter  int
+	currentErrorVelocityCounter    int
+	currentSec                     int
 }

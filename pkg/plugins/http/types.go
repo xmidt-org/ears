@@ -86,16 +86,23 @@ var DefaultReceiverConfig = ReceiverConfig{
 
 type Receiver struct {
 	sync.Mutex
-	logger              *zerolog.Logger
-	srv                 *http.Server
-	config              ReceiverConfig
-	name                string
-	plugin              string
-	tid                 tenant.Id
-	eventSuccessCounter metric.BoundInt64Counter
-	eventFailureCounter metric.BoundInt64Counter
-	eventBytesCounter   metric.BoundInt64Counter
-	next                receiver.NextFn
+	logger                        *zerolog.Logger
+	srv                           *http.Server
+	config                        ReceiverConfig
+	name                          string
+	plugin                        string
+	tid                           tenant.Id
+	eventSuccessCounter           metric.BoundInt64Counter
+	eventFailureCounter           metric.BoundInt64Counter
+	eventBytesCounter             metric.BoundInt64Counter
+	next                          receiver.NextFn
+	successCounter                int
+	errorCounter                  int
+	successVelocityCounter        int
+	errorVelocityCounter          int
+	currentSuccessVelocityCounter int
+	currentErrorVelocityCounter   int
+	currentSec                    int
 }
 
 type SenderConfig struct {

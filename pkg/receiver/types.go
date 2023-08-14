@@ -65,4 +65,8 @@ type Receiver interface {
 	Name() string
 	Plugin() string
 	Tenant() tenant.Id
+	EventSuccessCount() int
+	EventSuccessVelocity() int
+	EventErrorCount() int
+	EventErrorVelocity() int
 }

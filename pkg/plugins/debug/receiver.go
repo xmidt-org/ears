@@ -66,12 +66,13 @@ func NewReceiver(tid tenant.Id, plugin string, name string, config interface{}, 
 	logger := zerolog.New(os.Stdout).Level(zerolog.DebugLevel)
 	//zerolog.LevelFieldName = "log.level"
 	r := &Receiver{
-		config:  cfg,
-		name:    name,
-		plugin:  plugin,
-		tid:     tid,
-		logger:  logger,
-		stopped: true,
+		config:     cfg,
+		name:       name,
+		plugin:     plugin,
+		tid:        tid,
+		logger:     logger,
+		stopped:    true,
+		currentSec: time.Now().Second(),
 	}
 	r.history = newHistory(*r.config.MaxHistory)
 	// metric recorders
@@ -99,6 +100,30 @@ func NewReceiver(tid tenant.Id, plugin string, name string, config interface{}, 
 			metric.WithUnit(unit.Bytes),
 		).Bind(commonLabels...)
 	return r, nil
+}
+
+func (r *Receiver) logSuccess() {
+	r.Lock()
+	r.successCounter++
+	if time.Now().Second() != r.currentSec {
+		r.successVelocityCounter = r.currentSuccessVelocityCounter
+		r.currentSuccessVelocityCounter = 0
+		r.currentSec = time.Now().Second()
+	}
+	r.currentSuccessVelocityCounter++
+	r.Unlock()
+}
+
+func (r *Receiver) logError() {
+	r.Lock()
+	r.errorCounter++
+	if time.Now().Second() != r.currentSec {
+		r.errorVelocityCounter = r.currentErrorVelocityCounter
+		r.currentErrorVelocityCounter = 0
+		r.currentSec = time.Now().Second()
+	}
+	r.currentErrorVelocityCounter++
+	r.Unlock()
 }
 
 func (r *Receiver) Receive(next receiver.NextFn) error {
@@ -146,6 +171,7 @@ func (r *Receiver) Receive(next receiver.NextFn) error {
 							eventsDone.Done()
 						}
 						r.eventSuccessCounter.Add(ctx, 1)
+						r.logSuccess()
 						cancel()
 					}, func(evt event.Event, err error) {
 						r.logger.Error().Str("op", "debug.Receive").Msg("failed to process message: " + err.Error())
@@ -153,6 +179,7 @@ func (r *Receiver) Receive(next receiver.NextFn) error {
 							eventsDone.Done()
 						}
 						r.eventFailureCounter.Add(ctx, 1)
+						r.logError()
 						cancel()
 					}),
 					event.WithOtelTracing(r.Name()),
@@ -228,4 +255,28 @@ func (r *Receiver) Plugin() string {
 
 func (r *Receiver) Tenant() tenant.Id {
 	return r.tid
+}
+
+func (r *Receiver) EventSuccessCount() int {
+	r.Lock()
+	defer r.Unlock()
+	return r.successCounter
+}
+
+func (r *Receiver) EventSuccessVelocity() int {
+	r.Lock()
+	defer r.Unlock()
+	return r.successVelocityCounter
+}
+
+func (r *Receiver) EventErrorCount() int {
+	r.Lock()
+	defer r.Unlock()
+	return r.errorCounter
+}
+
+func (r *Receiver) EventErrorVelocity() int {
+	r.Lock()
+	defer r.Unlock()
+	return r.errorVelocityCounter
 }
