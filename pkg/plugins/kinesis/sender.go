@@ -119,6 +119,30 @@ func NewSender(tid tenant.Id, plugin string, name string, config interface{}, se
 	return s, nil
 }
 
+func (s *Sender) logSuccess() {
+	s.Lock()
+	s.successCounter++
+	if time.Now().Second() != s.currentSec {
+		s.successVelocityCounter = s.currentSuccessVelocityCounter
+		s.currentSuccessVelocityCounter = 0
+		s.currentSec = time.Now().Second()
+	}
+	s.currentSuccessVelocityCounter++
+	s.Unlock()
+}
+
+func (s *Sender) logError() {
+	s.Lock()
+	s.errorCounter++
+	if time.Now().Second() != s.currentSec {
+		s.errorVelocityCounter = s.currentErrorVelocityCounter
+		s.currentErrorVelocityCounter = 0
+		s.currentSec = time.Now().Second()
+	}
+	s.currentErrorVelocityCounter++
+	s.Unlock()
+}
+
 func (s *Sender) initPlugin() error {
 	s.Lock()
 	defer s.Unlock()
@@ -245,10 +269,12 @@ func (s *Sender) send(events []event.Event) {
 		for idx, putResult := range putResults.Records {
 			if putResult.ErrorCode == nil {
 				s.eventSuccessCounter.Add(events[idx].Context(), 1)
+				s.logSuccess()
 				successCount++
 				events[idx].Ack()
 			} else {
 				s.eventFailureCounter.Add(events[idx].Context(), 1)
+				s.logError()
 				events[idx].Nack(err)
 			}
 		}
@@ -292,4 +318,28 @@ func (s *Sender) Plugin() string {
 
 func (s *Sender) Tenant() tenant.Id {
 	return s.tid
+}
+
+func (s *Sender) EventSuccessCount() int {
+	s.Lock()
+	defer s.Unlock()
+	return s.successCounter
+}
+
+func (s *Sender) EventSuccessVelocity() int {
+	s.Lock()
+	defer s.Unlock()
+	return s.successVelocityCounter
+}
+
+func (s *Sender) EventErrorCount() int {
+	s.Lock()
+	defer s.Unlock()
+	return s.errorCounter
+}
+
+func (s *Sender) EventErrorVelocity() int {
+	s.Lock()
+	defer s.Unlock()
+	return s.errorVelocityCounter
 }

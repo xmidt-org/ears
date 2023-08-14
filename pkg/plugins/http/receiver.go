@@ -182,6 +182,7 @@ func (r *Receiver) Receive(next receiver.NextFn) error {
 					json.NewEncoder(w).Encode(resp)
 					wg.Done()
 					r.eventSuccessCounter.Add(ctx, 1)
+					r.logSuccess()
 					cancel()
 				}, func(e event.Event, err error) {
 					w.Header().Set("Content-Type", "application/json")
@@ -199,6 +200,7 @@ func (r *Receiver) Receive(next receiver.NextFn) error {
 					wg.Done()
 					log.Ctx(e.Context()).Error().Str("error", err.Error()).Msg("nack handling events")
 					r.eventFailureCounter.Add(ctx, 1)
+					r.logError()
 					cancel()
 				},
 			),

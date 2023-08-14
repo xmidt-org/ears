@@ -326,11 +326,13 @@ func (r *Receiver) Receive(next receiver.NextFn) error {
 				func(e event.Event) {
 					log.Ctx(e.Context()).Debug().Str("op", "kafka.Receive").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Msg("processed message from kafka topic")
 					r.eventSuccessCounter.Add(ctx, 1)
+					r.logSuccess()
 					cancel()
 				},
 				func(e event.Event, err error) {
 					log.Ctx(e.Context()).Error().Str("op", "kafka.Receive").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Msg("failed to process message: " + err.Error())
 					r.eventFailureCounter.Add(ctx, 1)
+					r.logError()
 					cancel()
 				}),
 				event.WithOtelTracing(r.Name()),

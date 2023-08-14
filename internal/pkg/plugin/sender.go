@@ -58,6 +58,22 @@ func (s *sender) Tenant() tenant.Id {
 	return s.tid
 }
 
+func (s *sender) EventSuccessCount() int {
+	return s.sender.EventSuccessCount()
+}
+
+func (s *sender) EventSuccessVelocity() int {
+	return s.sender.EventSuccessVelocity()
+}
+
+func (s *sender) EventErrorCount() int {
+	return s.sender.EventErrorCount()
+}
+
+func (s *sender) EventErrorVelocity() int {
+	return s.sender.EventErrorVelocity()
+}
+
 func (s *sender) Send(e event.Event) {
 	if s == nil {
 		e.Nack(&pkgmanager.NilPluginError{})

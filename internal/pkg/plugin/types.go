@@ -122,11 +122,15 @@ type ReceiverStatus struct {
 }
 
 type SenderStatus struct {
-	Name           string
-	Plugin         string
-	Config         interface{}
-	ReferenceCount int
-	Tid            tenant.Id
+	Name            string
+	Plugin          string
+	Config          interface{}
+	ReferenceCount  int
+	SuccessCount    int
+	ErrorCount      int
+	SuccessVelocity int
+	ErrorVelocity   int
+	Tid             tenant.Id
 }
 
 type FilterStatus struct {

@@ -330,6 +330,22 @@ func (mock *SenderMock) ConfigCalls() []struct {
 	return calls
 }
 
+func (mock *SenderMock) EventSuccessCount() int {
+	return 0
+}
+
+func (mock *SenderMock) EventSuccessVelocity() int {
+	return 0
+}
+
+func (mock *SenderMock) EventErrorCount() int {
+	return 0
+}
+
+func (mock *SenderMock) EventErrorVelocity() int {
+	return 0
+}
+
 // Name calls NameFunc.
 func (mock *SenderMock) Name() string {
 	if mock.NameFunc == nil {

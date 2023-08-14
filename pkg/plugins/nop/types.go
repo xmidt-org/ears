@@ -80,13 +80,20 @@ type SenderConfig struct {
 
 type Sender struct {
 	sync.Mutex
-	name                string
-	plugin              string
-	tid                 tenant.Id
-	config              SenderConfig
-	eventSuccessCounter metric.BoundInt64Counter
-	eventFailureCounter metric.BoundInt64Counter
-	eventBytesCounter   metric.BoundInt64Counter
-	eventProcessingTime metric.BoundInt64Histogram
-	eventSendOutTime    metric.BoundInt64Histogram
+	name                          string
+	plugin                        string
+	tid                           tenant.Id
+	config                        SenderConfig
+	eventSuccessCounter           metric.BoundInt64Counter
+	eventFailureCounter           metric.BoundInt64Counter
+	eventBytesCounter             metric.BoundInt64Counter
+	eventProcessingTime           metric.BoundInt64Histogram
+	eventSendOutTime              metric.BoundInt64Histogram
+	successCounter                int
+	errorCounter                  int
+	successVelocityCounter        int
+	errorVelocityCounter          int
+	currentSuccessVelocityCounter int
+	currentErrorVelocityCounter   int
+	currentSec                    int
 }

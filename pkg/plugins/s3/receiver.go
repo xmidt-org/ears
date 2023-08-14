@@ -224,11 +224,13 @@ func (r *Receiver) Receive(next receiver.NextFn) error {
 		e, err := event.New(ctx, payload, event.WithAck(
 			func(e event.Event) {
 				r.eventSuccessCounter.Add(ctx, 1)
+				r.logSuccess()
 				cancel()
 			},
 			func(e event.Event, err error) {
 				log.Ctx(e.Context()).Error().Str("op", "SQS.receiveWorker").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Msg("failed to process message: " + err.Error())
 				r.eventFailureCounter.Add(ctx, 1)
+				r.logError()
 				cancel()
 			}),
 			event.WithTenant(r.Tenant()),

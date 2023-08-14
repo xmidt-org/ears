@@ -134,26 +134,33 @@ type SenderConfig struct {
 
 type Sender struct {
 	sync.Mutex
-	s3Service           *s3.S3
-	session             *session.Session
-	name                string
-	plugin              string
-	tid                 tenant.Id
-	config              SenderConfig
-	count               int
-	logger              *zerolog.Logger
-	done                chan struct{}
-	secrets             secret.Vault
-	eventSuccessCounter metric.BoundInt64Counter
-	eventFailureCounter metric.BoundInt64Counter
-	eventBytesCounter   metric.BoundInt64Counter
-	eventProcessingTime metric.BoundInt64Histogram
-	eventSendOutTime    metric.BoundInt64Histogram
-	awsRoleArn          string
-	awsAccessKey        string
-	awsAccessSecret     string
-	awsRegion           string
-	bucket              string
+	s3Service                     *s3.S3
+	session                       *session.Session
+	name                          string
+	plugin                        string
+	tid                           tenant.Id
+	config                        SenderConfig
+	count                         int
+	logger                        *zerolog.Logger
+	done                          chan struct{}
+	secrets                       secret.Vault
+	eventSuccessCounter           metric.BoundInt64Counter
+	eventFailureCounter           metric.BoundInt64Counter
+	eventBytesCounter             metric.BoundInt64Counter
+	eventProcessingTime           metric.BoundInt64Histogram
+	eventSendOutTime              metric.BoundInt64Histogram
+	awsRoleArn                    string
+	awsAccessKey                  string
+	awsAccessSecret               string
+	awsRegion                     string
+	bucket                        string
+	successCounter                int
+	errorCounter                  int
+	successVelocityCounter        int
+	errorVelocityCounter          int
+	currentSuccessVelocityCounter int
+	currentErrorVelocityCounter   int
+	currentSec                    int
 }
 
 type S3Error struct {

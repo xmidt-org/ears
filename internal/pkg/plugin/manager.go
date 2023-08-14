@@ -670,7 +670,17 @@ func (m *manager) SendersStatus() map[string]SenderStatus {
 			status.ReferenceCount++
 			senders[mapKey] = status
 		} else {
-			senders[mapKey] = SenderStatus{Name: v.Name(), Plugin: v.Plugin(), Config: v.Config(), ReferenceCount: 1, Tid: v.tid}
+			senders[mapKey] = SenderStatus{
+				Name:            v.Name(),
+				Plugin:          v.Plugin(),
+				Config:          v.Config(),
+				ReferenceCount:  1,
+				SuccessCount:    v.EventSuccessCount(),
+				ErrorCount:      v.EventErrorCount(),
+				SuccessVelocity: v.EventSuccessVelocity(),
+				ErrorVelocity:   v.EventErrorVelocity(),
+				Tid:             v.tid,
+			}
 		}
 	}
 	return senders

@@ -426,6 +426,7 @@ func (r *Receiver) startShardReceiverEFO(svc *kinesis.Kinesis, stream *kinesis.D
 							e, err := event.New(ctx, payload, event.WithMetadataKeyValue("kinesisMessage", rec), event.WithAck(
 								func(e event.Event) {
 									r.eventSuccessCounter.Add(ctx, 1)
+									r.logSuccess()
 									if kinEvt.ContinuationSequenceNumber != nil {
 										checkpoint.SetCheckpoint(checkpointId, *kinEvt.ContinuationSequenceNumber)
 									}
@@ -433,6 +434,7 @@ func (r *Receiver) startShardReceiverEFO(svc *kinesis.Kinesis, stream *kinesis.D
 								},
 								func(e event.Event, err error) {
 									r.eventFailureCounter.Add(ctx, 1)
+									r.logError()
 									if kinEvt.ContinuationSequenceNumber != nil {
 										checkpoint.SetCheckpoint(checkpointId, *kinEvt.ContinuationSequenceNumber)
 									}
@@ -592,11 +594,13 @@ func (r *Receiver) startShardReceiver(svc *kinesis.Kinesis, stream *kinesis.Desc
 							e, err := event.New(ctx, payload, event.WithMetadataKeyValue("kinesisMessage", *msg), event.WithAck(
 								func(e event.Event) {
 									r.eventSuccessCounter.Add(ctx, 1)
+									r.logSuccess()
 									checkpoint.SetCheckpoint(checkpointId, *msg.SequenceNumber)
 									cancel()
 								},
 								func(e event.Event, err error) {
 									r.eventFailureCounter.Add(ctx, 1)
+									r.logError()
 									checkpoint.SetCheckpoint(checkpointId, *msg.SequenceNumber)
 									cancel()
 								}),

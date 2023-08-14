@@ -176,9 +176,6 @@ func (r *Receiver) logError() {
 	r.Unlock()
 }
 
-func (r *Receiver) handleConnection(message string, server SyslogServer) {
-}
-
 func (r *Receiver) parseSyslogMessage(msg string) ([]byte, error) {
 	const severityMask = 0x07
 	const facilityShift = 3
@@ -187,7 +184,7 @@ func (r *Receiver) parseSyslogMessage(msg string) ([]byte, error) {
 	// Parse the priority value from the message
 
 	if !strings.HasPrefix(msg, "<") || !strings.Contains(msg, ">") {
-		r.logger.Error().Str("op", "syslog.parseSyslogMessage").Msg(fmt.Sprintf("invalid property value"))
+		r.logger.Error().Str("op", "syslog.parseSyslogMessage").Msg("invalid property value")
 		return nil, errors.New("invalid property value")
 	}
 
@@ -195,20 +192,20 @@ func (r *Receiver) parseSyslogMessage(msg string) ([]byte, error) {
 	priorityNum, err := strconv.Atoi(priorityValue)
 	if err != nil {
 		r.logger.Error().Str("op", "syslog.parseSyslogMessage").Msg(fmt.Sprintf("strconv.Atoi error: %s", err))
-		return nil, errors.New(fmt.Sprintf("strconv.Atoi error: %s", err))
+		return nil, fmt.Errorf("strconv.Atoi error: %s", err)
 	}
 
 	// Parse the severity and facility values from the priority
 
 	if priorityNum < 0 || priorityNum > 191 {
 		r.logger.Error().Str("op", "syslog.parseSyslogMessage").Msg(fmt.Sprintf("invalid priority value: %d", priorityNum))
-		return nil, errors.New(fmt.Sprintf("invalid priority value: %d", priorityNum))
+		return nil, fmt.Errorf("invalid priority value: %d", priorityNum)
 	}
 
 	severityVal := Severity(priorityNum & severityMask)
 	if severityVal < Emergency || severityVal > Debug {
 		r.logger.Error().Str("op", "syslog.parseSyslogMessage").Msg(fmt.Sprintf("invalid severity value: %d", severityVal))
-		return nil, errors.New(fmt.Sprintf("invalid severity value: %d", severityVal))
+		return nil, fmt.Errorf("invalid severity value: %d", severityVal)
 	}
 
 	facilityVal := Facility((priorityNum & facilityMask) >> facilityShift)
@@ -284,10 +281,12 @@ func (r *Receiver) Receive(next receiver.NextFn) error {
 					e, err := event.New(ctx, payload, event.WithAck(
 						func(e event.Event) {
 							r.eventSuccessCounter.Add(ctx, 1)
+							r.logSuccess()
 							cancel()
 						},
 						func(e event.Event, err error) {
 							r.eventFailureCounter.Add(ctx, 1)
+							r.logError()
 							cancel()
 						}),
 						event.WithTenant(r.Tenant()),

@@ -187,12 +187,19 @@ type Sender struct {
 	stopped  bool
 	secrets  secret.Vault
 	//metrics  map[string]*SenderMetrics
-	commonLabels        []attribute.KeyValue
-	eventSuccessCounter metric.Int64Counter
-	eventFailureCounter metric.Int64Counter
-	eventBytesCounter   metric.Int64Counter
-	eventProcessingTime metric.Int64Histogram
-	eventSendOutTime    metric.Int64Histogram
+	commonLabels                  []attribute.KeyValue
+	eventSuccessCounter           metric.Int64Counter
+	eventFailureCounter           metric.Int64Counter
+	eventBytesCounter             metric.Int64Counter
+	eventProcessingTime           metric.Int64Histogram
+	eventSendOutTime              metric.Int64Histogram
+	successCounter                int
+	errorCounter                  int
+	successVelocityCounter        int
+	errorVelocityCounter          int
+	currentSuccessVelocityCounter int
+	currentErrorVelocityCounter   int
+	currentSec                    int
 }
 
 type ManualHashPartitioner struct {

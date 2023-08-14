@@ -355,6 +355,7 @@ func (r *Receiver) startReceiveWorker(svc *sqs.SQS, n int) {
 							entry := sqs.DeleteMessageBatchRequestEntry{Id: msg.MessageId, ReceiptHandle: msg.ReceiptHandle}
 							entries <- &entry
 							r.eventSuccessCounter.Add(ctx, 1)
+							r.logSuccess()
 						} else {
 							log.Ctx(e.Context()).Error().Str("op", "SQS.receiveWorker").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Int("workerNum", n).Msg("failed to process message with missing sqs metadata")
 						}
@@ -369,6 +370,7 @@ func (r *Receiver) startReceiveWorker(svc *sqs.SQS, n int) {
 						}
 						// a nack below max retries - this is the only case where we do not delete the message yet
 						r.eventFailureCounter.Add(ctx, 1)
+						r.logError()
 						cancel()
 					}),
 					event.WithTenant(r.Tenant()),

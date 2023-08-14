@@ -290,20 +290,16 @@ func (r *Receiver) Receive(next receiver.NextFn) error {
 	r.shardsCount = &gatewayResp.Shards
 	r.shardUpdateListener(r.shardDistributor)
 	r.shardMonitor(r.shardDistributor)
-
 	if err != nil {
 		return err
 	}
 	return nil
-
 }
 
 func (r *Receiver) startShardReceiver(shardIdx int) error {
-
 	totalShardNum := *r.shardsCount
 	// Register the messageCreate func as a callback for MessageCreate events.
 	r.sess.AddHandler(r.messageCreate)
-
 	// In this example, we only care about receiving message events.
 	r.sess.Identify.Intents = discordgo.IntentsGuildMessages
 	r.sess.Identify.Shard = &[2]int{shardIdx, totalShardNum}
@@ -357,15 +353,16 @@ func (r *Receiver) messageCreate(s *discordgo.Session, m *discordgo.MessageCreat
 			r.logger.Error().Str("op", "Discord.startReceiver").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Msg("cannot parse message :" + err.Error())
 			return
 		}
-
 		ctx, cancel := context.WithTimeout(context.Background(), time.Duration(5)*time.Second)
 		e, err := event.New(ctx, payload, event.WithMetadataKeyValue("discordMessage", 1), event.WithAck(
 			func(e event.Event) {
 				r.eventSuccessCounter.Add(ctx, 1)
+				r.logSuccess()
 				cancel()
 			},
 			func(e event.Event, err error) {
 				r.eventFailureCounter.Add(ctx, 1)
+				r.logError()
 				cancel()
 			}),
 			event.WithTenant(r.Tenant()),
