@@ -285,10 +285,12 @@ func (s *Sender) NewSyncProducers(count int) ([]sarama.SyncProducer, sarama.Clie
 	for i := 0; i < count; i++ {
 		c, err := sarama.NewClient(brokers, config)
 		if err != nil {
+			s.logError()
 			return nil, nil, err
 		}
 		p, err := sarama.NewSyncProducerFromClient(c)
 		if nil != err {
+			s.logError()
 			c.Close()
 			return nil, nil, err
 		}
@@ -383,6 +385,7 @@ func (s *Sender) Send(e event.Event) {
 	if err != nil {
 		log.Ctx(e.Context()).Error().Str("op", "kafka.Send").Str("name", s.Name()).Str("tid", s.Tenant().ToString()).Msg("failed to marshal message: " + err.Error())
 		s.eventFailureCounter.Add(e.Context(), 1.0, s.getAttributes(e, s.config.DynamicMetricLabels)...)
+		s.logError()
 		e.Nack(err)
 		return
 	}

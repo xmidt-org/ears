@@ -188,6 +188,7 @@ func (r *Receiver) Start(handler func(*sarama.ConsumerMessage) bool) {
 		err := r.client.Consume(r.ctx, r.topics, r)
 		if err != nil { // the receiver itself is the group handler
 			r.logger.Error().Str("op", "kafka.Start").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Msg(err.Error())
+			r.logError()
 			//Sleep for a little bit to prevent busy loop
 			time.Sleep(time.Second)
 		} else {
@@ -195,6 +196,7 @@ func (r *Receiver) Start(handler func(*sarama.ConsumerMessage) bool) {
 		}
 		// check if context was canceled, signaling that the consumer should stop
 		if nil != r.ctx.Err() {
+			r.logError()
 			r.logger.Error().Str("op", "kafka.Start").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Msg("context canceled, stopping consumption")
 			return
 		}
@@ -279,7 +281,6 @@ func (r *Receiver) Receive(next receiver.NextFn) error {
 		}
 	}
 	r.Lock()
-	r.startTime = time.Now()
 	r.next = next
 	r.done = make(chan struct{})
 	r.stopped = false
@@ -309,12 +310,10 @@ func (r *Receiver) Receive(next receiver.NextFn) error {
 				return false
 			}
 			r.logger.Debug().Str("op", "kafka.Receive").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Str("topic", msg.Topic).Int("partition", int(msg.Partition)).Int("offset", int(msg.Offset)).Msg("message received")
-			r.Lock()
-			r.count++
-			r.Unlock()
 			var pl interface{}
 			err := json.Unmarshal(msg.Value, &pl)
 			if err != nil {
+				r.logError()
 				r.logger.Error().Str("op", "kafka.Receive").Msg("cannot parse payload: " + err.Error())
 				return false
 			}
@@ -339,6 +338,7 @@ func (r *Receiver) Receive(next receiver.NextFn) error {
 				event.WithTenant(r.Tenant()),
 				event.WithTracePayloadOnNack(*r.config.TracePayloadOnNack))
 			if err != nil {
+				r.logError()
 				r.logger.Error().Str("op", "kafka.Receive").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Msg("cannot create event: " + err.Error())
 				return false
 			}
@@ -348,19 +348,8 @@ func (r *Receiver) Receive(next receiver.NextFn) error {
 	}()
 	r.logger.Info().Str("op", "kafka.Receive").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Msg("waiting for receive done")
 	<-r.done
-	r.Lock()
-	elapsedMs := time.Since(r.startTime).Milliseconds()
-	throughput := 1000 * r.count / (int(elapsedMs) + 1)
-	cnt := r.count
-	r.Unlock()
-	r.logger.Info().Str("op", "kafka.Receive").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Int("elapsedMs", int(elapsedMs)).Int("count", cnt).Int("throughput", throughput).Msg("receive done")
+	r.logger.Info().Str("op", "kafka.Receive").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Msg("receive done")
 	return nil
-}
-
-func (r *Receiver) Count() int {
-	r.Lock()
-	defer r.Unlock()
-	return r.count
 }
 
 func (r *Receiver) StopReceiving(ctx context.Context) error {

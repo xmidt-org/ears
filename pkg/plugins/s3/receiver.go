@@ -153,10 +153,12 @@ func (r *Receiver) initPlugin() error {
 	}
 	sess, err = session.NewSession(&aws.Config{Region: aws.String(r.awsRegion), Credentials: creds})
 	if nil != err {
+		r.logError()
 		return &S3Error{op: "NewSession", err: err}
 	}
 	_, err = sess.Config.Credentials.Get()
 	if nil != err {
+		r.logError()
 		return &S3Error{op: "GetCredentials", err: err}
 	}
 	r.s3Service = s3.New(sess)
@@ -206,16 +208,15 @@ func (r *Receiver) Receive(next receiver.NextFn) error {
 		wabuf := aws.NewWriteAtBuffer([]byte{})
 		_, err = downloader.Download(wabuf, params)
 		if err != nil {
+			r.logError()
 			r.logger.Error().Str("op", "SQS.receiveWorker").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Msg("cannot download message from s3: " + err.Error())
 			continue
 		}
 		buf := wabuf.Bytes()
-		r.Lock()
-		r.count++
-		r.Unlock()
 		var payload interface{}
 		err = json.Unmarshal(buf, &payload)
 		if err != nil {
+			r.logError()
 			r.logger.Error().Str("op", "SQS.receiveWorker").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Msg("cannot parse message: " + err.Error())
 			continue
 		}
@@ -236,6 +237,7 @@ func (r *Receiver) Receive(next receiver.NextFn) error {
 			event.WithTenant(r.Tenant()),
 			event.WithOtelTracing(r.Name()))
 		if err != nil {
+			r.logError()
 			r.logger.Error().Str("op", "SQS.receiveWorker").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Msg("cannot create event: " + err.Error())
 		}
 		r.Trigger(e)
@@ -248,12 +250,6 @@ func (r *Receiver) Receive(next receiver.NextFn) error {
 	r.Unlock()
 	r.logger.Info().Str("op", "SQS.Receive").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Int("elapsedMs", int(elapsedMs)).Msg("receive done")
 	return nil
-}
-
-func (r *Receiver) Count() int {
-	r.Lock()
-	defer r.Unlock()
-	return r.count
 }
 
 func (r *Receiver) StopReceiving(ctx context.Context) error {

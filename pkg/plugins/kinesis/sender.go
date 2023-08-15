@@ -161,15 +161,18 @@ func (s *Sender) initPlugin() error {
 	}
 	sess, err = session.NewSession(&aws.Config{Region: aws.String(s.awsRegion), Credentials: creds})
 	if nil != err {
+		s.logError()
 		return &KinesisError{op: "NewSession", err: err}
 	}
 	_, err = sess.Config.Credentials.Get()
 	if nil != err {
+		s.logError()
 		return &KinesisError{op: "GetCredentials", err: err}
 	}
 	s.kinesisService = kinesis.New(sess)
 	_, err = s.kinesisService.DescribeStream(&kinesis.DescribeStreamInput{StreamName: aws.String(s.streamName)})
 	if err != nil {
+		s.logError()
 		return err
 	}
 	s.done = make(chan struct{})
@@ -182,7 +185,7 @@ func (s *Sender) startTimedSender() {
 		for {
 			select {
 			case <-s.done:
-				s.logger.Info().Str("op", "Kinesis.timedSender").Str("name", s.Name()).Str("tid", s.Tenant().ToString()).Int("sendCount", s.count).Msg("stopping kinesis sender")
+				s.logger.Info().Str("op", "Kinesis.timedSender").Str("name", s.Name()).Str("tid", s.Tenant().ToString()).Msg("stopping kinesis sender")
 				return
 			case <-time.After(time.Duration(*s.config.SendTimeout) * time.Second):
 			}
@@ -198,12 +201,6 @@ func (s *Sender) startTimedSender() {
 			}
 		}
 	}()
-}
-
-func (s *Sender) Count() int {
-	s.Lock()
-	defer s.Unlock()
-	return s.count
 }
 
 func (s *Sender) StopSending(ctx context.Context) {
@@ -227,10 +224,11 @@ func (s *Sender) send(events []event.Event) {
 	batchReqs := []*kinesis.PutRecordsRequestEntry{}
 	for idx, evt := range events {
 		if idx == 0 {
-			log.Ctx(evt.Context()).Debug().Str("op", "Kinesis.sendWorker").Str("name", s.Name()).Str("tid", s.Tenant().ToString()).Int("eventIdx", idx).Int("batchSize", len(events)).Int("sendCount", s.count).Msg("send message batch")
+			log.Ctx(evt.Context()).Debug().Str("op", "Kinesis.sendWorker").Str("name", s.Name()).Str("tid", s.Tenant().ToString()).Int("eventIdx", idx).Int("batchSize", len(events)).Msg("send message batch")
 		}
 		buf, err := json.Marshal(evt.Payload())
 		if err != nil {
+			s.logError()
 			continue
 		}
 		partitionKey := s.config.PartitionKey
@@ -259,10 +257,10 @@ func (s *Sender) send(events []event.Event) {
 	start := time.Now()
 	putResults, err := s.kinesisService.PutRecordsWithContext(events[0].Context(), &batchPut)
 	s.eventSendOutTime.Record(events[0].Context(), time.Since(start).Milliseconds())
-	successCount := 0
 	if err != nil {
 		log.Ctx(events[0].Context()).Error().Str("op", "Kinesis.sendWorker").Str("name", s.Name()).Str("tid", s.Tenant().ToString()).Int("batchSize", len(events)).Msg("batch send error: " + err.Error())
 		for idx := range events {
+			s.logError()
 			s.eventFailureCounter.Add(events[idx].Context(), 1)
 			events[idx].Nack(err)
 		}
@@ -271,7 +269,6 @@ func (s *Sender) send(events []event.Event) {
 			if putResult.ErrorCode == nil {
 				s.eventSuccessCounter.Add(events[idx].Context(), 1)
 				s.logSuccess()
-				successCount++
 				events[idx].Ack()
 			} else {
 				s.eventFailureCounter.Add(events[idx].Context(), 1)
@@ -280,9 +277,6 @@ func (s *Sender) send(events []event.Event) {
 			}
 		}
 	}
-	s.Lock()
-	s.count += successCount
-	s.Unlock()
 }
 
 func (s *Sender) Send(e event.Event) {

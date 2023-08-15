@@ -143,12 +143,6 @@ func (s *Sender) initPlugin() error {
 	return nil
 }
 
-func (s *Sender) Count() int {
-	s.Lock()
-	defer s.Unlock()
-	return s.count
-}
-
 func (s *Sender) StopSending(ctx context.Context) {
 	s.eventSuccessCounter.Unbind()
 	s.eventFailureCounter.Unbind()
@@ -184,9 +178,6 @@ func (s *Sender) Send(e event.Event) {
 	log.Ctx(e.Context()).Debug().Str("op", "redis.Send").Str("name", s.Name()).Str("tid", s.Tenant().ToString()).Msg("sent message on redis channel")
 	s.eventSuccessCounter.Add(e.Context(), 1)
 	s.logSuccess()
-	s.Lock()
-	s.count++
-	s.Unlock()
 	e.Ack()
 }
 

@@ -168,10 +168,12 @@ func (s *Sender) initPlugin() error {
 	}
 	sess, err = session.NewSession(&aws.Config{Region: aws.String(s.awsRegion), Credentials: creds})
 	if nil != err {
+		s.logError()
 		return &SQSError{op: "NewSession", err: err}
 	}
 	_, err = sess.Config.Credentials.Get()
 	if nil != err {
+		s.logError()
 		return &SQSError{op: "GetCredentials", err: err}
 	}
 	s.sqsService = sqs.New(sess)
@@ -181,6 +183,7 @@ func (s *Sender) initPlugin() error {
 	}
 	_, err = s.sqsService.GetQueueAttributes(queueAttributesParams)
 	if nil != err {
+		s.logError()
 		return &SQSError{op: "GetQueueAttributes", err: err}
 	}
 	s.done = make(chan struct{})
@@ -193,7 +196,7 @@ func (s *Sender) startTimedSender() {
 		for {
 			select {
 			case <-s.done:
-				s.logger.Info().Str("op", "SQS.timedSender").Str("name", s.Name()).Str("tid", s.Tenant().ToString()).Int("sendCount", s.count).Msg("stopping sqs sender")
+				s.logger.Info().Str("op", "SQS.timedSender").Str("name", s.Name()).Str("tid", s.Tenant().ToString()).Msg("stopping sqs sender")
 				return
 			case <-time.After(time.Duration(*s.config.SendTimeout) * time.Second):
 			}
@@ -209,12 +212,6 @@ func (s *Sender) startTimedSender() {
 			}
 		}
 	}()
-}
-
-func (s *Sender) Count() int {
-	s.Lock()
-	defer s.Unlock()
-	return s.count
 }
 
 func (s *Sender) StopSending(ctx context.Context) {
@@ -238,10 +235,11 @@ func (s *Sender) send(events []event.Event) {
 	entries := make([]*sqs.SendMessageBatchRequestEntry, 0)
 	for idx, evt := range events {
 		if idx == 0 {
-			log.Ctx(evt.Context()).Debug().Str("op", "SQS.sendWorker").Str("name", s.Name()).Str("tid", s.Tenant().ToString()).Int("eventIdx", idx).Int("batchSize", len(events)).Int("sendCount", s.count).Msg("send message batch")
+			log.Ctx(evt.Context()).Debug().Str("op", "SQS.sendWorker").Str("name", s.Name()).Str("tid", s.Tenant().ToString()).Int("eventIdx", idx).Int("batchSize", len(events)).Msg("send message batch")
 		}
 		buf, err := json.Marshal(evt.Payload())
 		if err != nil {
+			s.logError()
 			continue
 		}
 		attributes := make(map[string]*sqs.MessageAttributeValue)
@@ -291,9 +289,6 @@ func (s *Sender) send(events []event.Event) {
 					s.eventSuccessCounter.Add(evt.Context(), 1)
 					s.logSuccess()
 					evt.Ack()
-					s.Lock()
-					s.count++
-					s.Unlock()
 					break
 				}
 			}

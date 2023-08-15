@@ -18,15 +18,13 @@ import (
 	"context"
 	"github.com/Shopify/sarama"
 	"github.com/rs/zerolog"
+	pkgplugin "github.com/xmidt-org/ears/pkg/plugin"
 	"github.com/xmidt-org/ears/pkg/secret"
 	"github.com/xmidt-org/ears/pkg/tenant"
 	"github.com/xorcare/pointer"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
 	"sync"
-	"time"
-
-	pkgplugin "github.com/xmidt-org/ears/pkg/plugin"
 
 	"github.com/xmidt-org/ears/pkg/receiver"
 	"github.com/xmidt-org/ears/pkg/sender"
@@ -89,16 +87,14 @@ type ReceiverConfig struct {
 
 type Receiver struct {
 	sync.Mutex
-	done      chan struct{}
-	stopped   bool
-	config    ReceiverConfig
-	name      string
-	plugin    string
-	tid       tenant.Id
-	next      receiver.NextFn
-	logger    *zerolog.Logger
-	count     int
-	startTime time.Time
+	done    chan struct{}
+	stopped bool
+	config  ReceiverConfig
+	name    string
+	plugin  string
+	tid     tenant.Id
+	next    receiver.NextFn
+	logger  *zerolog.Logger
 	sarama.ConsumerGroupSession
 	wg                            sync.WaitGroup
 	ready                         chan bool

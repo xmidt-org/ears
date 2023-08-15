@@ -184,6 +184,7 @@ func (r *Receiver) parseSyslogMessage(msg string) ([]byte, error) {
 	// Parse the priority value from the message
 
 	if !strings.HasPrefix(msg, "<") || !strings.Contains(msg, ">") {
+		r.logError()
 		r.logger.Error().Str("op", "syslog.parseSyslogMessage").Msg("invalid property value")
 		return nil, errors.New("invalid property value")
 	}
@@ -191,6 +192,7 @@ func (r *Receiver) parseSyslogMessage(msg string) ([]byte, error) {
 	priorityValue := (msg)[1:strings.Index(msg, ">")]
 	priorityNum, err := strconv.Atoi(priorityValue)
 	if err != nil {
+		r.logError()
 		r.logger.Error().Str("op", "syslog.parseSyslogMessage").Msg(fmt.Sprintf("strconv.Atoi error: %s", err))
 		return nil, fmt.Errorf("strconv.Atoi error: %s", err)
 	}
@@ -198,12 +200,14 @@ func (r *Receiver) parseSyslogMessage(msg string) ([]byte, error) {
 	// Parse the severity and facility values from the priority
 
 	if priorityNum < 0 || priorityNum > 191 {
+		r.logError()
 		r.logger.Error().Str("op", "syslog.parseSyslogMessage").Msg(fmt.Sprintf("invalid priority value: %d", priorityNum))
 		return nil, fmt.Errorf("invalid priority value: %d", priorityNum)
 	}
 
 	severityVal := Severity(priorityNum & severityMask)
 	if severityVal < Emergency || severityVal > Debug {
+		r.logError()
 		r.logger.Error().Str("op", "syslog.parseSyslogMessage").Msg(fmt.Sprintf("invalid severity value: %d", severityVal))
 		return nil, fmt.Errorf("invalid severity value: %d", severityVal)
 	}
@@ -256,10 +260,12 @@ func (r *Receiver) Receive(next receiver.NextFn) error {
 	r.syslogServer = NewSyslogServer(addr)
 	udpAddr, err := net.ResolveUDPAddr("udp", r.syslogServer.Addr)
 	if err != nil {
+		r.logError()
 		r.logger.Error().Str("op", "syslog.Receive").Str("error", "error resolving UDP address").Msg(err.Error())
 	}
 	r.syslogServer.conn, err = net.ListenUDP("udp", udpAddr)
 	if err != nil {
+		r.logError()
 		r.logger.Error().Str("op", "syslog.Receive").Str("error", "error listening to UDP address").Msg(err.Error())
 	}
 	r.logger.Info().Str("op", "syslog.Receive").Msg(fmt.Sprintf("syslog plugin listening on port %s", r.config.Port))
@@ -270,12 +276,14 @@ func (r *Receiver) Receive(next receiver.NextFn) error {
 		go func() {
 			parsedMessage, err := r.parseSyslogMessage(message)
 			if err != nil {
+				r.logError()
 				r.logger.Error().Str("op", "syslog.Receive").Str("error", "error parsing message").Msg(err.Error())
 			} else {
 				ctx, cancel := context.WithTimeout(context.Background(), time.Duration(5)*time.Second)
 				var payload interface{}
 				err = json.Unmarshal(parsedMessage, &payload)
 				if err != nil {
+					r.logError()
 					r.logger.Error().Str("op", "syslog.Receive").Str("error", "error reparsing message").Msg(err.Error())
 				} else {
 					e, err := event.New(ctx, payload, event.WithAck(
@@ -293,6 +301,7 @@ func (r *Receiver) Receive(next receiver.NextFn) error {
 						event.WithOtelTracing(r.Name()))
 					if err != nil {
 						cancel()
+						r.logError()
 						r.logger.Error().Str("op", "syslog.Receive").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Msg("cannot create event: " + err.Error())
 						//return
 					}
@@ -303,6 +312,7 @@ func (r *Receiver) Receive(next receiver.NextFn) error {
 		}()
 	}
 	if err := scanner.Err(); err != nil {
+		r.logError()
 		r.logger.Error().Str("op", "syslog.Receive").Msg(fmt.Sprintf("Scanner error: %s", err))
 	}
 	return nil

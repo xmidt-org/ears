@@ -181,6 +181,7 @@ func (r *Receiver) shardMonitor(distributor sharder.ShardDistributor) {
 			sess, _ := discordgo.New("Bot " + r.config.BotToken)
 			gatewayResp, err := sess.GatewayBot()
 			if err != nil {
+				r.logError()
 				r.logger.Error().Str("op", "Discord.shardMonitor").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Msg("cannot get number of shards: " + err.Error())
 				continue
 			}
@@ -280,11 +281,13 @@ func (r *Receiver) Receive(next receiver.NextFn) error {
 	var err error
 	r.shardDistributor, err = sharder.GetDefaultHashDistributor(sharderConfig.NodeName, 1, sharderConfig.StorageConfig)
 	if err != nil {
+		r.logError()
 		return err
 	}
 	r.sess, _ = discordgo.New("Bot " + r.config.BotToken)
 	gatewayResp, err := r.sess.GatewayBot()
 	if err != nil {
+		r.logError()
 		return err
 	}
 	r.shardsCount = &gatewayResp.Shards
@@ -350,6 +353,7 @@ func (r *Receiver) messageCreate(s *discordgo.Session, m *discordgo.MessageCreat
 		var payload interface{}
 		err := json.Unmarshal(msg, &payload)
 		if err != nil {
+			r.logError()
 			r.logger.Error().Str("op", "Discord.startReceiver").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Msg("cannot parse message :" + err.Error())
 			return
 		}
