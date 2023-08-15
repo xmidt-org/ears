@@ -95,6 +95,7 @@ func NewReceiver(tid tenant.Id, plugin string, name string, config interface{}, 
 		awsRegion:                      secrets.Secret(ctx, cfg.AWSRegion),
 		streamName:                     secrets.Secret(ctx, cfg.StreamName),
 		consumerName:                   secrets.Secret(ctx, cfg.ConsumerName),
+		currentSec:                     time.Now().Unix(),
 	}
 	r.Lock()
 	r.stopChannelMap = make(map[int]chan bool)
@@ -132,6 +133,30 @@ func NewReceiver(tid tenant.Id, plugin string, name string, config interface{}, 
 
 //TODO: generic solution for retry policy on nack
 //TODO: checkpoint to advance on nack after final retry
+
+func (r *Receiver) logSuccess() {
+	r.Lock()
+	r.successCounter++
+	if time.Now().Unix() != r.currentSec {
+		r.successVelocityCounter = r.currentSuccessVelocityCounter
+		r.currentSuccessVelocityCounter = 0
+		r.currentSec = time.Now().Unix()
+	}
+	r.currentSuccessVelocityCounter++
+	r.Unlock()
+}
+
+func (r *Receiver) logError() {
+	r.Lock()
+	r.errorCounter++
+	if time.Now().Unix() != r.currentSec {
+		r.errorVelocityCounter = r.currentErrorVelocityCounter
+		r.currentErrorVelocityCounter = 0
+		r.currentSec = time.Now().Unix()
+	}
+	r.currentErrorVelocityCounter++
+	r.Unlock()
+}
 
 func (r *Receiver) getStopChannel(shardIdx int) chan bool {
 	var c chan bool
@@ -401,6 +426,7 @@ func (r *Receiver) startShardReceiverEFO(svc *kinesis.Kinesis, stream *kinesis.D
 							e, err := event.New(ctx, payload, event.WithMetadataKeyValue("kinesisMessage", rec), event.WithAck(
 								func(e event.Event) {
 									r.eventSuccessCounter.Add(ctx, 1)
+									r.logSuccess()
 									if kinEvt.ContinuationSequenceNumber != nil {
 										checkpoint.SetCheckpoint(checkpointId, *kinEvt.ContinuationSequenceNumber)
 									}
@@ -408,6 +434,7 @@ func (r *Receiver) startShardReceiverEFO(svc *kinesis.Kinesis, stream *kinesis.D
 								},
 								func(e event.Event, err error) {
 									r.eventFailureCounter.Add(ctx, 1)
+									r.logError()
 									if kinEvt.ContinuationSequenceNumber != nil {
 										checkpoint.SetCheckpoint(checkpointId, *kinEvt.ContinuationSequenceNumber)
 									}
@@ -567,11 +594,13 @@ func (r *Receiver) startShardReceiver(svc *kinesis.Kinesis, stream *kinesis.Desc
 							e, err := event.New(ctx, payload, event.WithMetadataKeyValue("kinesisMessage", *msg), event.WithAck(
 								func(e event.Event) {
 									r.eventSuccessCounter.Add(ctx, 1)
+									r.logSuccess()
 									checkpoint.SetCheckpoint(checkpointId, *msg.SequenceNumber)
 									cancel()
 								},
 								func(e event.Event, err error) {
 									r.eventFailureCounter.Add(ctx, 1)
+									r.logError()
 									checkpoint.SetCheckpoint(checkpointId, *msg.SequenceNumber)
 									cancel()
 								}),
@@ -815,4 +844,34 @@ func (r *Receiver) Plugin() string {
 
 func (r *Receiver) Tenant() tenant.Id {
 	return r.tid
+}
+
+func (r *Receiver) EventSuccessCount() int {
+	r.Lock()
+	defer r.Unlock()
+	return r.successCounter
+}
+
+func (r *Receiver) EventSuccessVelocity() int {
+	r.Lock()
+	defer r.Unlock()
+	return r.successVelocityCounter
+}
+
+func (r *Receiver) EventErrorCount() int {
+	r.Lock()
+	defer r.Unlock()
+	return r.errorCounter
+}
+
+func (r *Receiver) EventErrorVelocity() int {
+	r.Lock()
+	defer r.Unlock()
+	return r.errorVelocityCounter
+}
+
+func (r *Receiver) EventTs() int64 {
+	r.Lock()
+	defer r.Unlock()
+	return r.currentSec
 }

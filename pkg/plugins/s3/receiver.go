@@ -77,6 +77,7 @@ func NewReceiver(tid tenant.Id, plugin string, name string, config interface{}, 
 		awsAccessSecret: secrets.Secret(ctx, cfg.AWSSecretAccessKey),
 		awsRegion:       secrets.Secret(ctx, cfg.AWSRegion),
 		bucket:          secrets.Secret(ctx, cfg.Bucket),
+		currentSec:      time.Now().Unix(),
 	}
 	r.initPlugin()
 	hostname, _ := os.Hostname()
@@ -108,6 +109,30 @@ func NewReceiver(tid tenant.Id, plugin string, name string, config interface{}, 
 			metric.WithUnit(unit.Bytes),
 		).Bind(commonLabels...)
 	return r, nil
+}
+
+func (r *Receiver) logSuccess() {
+	r.Lock()
+	r.successCounter++
+	if time.Now().Unix() != r.currentSec {
+		r.successVelocityCounter = r.currentSuccessVelocityCounter
+		r.currentSuccessVelocityCounter = 0
+		r.currentSec = time.Now().Unix()
+	}
+	r.currentSuccessVelocityCounter++
+	r.Unlock()
+}
+
+func (r *Receiver) logError() {
+	r.Lock()
+	r.errorCounter++
+	if time.Now().Unix() != r.currentSec {
+		r.errorVelocityCounter = r.currentErrorVelocityCounter
+		r.currentErrorVelocityCounter = 0
+		r.currentSec = time.Now().Unix()
+	}
+	r.currentErrorVelocityCounter++
+	r.Unlock()
 }
 
 func (r *Receiver) initPlugin() error {
@@ -199,11 +224,13 @@ func (r *Receiver) Receive(next receiver.NextFn) error {
 		e, err := event.New(ctx, payload, event.WithAck(
 			func(e event.Event) {
 				r.eventSuccessCounter.Add(ctx, 1)
+				r.logSuccess()
 				cancel()
 			},
 			func(e event.Event, err error) {
 				log.Ctx(e.Context()).Error().Str("op", "SQS.receiveWorker").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Msg("failed to process message: " + err.Error())
 				r.eventFailureCounter.Add(ctx, 1)
+				r.logError()
 				cancel()
 			}),
 			event.WithTenant(r.Tenant()),
@@ -265,4 +292,34 @@ func (r *Receiver) Plugin() string {
 
 func (r *Receiver) Tenant() tenant.Id {
 	return r.tid
+}
+
+func (r *Receiver) EventSuccessCount() int {
+	r.Lock()
+	defer r.Unlock()
+	return r.successCounter
+}
+
+func (r *Receiver) EventSuccessVelocity() int {
+	r.Lock()
+	defer r.Unlock()
+	return r.successVelocityCounter
+}
+
+func (r *Receiver) EventErrorCount() int {
+	r.Lock()
+	defer r.Unlock()
+	return r.errorCounter
+}
+
+func (r *Receiver) EventErrorVelocity() int {
+	r.Lock()
+	defer r.Unlock()
+	return r.errorVelocityCounter
+}
+
+func (r *Receiver) EventTs() int64 {
+	r.Lock()
+	defer r.Unlock()
+	return r.currentSec
 }

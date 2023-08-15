@@ -56,14 +56,21 @@ type ReceiverConfig struct {
 
 type Receiver struct {
 	sync.Mutex
-	done    chan struct{}
-	stopped bool
-	config  ReceiverConfig
-	name    string
-	plugin  string
-	tid     tenant.Id
-	next    receiver.NextFn
-	logger  zerolog.Logger
+	done                          chan struct{}
+	stopped                       bool
+	config                        ReceiverConfig
+	name                          string
+	plugin                        string
+	tid                           tenant.Id
+	next                          receiver.NextFn
+	logger                        zerolog.Logger
+	successCounter                int
+	errorCounter                  int
+	successVelocityCounter        int
+	errorVelocityCounter          int
+	currentSuccessVelocityCounter int
+	currentErrorVelocityCounter   int
+	currentSec                    int64
 }
 
 var DefaultSenderConfig = SenderConfig{}
@@ -73,13 +80,20 @@ type SenderConfig struct {
 
 type Sender struct {
 	sync.Mutex
-	name                string
-	plugin              string
-	tid                 tenant.Id
-	config              SenderConfig
-	eventSuccessCounter metric.BoundInt64Counter
-	eventFailureCounter metric.BoundInt64Counter
-	eventBytesCounter   metric.BoundInt64Counter
-	eventProcessingTime metric.BoundInt64Histogram
-	eventSendOutTime    metric.BoundInt64Histogram
+	name                          string
+	plugin                        string
+	tid                           tenant.Id
+	config                        SenderConfig
+	eventSuccessCounter           metric.BoundInt64Counter
+	eventFailureCounter           metric.BoundInt64Counter
+	eventBytesCounter             metric.BoundInt64Counter
+	eventProcessingTime           metric.BoundInt64Histogram
+	eventSendOutTime              metric.BoundInt64Histogram
+	successCounter                int
+	errorCounter                  int
+	successVelocityCounter        int
+	errorVelocityCounter          int
+	currentSuccessVelocityCounter int
+	currentErrorVelocityCounter   int
+	currentSec                    int64
 }

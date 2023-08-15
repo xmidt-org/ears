@@ -77,6 +77,7 @@ func NewSender(tid tenant.Id, plugin string, name string, config interface{}, se
 		awsAccessSecret: secrets.Secret(ctx, cfg.AWSSecretAccessKey),
 		awsRegion:       secrets.Secret(ctx, cfg.AWSRegion),
 		bucket:          secrets.Secret(ctx, cfg.Bucket),
+		currentSec:      time.Now().Unix(),
 	}
 	s.initPlugin()
 	hostname, _ := os.Hostname()
@@ -119,6 +120,30 @@ func NewSender(tid tenant.Id, plugin string, name string, config interface{}, se
 			metric.WithUnit(unit.Milliseconds),
 		).Bind(commonLabels...)
 	return s, nil
+}
+
+func (s *Sender) logSuccess() {
+	s.Lock()
+	s.successCounter++
+	if time.Now().Unix() != s.currentSec {
+		s.successVelocityCounter = s.currentSuccessVelocityCounter
+		s.currentSuccessVelocityCounter = 0
+		s.currentSec = time.Now().Unix()
+	}
+	s.currentSuccessVelocityCounter++
+	s.Unlock()
+}
+
+func (s *Sender) logError() {
+	s.Lock()
+	s.errorCounter++
+	if time.Now().Unix() != s.currentSec {
+		s.errorVelocityCounter = s.currentErrorVelocityCounter
+		s.currentErrorVelocityCounter = 0
+		s.currentSec = time.Now().Unix()
+	}
+	s.currentErrorVelocityCounter++
+	s.Unlock()
 }
 
 func (s *Sender) initPlugin() error {
@@ -185,6 +210,7 @@ func (s *Sender) Send(evt event.Event) {
 	filePath, ok := fp.(string)
 	if !ok {
 		s.eventFailureCounter.Add(evt.Context(), 1)
+		s.logError()
 		evt.Nack(errors.New("s3 file path not a string"))
 		return
 	}
@@ -192,6 +218,7 @@ func (s *Sender) Send(evt event.Event) {
 	fileName, ok := fn.(string)
 	if !ok {
 		s.eventFailureCounter.Add(evt.Context(), 1)
+		s.logError()
 		evt.Nack(errors.New("s3 file name not a string"))
 		return
 	}
@@ -205,12 +232,14 @@ func (s *Sender) Send(evt event.Event) {
 	s.eventSendOutTime.Record(evt.Context(), time.Since(start).Milliseconds())
 	if err != nil {
 		s.eventFailureCounter.Add(evt.Context(), 1)
+		s.logError()
 		evt.Nack(err)
 	} else {
 		s.Lock()
 		s.count++
 		s.Unlock()
 		s.eventSuccessCounter.Add(evt.Context(), 1)
+		s.logSuccess()
 		evt.Ack()
 	}
 }
@@ -233,4 +262,34 @@ func (s *Sender) Plugin() string {
 
 func (s *Sender) Tenant() tenant.Id {
 	return s.tid
+}
+
+func (s *Sender) EventSuccessCount() int {
+	s.Lock()
+	defer s.Unlock()
+	return s.successCounter
+}
+
+func (s *Sender) EventSuccessVelocity() int {
+	s.Lock()
+	defer s.Unlock()
+	return s.successVelocityCounter
+}
+
+func (s *Sender) EventErrorCount() int {
+	s.Lock()
+	defer s.Unlock()
+	return s.errorCounter
+}
+
+func (s *Sender) EventErrorVelocity() int {
+	s.Lock()
+	defer s.Unlock()
+	return s.errorVelocityCounter
+}
+
+func (s *Sender) EventTs() int64 {
+	s.Lock()
+	defer s.Unlock()
+	return s.currentSec
 }

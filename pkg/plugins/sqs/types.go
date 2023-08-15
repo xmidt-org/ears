@@ -92,28 +92,35 @@ type ReceiverConfig struct {
 
 type Receiver struct {
 	sync.Mutex
-	done                chan struct{}
-	stopped             bool
-	config              ReceiverConfig
-	name                string
-	plugin              string
-	tid                 tenant.Id
-	next                receiver.NextFn
-	logger              *zerolog.Logger
-	secrets             secret.Vault
-	receiveCount        int
-	deleteCount         int
-	startTime           time.Time
-	eventSuccessCounter metric.BoundInt64Counter
-	eventFailureCounter metric.BoundInt64Counter
-	eventBytesCounter   metric.BoundInt64Counter
-	eventQueueDepth     metric.BoundInt64Histogram
-	sqs                 *sqs.SQS
-	queueUrl            string
-	awsRoleArn          string
-	awsAccessKey        string
-	awsAccessSecret     string
-	awsRegion           string
+	done                          chan struct{}
+	stopped                       bool
+	config                        ReceiverConfig
+	name                          string
+	plugin                        string
+	tid                           tenant.Id
+	next                          receiver.NextFn
+	logger                        *zerolog.Logger
+	secrets                       secret.Vault
+	receiveCount                  int
+	deleteCount                   int
+	startTime                     time.Time
+	eventSuccessCounter           metric.BoundInt64Counter
+	eventFailureCounter           metric.BoundInt64Counter
+	eventBytesCounter             metric.BoundInt64Counter
+	eventQueueDepth               metric.BoundInt64Histogram
+	sqs                           *sqs.SQS
+	queueUrl                      string
+	awsRoleArn                    string
+	awsAccessKey                  string
+	awsAccessSecret               string
+	awsRegion                     string
+	successCounter                int
+	errorCounter                  int
+	successVelocityCounter        int
+	errorVelocityCounter          int
+	currentSuccessVelocityCounter int
+	currentErrorVelocityCounter   int
+	currentSec                    int64
 }
 
 var DefaultSenderConfig = SenderConfig{
@@ -142,26 +149,33 @@ type SenderConfig struct {
 
 type Sender struct {
 	sync.Mutex
-	sqsService          *sqs.SQS
-	name                string
-	plugin              string
-	tid                 tenant.Id
-	config              SenderConfig
-	count               int
-	logger              *zerolog.Logger
-	eventBatch          []event.Event
-	done                chan struct{}
-	secrets             secret.Vault
-	eventSuccessCounter metric.BoundInt64Counter
-	eventFailureCounter metric.BoundInt64Counter
-	eventBytesCounter   metric.BoundInt64Counter
-	eventProcessingTime metric.BoundInt64Histogram
-	eventSendOutTime    metric.BoundInt64Histogram
-	queueUrl            string
-	awsRoleArn          string
-	awsAccessKey        string
-	awsAccessSecret     string
-	awsRegion           string
+	sqsService                    *sqs.SQS
+	name                          string
+	plugin                        string
+	tid                           tenant.Id
+	config                        SenderConfig
+	count                         int
+	logger                        *zerolog.Logger
+	eventBatch                    []event.Event
+	done                          chan struct{}
+	secrets                       secret.Vault
+	eventSuccessCounter           metric.BoundInt64Counter
+	eventFailureCounter           metric.BoundInt64Counter
+	eventBytesCounter             metric.BoundInt64Counter
+	eventProcessingTime           metric.BoundInt64Histogram
+	eventSendOutTime              metric.BoundInt64Histogram
+	queueUrl                      string
+	awsRoleArn                    string
+	awsAccessKey                  string
+	awsAccessSecret               string
+	awsRegion                     string
+	successCounter                int
+	errorCounter                  int
+	successVelocityCounter        int
+	errorVelocityCounter          int
+	currentSuccessVelocityCounter int
+	currentErrorVelocityCounter   int
+	currentSec                    int64
 }
 
 type SQSError struct {

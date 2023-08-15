@@ -116,11 +116,12 @@ func NewReceiver(tid tenant.Id, plugin string, name string, config interface{}, 
 		return nil, err
 	}
 	r := &Receiver{
-		config: cfg,
-		name:   name,
-		plugin: plugin,
-		tid:    tid,
-		logger: event.GetEventLogger(),
+		config:     cfg,
+		name:       name,
+		plugin:     plugin,
+		tid:        tid,
+		logger:     event.GetEventLogger(),
+		currentSec: time.Now().Unix(),
 	}
 
 	// metric recorders
@@ -151,7 +152,28 @@ func NewReceiver(tid tenant.Id, plugin string, name string, config interface{}, 
 	return r, nil
 }
 
-func (r *Receiver) handleConnection(message string, server SyslogServer) {
+func (r *Receiver) logSuccess() {
+	r.Lock()
+	r.successCounter++
+	if time.Now().Unix() != r.currentSec {
+		r.successVelocityCounter = r.currentSuccessVelocityCounter
+		r.currentSuccessVelocityCounter = 0
+		r.currentSec = time.Now().Unix()
+	}
+	r.currentSuccessVelocityCounter++
+	r.Unlock()
+}
+
+func (r *Receiver) logError() {
+	r.Lock()
+	r.errorCounter++
+	if time.Now().Unix() != r.currentSec {
+		r.errorVelocityCounter = r.currentErrorVelocityCounter
+		r.currentErrorVelocityCounter = 0
+		r.currentSec = time.Now().Unix()
+	}
+	r.currentErrorVelocityCounter++
+	r.Unlock()
 }
 
 func (r *Receiver) parseSyslogMessage(msg string) ([]byte, error) {
@@ -162,7 +184,7 @@ func (r *Receiver) parseSyslogMessage(msg string) ([]byte, error) {
 	// Parse the priority value from the message
 
 	if !strings.HasPrefix(msg, "<") || !strings.Contains(msg, ">") {
-		r.logger.Error().Str("op", "syslog.parseSyslogMessage").Msg(fmt.Sprintf("invalid property value"))
+		r.logger.Error().Str("op", "syslog.parseSyslogMessage").Msg("invalid property value")
 		return nil, errors.New("invalid property value")
 	}
 
@@ -170,20 +192,20 @@ func (r *Receiver) parseSyslogMessage(msg string) ([]byte, error) {
 	priorityNum, err := strconv.Atoi(priorityValue)
 	if err != nil {
 		r.logger.Error().Str("op", "syslog.parseSyslogMessage").Msg(fmt.Sprintf("strconv.Atoi error: %s", err))
-		return nil, errors.New(fmt.Sprintf("strconv.Atoi error: %s", err))
+		return nil, fmt.Errorf("strconv.Atoi error: %s", err)
 	}
 
 	// Parse the severity and facility values from the priority
 
 	if priorityNum < 0 || priorityNum > 191 {
 		r.logger.Error().Str("op", "syslog.parseSyslogMessage").Msg(fmt.Sprintf("invalid priority value: %d", priorityNum))
-		return nil, errors.New(fmt.Sprintf("invalid priority value: %d", priorityNum))
+		return nil, fmt.Errorf("invalid priority value: %d", priorityNum)
 	}
 
 	severityVal := Severity(priorityNum & severityMask)
 	if severityVal < Emergency || severityVal > Debug {
 		r.logger.Error().Str("op", "syslog.parseSyslogMessage").Msg(fmt.Sprintf("invalid severity value: %d", severityVal))
-		return nil, errors.New(fmt.Sprintf("invalid severity value: %d", severityVal))
+		return nil, fmt.Errorf("invalid severity value: %d", severityVal)
 	}
 
 	facilityVal := Facility((priorityNum & facilityMask) >> facilityShift)
@@ -259,10 +281,12 @@ func (r *Receiver) Receive(next receiver.NextFn) error {
 					e, err := event.New(ctx, payload, event.WithAck(
 						func(e event.Event) {
 							r.eventSuccessCounter.Add(ctx, 1)
+							r.logSuccess()
 							cancel()
 						},
 						func(e event.Event, err error) {
 							r.eventFailureCounter.Add(ctx, 1)
+							r.logError()
 							cancel()
 						}),
 						event.WithTenant(r.Tenant()),
@@ -311,4 +335,34 @@ func (r *Receiver) Plugin() string {
 
 func (r *Receiver) Tenant() tenant.Id {
 	return r.tid
+}
+
+func (r *Receiver) EventSuccessCount() int {
+	r.Lock()
+	defer r.Unlock()
+	return r.successCounter
+}
+
+func (r *Receiver) EventSuccessVelocity() int {
+	r.Lock()
+	defer r.Unlock()
+	return r.successVelocityCounter
+}
+
+func (r *Receiver) EventErrorCount() int {
+	r.Lock()
+	defer r.Unlock()
+	return r.errorCounter
+}
+
+func (r *Receiver) EventErrorVelocity() int {
+	r.Lock()
+	defer r.Unlock()
+	return r.errorVelocityCounter
+}
+
+func (r *Receiver) EventTs() int64 {
+	r.Lock()
+	defer r.Unlock()
+	return r.currentSec
 }

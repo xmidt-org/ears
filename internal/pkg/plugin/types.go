@@ -110,19 +110,29 @@ func WithNextFnDeadline(d time.Duration) ManagerOption {
 }
 
 type ReceiverStatus struct {
-	Name           string
-	Plugin         string
-	Config         interface{}
-	ReferenceCount int
-	Tid            tenant.Id
+	Name            string
+	Plugin          string
+	Config          interface{}
+	ReferenceCount  int
+	SuccessCount    int
+	ErrorCount      int
+	SuccessVelocity int
+	ErrorVelocity   int
+	LastEventTs     int64
+	Tid             tenant.Id
 }
 
 type SenderStatus struct {
-	Name           string
-	Plugin         string
-	Config         interface{}
-	ReferenceCount int
-	Tid            tenant.Id
+	Name            string
+	Plugin          string
+	Config          interface{}
+	ReferenceCount  int
+	SuccessCount    int
+	ErrorCount      int
+	SuccessVelocity int
+	ErrorVelocity   int
+	LastEventTs     int64
+	Tid             tenant.Id
 }
 
 type FilterStatus struct {

@@ -76,6 +76,7 @@ func NewReceiver(tid tenant.Id, plugin string, name string, config interface{}, 
 		logger:                         event.GetEventLogger(),
 		shardMonitorStopChannel:        make(chan bool),
 		shardUpdateListenerStopChannel: make(chan bool),
+		currentSec:                     time.Now().Unix(),
 	}
 
 	// metric recorders
@@ -104,6 +105,30 @@ func NewReceiver(tid tenant.Id, plugin string, name string, config interface{}, 
 			metric.WithUnit(unit.Bytes),
 		).Bind(commonLabels...)
 	return r, nil
+}
+
+func (r *Receiver) logSuccess() {
+	r.Lock()
+	r.successCounter++
+	if time.Now().Unix() != r.currentSec {
+		r.successVelocityCounter = r.currentSuccessVelocityCounter
+		r.currentSuccessVelocityCounter = 0
+		r.currentSec = time.Now().Unix()
+	}
+	r.currentSuccessVelocityCounter++
+	r.Unlock()
+}
+
+func (r *Receiver) logError() {
+	r.Lock()
+	r.errorCounter++
+	if time.Now().Unix() != r.currentSec {
+		r.errorVelocityCounter = r.currentErrorVelocityCounter
+		r.currentErrorVelocityCounter = 0
+		r.currentSec = time.Now().Unix()
+	}
+	r.currentErrorVelocityCounter++
+	r.Unlock()
 }
 
 func (r *Receiver) getStopChannel(shardIdx int) chan bool {
@@ -265,20 +290,16 @@ func (r *Receiver) Receive(next receiver.NextFn) error {
 	r.shardsCount = &gatewayResp.Shards
 	r.shardUpdateListener(r.shardDistributor)
 	r.shardMonitor(r.shardDistributor)
-
 	if err != nil {
 		return err
 	}
 	return nil
-
 }
 
 func (r *Receiver) startShardReceiver(shardIdx int) error {
-
 	totalShardNum := *r.shardsCount
 	// Register the messageCreate func as a callback for MessageCreate events.
 	r.sess.AddHandler(r.messageCreate)
-
 	// In this example, we only care about receiving message events.
 	r.sess.Identify.Intents = discordgo.IntentsGuildMessages
 	r.sess.Identify.Shard = &[2]int{shardIdx, totalShardNum}
@@ -332,15 +353,16 @@ func (r *Receiver) messageCreate(s *discordgo.Session, m *discordgo.MessageCreat
 			r.logger.Error().Str("op", "Discord.startReceiver").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Msg("cannot parse message :" + err.Error())
 			return
 		}
-
 		ctx, cancel := context.WithTimeout(context.Background(), time.Duration(5)*time.Second)
 		e, err := event.New(ctx, payload, event.WithMetadataKeyValue("discordMessage", 1), event.WithAck(
 			func(e event.Event) {
 				r.eventSuccessCounter.Add(ctx, 1)
+				r.logSuccess()
 				cancel()
 			},
 			func(e event.Event, err error) {
 				r.eventFailureCounter.Add(ctx, 1)
+				r.logError()
 				cancel()
 			}),
 			event.WithTenant(r.Tenant()),
@@ -375,4 +397,34 @@ func (r *Receiver) Plugin() string {
 
 func (r *Receiver) Tenant() tenant.Id {
 	return r.tid
+}
+
+func (r *Receiver) EventSuccessCount() int {
+	r.Lock()
+	defer r.Unlock()
+	return r.successCounter
+}
+
+func (r *Receiver) EventSuccessVelocity() int {
+	r.Lock()
+	defer r.Unlock()
+	return r.successVelocityCounter
+}
+
+func (r *Receiver) EventErrorCount() int {
+	r.Lock()
+	defer r.Unlock()
+	return r.errorCounter
+}
+
+func (r *Receiver) EventErrorVelocity() int {
+	r.Lock()
+	defer r.Unlock()
+	return r.errorVelocityCounter
+}
+
+func (r *Receiver) EventTs() int64 {
+	r.Lock()
+	defer r.Unlock()
+	return r.currentSec
 }

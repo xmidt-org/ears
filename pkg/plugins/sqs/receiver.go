@@ -80,6 +80,7 @@ func NewReceiver(tid tenant.Id, plugin string, name string, config interface{}, 
 		awsAccessKey:    secrets.Secret(ctx, cfg.AWSAccessKeyId),
 		awsAccessSecret: secrets.Secret(ctx, cfg.AWSSecretAccessKey),
 		awsRegion:       secrets.Secret(ctx, cfg.AWSRegion),
+		currentSec:      time.Now().Unix(),
 	}
 	// create sqs session
 	sess, err := session.NewSession()
@@ -152,6 +153,30 @@ const (
 	approximateNumberOfMessages = "ApproximateNumberOfMessages"
 	attributeNames              = "All"
 )
+
+func (r *Receiver) logSuccess() {
+	r.Lock()
+	r.successCounter++
+	if time.Now().Unix() != r.currentSec {
+		r.successVelocityCounter = r.currentSuccessVelocityCounter
+		r.currentSuccessVelocityCounter = 0
+		r.currentSec = time.Now().Unix()
+	}
+	r.currentSuccessVelocityCounter++
+	r.Unlock()
+}
+
+func (r *Receiver) logError() {
+	r.Lock()
+	r.errorCounter++
+	if time.Now().Unix() != r.currentSec {
+		r.errorVelocityCounter = r.currentErrorVelocityCounter
+		r.currentErrorVelocityCounter = 0
+		r.currentSec = time.Now().Unix()
+	}
+	r.currentErrorVelocityCounter++
+	r.Unlock()
+}
 
 func (r *Receiver) startReceiveWorker(svc *sqs.SQS, n int) {
 	go func() {
@@ -330,6 +355,7 @@ func (r *Receiver) startReceiveWorker(svc *sqs.SQS, n int) {
 							entry := sqs.DeleteMessageBatchRequestEntry{Id: msg.MessageId, ReceiptHandle: msg.ReceiptHandle}
 							entries <- &entry
 							r.eventSuccessCounter.Add(ctx, 1)
+							r.logSuccess()
 						} else {
 							log.Ctx(e.Context()).Error().Str("op", "SQS.receiveWorker").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Int("workerNum", n).Msg("failed to process message with missing sqs metadata")
 						}
@@ -344,6 +370,7 @@ func (r *Receiver) startReceiveWorker(svc *sqs.SQS, n int) {
 						}
 						// a nack below max retries - this is the only case where we do not delete the message yet
 						r.eventFailureCounter.Add(ctx, 1)
+						r.logError()
 						cancel()
 					}),
 					event.WithTenant(r.Tenant()),
@@ -437,4 +464,34 @@ func (r *Receiver) Plugin() string {
 
 func (r *Receiver) Tenant() tenant.Id {
 	return r.tid
+}
+
+func (r *Receiver) EventSuccessCount() int {
+	r.Lock()
+	defer r.Unlock()
+	return r.successCounter
+}
+
+func (r *Receiver) EventSuccessVelocity() int {
+	r.Lock()
+	defer r.Unlock()
+	return r.successVelocityCounter
+}
+
+func (r *Receiver) EventErrorCount() int {
+	r.Lock()
+	defer r.Unlock()
+	return r.errorCounter
+}
+
+func (r *Receiver) EventErrorVelocity() int {
+	r.Lock()
+	defer r.Unlock()
+	return r.errorVelocityCounter
+}
+
+func (r *Receiver) EventTs() int64 {
+	r.Lock()
+	defer r.Unlock()
+	return r.currentSec
 }

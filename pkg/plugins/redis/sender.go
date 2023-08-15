@@ -58,11 +58,12 @@ func NewSender(tid tenant.Id, plugin string, name string, config interface{}, se
 		return nil, err
 	}
 	s := &Sender{
-		name:   name,
-		plugin: plugin,
-		tid:    tid,
-		config: cfg,
-		logger: event.GetEventLogger(),
+		name:       name,
+		plugin:     plugin,
+		tid:        tid,
+		config:     cfg,
+		logger:     event.GetEventLogger(),
+		currentSec: time.Now().Unix(),
 	}
 	s.initPlugin()
 	hostname, _ := os.Hostname()
@@ -107,6 +108,30 @@ func NewSender(tid tenant.Id, plugin string, name string, config interface{}, se
 	return s, nil
 }
 
+func (s *Sender) logSuccess() {
+	s.Lock()
+	s.successCounter++
+	if time.Now().Unix() != s.currentSec {
+		s.successVelocityCounter = s.currentSuccessVelocityCounter
+		s.currentSuccessVelocityCounter = 0
+		s.currentSec = time.Now().Unix()
+	}
+	s.currentSuccessVelocityCounter++
+	s.Unlock()
+}
+
+func (s *Sender) logError() {
+	s.Lock()
+	s.errorCounter++
+	if time.Now().Unix() != s.currentSec {
+		s.errorVelocityCounter = s.currentErrorVelocityCounter
+		s.currentErrorVelocityCounter = 0
+		s.currentSec = time.Now().Unix()
+	}
+	s.currentErrorVelocityCounter++
+	s.Unlock()
+}
+
 func (s *Sender) initPlugin() error {
 	s.Lock()
 	s.client = redis.NewClient(&redis.Options{
@@ -140,6 +165,7 @@ func (s *Sender) Send(e event.Event) {
 	if err != nil {
 		log.Ctx(e.Context()).Error().Str("op", "redis.Send").Msg("failed to marshal message: " + err.Error())
 		s.eventFailureCounter.Add(e.Context(), 1)
+		s.logError()
 		e.Nack(err)
 		return
 	}
@@ -151,11 +177,13 @@ func (s *Sender) Send(e event.Event) {
 	if err != nil {
 		log.Ctx(e.Context()).Error().Str("op", "redis.Send").Msg("failed to send message on redis channel: " + err.Error())
 		s.eventFailureCounter.Add(e.Context(), 1)
+		s.logError()
 		e.Nack(err)
 		return
 	}
 	log.Ctx(e.Context()).Debug().Str("op", "redis.Send").Str("name", s.Name()).Str("tid", s.Tenant().ToString()).Msg("sent message on redis channel")
 	s.eventSuccessCounter.Add(e.Context(), 1)
+	s.logSuccess()
 	s.Lock()
 	s.count++
 	s.Unlock()
@@ -180,4 +208,34 @@ func (s *Sender) Plugin() string {
 
 func (s *Sender) Tenant() tenant.Id {
 	return s.tid
+}
+
+func (s *Sender) EventSuccessCount() int {
+	s.Lock()
+	defer s.Unlock()
+	return s.successCounter
+}
+
+func (s *Sender) EventSuccessVelocity() int {
+	s.Lock()
+	defer s.Unlock()
+	return s.successVelocityCounter
+}
+
+func (s *Sender) EventErrorCount() int {
+	s.Lock()
+	defer s.Unlock()
+	return s.errorCounter
+}
+
+func (s *Sender) EventErrorVelocity() int {
+	s.Lock()
+	defer s.Unlock()
+	return s.errorVelocityCounter
+}
+
+func (s *Sender) EventTs() int64 {
+	s.Lock()
+	defer s.Unlock()
+	return s.currentSec
 }

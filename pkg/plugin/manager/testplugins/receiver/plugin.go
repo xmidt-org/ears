@@ -92,3 +92,23 @@ func (p *plugin) Tenant() tenant.Id {
 
 func (p *plugin) Trigger(e event.Event) {
 }
+
+func (p *plugin) EventSuccessCount() int {
+	return 0
+}
+
+func (p *plugin) EventSuccessVelocity() int {
+	return 0
+}
+
+func (p *plugin) EventErrorCount() int {
+	return 0
+}
+
+func (p *plugin) EventErrorVelocity() int {
+	return 0
+}
+
+func (p *plugin) EventTs() int64 {
+	return 0
+}

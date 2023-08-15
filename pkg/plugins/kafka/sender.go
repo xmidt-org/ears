@@ -67,12 +67,13 @@ func NewSender(tid tenant.Id, plugin string, name string, config interface{}, se
 		return nil, err
 	}
 	s := &Sender{
-		name:    name,
-		plugin:  plugin,
-		tid:     tid,
-		config:  cfg,
-		logger:  event.GetEventLogger(),
-		secrets: secrets,
+		name:       name,
+		plugin:     plugin,
+		tid:        tid,
+		config:     cfg,
+		logger:     event.GetEventLogger(),
+		secrets:    secrets,
+		currentSec: time.Now().Unix(),
 	}
 	err = s.initPlugin()
 	if err != nil {
@@ -134,6 +135,30 @@ func (s *Sender) getAttributes(e event.Event, labels []DynamicMetricLabel) []att
 		attrs = append(attrs, attribute.String(label.Label, value))
 	}
 	return attrs
+}
+
+func (s *Sender) logSuccess() {
+	s.Lock()
+	s.successCounter++
+	if time.Now().Unix() != s.currentSec {
+		s.successVelocityCounter = s.currentSuccessVelocityCounter
+		s.currentSuccessVelocityCounter = 0
+		s.currentSec = time.Now().Unix()
+	}
+	s.currentSuccessVelocityCounter++
+	s.Unlock()
+}
+
+func (s *Sender) logError() {
+	s.Lock()
+	s.errorCounter++
+	if time.Now().Unix() != s.currentSec {
+		s.errorVelocityCounter = s.currentErrorVelocityCounter
+		s.currentErrorVelocityCounter = 0
+		s.currentSec = time.Now().Unix()
+	}
+	s.currentErrorVelocityCounter++
+	s.Unlock()
 }
 
 func (s *Sender) initPlugin() error {
@@ -328,7 +353,6 @@ func (p *Producer) SendMessage(ctx context.Context, topic string, partition int,
 		Timestamp: time.Now(),
 	}
 	otel.GetTextMapPropagator().Inject(ctx, otelsarama.NewProducerMessageCarrier(message))
-
 	part, offset, err := producer.SendMessage(message)
 	if nil != err {
 		return err
@@ -379,10 +403,12 @@ func (s *Sender) Send(e event.Event) {
 	if err != nil {
 		log.Ctx(e.Context()).Error().Str("op", "kafka.Send").Str("name", s.Name()).Str("tid", s.Tenant().ToString()).Msg("failed to send message: " + err.Error())
 		s.eventFailureCounter.Add(e.Context(), 1, s.getAttributes(e, s.config.DynamicMetricLabels)...)
+		s.logError()
 		e.Nack(err)
 		return
 	}
 	s.eventSuccessCounter.Add(e.Context(), 1, s.getAttributes(e, s.config.DynamicMetricLabels)...)
+	s.logSuccess()
 	s.Lock()
 	s.count++
 	log.Ctx(e.Context()).Debug().Str("op", "kafka.Send").Str("name", s.Name()).Str("tid", s.Tenant().ToString()).Int("count", s.count).Msg("sent message on kafka topic")
@@ -408,4 +434,34 @@ func (s *Sender) Plugin() string {
 
 func (s *Sender) Tenant() tenant.Id {
 	return s.tid
+}
+
+func (s *Sender) EventSuccessCount() int {
+	s.Lock()
+	defer s.Unlock()
+	return s.successCounter
+}
+
+func (s *Sender) EventSuccessVelocity() int {
+	s.Lock()
+	defer s.Unlock()
+	return s.successVelocityCounter
+}
+
+func (s *Sender) EventErrorCount() int {
+	s.Lock()
+	defer s.Unlock()
+	return s.errorCounter
+}
+
+func (s *Sender) EventErrorVelocity() int {
+	s.Lock()
+	defer s.Unlock()
+	return s.errorVelocityCounter
+}
+
+func (s *Sender) EventTs() int64 {
+	s.Lock()
+	defer s.Unlock()
+	return s.currentSec
 }

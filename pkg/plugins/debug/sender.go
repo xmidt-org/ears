@@ -57,10 +57,11 @@ func NewSender(tid tenant.Id, plugin string, name string, config interface{}, se
 		return nil, err
 	}
 	s := &Sender{
-		config: cfg,
-		name:   name,
-		plugin: plugin,
-		tid:    tid,
+		config:     cfg,
+		name:       name,
+		plugin:     plugin,
+		tid:        tid,
+		currentSec: time.Now().Unix(),
 	}
 	switch s.config.Destination {
 	case DestinationDevNull:
@@ -116,11 +117,36 @@ func NewSender(tid tenant.Id, plugin string, name string, config interface{}, se
 	return s, nil
 }
 
+func (s *Sender) logSuccess() {
+	s.Lock()
+	s.successCounter++
+	if time.Now().Unix() != s.currentSec {
+		s.successVelocityCounter = s.currentSuccessVelocityCounter
+		s.currentSuccessVelocityCounter = 0
+		s.currentSec = time.Now().Unix()
+	}
+	s.currentSuccessVelocityCounter++
+	s.Unlock()
+}
+
+func (s *Sender) logError() {
+	s.Lock()
+	s.errorCounter++
+	if time.Now().Unix() != s.currentSec {
+		s.errorVelocityCounter = s.currentErrorVelocityCounter
+		s.currentErrorVelocityCounter = 0
+		s.currentSec = time.Now().Unix()
+	}
+	s.currentErrorVelocityCounter++
+	s.Unlock()
+}
+
 func (s *Sender) Send(e event.Event) {
 	s.history.Add(e)
 	buf, err := json.Marshal(e.Payload())
 	if err != nil {
 		s.eventFailureCounter.Add(e.Context(), 1)
+		s.logError()
 		e.Nack(err)
 		return
 	}
@@ -135,11 +161,13 @@ func (s *Sender) Send(e event.Event) {
 		s.eventSendOutTime.Record(e.Context(), est)
 		if err != nil {
 			s.eventFailureCounter.Add(e.Context(), 1)
+			s.logError()
 			e.Nack(err)
 			return
 		}
 	}
 	s.eventSuccessCounter.Add(e.Context(), 1)
+	s.logSuccess()
 	e.Ack()
 }
 
@@ -188,4 +216,34 @@ func (s *Sender) Plugin() string {
 
 func (s *Sender) Tenant() tenant.Id {
 	return s.tid
+}
+
+func (s *Sender) EventSuccessCount() int {
+	s.Lock()
+	defer s.Unlock()
+	return s.successCounter
+}
+
+func (s *Sender) EventSuccessVelocity() int {
+	s.Lock()
+	defer s.Unlock()
+	return s.successVelocityCounter
+}
+
+func (s *Sender) EventErrorCount() int {
+	s.Lock()
+	defer s.Unlock()
+	return s.errorCounter
+}
+
+func (s *Sender) EventErrorVelocity() int {
+	s.Lock()
+	defer s.Unlock()
+	return s.errorVelocityCounter
+}
+
+func (s *Sender) EventTs() int64 {
+	s.Lock()
+	defer s.Unlock()
+	return s.currentSec
 }
