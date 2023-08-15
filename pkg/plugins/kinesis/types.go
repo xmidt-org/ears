@@ -20,15 +20,13 @@ import (
 	"github.com/rs/zerolog"
 	"github.com/xmidt-org/ears/pkg/errs"
 	"github.com/xmidt-org/ears/pkg/event"
+	pkgplugin "github.com/xmidt-org/ears/pkg/plugin"
 	"github.com/xmidt-org/ears/pkg/secret"
 	"github.com/xmidt-org/ears/pkg/sharder"
 	"github.com/xmidt-org/ears/pkg/tenant"
 	"github.com/xorcare/pointer"
 	"go.opentelemetry.io/otel/metric"
 	"sync"
-	"time"
-
-	pkgplugin "github.com/xmidt-org/ears/pkg/plugin"
 
 	"github.com/xmidt-org/ears/pkg/receiver"
 	"github.com/xmidt-org/ears/pkg/sender"
@@ -107,13 +105,10 @@ type Receiver struct {
 	tid                            tenant.Id
 	next                           receiver.NextFn
 	logger                         *zerolog.Logger
-	receiveCount                   int
-	deleteCount                    int
 	shardConfig                    sharder.ShardConfig
 	svc                            *kinesis.Kinesis
 	consumer                       *kinesis.DescribeStreamConsumerOutput
 	stream                         *kinesis.DescribeStreamOutput
-	startTime                      time.Time
 	secrets                        secret.Vault
 	eventSuccessCounter            metric.BoundInt64Counter
 	eventFailureCounter            metric.BoundInt64Counter
@@ -166,7 +161,6 @@ type Sender struct {
 	plugin                        string
 	tid                           tenant.Id
 	config                        SenderConfig
-	count                         int
 	logger                        *zerolog.Logger
 	eventBatch                    []event.Event
 	done                          chan struct{}

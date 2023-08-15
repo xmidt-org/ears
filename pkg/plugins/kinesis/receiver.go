@@ -408,9 +408,6 @@ func (r *Receiver) startShardReceiverEFO(svc *kinesis.Kinesis, stream *kinesis.D
 						if len(rec.Data) == 0 {
 							continue
 						} else {
-							r.Lock()
-							r.receiveCount++
-							r.Unlock()
 							var payload interface{}
 							err = json.Unmarshal(rec.Data, &payload)
 							if err != nil {
@@ -529,6 +526,7 @@ func (r *Receiver) startShardReceiver(svc *kinesis.Kinesis, stream *kinesis.Desc
 						shardIteratorInput.StartingSequenceNumber = aws.String(sequenceId)
 					}
 				} else {
+					r.logError()
 					r.logger.Error().Str("op", "kinesis.startShardReceiver").Str("stream", *r.stream.StreamDescription.StreamName).Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Int("shardIdx", shardIdx).Msg("checkpoint error: " + err.Error())
 				}
 				//} else if *r.config.StartingTimestamp > 0 {
@@ -540,6 +538,7 @@ func (r *Receiver) startShardReceiver(svc *kinesis.Kinesis, stream *kinesis.Desc
 			}
 			iteratorOutput, err := svc.GetShardIterator(shardIteratorInput)
 			if err != nil {
+				r.logError()
 				r.logger.Error().Str("op", "kinesis.startShardReceiver").Str("stream", *r.stream.StreamDescription.StreamName).Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Int("shardIdx", shardIdx).Msg(err.Error())
 				time.Sleep(errorTimeoutSecShort * time.Second)
 				continue
@@ -560,6 +559,7 @@ func (r *Receiver) startShardReceiver(svc *kinesis.Kinesis, stream *kinesis.Desc
 					ShardIterator: shardIterator,
 				})
 				if err != nil {
+					r.logError()
 					r.logger.Error().Str("op", "kinesis.startShardReceiver").Str("stream", *r.stream.StreamDescription.StreamName).Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Int("shardIdx", shardIdx).Msg(err.Error())
 					time.Sleep(errorTimeoutSecShort * time.Second)
 					continue
@@ -567,7 +567,7 @@ func (r *Receiver) startShardReceiver(svc *kinesis.Kinesis, stream *kinesis.Desc
 				records := getRecordsOutput.Records
 				if len(records) > 0 {
 					r.Lock()
-					r.logger.Debug().Str("op", "kinesis.startShardReceiver").Str("stream", *r.stream.StreamDescription.StreamName).Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Int("receiveCount", r.receiveCount).Int("batchSize", len(records)).Int("shardIdx", shardIdx).Msg("received message batch")
+					r.logger.Debug().Str("op", "kinesis.startShardReceiver").Str("stream", *r.stream.StreamDescription.StreamName).Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Int("batchSize", len(records)).Int("shardIdx", shardIdx).Msg("received message batch")
 					r.Unlock()
 				} else {
 					r.logger.Debug().Str("op", "kinesis.startShardReceiver").Msg("no new records")
@@ -577,12 +577,10 @@ func (r *Receiver) startShardReceiver(svc *kinesis.Kinesis, stream *kinesis.Desc
 						continue
 					} else {
 						go func() {
-							r.Lock()
-							r.receiveCount++
-							r.Unlock()
 							var payload interface{}
 							err = json.Unmarshal(msg.Data, &payload)
 							if err != nil {
+								r.logError()
 								r.logger.Error().Str("op", "kinesis.startShardReceiver").Str("stream", *r.stream.StreamDescription.StreamName).Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Int("shardIdx", shardIdx).Msg("cannot parse message " + (*msg.SequenceNumber) + ": " + err.Error())
 								return
 							}
@@ -717,7 +715,6 @@ func (r *Receiver) Receive(next receiver.NextFn) error {
 		}
 	}
 	r.Lock()
-	r.startTime = time.Now()
 	r.stopped = false
 	r.done = make(chan struct{})
 	r.next = next
@@ -747,48 +744,40 @@ func (r *Receiver) Receive(next receiver.NextFn) error {
 	}
 	sess, err = session.NewSession(&aws.Config{Region: aws.String(r.awsRegion), Credentials: creds, HTTPClient: httpClient})
 	if nil != err {
+		r.logError()
 		return &KinesisError{op: "NewSession", err: err}
 	}
 	_, err = sess.Config.Credentials.Get()
 	if nil != err {
+		r.logError()
 		return &KinesisError{op: "GetCredentials", err: err}
 	}
 	r.svc = kinesis.New(sess)
 	//r.svc = kinesis.New(sess, aws.NewConfig().WithLogLevel(aws.LogDebug))
 	r.stream, err = r.svc.DescribeStream(&kinesis.DescribeStreamInput{StreamName: aws.String(r.streamName)})
 	if err != nil {
+		r.logError()
 		return &KinesisError{op: "DescribeStream", err: err}
 	}
 	if *r.config.EnhancedFanOut {
 		r.consumer, err = r.registerStreamConsumer(r.svc, r.streamName, r.consumerName)
 		if err != nil {
+			r.logError()
 			return &KinesisError{op: "registerStreamConsumer", err: err}
 		}
 	}
 	sharderConfig := sharder.DefaultControllerConfig()
 	r.shardDistributor, err = sharder.GetDefaultHashDistributor(sharderConfig.NodeName, len(r.stream.StreamDescription.Shards), sharderConfig.StorageConfig)
 	if err != nil {
+		r.logError()
 		return &KinesisError{op: "GetDefaultHashDistributor", err: err}
 	}
 	r.shardUpdateListener(r.shardDistributor)
 	r.shardMonitor(r.svc, r.shardDistributor)
 	r.logger.Info().Str("op", "Kinesis.Receive").Str("stream", *r.stream.StreamDescription.StreamName).Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Msg("waiting for receive done")
 	<-r.done
-	r.Lock()
-	elapsedMs := time.Since(r.startTime).Milliseconds()
-	receiveThroughput := 1000 * r.receiveCount / (int(elapsedMs) + 1)
-	deleteThroughput := 1000 * r.deleteCount / (int(elapsedMs) + 1)
-	receiveCnt := r.receiveCount
-	deleteCnt := r.deleteCount
-	r.Unlock()
-	r.logger.Info().Str("op", "Kinesis.Receive").Str("stream", *r.stream.StreamDescription.StreamName).Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Int("elapsedMs", int(elapsedMs)).Int("deleteCount", deleteCnt).Int("receiveCount", receiveCnt).Int("receiveThroughput", receiveThroughput).Int("deleteThroughput", deleteThroughput).Msg("receive done")
+	r.logger.Info().Str("op", "Kinesis.Receive").Str("stream", *r.stream.StreamDescription.StreamName).Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Msg("receive done")
 	return nil
-}
-
-func (r *Receiver) Count() int {
-	r.Lock()
-	defer r.Unlock()
-	return r.receiveCount
 }
 
 func (r *Receiver) StopReceiving(ctx context.Context) error {

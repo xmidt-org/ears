@@ -88,7 +88,6 @@ type Receiver struct {
 	tid                           tenant.Id
 	next                          receiver.NextFn
 	logger                        *zerolog.Logger
-	count                         int
 	secrets                       secret.Vault
 	startTime                     time.Time
 	eventSuccessCounter           metric.BoundInt64Counter
@@ -140,7 +139,6 @@ type Sender struct {
 	plugin                        string
 	tid                           tenant.Id
 	config                        SenderConfig
-	count                         int
 	logger                        *zerolog.Logger
 	done                          chan struct{}
 	secrets                       secret.Vault

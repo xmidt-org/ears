@@ -97,10 +97,12 @@ func NewReceiver(tid tenant.Id, plugin string, name string, config interface{}, 
 	}
 	sess, err = session.NewSession(&aws.Config{Region: aws.String(r.awsRegion), Credentials: creds})
 	if nil != err {
+		r.logError()
 		return r, &SQSError{op: "NewSession", err: err}
 	}
 	_, err = sess.Config.Credentials.Get()
 	if nil != err {
+		r.logError()
 		return r, &SQSError{op: "GetCredentials", err: err}
 	}
 	r.sqs = sqs.New(sess)
@@ -110,6 +112,7 @@ func NewReceiver(tid tenant.Id, plugin string, name string, config interface{}, 
 	}
 	_, err = r.sqs.GetQueueAttributes(queueAttributesParams)
 	if nil != err {
+		r.logError()
 		return r, &SQSError{op: "GetQueueAttributes", err: err}
 	}
 	hostname, _ := os.Hostname()
@@ -207,6 +210,7 @@ func (r *Receiver) startReceiveWorker(svc *sqs.SQS, n int) {
 				}
 				queueAttributesResp, err := svc.GetQueueAttributes(queueAttributesParams)
 				if err != nil {
+					r.logError()
 					r.logger.Error().Str("op", "SQS.receiveWorker").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Int("workerNum", n).Msg(err.Error())
 				} else {
 					if queueAttributesResp.Attributes[approximateNumberOfMessages] != nil {
@@ -256,12 +260,10 @@ func (r *Receiver) startReceiveWorker(svc *sqs.SQS, n int) {
 					}
 					_, err := svc.DeleteMessageBatch(deleteParams)
 					if err != nil {
+						r.logError()
 						r.logger.Error().Str("op", "SQS.receiveWorker").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Msg("delete error: " + err.Error())
 					} else {
-						r.Lock()
-						r.deleteCount += len(deleteBatch)
-						r.logger.Debug().Str("op", "SQS.receiveWorker").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Int("deleteCount", r.deleteCount).Int("batchSize", len(deleteBatch)).Int("workerNum", n).Msg("deleted message batch")
-						r.Unlock()
+						r.logger.Debug().Str("op", "SQS.receiveWorker").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Int("batchSize", len(deleteBatch)).Int("workerNum", n).Msg("deleted message batch")
 						/*for _, entry := range deleteBatch {
 							r.logger.Info().Str("op", "SQS.receiveWorker").Int("batchSize", len(deleteBatch)).Int("workerNum", n).Msg("deleted message " + (*entry.Id))
 						}*/
@@ -296,23 +298,18 @@ func (r *Receiver) startReceiveWorker(svc *sqs.SQS, n int) {
 				return
 			}
 			if err != nil {
+				r.logError()
 				r.logger.Error().Str("op", "SQS.receiveWorker").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Int("workerNum", n).Msg(err.Error())
 				time.Sleep(1 * time.Second)
 				continue
 			}
 			if len(sqsResp.Messages) > 0 {
 				r.Lock()
-				r.logger.Debug().Str("op", "SQS.receiveWorker").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Int("receiveCount", r.receiveCount).Int("batchSize", len(sqsResp.Messages)).Int("workerNum", n).Msg("received message batch")
+				r.logger.Debug().Str("op", "SQS.receiveWorker").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Int("batchSize", len(sqsResp.Messages)).Int("workerNum", n).Msg("received message batch")
 				r.Unlock()
 			}
 			for _, message := range sqsResp.Messages {
-				//logger.Debug().Str("op", "SQS.Receive").Msg(*message.Body)
-				r.Lock()
-				r.receiveCount++
-				r.Unlock()
-
 				ctx, cancel := context.WithTimeout(context.Background(), time.Duration(*r.config.AcknowledgeTimeout)*time.Second)
-
 				//extract otel tracing info
 				if message.MessageAttributes != nil {
 					ctx = otel.GetTextMapPropagator().Extract(ctx, NewSqsMessageAttributeCarrier(message.MessageAttributes))
@@ -340,6 +337,7 @@ func (r *Receiver) startReceiveWorker(svc *sqs.SQS, n int) {
 				var payload interface{}
 				err = json.Unmarshal([]byte(*message.Body), &payload)
 				if err != nil {
+					r.logError()
 					r.logger.Error().Str("op", "SQS.receiveWorker").Str(rtsemconv.EarsLogTraceIdKey, traceId).Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Int("workerNum", n).Msg("cannot parse message " + (*message.MessageId) + ": " + err.Error())
 					entry := sqs.DeleteMessageBatchRequestEntry{Id: message.MessageId, ReceiptHandle: message.ReceiptHandle}
 					entries <- &entry
@@ -399,7 +397,6 @@ func (r *Receiver) Receive(next receiver.NextFn) error {
 		}
 	}
 	r.Lock()
-	r.startTime = time.Now()
 	r.stopped = false
 	r.done = make(chan struct{})
 	r.next = next
@@ -410,21 +407,8 @@ func (r *Receiver) Receive(next receiver.NextFn) error {
 	}
 	r.logger.Info().Str("op", "SQS.Receive").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Msg("waiting for receive done")
 	<-r.done
-	r.Lock()
-	elapsedMs := time.Since(r.startTime).Milliseconds()
-	receiveThroughput := 1000 * r.receiveCount / (int(elapsedMs) + 1)
-	deleteThroughput := 1000 * r.deleteCount / (int(elapsedMs) + 1)
-	receiveCnt := r.receiveCount
-	deleteCnt := r.deleteCount
-	r.Unlock()
-	r.logger.Info().Str("op", "SQS.Receive").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Int("elapsedMs", int(elapsedMs)).Int("deleteCount", deleteCnt).Int("receiveCount", receiveCnt).Int("receiveThroughput", receiveThroughput).Int("deleteThroughput", deleteThroughput).Msg("receive done")
+	r.logger.Info().Str("op", "SQS.Receive").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Msg("receive done")
 	return nil
-}
-
-func (r *Receiver) Count() int {
-	r.Lock()
-	defer r.Unlock()
-	return r.receiveCount
 }
 
 func (r *Receiver) StopReceiving(ctx context.Context) error {

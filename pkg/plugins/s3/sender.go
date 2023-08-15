@@ -164,22 +164,18 @@ func (s *Sender) initPlugin() error {
 	}
 	sess, err = session.NewSession(&aws.Config{Region: aws.String(s.awsRegion), Credentials: creds})
 	if nil != err {
+		s.logError()
 		return &S3Error{op: "NewSession", err: err}
 	}
 	_, err = sess.Config.Credentials.Get()
 	if nil != err {
+		s.logError()
 		return &S3Error{op: "GetCredentials", err: err}
 	}
 	s.s3Service = s3.New(sess)
 	s.session = sess
 	s.done = make(chan struct{})
 	return nil
-}
-
-func (s *Sender) Count() int {
-	s.Lock()
-	defer s.Unlock()
-	return s.count
 }
 
 func (s *Sender) StopSending(ctx context.Context) {
@@ -235,9 +231,6 @@ func (s *Sender) Send(evt event.Event) {
 		s.logError()
 		evt.Nack(err)
 	} else {
-		s.Lock()
-		s.count++
-		s.Unlock()
 		s.eventSuccessCounter.Add(evt.Context(), 1)
 		s.logSuccess()
 		evt.Ack()
