@@ -90,29 +90,29 @@ func (f *filter) Tenant() tenant.Id {
 }
 
 func (f *filter) EventSuccessCount() int {
-	return f.EventSuccessCount()
+	return f.filterer.EventSuccessCount()
 }
 
 func (f *filter) EventSuccessVelocity() int {
-	return f.EventSuccessVelocity()
+	return f.filterer.EventSuccessVelocity()
 }
 
 func (f *filter) EventFilterCount() int {
-	return f.EventFilterCount()
+	return f.filterer.EventFilterCount()
 }
 
 func (f *filter) EventFilterVelocity() int {
-	return f.EventFilterVelocity()
+	return f.filterer.EventFilterVelocity()
 }
 
 func (f *filter) EventErrorCount() int {
-	return f.EventErrorCount()
+	return f.filterer.EventErrorCount()
 }
 
 func (f *filter) EventErrorVelocity() int {
-	return f.EventErrorVelocity()
+	return f.filterer.EventErrorVelocity()
 }
 
 func (f *filter) EventTs() int64 {
-	return f.EventTs()
+	return f.filterer.EventTs()
 }
