@@ -129,6 +129,8 @@ func (r *Receiver) Trigger(e event.Event) {
 	r.Lock()
 	next := r.next
 	r.Unlock()
+	// this will be called by RouteEvent() for webhook routes
+	r.logSuccess()
 	if next != nil {
 		next(e)
 	}
