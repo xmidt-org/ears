@@ -116,7 +116,7 @@ type Receiver struct {
 	errorVelocityCounter          int
 	currentSuccessVelocityCounter int
 	currentErrorVelocityCounter   int
-	currentSec                    int
+	currentSec                    int64
 	secrets                       secret.Vault
 }
 
@@ -199,7 +199,7 @@ type Sender struct {
 	errorVelocityCounter          int
 	currentSuccessVelocityCounter int
 	currentErrorVelocityCounter   int
-	currentSec                    int
+	currentSec                    int64
 }
 
 type ManualHashPartitioner struct {

@@ -142,3 +142,7 @@ func (p *plugin) EventErrorCount() int {
 func (p *plugin) EventErrorVelocity() int {
 	return 0
 }
+
+func (p *plugin) EventTs() int64 {
+	return 0
+}

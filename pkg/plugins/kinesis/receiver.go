@@ -95,7 +95,7 @@ func NewReceiver(tid tenant.Id, plugin string, name string, config interface{}, 
 		awsRegion:                      secrets.Secret(ctx, cfg.AWSRegion),
 		streamName:                     secrets.Secret(ctx, cfg.StreamName),
 		consumerName:                   secrets.Secret(ctx, cfg.ConsumerName),
-		currentSec:                     time.Now().Second(),
+		currentSec:                     time.Now().Unix(),
 	}
 	r.Lock()
 	r.stopChannelMap = make(map[int]chan bool)
@@ -137,10 +137,10 @@ func NewReceiver(tid tenant.Id, plugin string, name string, config interface{}, 
 func (r *Receiver) logSuccess() {
 	r.Lock()
 	r.successCounter++
-	if time.Now().Second() != r.currentSec {
+	if time.Now().Unix() != r.currentSec {
 		r.successVelocityCounter = r.currentSuccessVelocityCounter
 		r.currentSuccessVelocityCounter = 0
-		r.currentSec = time.Now().Second()
+		r.currentSec = time.Now().Unix()
 	}
 	r.currentSuccessVelocityCounter++
 	r.Unlock()
@@ -149,10 +149,10 @@ func (r *Receiver) logSuccess() {
 func (r *Receiver) logError() {
 	r.Lock()
 	r.errorCounter++
-	if time.Now().Second() != r.currentSec {
+	if time.Now().Unix() != r.currentSec {
 		r.errorVelocityCounter = r.currentErrorVelocityCounter
 		r.currentErrorVelocityCounter = 0
-		r.currentSec = time.Now().Second()
+		r.currentSec = time.Now().Unix()
 	}
 	r.currentErrorVelocityCounter++
 	r.Unlock()
@@ -868,4 +868,10 @@ func (r *Receiver) EventErrorVelocity() int {
 	r.Lock()
 	defer r.Unlock()
 	return r.errorVelocityCounter
+}
+
+func (r *Receiver) EventTs() int64 {
+	r.Lock()
+	defer r.Unlock()
+	return r.currentSec
 }

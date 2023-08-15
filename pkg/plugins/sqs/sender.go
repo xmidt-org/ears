@@ -79,6 +79,7 @@ func NewSender(tid tenant.Id, plugin string, name string, config interface{}, se
 		awsAccessKey:    secrets.Secret(ctx, cfg.AWSAccessKeyId),
 		awsAccessSecret: secrets.Secret(ctx, cfg.AWSSecretAccessKey),
 		awsRegion:       secrets.Secret(ctx, cfg.AWSRegion),
+		currentSec:      time.Now().Unix(),
 	}
 	err = s.initPlugin()
 	if err != nil {
@@ -129,10 +130,10 @@ func NewSender(tid tenant.Id, plugin string, name string, config interface{}, se
 func (s *Sender) logSuccess() {
 	s.Lock()
 	s.successCounter++
-	if time.Now().Second() != s.currentSec {
+	if time.Now().Unix() != s.currentSec {
 		s.successVelocityCounter = s.currentSuccessVelocityCounter
 		s.currentSuccessVelocityCounter = 0
-		s.currentSec = time.Now().Second()
+		s.currentSec = time.Now().Unix()
 	}
 	s.currentSuccessVelocityCounter++
 	s.Unlock()
@@ -141,10 +142,10 @@ func (s *Sender) logSuccess() {
 func (s *Sender) logError() {
 	s.Lock()
 	s.errorCounter++
-	if time.Now().Second() != s.currentSec {
+	if time.Now().Unix() != s.currentSec {
 		s.errorVelocityCounter = s.currentErrorVelocityCounter
 		s.currentErrorVelocityCounter = 0
-		s.currentSec = time.Now().Second()
+		s.currentSec = time.Now().Unix()
 	}
 	s.currentErrorVelocityCounter++
 	s.Unlock()
@@ -358,4 +359,10 @@ func (s *Sender) EventErrorVelocity() int {
 	s.Lock()
 	defer s.Unlock()
 	return s.errorVelocityCounter
+}
+
+func (s *Sender) EventTs() int64 {
+	s.Lock()
+	defer s.Unlock()
+	return s.currentSec
 }

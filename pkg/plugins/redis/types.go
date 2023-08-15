@@ -87,7 +87,7 @@ type Receiver struct {
 	errorVelocityCounter          int
 	currentSuccessVelocityCounter int
 	currentErrorVelocityCounter   int
-	currentSec                    int
+	currentSec                    int64
 }
 
 var DefaultSenderConfig = SenderConfig{
@@ -122,5 +122,5 @@ type Sender struct {
 	errorVelocityCounter          int
 	currentSuccessVelocityCounter int
 	currentErrorVelocityCounter   int
-	currentSec                    int
+	currentSec                    int64
 }

@@ -77,6 +77,10 @@ func (r *receiver) EventErrorVelocity() int {
 	return r.receiver.EventErrorVelocity()
 }
 
+func (r *receiver) EventTs() int64 {
+	return r.receiver.EventTs()
+}
+
 func (r *receiver) Trigger(e event.Event) {
 	//r.receiver.Trigger(e)
 	r.Lock()

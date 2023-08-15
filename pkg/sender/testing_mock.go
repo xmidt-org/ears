@@ -346,6 +346,10 @@ func (mock *SenderMock) EventErrorVelocity() int {
 	return 0
 }
 
+func (mock *SenderMock) EventTs() int64 {
+	return 0
+}
+
 // Name calls NameFunc.
 func (mock *SenderMock) Name() string {
 	if mock.NameFunc == nil {

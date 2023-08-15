@@ -361,6 +361,10 @@ func (mock *ReceiverMock) EventErrorVelocity() int {
 	return 0
 }
 
+func (mock *ReceiverMock) EventTs() int64 {
+	return 0
+}
+
 // NameCalls gets all the calls that were made to Name.
 // Check the length with:
 //     len(mockedReceiver.NameCalls())

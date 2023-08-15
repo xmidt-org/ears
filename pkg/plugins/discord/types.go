@@ -84,7 +84,7 @@ type Sender struct {
 	errorVelocityCounter          int
 	currentSuccessVelocityCounter int
 	currentErrorVelocityCounter   int
-	currentSec                    int
+	currentSec                    int64
 }
 
 type Receiver struct {
@@ -113,5 +113,5 @@ type Receiver struct {
 	errorVelocityCounter           int
 	currentSuccessVelocityCounter  int
 	currentErrorVelocityCounter    int
-	currentSec                     int
+	currentSec                     int64
 }

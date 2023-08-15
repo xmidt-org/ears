@@ -80,7 +80,7 @@ func NewReceiver(tid tenant.Id, plugin string, name string, config interface{}, 
 		awsAccessKey:    secrets.Secret(ctx, cfg.AWSAccessKeyId),
 		awsAccessSecret: secrets.Secret(ctx, cfg.AWSSecretAccessKey),
 		awsRegion:       secrets.Secret(ctx, cfg.AWSRegion),
-		currentSec:      time.Now().Second(),
+		currentSec:      time.Now().Unix(),
 	}
 	// create sqs session
 	sess, err := session.NewSession()
@@ -157,10 +157,10 @@ const (
 func (r *Receiver) logSuccess() {
 	r.Lock()
 	r.successCounter++
-	if time.Now().Second() != r.currentSec {
+	if time.Now().Unix() != r.currentSec {
 		r.successVelocityCounter = r.currentSuccessVelocityCounter
 		r.currentSuccessVelocityCounter = 0
-		r.currentSec = time.Now().Second()
+		r.currentSec = time.Now().Unix()
 	}
 	r.currentSuccessVelocityCounter++
 	r.Unlock()
@@ -169,10 +169,10 @@ func (r *Receiver) logSuccess() {
 func (r *Receiver) logError() {
 	r.Lock()
 	r.errorCounter++
-	if time.Now().Second() != r.currentSec {
+	if time.Now().Unix() != r.currentSec {
 		r.errorVelocityCounter = r.currentErrorVelocityCounter
 		r.currentErrorVelocityCounter = 0
-		r.currentSec = time.Now().Second()
+		r.currentSec = time.Now().Unix()
 	}
 	r.currentErrorVelocityCounter++
 	r.Unlock()
@@ -488,4 +488,10 @@ func (r *Receiver) EventErrorVelocity() int {
 	r.Lock()
 	defer r.Unlock()
 	return r.errorVelocityCounter
+}
+
+func (r *Receiver) EventTs() int64 {
+	r.Lock()
+	defer r.Unlock()
+	return r.currentSec
 }

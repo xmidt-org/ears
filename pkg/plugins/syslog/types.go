@@ -57,5 +57,5 @@ type Receiver struct {
 	errorVelocityCounter          int
 	currentSuccessVelocityCounter int
 	currentErrorVelocityCounter   int
-	currentSec                    int
+	currentSec                    int64
 }

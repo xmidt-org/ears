@@ -74,6 +74,10 @@ func (s *sender) EventErrorVelocity() int {
 	return s.sender.EventErrorVelocity()
 }
 
+func (s *sender) EventTs() int64 {
+	return s.sender.EventTs()
+}
+
 func (s *sender) Send(e event.Event) {
 	if s == nil {
 		e.Nack(&pkgmanager.NilPluginError{})

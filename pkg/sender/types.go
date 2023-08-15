@@ -57,4 +57,5 @@ type Sender interface {
 	EventSuccessVelocity() int
 	EventErrorCount() int
 	EventErrorVelocity() int
+	EventTs() int64
 }

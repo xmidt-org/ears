@@ -597,16 +597,18 @@ func (a *APIManager) getAllSendersHandler(w http.ResponseWriter, r *http.Request
 		resp.Respond(ctx, w, doYaml(r))
 		return
 	}
-	senders := make(map[string]plugin.SenderStatus)
+	senders := make([]plugin.SenderStatus, 0)
 	tid, _ := getTenant(ctx, vars)
 	if tid != nil {
-		for k, v := range allSenders {
+		for _, v := range allSenders {
 			if tid.Equal(v.Tid) {
-				senders[k] = v
+				senders = append(senders, v)
 			}
 		}
 	} else {
-		senders = allSenders
+		for _, v := range allSenders {
+			senders = append(senders, v)
+		}
 	}
 	trace.SpanFromContext(ctx).SetAttributes(attribute.Int("senderCount", len(senders)))
 	resp := ItemsResponse(senders)
@@ -623,16 +625,18 @@ func (a *APIManager) getAllReceiversHandler(w http.ResponseWriter, r *http.Reque
 		resp.Respond(ctx, w, doYaml(r))
 		return
 	}
-	receivers := make(map[string]plugin.ReceiverStatus)
+	receivers := make([]plugin.ReceiverStatus, 0)
 	tid, _ := getTenant(ctx, vars)
 	if tid != nil {
-		for k, v := range allReceivers {
+		for _, v := range allReceivers {
 			if tid.Equal(v.Tid) {
-				receivers[k] = v
+				receivers = append(receivers, v)
 			}
 		}
 	} else {
-		receivers = allReceivers
+		for _, v := range allReceivers {
+			receivers = append(receivers, v)
+		}
 	}
 	trace.SpanFromContext(ctx).SetAttributes(attribute.Int("receiverCount", len(receivers)))
 	resp := ItemsResponse(receivers)
@@ -649,16 +653,18 @@ func (a *APIManager) getAllFiltersHandler(w http.ResponseWriter, r *http.Request
 		resp.Respond(ctx, w, doYaml(r))
 		return
 	}
-	filters := make(map[string]plugin.FilterStatus)
+	filters := make([]plugin.FilterStatus, 0)
 	tid, _ := getTenant(ctx, vars)
 	if tid != nil {
-		for k, v := range allFilters {
+		for _, v := range allFilters {
 			if tid.Equal(v.Tid) {
-				filters[k] = v
+				filters = append(filters, v)
 			}
 		}
 	} else {
-		filters = allFilters
+		for _, v := range allFilters {
+			filters = append(filters, v)
+		}
 	}
 	trace.SpanFromContext(ctx).SetAttributes(attribute.Int("filterCount", len(filters)))
 	resp := ItemsResponse(filters)

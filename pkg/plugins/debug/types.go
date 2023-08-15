@@ -93,7 +93,7 @@ type Receiver struct {
 	errorVelocityCounter          int
 	currentSuccessVelocityCounter int
 	currentErrorVelocityCounter   int
-	currentSec                    int
+	currentSec                    int64
 	eventSuccessCounter           metric.BoundInt64Counter
 	eventFailureCounter           metric.BoundInt64Counter
 	eventBytesCounter             metric.BoundInt64Counter
@@ -179,7 +179,7 @@ type Sender struct {
 	errorVelocityCounter          int
 	currentSuccessVelocityCounter int
 	currentErrorVelocityCounter   int
-	currentSec                    int
+	currentSec                    int64
 }
 
 type history struct {

@@ -118,6 +118,7 @@ type ReceiverStatus struct {
 	ErrorCount      int
 	SuccessVelocity int
 	ErrorVelocity   int
+	LastEventTs     int64
 	Tid             tenant.Id
 }
 
@@ -130,6 +131,7 @@ type SenderStatus struct {
 	ErrorCount      int
 	SuccessVelocity int
 	ErrorVelocity   int
+	LastEventTs     int64
 	Tid             tenant.Id
 }
 
