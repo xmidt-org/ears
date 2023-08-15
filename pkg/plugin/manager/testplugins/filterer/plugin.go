@@ -84,3 +84,31 @@ func (p *plugin) Plugin() string {
 func (p *plugin) Tenant() tenant.Id {
 	return tenant.Id{OrgId: "myorg", AppId: "myapp"}
 }
+
+func (p *plugin) EventSuccessCount() int {
+	return 0
+}
+
+func (p *plugin) EventSuccessVelocity() int {
+	return 0
+}
+
+func (p *plugin) EventFilterCount() int {
+	return 0
+}
+
+func (p *plugin) EventFilterVelocity() int {
+	return 0
+}
+
+func (p *plugin) EventErrorCount() int {
+	return 0
+}
+
+func (p *plugin) EventErrorVelocity() int {
+	return 0
+}
+
+func (p *plugin) EventTs() int64 {
+	return 0
+}
