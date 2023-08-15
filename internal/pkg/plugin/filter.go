@@ -88,3 +88,31 @@ func (f *filter) Plugin() string {
 func (f *filter) Tenant() tenant.Id {
 	return f.tid
 }
+
+func (f *filter) EventSuccessCount() int {
+	return f.EventSuccessCount()
+}
+
+func (f *filter) EventSuccessVelocity() int {
+	return f.EventSuccessVelocity()
+}
+
+func (f *filter) EventFilterCount() int {
+	return f.EventFilterCount()
+}
+
+func (f *filter) EventFilterVelocity() int {
+	return f.EventFilterVelocity()
+}
+
+func (f *filter) EventErrorCount() int {
+	return f.EventErrorCount()
+}
+
+func (f *filter) EventErrorVelocity() int {
+	return f.EventErrorVelocity()
+}
+
+func (f *filter) EventTs() int64 {
+	return f.EventTs()
+}

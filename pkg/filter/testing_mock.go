@@ -281,6 +281,34 @@ type FiltererMock struct {
 	lockTenant sync.RWMutex
 }
 
+func (mock *FiltererMock) EventSuccessCount() int {
+	return 0
+}
+
+func (mock *FiltererMock) EventSuccessVelocity() int {
+	return 0
+}
+
+func (mock *FiltererMock) EventFilterCount() int {
+	return 0
+}
+
+func (mock *FiltererMock) EventFilterVelocity() int {
+	return 0
+}
+
+func (mock *FiltererMock) EventErrorCount() int {
+	return 0
+}
+
+func (mock *FiltererMock) EventErrorVelocity() int {
+	return 0
+}
+
+func (mock *FiltererMock) EventTs() int64 {
+	return 0
+}
+
 // Config calls ConfigFunc.
 func (mock *FiltererMock) Config() interface{} {
 	if mock.ConfigFunc == nil {
@@ -702,4 +730,32 @@ func (mock *ChainerMock) TenantCalls() []struct {
 	calls = mock.calls.Tenant
 	mock.lockTenant.RUnlock()
 	return calls
+}
+
+func (mock *ChainerMock) EventSuccessCount() int {
+	return 0
+}
+
+func (mock *ChainerMock) EventSuccessVelocity() int {
+	return 0
+}
+
+func (mock *ChainerMock) EventFilterCount() int {
+	return 0
+}
+
+func (mock *ChainerMock) EventFilterVelocity() int {
+	return 0
+}
+
+func (mock *ChainerMock) EventErrorCount() int {
+	return 0
+}
+
+func (mock *ChainerMock) EventErrorVelocity() int {
+	return 0
+}
+
+func (mock *ChainerMock) EventTs() int64 {
+	return 0
 }

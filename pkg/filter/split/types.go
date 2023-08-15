@@ -14,7 +14,10 @@
 
 package split
 
-import "github.com/xmidt-org/ears/pkg/tenant"
+import (
+	"github.com/xmidt-org/ears/pkg/tenant"
+	"sync"
+)
 
 type Config struct {
 	Path string `json:"path,omitempty"`
@@ -25,8 +28,19 @@ var DefaultConfig = Config{
 }
 
 type Filter struct {
-	config Config
-	name   string
-	plugin string
-	tid    tenant.Id
+	sync.RWMutex
+	config                        Config
+	name                          string
+	plugin                        string
+	tid                           tenant.Id
+	successCounter                int
+	errorCounter                  int
+	filterCounter                 int
+	successVelocityCounter        int
+	errorVelocityCounter          int
+	filterVelocityCounter         int
+	currentSuccessVelocityCounter int
+	currentErrorVelocityCounter   int
+	currentFilterVelocityCounter  int
+	currentSec                    int64
 }

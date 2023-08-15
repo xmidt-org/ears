@@ -261,7 +261,9 @@ func (m *manager) ReceiversStatus() map[string]ReceiverStatus {
 				SuccessCount:    v.EventSuccessCount(),
 				ErrorCount:      v.EventErrorCount(),
 				SuccessVelocity: v.EventSuccessVelocity(),
-				ErrorVelocity:   v.EventErrorVelocity(), Tid: v.tid}
+				ErrorVelocity:   v.EventErrorVelocity(),
+				Tid:             v.tid,
+			}
 		}
 	}
 	return receivers
@@ -505,7 +507,20 @@ func (m *manager) FiltersStatus() map[string]FilterStatus {
 			status.ReferenceCount++
 			filters[mapKey] = status
 		} else {
-			filters[mapKey] = FilterStatus{Name: v.Name(), Plugin: v.Plugin(), Config: v.Config(), ReferenceCount: 1, Tid: v.tid}
+			filters[mapKey] = FilterStatus{
+				Name:            v.Name(),
+				Plugin:          v.Plugin(),
+				Config:          v.Config(),
+				ReferenceCount:  1,
+				LastEventTs:     v.EventTs(),
+				SuccessCount:    v.EventSuccessCount(),
+				ErrorCount:      v.EventErrorCount(),
+				FilterCount:     v.EventFilterCount(),
+				SuccessVelocity: v.EventSuccessVelocity(),
+				ErrorVelocity:   v.EventErrorVelocity(),
+				FilterVelocity:  v.EventFilterVelocity(),
+				Tid:             v.tid,
+			}
 		}
 	}
 	return filters

@@ -101,3 +101,31 @@ func (c *Chain) Plugin() string {
 func (c *Chain) Tenant() tenant.Id {
 	return tenant.Id{}
 }
+
+func (c *Chain) EventSuccessCount() int {
+	return 0
+}
+
+func (c *Chain) EventSuccessVelocity() int {
+	return 0
+}
+
+func (c *Chain) EventFilterCount() int {
+	return 0
+}
+
+func (c *Chain) EventFilterVelocity() int {
+	return 0
+}
+
+func (c *Chain) EventErrorCount() int {
+	return 0
+}
+
+func (c *Chain) EventErrorVelocity() int {
+	return 0
+}
+
+func (c *Chain) EventTs() int64 {
+	return 0
+}

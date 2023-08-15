@@ -14,7 +14,10 @@
 
 package mapping
 
-import "github.com/xmidt-org/ears/pkg/tenant"
+import (
+	"github.com/xmidt-org/ears/pkg/tenant"
+	"sync"
+)
 
 // Config can be passed into NewFilter() in order to configure
 // the behavior of the sender.
@@ -43,8 +46,19 @@ var DefaultConfig = Config{
 }
 
 type Filter struct {
-	config Config
-	name   string
-	plugin string
-	tid    tenant.Id
+	sync.RWMutex
+	config                        Config
+	name                          string
+	plugin                        string
+	tid                           tenant.Id
+	successCounter                int
+	errorCounter                  int
+	filterCounter                 int
+	successVelocityCounter        int
+	errorVelocityCounter          int
+	filterVelocityCounter         int
+	currentSuccessVelocityCounter int
+	currentErrorVelocityCounter   int
+	currentFilterVelocityCounter  int
+	currentSec                    int64
 }
