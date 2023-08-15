@@ -67,4 +67,14 @@ type Filter struct {
 	clients   map[string]*http.Client
 	satTokens map[string]*SatToken
 	sync.RWMutex
+	successCounter                int
+	errorCounter                  int
+	filterCounter                 int
+	successVelocityCounter        int
+	errorVelocityCounter          int
+	filterVelocityCounter         int
+	currentSuccessVelocityCounter int
+	currentErrorVelocityCounter   int
+	currentFilterVelocityCounter  int
+	currentSec                    int64
 }

@@ -12,26 +12,15 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package unwrap
+package pass
 
 import (
 	"github.com/xmidt-org/ears/pkg/tenant"
 	"sync"
 )
 
-// Config can be passed into NewFilter() in order to configure
-// the behavior of the sender.
-type Config struct {
-	Path string `json:"path,omitempty"`
-}
-
-var DefaultConfig = Config{
-	Path: "",
-}
-
 type Filter struct {
 	sync.RWMutex
-	config                        Config
 	name                          string
 	plugin                        string
 	tid                           tenant.Id

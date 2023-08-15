@@ -25,6 +25,7 @@ import (
 	"github.com/xmidt-org/ears/pkg/secret"
 	"github.com/xmidt-org/ears/pkg/tenant"
 	"go.opentelemetry.io/otel/trace"
+	"time"
 )
 
 func NewFilter(tid tenant.Id, plugin string, name string, config interface{}, secrets secret.Vault) (*Filter, error) {
@@ -40,16 +41,53 @@ func NewFilter(tid tenant.Id, plugin string, name string, config interface{}, se
 		return nil, err
 	}
 	f := &Filter{
-		config: *cfg,
-		name:   name,
-		plugin: plugin,
-		tid:    tid,
+		config:     *cfg,
+		name:       name,
+		plugin:     plugin,
+		tid:        tid,
+		currentSec: time.Now().Unix(),
 	}
 	f.lruCache, err = lru.New(*cfg.CacheSize)
 	if err != nil {
 		return nil, err
 	}
 	return f, nil
+}
+
+func (f *Filter) logSuccess() {
+	f.Lock()
+	f.successCounter++
+	if time.Now().Unix() != f.currentSec {
+		f.successVelocityCounter = f.currentSuccessVelocityCounter
+		f.currentSuccessVelocityCounter = 0
+		f.currentSec = time.Now().Unix()
+	}
+	f.currentSuccessVelocityCounter++
+	f.Unlock()
+}
+
+func (f *Filter) logError() {
+	f.Lock()
+	f.errorCounter++
+	if time.Now().Unix() != f.currentSec {
+		f.errorVelocityCounter = f.currentErrorVelocityCounter
+		f.currentErrorVelocityCounter = 0
+		f.currentSec = time.Now().Unix()
+	}
+	f.currentErrorVelocityCounter++
+	f.Unlock()
+}
+
+func (f *Filter) logFilter() {
+	f.Lock()
+	f.filterCounter++
+	if time.Now().Unix() != f.currentSec {
+		f.filterVelocityCounter = f.currentFilterVelocityCounter
+		f.currentFilterVelocityCounter = 0
+		f.currentSec = time.Now().Unix()
+	}
+	f.currentFilterVelocityCounter++
+	f.Unlock()
 }
 
 func (f *Filter) Filter(evt event.Event) []event.Event {
@@ -66,6 +104,7 @@ func (f *Filter) Filter(evt event.Event) []event.Event {
 			span.AddEvent("nil object at " + f.config.Path)
 		}
 		evt.Ack()
+		f.logError()
 		return []event.Event{}
 	}
 	buf, err := json.Marshal(obj)
@@ -75,6 +114,7 @@ func (f *Filter) Filter(evt event.Event) []event.Event {
 			span.AddEvent(err.Error())
 		}
 		evt.Ack()
+		f.logError()
 		return []event.Event{}
 	}
 	evtHash := fmt.Sprintf("%x", md5.Sum(buf))
@@ -82,10 +122,12 @@ func (f *Filter) Filter(evt event.Event) []event.Event {
 	if !ok {
 		f.lruCache.Add(evtHash, struct{}{})
 		log.Ctx(evt.Context()).Debug().Str("op", "filter").Str("filterType", "dedup").Str("name", f.Name()).Int("eventCount", 1).Msg("dedup")
+		f.logSuccess()
 		return []event.Event{evt}
 	} else {
 		evt.Ack()
 		log.Ctx(evt.Context()).Debug().Str("op", "filter").Str("filterType", "dedup").Str("name", f.Name()).Int("eventCount", 0).Msg("dedup")
+		f.logFilter()
 		return []event.Event{}
 	}
 }
@@ -107,4 +149,32 @@ func (f *Filter) Plugin() string {
 
 func (f *Filter) Tenant() tenant.Id {
 	return f.tid
+}
+
+func (f *Filter) EventSuccessCount() int {
+	return f.successCounter
+}
+
+func (f *Filter) EventSuccessVelocity() int {
+	return f.successVelocityCounter
+}
+
+func (f *Filter) EventFilterCount() int {
+	return f.filterCounter
+}
+
+func (f *Filter) EventFilterVelocity() int {
+	return f.filterVelocityCounter
+}
+
+func (f *Filter) EventErrorCount() int {
+	return f.errorCounter
+}
+
+func (f *Filter) EventErrorVelocity() int {
+	return f.errorVelocityCounter
+}
+
+func (f *Filter) EventTs() int64 {
+	return f.currentSec
 }

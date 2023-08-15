@@ -56,18 +56,22 @@ type NewFilterer interface {
 }
 
 // Filterer defines the interface that a filterer must implement
-// TODO: https://github.com/xmidt-org/ears/issues/74
 type Filterer interface {
 	Filter(e event.Event) []event.Event
-	//
 	Config() interface{}
 	Name() string
 	Plugin() string
 	Tenant() tenant.Id
+	EventSuccessCount() int
+	EventSuccessVelocity() int
+	EventFilterCount() int
+	EventFilterVelocity() int
+	EventErrorCount() int
+	EventErrorVelocity() int
+	EventTs() int64
 }
 
 // Chainer
-// TODO: https://github.com/xmidt-org/ears/issues/74
 type Chainer interface {
 	Filterer
 
