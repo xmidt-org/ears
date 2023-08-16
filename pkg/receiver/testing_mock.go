@@ -345,6 +345,8 @@ func (mock *ReceiverMock) Name() string {
 	return mock.NameFunc()
 }
 
+func (mock *ReceiverMock) LogSuccess() {}
+
 func (mock *ReceiverMock) EventSuccessCount() int {
 	return 0
 }

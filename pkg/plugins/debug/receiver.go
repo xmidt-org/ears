@@ -102,7 +102,7 @@ func NewReceiver(tid tenant.Id, plugin string, name string, config interface{}, 
 	return r, nil
 }
 
-func (r *Receiver) logSuccess() {
+func (r *Receiver) LogSuccess() {
 	r.Lock()
 	r.successCounter++
 	if time.Now().Unix() != r.currentSec {
@@ -171,7 +171,7 @@ func (r *Receiver) Receive(next receiver.NextFn) error {
 							eventsDone.Done()
 						}
 						r.eventSuccessCounter.Add(ctx, 1)
-						r.logSuccess()
+						r.LogSuccess()
 						cancel()
 					}, func(evt event.Event, err error) {
 						r.logger.Error().Str("op", "debug.Receive").Msg("failed to process message: " + err.Error())

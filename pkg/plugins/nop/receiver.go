@@ -65,7 +65,7 @@ func NewReceiver(tid tenant.Id, plugin string, name string, config interface{}, 
 	return r, nil
 }
 
-func (r *Receiver) logSuccess() {
+func (r *Receiver) LogSuccess() {
 	r.Lock()
 	r.successCounter++
 	if time.Now().Unix() != r.currentSec {
@@ -130,7 +130,6 @@ func (r *Receiver) Trigger(e event.Event) {
 	next := r.next
 	r.Unlock()
 	// this will be called by RouteEvent() for webhook routes
-	r.logSuccess()
 	if next != nil {
 		next(e)
 	}

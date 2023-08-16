@@ -107,7 +107,7 @@ func NewReceiver(tid tenant.Id, plugin string, name string, config interface{}, 
 	return r, nil
 }
 
-func (r *Receiver) logSuccess() {
+func (r *Receiver) LogSuccess() {
 	r.Lock()
 	r.successCounter++
 	if time.Now().Unix() != r.currentSec {
@@ -361,7 +361,7 @@ func (r *Receiver) messageCreate(s *discordgo.Session, m *discordgo.MessageCreat
 		e, err := event.New(ctx, payload, event.WithMetadataKeyValue("discordMessage", 1), event.WithAck(
 			func(e event.Event) {
 				r.eventSuccessCounter.Add(ctx, 1)
-				r.logSuccess()
+				r.LogSuccess()
 				cancel()
 			},
 			func(e event.Event, err error) {

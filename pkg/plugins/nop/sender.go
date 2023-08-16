@@ -129,6 +129,7 @@ func (s *Sender) Send(e event.Event) {
 	buf, err := json.Marshal(e.Payload())
 	if err != nil {
 		s.eventFailureCounter.Add(e.Context(), 1)
+		s.logError()
 		e.Nack(err)
 		return
 	}

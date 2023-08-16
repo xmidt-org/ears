@@ -112,3 +112,5 @@ func (p *plugin) EventErrorVelocity() int {
 func (p *plugin) EventTs() int64 {
 	return 0
 }
+
+func (p *plugin) LogSuccess() {}

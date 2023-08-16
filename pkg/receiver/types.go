@@ -70,4 +70,5 @@ type Receiver interface {
 	EventErrorCount() int
 	EventErrorVelocity() int
 	EventTs() int64
+	LogSuccess()
 }

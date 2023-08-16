@@ -157,7 +157,7 @@ const (
 	attributeNames              = "All"
 )
 
-func (r *Receiver) logSuccess() {
+func (r *Receiver) LogSuccess() {
 	r.Lock()
 	r.successCounter++
 	if time.Now().Unix() != r.currentSec {
@@ -353,7 +353,7 @@ func (r *Receiver) startReceiveWorker(svc *sqs.SQS, n int) {
 							entry := sqs.DeleteMessageBatchRequestEntry{Id: msg.MessageId, ReceiptHandle: msg.ReceiptHandle}
 							entries <- &entry
 							r.eventSuccessCounter.Add(ctx, 1)
-							r.logSuccess()
+							r.LogSuccess()
 						} else {
 							log.Ctx(e.Context()).Error().Str("op", "SQS.receiveWorker").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Int("workerNum", n).Msg("failed to process message with missing sqs metadata")
 						}

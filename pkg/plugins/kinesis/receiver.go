@@ -134,7 +134,7 @@ func NewReceiver(tid tenant.Id, plugin string, name string, config interface{}, 
 //TODO: generic solution for retry policy on nack
 //TODO: checkpoint to advance on nack after final retry
 
-func (r *Receiver) logSuccess() {
+func (r *Receiver) LogSuccess() {
 	r.Lock()
 	r.successCounter++
 	if time.Now().Unix() != r.currentSec {
@@ -427,7 +427,7 @@ func (r *Receiver) startShardReceiverEFO(svc *kinesis.Kinesis, stream *kinesis.D
 							e, err := event.New(ctx, payload, event.WithMetadataKeyValue("kinesisMessage", rec), event.WithAck(
 								func(e event.Event) {
 									r.eventSuccessCounter.Add(ctx, 1)
-									r.logSuccess()
+									r.LogSuccess()
 									if kinEvt.ContinuationSequenceNumber != nil {
 										checkpoint.SetCheckpoint(checkpointId, *kinEvt.ContinuationSequenceNumber)
 									}
@@ -598,7 +598,7 @@ func (r *Receiver) startShardReceiver(svc *kinesis.Kinesis, stream *kinesis.Desc
 							e, err := event.New(ctx, payload, event.WithMetadataKeyValue("kinesisMessage", *msg), event.WithAck(
 								func(e event.Event) {
 									r.eventSuccessCounter.Add(ctx, 1)
-									r.logSuccess()
+									r.LogSuccess()
 									checkpoint.SetCheckpoint(checkpointId, *msg.SequenceNumber)
 									cancel()
 								},

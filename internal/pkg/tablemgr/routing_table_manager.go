@@ -232,6 +232,7 @@ func (r *DefaultRoutingTableManager) RouteEvent(ctx context.Context, tid tenant.
 	// no need to cancel context here because RouteEvent is only used synchronously via API call
 	e, err := event.New(ctx, payload, event.WithAck(
 		func(evt event.Event) {
+			lrw.Receiver.LogSuccess()
 			wg.Done()
 			//cancel()
 		}, func(evt event.Event, err error) {

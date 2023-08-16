@@ -123,7 +123,7 @@ func NewReceiver(tid tenant.Id, plugin string, name string, config interface{}, 
 	return r, nil
 }
 
-func (r *Receiver) logSuccess() {
+func (r *Receiver) LogSuccess() {
 	r.Lock()
 	r.successCounter++
 	if time.Now().Unix() != r.currentSec {
@@ -325,7 +325,7 @@ func (r *Receiver) Receive(next receiver.NextFn) error {
 				func(e event.Event) {
 					log.Ctx(e.Context()).Debug().Str("op", "kafka.Receive").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Msg("processed message from kafka topic")
 					r.eventSuccessCounter.Add(ctx, 1)
-					r.logSuccess()
+					r.LogSuccess()
 					cancel()
 				},
 				func(e event.Event, err error) {
