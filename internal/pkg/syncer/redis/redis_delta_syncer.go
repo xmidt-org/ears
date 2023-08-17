@@ -112,7 +112,7 @@ func (s *RedisDeltaSyncer) ReadMetrics(id string) *syncer.EarsMetric {
 		aggMetric.ErrorVelocity += metric.ErrorVelocity
 		aggMetric.FilterVelocity += metric.FilterVelocity
 		if metric.LastEventTs > aggMetric.LastEventTs {
-			aggMetric.LastEventTs += metric.LastEventTs
+			aggMetric.LastEventTs = metric.LastEventTs
 		}
 	}
 	return &aggMetric
