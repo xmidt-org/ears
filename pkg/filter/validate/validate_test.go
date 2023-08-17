@@ -50,7 +50,7 @@ func TestFilterValidateBasic(t *testing.T) {
 	f, err := validate.NewFilter(tenant.Id{AppId: "myapp", OrgId: "myorg"}, "validate", "myvalidate", validate.Config{
 		Path:   ".",
 		Schema: sobj,
-	}, nil)
+	}, nil, nil)
 	if err != nil {
 		t.Fatalf("validate test failed: %s\n", err.Error())
 	}
@@ -106,7 +106,7 @@ func TestFilterValidateFilter(t *testing.T) {
 	f, err := validate.NewFilter(tenant.Id{AppId: "myapp", OrgId: "myorg"}, "validate", "myvalidate", validate.Config{
 		Path:   ".",
 		Schema: sobj,
-	}, nil)
+	}, nil, nil)
 	if err != nil {
 		t.Fatalf("validate test failed: %s\n", err.Error())
 	}

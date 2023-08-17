@@ -1,6 +1,7 @@
 package syslog
 
 import (
+	"github.com/xmidt-org/ears/internal/pkg/syncer"
 	"sync"
 
 	"github.com/rs/zerolog"
@@ -58,4 +59,5 @@ type Receiver struct {
 	currentSuccessVelocityCounter int
 	currentErrorVelocityCounter   int
 	currentSec                    int64
+	tableSyncer                   syncer.DeltaSyncer
 }

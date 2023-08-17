@@ -16,6 +16,7 @@ package sender
 
 import (
 	"context"
+	"github.com/xmidt-org/ears/internal/pkg/syncer"
 	"github.com/xmidt-org/ears/pkg/event"
 	"github.com/xmidt-org/ears/pkg/secret"
 	"github.com/xmidt-org/ears/pkg/tenant"
@@ -36,7 +37,7 @@ type Hasher interface {
 type NewSenderer interface {
 	Hasher
 	// Returns an objec that implements the Sender interface
-	NewSender(tid tenant.Id, plugin string, name string, config interface{}, secrets secret.Vault) (Sender, error)
+	NewSender(tid tenant.Id, plugin string, name string, config interface{}, secrets secret.Vault, tableSyncer syncer.DeltaSyncer) (Sender, error)
 }
 
 // or Outputter[√] or Producer[x] or Publisher[√]

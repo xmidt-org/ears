@@ -19,6 +19,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/rs/zerolog"
+	"github.com/xmidt-org/ears/internal/pkg/syncer"
 	"github.com/xmidt-org/ears/pkg/errs"
 	"github.com/xmidt-org/ears/pkg/secret"
 	"github.com/xmidt-org/ears/pkg/tenant"
@@ -105,6 +106,7 @@ type Receiver struct {
 	currentSuccessVelocityCounter int
 	currentErrorVelocityCounter   int
 	currentSec                    int64
+	tableSyncer                   syncer.DeltaSyncer
 }
 
 var DefaultSenderConfig = SenderConfig{
@@ -159,6 +161,7 @@ type Sender struct {
 	currentSuccessVelocityCounter int
 	currentErrorVelocityCounter   int
 	currentSec                    int64
+	tableSyncer                   syncer.DeltaSyncer
 }
 
 type S3Error struct {

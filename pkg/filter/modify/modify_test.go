@@ -30,7 +30,7 @@ func TestFilterModifyUpper(t *testing.T) {
 	f, err := modify.NewFilter(tenant.Id{AppId: "myapp", OrgId: "myorg"}, "modify", "mymodify", modify.Config{
 		Path:    ".foo",
 		ToUpper: pointer.Bool(true),
-	}, nil)
+	}, nil, nil)
 	if err != nil {
 		t.Fatalf("modify test failed: %s\n", err.Error())
 	}
@@ -65,7 +65,7 @@ func TestFilterModifyLower(t *testing.T) {
 	f, err := modify.NewFilter(tenant.Id{AppId: "myapp", OrgId: "myorg"}, "modify", "mymodify", modify.Config{
 		Path:    ".foo",
 		ToLower: pointer.Bool(true),
-	}, nil)
+	}, nil, nil)
 	if err != nil {
 		t.Fatalf("modify test failed: %s\n", err.Error())
 	}
@@ -100,7 +100,7 @@ func TestFilterModifyMany(t *testing.T) {
 	f, err := modify.NewFilter(tenant.Id{AppId: "myapp", OrgId: "myorg"}, "modify", "mymodify", modify.Config{
 		Paths:   []string{".foo", ".a"},
 		ToLower: pointer.Bool(true),
-	}, nil)
+	}, nil, nil)
 	if err != nil {
 		t.Fatalf("modify test failed: %s\n", err.Error())
 	}
@@ -135,7 +135,7 @@ func TestFilterModifyDeadPath(t *testing.T) {
 	f, err := modify.NewFilter(tenant.Id{AppId: "myapp", OrgId: "myorg"}, "modify", "mymodify", modify.Config{
 		Path:    ".foo.bar.baz",
 		ToUpper: pointer.Bool(true),
-	}, nil)
+	}, nil, nil)
 	if err != nil {
 		t.Fatalf("modify test failed: %s\n", err.Error())
 	}

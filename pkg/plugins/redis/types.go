@@ -17,6 +17,7 @@ package redis
 import (
 	"github.com/go-redis/redis"
 	"github.com/rs/zerolog"
+	"github.com/xmidt-org/ears/internal/pkg/syncer"
 	"github.com/xmidt-org/ears/pkg/tenant"
 	"github.com/xorcare/pointer"
 	"go.opentelemetry.io/otel/metric"
@@ -87,6 +88,7 @@ type Receiver struct {
 	currentSuccessVelocityCounter int
 	currentErrorVelocityCounter   int
 	currentSec                    int64
+	tableSyncer                   syncer.DeltaSyncer
 }
 
 var DefaultSenderConfig = SenderConfig{
@@ -121,4 +123,5 @@ type Sender struct {
 	currentSuccessVelocityCounter int
 	currentErrorVelocityCounter   int
 	currentSec                    int64
+	tableSyncer                   syncer.DeltaSyncer
 }

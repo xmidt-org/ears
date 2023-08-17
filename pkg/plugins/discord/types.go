@@ -15,6 +15,7 @@
 package discord
 
 import (
+	"github.com/xmidt-org/ears/internal/pkg/syncer"
 	"sync"
 
 	"github.com/bwmarrin/discordgo"
@@ -85,6 +86,7 @@ type Sender struct {
 	currentSuccessVelocityCounter int
 	currentErrorVelocityCounter   int
 	currentSec                    int64
+	tableSyncer                   syncer.DeltaSyncer
 }
 
 type Receiver struct {
@@ -114,4 +116,5 @@ type Receiver struct {
 	currentSuccessVelocityCounter  int
 	currentErrorVelocityCounter    int
 	currentSec                     int64
+	tableSyncer                    syncer.DeltaSyncer
 }

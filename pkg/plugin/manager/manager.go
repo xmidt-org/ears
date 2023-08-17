@@ -16,6 +16,7 @@ package manager
 
 import (
 	"fmt"
+	"github.com/xmidt-org/ears/internal/pkg/syncer"
 	"github.com/xmidt-org/ears/pkg/secret"
 	"github.com/xmidt-org/ears/pkg/tenant"
 	"reflect"
@@ -196,12 +197,12 @@ func (m *manager) Senderer(pluginName string) (sender.NewSenderer, error) {
 	return p, nil
 }
 
-func (m *manager) NewSender(tid tenant.Id, plugin string, name string, config string, secrets secret.Vault) (sender.Sender, error) {
+func (m *manager) NewSender(tid tenant.Id, plugin string, name string, config string, secrets secret.Vault, tableSyncer syncer.DeltaSyncer) (sender.Sender, error) {
 	p, ok := m.registrations[plugin].Plugin.(sender.NewSenderer)
 	if !ok {
 		return nil, &NotFoundError{}
 	}
-	return p.NewSender(tid, plugin, name, config, secrets)
+	return p.NewSender(tid, plugin, name, config, secrets, tableSyncer)
 }
 
 // === Filters ========================================================
@@ -227,12 +228,12 @@ func (m *manager) Filterer(pluginName string) (filter.NewFilterer, error) {
 	return p, nil
 }
 
-func (m *manager) NewFilterer(tid tenant.Id, plugin string, name string, config string, secrets secret.Vault) (filter.Filterer, error) {
+func (m *manager) NewFilterer(tid tenant.Id, plugin string, name string, config string, secrets secret.Vault, tableSyncer syncer.DeltaSyncer) (filter.Filterer, error) {
 	p, ok := m.registrations[plugin].Plugin.(filter.NewFilterer)
 	if !ok {
 		return nil, &NotFoundError{}
 	}
-	return p.NewFilterer(tid, plugin, name, config, secrets)
+	return p.NewFilterer(tid, plugin, name, config, secrets, tableSyncer)
 }
 
 // === Receivers ======================================================
@@ -258,10 +259,10 @@ func (m *manager) Receiverer(pluginName string) (receiver.NewReceiverer, error) 
 	return p, nil
 }
 
-func (m *manager) NewReceiver(tid tenant.Id, plugin string, name string, config string, secrets secret.Vault) (receiver.Receiver, error) {
+func (m *manager) NewReceiver(tid tenant.Id, plugin string, name string, config string, secrets secret.Vault, tableSyncer syncer.DeltaSyncer) (receiver.Receiver, error) {
 	p, ok := m.registrations[plugin].Plugin.(receiver.NewReceiverer)
 	if !ok {
 		return nil, &NotFoundError{}
 	}
-	return p.NewReceiver(tid, plugin, name, config, secrets)
+	return p.NewReceiver(tid, plugin, name, config, secrets, tableSyncer)
 }

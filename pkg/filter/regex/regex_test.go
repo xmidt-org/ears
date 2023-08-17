@@ -30,7 +30,7 @@ func TestFilterHashBasic(t *testing.T) {
 		FromPath: ".foo",
 		ToPath:   ".regex",
 		Regex:    "[\\w]+$",
-	}, nil)
+	}, nil, nil)
 	if err != nil {
 		t.Fatalf("regex test failed: %s\n", err.Error())
 	}

@@ -15,6 +15,7 @@
 package transform
 
 import (
+	"github.com/xmidt-org/ears/internal/pkg/syncer"
 	"github.com/xmidt-org/ears/pkg/filter"
 	pkgtransfrom "github.com/xmidt-org/ears/pkg/filter/transform"
 	pkgplugin "github.com/xmidt-org/ears/pkg/plugin"
@@ -41,6 +42,6 @@ func NewPluginVersion(name string, version string, commitID string) (*pkgplugin.
 	)
 }
 
-func NewFilterer(tid tenant.Id, plugin string, name string, config interface{}, secrets secret.Vault) (filter.Filterer, error) {
-	return pkgtransfrom.NewFilter(tid, plugin, name, config, secrets)
+func NewFilterer(tid tenant.Id, plugin string, name string, config interface{}, secrets secret.Vault, tableSyncer syncer.DeltaSyncer) (filter.Filterer, error) {
+	return pkgtransfrom.NewFilter(tid, plugin, name, config, secrets, tableSyncer)
 }

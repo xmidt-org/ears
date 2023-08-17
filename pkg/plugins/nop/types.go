@@ -16,6 +16,7 @@ package nop
 
 import (
 	"github.com/rs/zerolog"
+	"github.com/xmidt-org/ears/internal/pkg/syncer"
 	"github.com/xmidt-org/ears/pkg/tenant"
 	"go.opentelemetry.io/otel/metric"
 	"sync"
@@ -71,6 +72,7 @@ type Receiver struct {
 	currentSuccessVelocityCounter int
 	currentErrorVelocityCounter   int
 	currentSec                    int64
+	tableSyncer                   syncer.DeltaSyncer
 }
 
 var DefaultSenderConfig = SenderConfig{}
@@ -96,4 +98,5 @@ type Sender struct {
 	currentSuccessVelocityCounter int
 	currentErrorVelocityCounter   int
 	currentSec                    int64
+	tableSyncer                   syncer.DeltaSyncer
 }

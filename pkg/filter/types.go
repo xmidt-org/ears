@@ -18,6 +18,7 @@
 package filter
 
 import (
+	"github.com/xmidt-org/ears/internal/pkg/syncer"
 	"github.com/xmidt-org/ears/pkg/secret"
 	"github.com/xmidt-org/ears/pkg/tenant"
 	"sync"
@@ -52,7 +53,7 @@ type NewFilterer interface {
 	Hasher
 
 	// NewFilterer returns an object that implements the Filterer interface
-	NewFilterer(tid tenant.Id, plugin string, name string, config interface{}, secrets secret.Vault) (Filterer, error)
+	NewFilterer(tid tenant.Id, plugin string, name string, config interface{}, secrets secret.Vault, tableSyncer syncer.DeltaSyncer) (Filterer, error)
 }
 
 // Filterer defines the interface that a filterer must implement

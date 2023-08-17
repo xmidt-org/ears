@@ -39,6 +39,16 @@ type SyncCommand struct {
 	Tenant     tenant.Id
 }
 
+type EarsMetric struct {
+	SuccessCount    int
+	ErrorCount      int
+	FilterCount     int
+	SuccessVelocity int
+	ErrorVelocity   int
+	FilterVelocity  int
+	LastEventTs     int64
+}
+
 type (
 	LocalSyncer interface {
 		// SyncRoute
@@ -58,5 +68,9 @@ type (
 		PublishSyncRequest(ctx context.Context, tenantId tenant.Id, itemType string, itemId string, add bool)
 		// GetInstanceCount
 		GetInstanceCount(ctx context.Context) int
+		//
+		WriteMetrics(id string, metric *EarsMetric)
+		//
+		ReadMetrics(id string) *EarsMetric
 	}
 )

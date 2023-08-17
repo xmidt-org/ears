@@ -16,6 +16,7 @@ package receiver
 
 import (
 	"context"
+	"github.com/xmidt-org/ears/internal/pkg/syncer"
 
 	"github.com/xmidt-org/ears/pkg/secret"
 	"github.com/xmidt-org/ears/pkg/tenant"
@@ -44,7 +45,7 @@ type NewReceiverer interface {
 	Hasher
 	// NewReceiver returns an object that implements the
 	// Receiver interface
-	NewReceiver(tid tenant.Id, plugin string, name string, config interface{}, secrets secret.Vault) (Receiver, error)
+	NewReceiver(tid tenant.Id, plugin string, name string, config interface{}, secrets secret.Vault, tableSyncer syncer.DeltaSyncer) (Receiver, error)
 }
 
 // NextFn defines the signature of a function that can take in an

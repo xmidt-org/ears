@@ -83,7 +83,7 @@ func TestSender(t *testing.T) {
 			tc.config.Writer = w
 			tc.config = tc.config.WithDefaults()
 
-			s, err := p.NewSender(tid, "debug", "mydebug", tc.config, nil)
+			s, err := p.NewSender(tid, "debug", "mydebug", tc.config, nil, nil)
 			a.Expect(err).To(BeNil())
 
 			for i := 0; i < tc.numMessages; i++ {

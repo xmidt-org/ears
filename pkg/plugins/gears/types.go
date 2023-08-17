@@ -17,6 +17,7 @@ package gears
 import (
 	"github.com/Shopify/sarama"
 	"github.com/rs/zerolog"
+	"github.com/xmidt-org/ears/internal/pkg/syncer"
 	pkgplugin "github.com/xmidt-org/ears/pkg/plugin"
 	"github.com/xmidt-org/ears/pkg/secret"
 	"github.com/xmidt-org/ears/pkg/sender"
@@ -125,6 +126,7 @@ type Sender struct {
 	currentSuccessVelocityCounter int
 	currentErrorVelocityCounter   int
 	currentSec                    int64
+	tableSyncer                   syncer.DeltaSyncer
 }
 
 type ManualHashPartitioner struct {

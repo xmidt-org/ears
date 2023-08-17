@@ -22,8 +22,10 @@ import (
 	"fmt"
 	"github.com/boriwo/deepcopy"
 	"github.com/rs/zerolog/log"
+	"github.com/xmidt-org/ears/internal/pkg/syncer"
 	"github.com/xmidt-org/ears/pkg/event"
 	"github.com/xmidt-org/ears/pkg/filter"
+	"github.com/xmidt-org/ears/pkg/hasher"
 	"github.com/xmidt-org/ears/pkg/secret"
 	"github.com/xmidt-org/ears/pkg/tenant"
 	"go.opentelemetry.io/otel/trace"
@@ -54,7 +56,7 @@ type (
 	}
 )
 
-func NewFilter(tid tenant.Id, plugin string, name string, config interface{}, secrets secret.Vault) (*Filter, error) {
+func NewFilter(tid tenant.Id, plugin string, name string, config interface{}, secrets secret.Vault, tableSyncer syncer.DeltaSyncer) (*Filter, error) {
 	cfg, err := NewConfig(config)
 	if err != nil {
 		return nil, &filter.InvalidConfigError{
@@ -67,14 +69,15 @@ func NewFilter(tid tenant.Id, plugin string, name string, config interface{}, se
 		return nil, err
 	}
 	f := &Filter{
-		config:     *cfg,
-		name:       name,
-		plugin:     plugin,
-		tid:        tid,
-		secrets:    secrets,
-		clients:    make(map[string]*http.Client),
-		satTokens:  make(map[string]*SatToken),
-		currentSec: time.Now().Unix(),
+		config:      *cfg,
+		name:        name,
+		plugin:      plugin,
+		tid:         tid,
+		secrets:     secrets,
+		clients:     make(map[string]*http.Client),
+		satTokens:   make(map[string]*SatToken),
+		currentSec:  time.Now().Unix(),
+		tableSyncer: tableSyncer,
 	}
 	return f, nil
 }
@@ -402,30 +405,72 @@ func InitHttpTransportWithDialer() *http.Client {
 	return client
 }
 
+func (f *Filter) getLocalMetric() *syncer.EarsMetric {
+	f.Lock()
+	defer f.Unlock()
+	metrics := &syncer.EarsMetric{
+		f.successCounter,
+		f.errorCounter,
+		f.filterCounter,
+		f.successVelocityCounter,
+		f.errorVelocityCounter,
+		f.filterVelocityCounter,
+		f.currentSec,
+	}
+	return metrics
+}
+
 func (f *Filter) EventSuccessCount() int {
-	return f.successCounter
+	hash := f.Hash()
+	f.tableSyncer.WriteMetrics(hash, f.getLocalMetric())
+	return f.tableSyncer.ReadMetrics(hash).SuccessCount
 }
 
 func (f *Filter) EventSuccessVelocity() int {
-	return f.successVelocityCounter
+	hash := f.Hash()
+	f.tableSyncer.WriteMetrics(hash, f.getLocalMetric())
+	return f.tableSyncer.ReadMetrics(hash).SuccessVelocity
 }
 
 func (f *Filter) EventFilterCount() int {
-	return f.filterCounter
+	hash := f.Hash()
+	f.tableSyncer.WriteMetrics(hash, f.getLocalMetric())
+	return f.tableSyncer.ReadMetrics(hash).FilterCount
 }
 
 func (f *Filter) EventFilterVelocity() int {
-	return f.filterVelocityCounter
+	hash := f.Hash()
+	f.tableSyncer.WriteMetrics(hash, f.getLocalMetric())
+	return f.tableSyncer.ReadMetrics(hash).FilterVelocity
 }
 
 func (f *Filter) EventErrorCount() int {
-	return f.errorCounter
+	hash := f.Hash()
+	f.tableSyncer.WriteMetrics(hash, f.getLocalMetric())
+	return f.tableSyncer.ReadMetrics(hash).ErrorCount
 }
 
 func (f *Filter) EventErrorVelocity() int {
-	return f.errorVelocityCounter
+	hash := f.Hash()
+	f.tableSyncer.WriteMetrics(hash, f.getLocalMetric())
+	return f.tableSyncer.ReadMetrics(hash).ErrorVelocity
 }
 
 func (f *Filter) EventTs() int64 {
-	return f.currentSec
+	hash := f.Hash()
+	f.tableSyncer.WriteMetrics(hash, f.getLocalMetric())
+	return f.tableSyncer.ReadMetrics(hash).LastEventTs
+}
+
+func (f *Filter) Hash() string {
+	cfg := ""
+	if f.Config() != nil {
+		buf, _ := json.Marshal(f.Config())
+		if buf != nil {
+			cfg = string(buf)
+		}
+	}
+	str := f.name + f.plugin + cfg
+	hash := hasher.String(str)
+	return hash
 }

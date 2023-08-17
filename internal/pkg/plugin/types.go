@@ -18,6 +18,7 @@ import (
 	"context"
 	"github.com/rs/zerolog"
 	"github.com/xmidt-org/ears/internal/pkg/quota"
+	"github.com/xmidt-org/ears/internal/pkg/syncer"
 	"github.com/xmidt-org/ears/pkg/secret"
 	"github.com/xmidt-org/ears/pkg/tenant"
 	"time"
@@ -70,6 +71,13 @@ func WithPluginManager(p pkgmanager.Manager) ManagerOption {
 			}
 		}
 		m.pm = p
+		return nil
+	}
+}
+
+func WithSyncer(tableSyncer syncer.DeltaSyncer) ManagerOption {
+	return func(m *manager) error {
+		m.tableSyncer = tableSyncer
 		return nil
 	}
 }

@@ -15,6 +15,7 @@
 package match
 
 import (
+	"github.com/xmidt-org/ears/internal/pkg/syncer"
 	"github.com/xmidt-org/ears/pkg/event"
 	"github.com/xmidt-org/ears/pkg/filter/match/comparison"
 	"github.com/xmidt-org/ears/pkg/tenant"
@@ -86,4 +87,5 @@ type Filter struct {
 	currentErrorVelocityCounter   int
 	currentFilterVelocityCounter  int
 	currentSec                    int64
+	tableSyncer                   syncer.DeltaSyncer
 }
