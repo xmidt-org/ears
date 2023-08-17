@@ -18,6 +18,7 @@
 package app
 
 import (
+	"cloud.google.com/go/profiler"
 	"context"
 	"fmt"
 	"github.com/rs/zerolog"
@@ -217,6 +218,15 @@ func SetupAPIServer(lifecycle fx.Lifecycle, config config.Config, logger *zerolo
 	server := &http.Server{
 		Addr:    ":" + config.GetString("ears.api.port"),
 		Handler: mux,
+	}
+
+	cfg := profiler.Config{
+		Service:        "earsservice",
+		ServiceVersion: "1.1.1",
+		ProjectID:      "",
+	}
+	if err := profiler.Start(cfg); err != nil {
+		logger.Error().Str("op", "SetupAPIServer.StartProfiler").Msg(err.Error())
 	}
 
 	// initialize event logger

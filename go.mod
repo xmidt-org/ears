@@ -3,6 +3,7 @@ module github.com/xmidt-org/ears
 go 1.16
 
 require (
+	cloud.google.com/go/profiler v0.3.1 // indirect
 	github.com/Shopify/sarama v1.38.1
 	github.com/Shopify/toxiproxy/v2 v2.5.0 // indirect
 	github.com/aws/aws-sdk-go v1.44.298
