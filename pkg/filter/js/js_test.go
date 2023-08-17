@@ -32,7 +32,7 @@ func TestFilterJsBasic(t *testing.T) {
         event.metadata =  _.event.metadata;
         event.payload.tag = "ears";
         return event;`,
-	}, nil)
+	}, nil, nil)
 	if err != nil {
 		t.Fatalf("js test failed: %s\n", err.Error())
 	}

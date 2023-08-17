@@ -28,7 +28,7 @@ func TestFilterDecodeBasic(t *testing.T) {
 	ctx := context.Background()
 	f, err := sample.NewFilter(tenant.Id{AppId: "myapp", OrgId: "myorg"}, "sample", "mysample", sample.Config{
 		Percentage: pointer.Float64(0.1),
-	}, nil)
+	}, nil, nil)
 	if err != nil {
 		t.Fatalf("sample test failed: %s\n", err.Error())
 	}

@@ -15,6 +15,7 @@
 package plugin
 
 import (
+	"github.com/xmidt-org/ears/internal/pkg/syncer"
 	"github.com/xmidt-org/ears/pkg/secret"
 	"github.com/xmidt-org/ears/pkg/tenant"
 	"sync"
@@ -66,12 +67,10 @@ const (
 
 type HashFn func(i interface{}) (string, error)
 
-// TODO: Question -- How do these stay in sync with the package?
-// Do we define them in the package alongside the interface definition?
 type NewPluginerFn func(config interface{}) (Pluginer, error)
-type NewReceiverFn func(tid tenant.Id, plugin string, name string, config interface{}, secrets secret.Vault) (receiver.Receiver, error)
-type NewSenderFn func(tid tenant.Id, plugin string, name string, config interface{}, secrets secret.Vault) (sender.Sender, error)
-type NewFiltererFn func(tid tenant.Id, plugin string, name string, config interface{}, secrets secret.Vault) (filter.Filterer, error)
+type NewReceiverFn func(tid tenant.Id, plugin string, name string, config interface{}, secrets secret.Vault, tableSyncer syncer.DeltaSyncer) (receiver.Receiver, error)
+type NewSenderFn func(tid tenant.Id, plugin string, name string, config interface{}, secrets secret.Vault, tableSyncer syncer.DeltaSyncer) (sender.Sender, error)
+type NewFiltererFn func(tid tenant.Id, plugin string, name string, config interface{}, secrets secret.Vault, tableSyncer syncer.DeltaSyncer) (filter.Filterer, error)
 
 // Plugin implements Pluginer
 type Plugin struct {

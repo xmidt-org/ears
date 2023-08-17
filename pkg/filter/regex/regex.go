@@ -18,6 +18,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/rs/zerolog/log"
+	"github.com/xmidt-org/ears/internal/pkg/syncer"
 	"github.com/xmidt-org/ears/pkg/event"
 	"github.com/xmidt-org/ears/pkg/filter"
 	"github.com/xmidt-org/ears/pkg/secret"
@@ -27,7 +28,7 @@ import (
 	"time"
 )
 
-func NewFilter(tid tenant.Id, plugin string, name string, config interface{}, secrets secret.Vault) (*Filter, error) {
+func NewFilter(tid tenant.Id, plugin string, name string, config interface{}, secrets secret.Vault, tableSyncer syncer.DeltaSyncer) (*Filter, error) {
 	cfg, err := NewConfig(config)
 	if err != nil {
 		return nil, &filter.InvalidConfigError{
@@ -40,11 +41,12 @@ func NewFilter(tid tenant.Id, plugin string, name string, config interface{}, se
 		return nil, err
 	}
 	f := &Filter{
-		config:     *cfg,
-		name:       name,
-		plugin:     plugin,
-		tid:        tid,
-		currentSec: time.Now().Unix(),
+		config:      *cfg,
+		name:        name,
+		plugin:      plugin,
+		tid:         tid,
+		currentSec:  time.Now().Unix(),
+		tableSyncer: tableSyncer,
 	}
 	return f, nil
 }

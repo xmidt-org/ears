@@ -18,6 +18,7 @@ import (
 	"context"
 	"github.com/Shopify/sarama"
 	"github.com/rs/zerolog"
+	"github.com/xmidt-org/ears/internal/pkg/syncer"
 	pkgplugin "github.com/xmidt-org/ears/pkg/plugin"
 	"github.com/xmidt-org/ears/pkg/secret"
 	"github.com/xmidt-org/ears/pkg/tenant"
@@ -114,6 +115,7 @@ type Receiver struct {
 	currentErrorVelocityCounter   int
 	currentSec                    int64
 	secrets                       secret.Vault
+	tableSyncer                   syncer.DeltaSyncer
 }
 
 var DefaultSenderConfig = SenderConfig{
@@ -196,6 +198,7 @@ type Sender struct {
 	currentSuccessVelocityCounter int
 	currentErrorVelocityCounter   int
 	currentSec                    int64
+	tableSyncer                   syncer.DeltaSyncer
 }
 
 type ManualHashPartitioner struct {

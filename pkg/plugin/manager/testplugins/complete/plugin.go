@@ -16,6 +16,7 @@ package main
 
 import (
 	"context"
+	"github.com/xmidt-org/ears/internal/pkg/syncer"
 	"github.com/xmidt-org/ears/pkg/secret"
 	"github.com/xmidt-org/ears/pkg/tenant"
 
@@ -70,7 +71,7 @@ func NewPluginVersion(name string, version string, commitID string) (*pkgplugin.
 
 // Receiver ============================================================
 
-func NewReceiver(tid tenant.Id, pluginType string, name string, config interface{}, secrets secret.Vault) (receiver.Receiver, error) {
+func NewReceiver(tid tenant.Id, pluginType string, name string, config interface{}, secrets secret.Vault, tableSyncer syncer.DeltaSyncer) (receiver.Receiver, error) {
 	return &plugin{}, nil
 }
 
@@ -84,7 +85,7 @@ func (p *plugin) StopReceiving(ctx context.Context) error {
 
 // Filterer ============================================================
 
-func NewFilterer(tid tenant.Id, pluginType string, name string, config interface{}, secrets secret.Vault) (filter.Filterer, error) {
+func NewFilterer(tid tenant.Id, pluginType string, name string, config interface{}, secrets secret.Vault, tableSyncer syncer.DeltaSyncer) (filter.Filterer, error) {
 	return &plugin{}, nil
 }
 
@@ -94,7 +95,7 @@ func (p *plugin) Filter(e event.Event) []event.Event {
 
 // Sender ============================================================
 
-func NewSender(tid tenant.Id, pluginType string, name string, config interface{}, secrets secret.Vault) (sender.Sender, error) {
+func NewSender(tid tenant.Id, pluginType string, name string, config interface{}, secrets secret.Vault, tableSyncer syncer.DeltaSyncer) (sender.Sender, error) {
 	return &plugin{}, nil
 }
 
@@ -142,6 +143,16 @@ func (p *plugin) EventErrorCount() int {
 func (p *plugin) EventErrorVelocity() int {
 	return 0
 }
+
+func (p *plugin) EventFilterCount() int {
+	return 0
+}
+
+func (p *plugin) EventFilterVelocity() int {
+	return 0
+}
+
+func (p *plugin) LogSuccess() {}
 
 func (p *plugin) EventTs() int64 {
 	return 0

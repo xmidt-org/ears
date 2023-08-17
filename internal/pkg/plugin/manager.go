@@ -23,6 +23,7 @@ import (
 	"github.com/xmidt-org/ears/internal/pkg/appsecret"
 	"github.com/xmidt-org/ears/internal/pkg/quota"
 	"github.com/xmidt-org/ears/internal/pkg/rtsemconv"
+	"github.com/xmidt-org/ears/internal/pkg/syncer"
 	"github.com/xmidt-org/ears/pkg/logs"
 	"github.com/xmidt-org/ears/pkg/panics"
 	"github.com/xmidt-org/ears/pkg/secret"
@@ -65,6 +66,7 @@ type manager struct {
 	quotaManager *quota.QuotaManager
 	tenantStorer tenant.TenantStorer
 	secrets      secret.Vault
+	tableSyncer  syncer.DeltaSyncer
 }
 
 // === Initialization ================================================
@@ -153,7 +155,7 @@ func (m *manager) RegisterReceiver(
 
 		receiverChan := make(chan pkgreceiver.Receiver, 1)
 		go func() {
-			r, err = ns.NewReceiver(tid, plugin, name, config, secrets)
+			r, err = ns.NewReceiver(tid, plugin, name, config, secrets, m.tableSyncer)
 			receiverChan <- r
 		}()
 		select {
@@ -393,11 +395,7 @@ func (m *manager) Filterers() map[string]pkgfilter.NewFilterer {
 	return m.pm.Filterers()
 }
 
-func (m *manager) RegisterFilter(
-	ctx context.Context, plugin string,
-	name string, config interface{},
-	tid tenant.Id,
-) (pkgfilter.Filterer, error) {
+func (m *manager) RegisterFilter(ctx context.Context, plugin string, name string, config interface{}, tid tenant.Id) (pkgfilter.Filterer, error) {
 
 	factory, err := m.pm.Filterer(plugin)
 	if err != nil {
@@ -435,7 +433,7 @@ func (m *manager) RegisterFilter(
 
 		filterChan := make(chan pkgfilter.Filterer, 1)
 		go func() {
-			f, err = factory.NewFilterer(tid, plugin, name, config, secrets)
+			f, err = factory.NewFilterer(tid, plugin, name, config, secrets, m.tableSyncer)
 			filterChan <- f
 		}()
 		select {
@@ -616,7 +614,7 @@ func (m *manager) RegisterSender(
 
 		senderChan := make(chan pkgsender.Sender, 1)
 		go func() {
-			s, err = ns.NewSender(tid, plugin, name, config, secrets)
+			s, err = ns.NewSender(tid, plugin, name, config, secrets, m.tableSyncer)
 			senderChan <- s
 		}()
 		select {

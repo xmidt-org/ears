@@ -81,6 +81,10 @@ func (r *receiver) EventTs() int64 {
 	return r.receiver.EventTs()
 }
 
+func (r *receiver) LogSuccess() {
+	r.receiver.LogSuccess()
+}
+
 func (r *receiver) Trigger(e event.Event) {
 	//r.receiver.Trigger(e)
 	r.Lock()

@@ -28,7 +28,7 @@ func TestFilterUnwrapBasic(t *testing.T) {
 	ctx := context.Background()
 	f, err := unwrap.NewFilter(tenant.Id{AppId: "myapp", OrgId: "myorg"}, "unwrap", "myunwrap", unwrap.Config{
 		Path: ".foo",
-	}, nil)
+	}, nil, nil)
 	if err != nil {
 		t.Fatalf("unwrap test failed: %s\n", err.Error())
 	}

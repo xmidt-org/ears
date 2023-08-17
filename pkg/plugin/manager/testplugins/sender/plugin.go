@@ -16,6 +16,7 @@ package main
 
 import (
 	"context"
+	"github.com/xmidt-org/ears/internal/pkg/syncer"
 	pkgplugin "github.com/xmidt-org/ears/pkg/plugin"
 	"github.com/xmidt-org/ears/pkg/secret"
 	"github.com/xmidt-org/ears/pkg/tenant"
@@ -61,7 +62,7 @@ func NewPluginVersion(name string, version string, commitID string) (*pkgplugin.
 
 // Sender ===========================================================
 
-func NewSender(tid tenant.Id, pluginType string, name string, config interface{}, secrets secret.Vault) (sender.Sender, error) {
+func NewSender(tid tenant.Id, pluginType string, name string, config interface{}, secrets secret.Vault, tableSyncer syncer.DeltaSyncer) (sender.Sender, error) {
 	return &plugin{}, nil
 }
 

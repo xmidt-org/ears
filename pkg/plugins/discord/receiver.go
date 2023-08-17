@@ -18,6 +18,8 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/xmidt-org/ears/internal/pkg/syncer"
+	"github.com/xmidt-org/ears/pkg/hasher"
 	"strconv"
 	"time"
 
@@ -45,7 +47,7 @@ const (
 	monitorTimeoutSecLong  = 30
 )
 
-func NewReceiver(tid tenant.Id, plugin string, name string, config interface{}, secrets secret.Vault) (receiver.Receiver, error) {
+func NewReceiver(tid tenant.Id, plugin string, name string, config interface{}, secrets secret.Vault, tableSyncer syncer.DeltaSyncer) (receiver.Receiver, error) {
 	var cfg ReceiverConfig
 	var err error
 	switch c := config.(type) {
@@ -77,6 +79,7 @@ func NewReceiver(tid tenant.Id, plugin string, name string, config interface{}, 
 		shardMonitorStopChannel:        make(chan bool),
 		shardUpdateListenerStopChannel: make(chan bool),
 		currentSec:                     time.Now().Unix(),
+		tableSyncer:                    tableSyncer,
 	}
 
 	// metric recorders
@@ -107,7 +110,7 @@ func NewReceiver(tid tenant.Id, plugin string, name string, config interface{}, 
 	return r, nil
 }
 
-func (r *Receiver) logSuccess() {
+func (r *Receiver) LogSuccess() {
 	r.Lock()
 	r.successCounter++
 	if time.Now().Unix() != r.currentSec {
@@ -361,7 +364,7 @@ func (r *Receiver) messageCreate(s *discordgo.Session, m *discordgo.MessageCreat
 		e, err := event.New(ctx, payload, event.WithMetadataKeyValue("discordMessage", 1), event.WithAck(
 			func(e event.Event) {
 				r.eventSuccessCounter.Add(ctx, 1)
-				r.logSuccess()
+				r.LogSuccess()
 				cancel()
 			},
 			func(e event.Event, err error) {
@@ -403,32 +406,60 @@ func (r *Receiver) Tenant() tenant.Id {
 	return r.tid
 }
 
-func (r *Receiver) EventSuccessCount() int {
+func (r *Receiver) getLocalMetric() *syncer.EarsMetric {
 	r.Lock()
 	defer r.Unlock()
-	return r.successCounter
+	metrics := &syncer.EarsMetric{
+		r.successCounter,
+		r.errorCounter,
+		0,
+		r.successVelocityCounter,
+		r.errorVelocityCounter,
+		0,
+		r.currentSec,
+	}
+	return metrics
+}
+
+func (r *Receiver) EventSuccessCount() int {
+	hash := r.Hash()
+	r.tableSyncer.WriteMetrics(hash, r.getLocalMetric())
+	return r.tableSyncer.ReadMetrics(hash).SuccessCount
 }
 
 func (r *Receiver) EventSuccessVelocity() int {
-	r.Lock()
-	defer r.Unlock()
-	return r.successVelocityCounter
+	hash := r.Hash()
+	r.tableSyncer.WriteMetrics(hash, r.getLocalMetric())
+	return r.tableSyncer.ReadMetrics(hash).SuccessVelocity
 }
 
 func (r *Receiver) EventErrorCount() int {
-	r.Lock()
-	defer r.Unlock()
-	return r.errorCounter
+	hash := r.Hash()
+	r.tableSyncer.WriteMetrics(hash, r.getLocalMetric())
+	return r.tableSyncer.ReadMetrics(hash).ErrorCount
 }
 
 func (r *Receiver) EventErrorVelocity() int {
-	r.Lock()
-	defer r.Unlock()
-	return r.errorVelocityCounter
+	hash := r.Hash()
+	r.tableSyncer.WriteMetrics(hash, r.getLocalMetric())
+	return r.tableSyncer.ReadMetrics(hash).ErrorVelocity
 }
 
 func (r *Receiver) EventTs() int64 {
-	r.Lock()
-	defer r.Unlock()
-	return r.currentSec
+	hash := r.Hash()
+	r.tableSyncer.WriteMetrics(hash, r.getLocalMetric())
+	return r.tableSyncer.ReadMetrics(hash).LastEventTs
+}
+
+func (r *Receiver) Hash() string {
+	cfg := ""
+	if r.Config() != nil {
+		buf, _ := json.Marshal(r.Config())
+		if buf != nil {
+			cfg = string(buf)
+		}
+	}
+	str := r.name + r.plugin + cfg
+	hash := hasher.String(str)
+	return hash
 }

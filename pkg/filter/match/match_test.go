@@ -32,7 +32,7 @@ func TestFilterMatchComparison1(t *testing.T) {
 		PatternsLogic: "and",
 		Matcher:       match.MatcherComparison,
 		Mode:          match.ModeAllow,
-	}, nil)
+	}, nil, nil)
 	if err != nil {
 		t.Fatalf("comparison test failed: %s\n", err.Error())
 	}
@@ -69,7 +69,7 @@ func TestFilterMatchComparison1b(t *testing.T) {
 		PatternsLogic: "and",
 		Matcher:       match.MatcherComparison,
 		Mode:          match.ModeAllow,
-	}, nil)
+	}, nil, nil)
 	if err != nil {
 		t.Fatalf("comparison test failed: %s\n", err.Error())
 	}
@@ -105,7 +105,7 @@ func TestFilterMatchComparisonTree1(t *testing.T) {
 		ComparisonTree: &comparison.ComparisonTreeNode{Logic: "and", Comparison: &comparison.Comparison{Equal: []map[string]interface{}{{"{.foo}": "bar"}, {"{.noo}": "nar"}}}},
 		Matcher:        match.MatcherComparison,
 		Mode:           match.ModeAllow,
-	}, nil)
+	}, nil, nil)
 	if err != nil {
 		t.Fatalf("comparison test failed: %s\n", err.Error())
 	}
@@ -143,7 +143,7 @@ func TestFilterMatchComparisonTree2(t *testing.T) {
 		ComparisonTree: tree1,
 		Matcher:        match.MatcherComparison,
 		Mode:           match.ModeAllow,
-	}, nil)
+	}, nil, nil)
 	if err != nil {
 		t.Fatalf("comparison test failed: %s\n", err.Error())
 	}
@@ -180,7 +180,7 @@ func TestFilterMatchComparison2(t *testing.T) {
 		PatternsLogic: "and",
 		Matcher:       match.MatcherComparison,
 		Mode:          match.ModeAllow,
-	}, nil)
+	}, nil, nil)
 	if err != nil {
 		t.Fatalf("comparison test failed: %s\n", err.Error())
 	}
@@ -207,7 +207,7 @@ func TestFilterMatchComparison3(t *testing.T) {
 		PatternsLogic: "or",
 		Matcher:       match.MatcherComparison,
 		Mode:          match.ModeAllow,
-	}, nil)
+	}, nil, nil)
 	if err != nil {
 		t.Fatalf("comparison test failed: %s\n", err.Error())
 	}

@@ -17,6 +17,7 @@ package debug
 import (
 	"container/ring"
 	"github.com/rs/zerolog"
+	"github.com/xmidt-org/ears/internal/pkg/syncer"
 	"github.com/xmidt-org/ears/pkg/tenant"
 	"go.opentelemetry.io/otel/metric"
 	"sync"
@@ -97,6 +98,7 @@ type Receiver struct {
 	eventSuccessCounter           metric.BoundInt64Counter
 	eventFailureCounter           metric.BoundInt64Counter
 	eventBytesCounter             metric.BoundInt64Counter
+	tableSyncer                   syncer.DeltaSyncer
 }
 
 type EventWriter interface {
@@ -168,6 +170,7 @@ type Sender struct {
 	config                        SenderConfig
 	history                       *history
 	destination                   EventWriter
+	tableSyncer                   syncer.DeltaSyncer
 	eventSuccessCounter           metric.BoundInt64Counter
 	eventFailureCounter           metric.BoundInt64Counter
 	eventBytesCounter             metric.BoundInt64Counter

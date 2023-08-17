@@ -33,7 +33,7 @@ func TestFilterTtlBasic(t *testing.T) {
 		Path:       ".ts",
 		NanoFactor: pointer.Int(1),
 		Ttl:        pointer.Int(300000),
-	}, nil)
+	}, nil, nil)
 	if err != nil {
 		t.Fatalf("ttl test failed: %s\n", err.Error())
 	}

@@ -5,6 +5,7 @@ package receiver
 
 import (
 	"context"
+	"github.com/xmidt-org/ears/internal/pkg/syncer"
 	"github.com/xmidt-org/ears/pkg/event"
 	"github.com/xmidt-org/ears/pkg/secret"
 	"github.com/xmidt-org/ears/pkg/tenant"
@@ -100,7 +101,7 @@ var _ NewReceiverer = &NewReceivererMock{}
 // 	}
 type NewReceivererMock struct {
 	// NewReceiverFunc mocks the NewReceiver method.
-	NewReceiverFunc func(tid tenant.Id, plugin string, name string, config interface{}, secrets secret.Vault) (Receiver, error)
+	NewReceiverFunc func(tid tenant.Id, plugin string, name string, config interface{}, secrets secret.Vault, tableSyncer syncer.DeltaSyncer) (Receiver, error)
 
 	// ReceiverHashFunc mocks the ReceiverHash method.
 	ReceiverHashFunc func(config interface{}) (string, error)
@@ -131,7 +132,7 @@ type NewReceivererMock struct {
 }
 
 // NewReceiver calls NewReceiverFunc.
-func (mock *NewReceivererMock) NewReceiver(tid tenant.Id, plugin string, name string, config interface{}, secrets secret.Vault) (Receiver, error) {
+func (mock *NewReceivererMock) NewReceiver(tid tenant.Id, plugin string, name string, config interface{}, secrets secret.Vault, tableSyncer syncer.DeltaSyncer) (Receiver, error) {
 	if mock.NewReceiverFunc == nil {
 		panic("NewReceivererMock.NewReceiverFunc: method is nil but NewReceiverer.NewReceiver was just called")
 	}
@@ -151,7 +152,7 @@ func (mock *NewReceivererMock) NewReceiver(tid tenant.Id, plugin string, name st
 	mock.lockNewReceiver.Lock()
 	mock.calls.NewReceiver = append(mock.calls.NewReceiver, callInfo)
 	mock.lockNewReceiver.Unlock()
-	return mock.NewReceiverFunc(tid, plugin, name, config, secrets)
+	return mock.NewReceiverFunc(tid, plugin, name, config, secrets, nil)
 }
 
 // NewReceiverCalls gets all the calls that were made to NewReceiver.
@@ -344,6 +345,8 @@ func (mock *ReceiverMock) Name() string {
 	mock.lockName.Unlock()
 	return mock.NameFunc()
 }
+
+func (mock *ReceiverMock) LogSuccess() {}
 
 func (mock *ReceiverMock) EventSuccessCount() int {
 	return 0

@@ -29,7 +29,7 @@ func TestFilterBatchBasic(t *testing.T) {
 	ctx := context.Background()
 	f, err := batch.NewFilter(tenant.Id{AppId: "myapp", OrgId: "myorg"}, "batch", "mybatch", batch.Config{
 		BatchSize: pointer.Int(2),
-	}, nil)
+	}, nil, nil)
 	if err != nil {
 		t.Fatalf("batch test failed: %s\n", err.Error())
 	}

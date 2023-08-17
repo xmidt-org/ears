@@ -81,7 +81,7 @@ func TestReceiver(t *testing.T) {
 			// Make sure we fill in all values
 			tc.config = tc.config.WithDefaults()
 
-			r, err := p.NewReceiver(tid, "debug", "mydebug", tc.config, nil)
+			r, err := p.NewReceiver(tid, "debug", "mydebug", tc.config, nil, nil)
 			a.Expect(err).To(BeNil())
 
 			events := []event.Event{}

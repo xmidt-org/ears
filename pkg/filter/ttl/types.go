@@ -15,6 +15,7 @@
 package ttl
 
 import (
+	"github.com/xmidt-org/ears/internal/pkg/syncer"
 	"github.com/xmidt-org/ears/pkg/tenant"
 	"github.com/xorcare/pointer"
 	"go.opentelemetry.io/otel/metric"
@@ -54,4 +55,5 @@ type Filter struct {
 	currentErrorVelocityCounter   int
 	currentFilterVelocityCounter  int
 	currentSec                    int64
+	tableSyncer                   syncer.DeltaSyncer
 }

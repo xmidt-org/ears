@@ -25,7 +25,7 @@ import (
 
 func TestFilterPassBasic(t *testing.T) {
 	ctx := context.Background()
-	f, err := block.NewFilter(tenant.Id{AppId: "myapp", OrgId: "myorg"}, "block", "mymblock", block.Config{}, nil)
+	f, err := block.NewFilter(tenant.Id{AppId: "myapp", OrgId: "myorg"}, "block", "mymblock", block.Config{}, nil, nil)
 	if err != nil {
 		t.Fatalf("block test failed: %s\n", err.Error())
 	}

@@ -29,7 +29,7 @@ func TestFilterMergeBasic(t *testing.T) {
 	f, err := merge.NewFilter(tenant.Id{AppId: "myapp", OrgId: "myorg"}, "merge", "mymerge", merge.Config{
 		FromPath: ".foo",
 		ToPath:   ".bar",
-	}, nil)
+	}, nil, nil)
 	if err != nil {
 		t.Fatalf("merge test failed: %s\n", err.Error())
 	}

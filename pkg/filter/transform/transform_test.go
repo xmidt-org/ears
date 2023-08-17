@@ -29,7 +29,7 @@ func TestFilterTransformBasic(t *testing.T) {
 	f, err := transform.NewFilter(tenant.Id{AppId: "myapp", OrgId: "myorg"}, "transform", "mytransform", transform.Config{
 		ToPath:         ".",
 		Transformation: map[string]interface{}{"bar": "{.foo}"},
-	}, nil)
+	}, nil, nil)
 	if err != nil {
 		t.Fatalf("transform test failed: %s\n", err.Error())
 	}
@@ -65,7 +65,7 @@ func TestFilterTransformArray(t *testing.T) {
 		FromPath:       ".foo",
 		ToPath:         ".foo",
 		Transformation: map[string]interface{}{"bar": "{.foo}"},
-	}, nil)
+	}, nil, nil)
 	if err != nil {
 		t.Fatalf("transform test failed: %s\n", err.Error())
 	}

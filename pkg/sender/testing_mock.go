@@ -5,6 +5,7 @@ package sender
 
 import (
 	"context"
+	"github.com/xmidt-org/ears/internal/pkg/syncer"
 	"github.com/xmidt-org/ears/pkg/event"
 	"github.com/xmidt-org/ears/pkg/secret"
 	"github.com/xmidt-org/ears/pkg/tenant"
@@ -100,7 +101,7 @@ var _ NewSenderer = &NewSendererMock{}
 // 	}
 type NewSendererMock struct {
 	// NewSenderFunc mocks the NewSender method.
-	NewSenderFunc func(tid tenant.Id, plugin string, name string, config interface{}, secrets secret.Vault) (Sender, error)
+	NewSenderFunc func(tid tenant.Id, plugin string, name string, config interface{}, secrets secret.Vault, tableSyncer syncer.DeltaSyncer) (Sender, error)
 
 	// SenderHashFunc mocks the SenderHash method.
 	SenderHashFunc func(config interface{}) (string, error)
@@ -131,7 +132,7 @@ type NewSendererMock struct {
 }
 
 // NewSender calls NewSenderFunc.
-func (mock *NewSendererMock) NewSender(tid tenant.Id, plugin string, name string, config interface{}, secrets secret.Vault) (Sender, error) {
+func (mock *NewSendererMock) NewSender(tid tenant.Id, plugin string, name string, config interface{}, secrets secret.Vault, tableSyncer syncer.DeltaSyncer) (Sender, error) {
 	if mock.NewSenderFunc == nil {
 		panic("NewSendererMock.NewSenderFunc: method is nil but NewSenderer.NewSender was just called")
 	}
@@ -151,7 +152,7 @@ func (mock *NewSendererMock) NewSender(tid tenant.Id, plugin string, name string
 	mock.lockNewSender.Lock()
 	mock.calls.NewSender = append(mock.calls.NewSender, callInfo)
 	mock.lockNewSender.Unlock()
-	return mock.NewSenderFunc(tid, plugin, name, config, secrets)
+	return mock.NewSenderFunc(tid, plugin, name, config, secrets, nil)
 }
 
 // NewSenderCalls gets all the calls that were made to NewSender.
