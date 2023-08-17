@@ -221,9 +221,9 @@ func SetupAPIServer(lifecycle fx.Lifecycle, config config.Config, logger *zerolo
 	}
 
 	cfg := profiler.Config{
-		Service:        "earsservice",
+		Service:        "ears",
 		ServiceVersion: "1.1.1",
-		ProjectID:      "",
+		ProjectID:      "ears-project",
 	}
 	if err := profiler.Start(cfg); err != nil {
 		logger.Error().Str("op", "SetupAPIServer.StartProfiler").Msg(err.Error())
