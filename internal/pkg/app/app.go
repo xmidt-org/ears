@@ -250,7 +250,7 @@ func SetupAPIServer(lifecycle fx.Lifecycle, config config.Config, logger *zerolo
 	os.Setenv("GOOGLE_APPLICATION_CREDENTIALS", filepath.Join(workingDir, "google_profiler_config.json"))
 	cfg := profiler.Config{
 		Service:        "ears",
-		ServiceVersion: "1.1.1",
+		ServiceVersion: app.Version,
 		ProjectID:      "ears-project",
 	}
 	if err := profiler.Start(cfg); err != nil {
