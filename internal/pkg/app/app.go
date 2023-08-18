@@ -20,6 +20,7 @@ package app
 import (
 	"cloud.google.com/go/profiler"
 	"context"
+	"encoding/json"
 	"fmt"
 	"github.com/rs/zerolog"
 	"github.com/xmidt-org/ears/internal/pkg/config"
@@ -47,6 +48,7 @@ import (
 	"net/http"
 	_ "net/http/pprof"
 	"os"
+	"path/filepath"
 	"time"
 )
 
@@ -220,6 +222,32 @@ func SetupAPIServer(lifecycle fx.Lifecycle, config config.Config, logger *zerolo
 		Handler: mux,
 	}
 
+	// initialize google profiler
+	profilerConfigMap := make(map[string]string, 0)
+	profilerConfigMap["type"] = config.GetString("type")
+	profilerConfigMap["project_id"] = config.GetString("project_id")
+	profilerConfigMap["private_key_id"] = config.GetString("private_key_id")
+	profilerConfigMap["private_key"] = config.GetString("private_key")
+	profilerConfigMap["client_email"] = config.GetString("client_email")
+	profilerConfigMap["client_id"] = config.GetString("client_id")
+	profilerConfigMap["auth_uri"] = config.GetString("auth_uri")
+	profilerConfigMap["token_uri"] = config.GetString("token_uri")
+	profilerConfigMap["auth_provider_x509_cert_url"] = config.GetString("auth_provider_x509_cert_url")
+	profilerConfigMap["client_x509_cert_url"] = config.GetString("client_x509_cert_url")
+	profilerConfigMap["universe_domain"] = config.GetString("universe_domain")
+	buf, err := json.MarshalIndent(profilerConfigMap, "", "\t")
+	if err != nil {
+		logger.Error().Str("op", "SetupAPIServer.StartProfiler").Msg(err.Error())
+	}
+	err = os.WriteFile("google_profiler_config.json", buf, 0644)
+	if err != nil {
+		logger.Error().Str("op", "SetupAPIServer.StartProfiler").Msg(err.Error())
+	}
+	workingDir, err := os.Getwd()
+	if err != nil {
+		logger.Error().Str("op", "SetupAPIServer.StartProfiler").Msg(err.Error())
+	}
+	os.Setenv("GOOGLE_APPLICATION_CREDENTIALS", filepath.Join(workingDir, "google_profiler_config.json"))
 	cfg := profiler.Config{
 		Service:        "ears",
 		ServiceVersion: "1.1.1",
