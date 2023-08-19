@@ -21,6 +21,7 @@ import (
 	"cloud.google.com/go/profiler"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"github.com/rs/zerolog"
 	"github.com/xmidt-org/ears/internal/pkg/config"
@@ -45,11 +46,18 @@ import (
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	semconv "go.opentelemetry.io/otel/semconv/v1.4.0"
 	"go.uber.org/fx"
+	"io"
 	"net/http"
 	_ "net/http/pprof"
 	"os"
 	"path/filepath"
 	"time"
+)
+
+type (
+	AWSTaskMetadata struct {
+		TaskARN string
+	}
 )
 
 func NewMux(a *APIManager, middleware []func(next http.Handler) http.Handler) (http.Handler, error) {
@@ -209,6 +217,29 @@ func SetupOpenTelemetry(lifecycle fx.Lifecycle, config config.Config, logger *ze
 	return nil
 }
 
+func GetTaskArn() (string, error) {
+	// https://docs.aws.amazon.com/AmazonECS/latest/userguide/task-metadata-endpoint-v4-fargate.html
+	url := os.Getenv("ECS_CONTAINER_METADATA_URI_V4")
+	if url == "" {
+		return "", errors.New("no url")
+	}
+	resp, err := http.Get(url + "/task")
+	if err != nil {
+		return "", err
+	}
+	defer resp.Body.Close()
+	buf, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return "", err
+	}
+	var tm AWSTaskMetadata
+	err = json.Unmarshal(buf, &tm)
+	if err != nil {
+		return "", err
+	}
+	return tm.TaskARN, nil
+}
+
 func SetupAPIServer(lifecycle fx.Lifecycle, config config.Config, logger *zerolog.Logger, mux http.Handler) error {
 	port := config.GetInt("ears.api.port")
 	if port < 1 {
@@ -248,10 +279,15 @@ func SetupAPIServer(lifecycle fx.Lifecycle, config config.Config, logger *zerolo
 		logger.Error().Str("op", "SetupAPIServer.StartProfiler").Msg(err.Error())
 	}
 	os.Setenv("GOOGLE_APPLICATION_CREDENTIALS", filepath.Join(workingDir, "google_profiler_config.json"))
+	taskArn, err := GetTaskArn()
+	if err != nil {
+		logger.Error().Str("op", "SetupAPIServer.StartProfiler").Msg(err.Error())
+	}
 	cfg := profiler.Config{
 		Service:        "ears",
 		ServiceVersion: app.Version,
 		ProjectID:      "ears-project",
+		Zone:           config.GetString("ears.env") + "-" + taskArn,
 	}
 	if err := profiler.Start(cfg); err != nil {
 		logger.Error().Str("op", "SetupAPIServer.StartProfiler").Msg(err.Error())
