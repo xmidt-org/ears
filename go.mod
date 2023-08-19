@@ -3,7 +3,7 @@ module github.com/xmidt-org/ears
 go 1.16
 
 require (
-	cloud.google.com/go/profiler v0.3.1 // indirect
+	cloud.google.com/go/profiler v0.3.1
 	github.com/Shopify/sarama v1.38.1
 	github.com/aws/aws-sdk-go v1.44.321
 	github.com/boriwo/deepcopy v0.0.0-20220804211148-d5122121a902
@@ -53,7 +53,7 @@ require (
 	go.uber.org/fx v1.20.0
 	go.uber.org/multierr v1.7.0 // indirect
 	golang.org/x/net v0.14.0
-	golang.org/x/oauth2 v0.9.0
+	golang.org/x/oauth2 v0.11.0
 	golang.org/x/time v0.3.0
 	gopkg.in/ini.v1 v1.63.0 // indirect
 	gopkg.in/yaml.v2 v2.4.0
