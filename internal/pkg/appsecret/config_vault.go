@@ -302,16 +302,20 @@ func (v *TenantConfigVault) Secret(ctx context.Context, key string) string {
 				return id
 			}
 			if strings.ToLower(keys[1]) == "scope" {
-				_, id := credential.GetScope()
-				return id
+				_, scope := credential.GetScope()
+				return scope
 			}
 			if strings.ToLower(keys[1]) == "granttype" {
-				_, id := credential.GetGrantType()
-				return id
+				_, granttype := credential.GetGrantType()
+				return granttype
 			}
 			if strings.ToLower(keys[1]) == "issuer" {
-				_, id := credential.GetIssuer()
-				return id
+				_, issuer := credential.GetIssuer()
+				return issuer
+			}
+			if strings.ToLower(keys[1]) == "secret" {
+				_, secret := credential.GetSecret()
+				return secret
 			}
 		}
 		_, secret := credential.GetSecret()
