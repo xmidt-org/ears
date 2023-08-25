@@ -26,7 +26,9 @@ import (
 	"github.com/goccy/go-yaml"
 	"github.com/rs/zerolog/log"
 	"github.com/xmidt-org/ears/internal/pkg/rtsemconv"
+	"github.com/xmidt-org/ears/internal/pkg/syncer"
 	"github.com/xmidt-org/ears/pkg/event"
+	"github.com/xmidt-org/ears/pkg/hasher"
 	"github.com/xmidt-org/ears/pkg/panics"
 	pkgplugin "github.com/xmidt-org/ears/pkg/plugin"
 	"github.com/xmidt-org/ears/pkg/receiver"
@@ -43,7 +45,7 @@ import (
 	"time"
 )
 
-func NewReceiver(tid tenant.Id, plugin string, name string, config interface{}, secrets secret.Vault) (receiver.Receiver, error) {
+func NewReceiver(tid tenant.Id, plugin string, name string, config interface{}, secrets secret.Vault, tableSyncer syncer.DeltaSyncer) (receiver.Receiver, error) {
 	var cfg ReceiverConfig
 	var err error
 	switch c := config.(type) {
@@ -63,17 +65,58 @@ func NewReceiver(tid tenant.Id, plugin string, name string, config interface{}, 
 	}
 	cfg = cfg.WithDefaults()
 	err = cfg.Validate()
+	ctx := context.Background()
 	if err != nil {
 		return nil, err
 	}
 	r := &Receiver{
-		config:  cfg,
-		name:    name,
-		plugin:  plugin,
-		tid:     tid,
-		logger:  event.GetEventLogger(),
-		stopped: true,
-		secrets: secrets,
+		config:          cfg,
+		name:            name,
+		plugin:          plugin,
+		tid:             tid,
+		logger:          event.GetEventLogger(),
+		stopped:         true,
+		secrets:         secrets,
+		queueUrl:        secrets.Secret(ctx, cfg.QueueUrl),
+		awsRoleArn:      secrets.Secret(ctx, cfg.AWSRoleARN),
+		awsAccessKey:    secrets.Secret(ctx, cfg.AWSAccessKeyId),
+		awsAccessSecret: secrets.Secret(ctx, cfg.AWSSecretAccessKey),
+		awsRegion:       secrets.Secret(ctx, cfg.AWSRegion),
+		currentSec:      time.Now().Unix(),
+		tableSyncer:     tableSyncer,
+	}
+	// create sqs session
+	sess, err := session.NewSession()
+	if nil != err {
+		return r, &SQSError{op: "NewSession", err: err}
+	}
+	var creds *credentials.Credentials
+	if r.awsRoleArn != "" {
+		creds = stscreds.NewCredentials(sess, r.awsRoleArn)
+	} else if r.awsAccessKey != "" && r.awsAccessSecret != "" {
+		creds = credentials.NewStaticCredentials(r.awsAccessKey, r.awsAccessSecret, "")
+	} else {
+		creds = sess.Config.Credentials
+	}
+	sess, err = session.NewSession(&aws.Config{Region: aws.String(r.awsRegion), Credentials: creds})
+	if nil != err {
+		r.logError()
+		return r, &SQSError{op: "NewSession", err: err}
+	}
+	_, err = sess.Config.Credentials.Get()
+	if nil != err {
+		r.logError()
+		return r, &SQSError{op: "GetCredentials", err: err}
+	}
+	r.sqs = sqs.New(sess)
+	queueAttributesParams := &sqs.GetQueueAttributesInput{
+		QueueUrl:       aws.String(r.queueUrl),
+		AttributeNames: []*string{aws.String(approximateNumberOfMessages)},
+	}
+	_, err = r.sqs.GetQueueAttributes(queueAttributesParams)
+	if nil != err {
+		r.logError()
+		return r, &SQSError{op: "GetQueueAttributes", err: err}
 	}
 	hostname, _ := os.Hostname()
 	// metric recorders
@@ -83,7 +126,7 @@ func NewReceiver(tid tenant.Id, plugin string, name string, config interface{}, 
 		attribute.String(rtsemconv.EARSPluginNameLabel, r.Name()),
 		attribute.String(rtsemconv.EARSAppIdLabel, r.tid.AppId),
 		attribute.String(rtsemconv.EARSOrgIdLabel, r.tid.OrgId),
-		attribute.String(rtsemconv.SQSQueueUrlLabel, r.config.QueueUrl),
+		attribute.String(rtsemconv.SQSQueueUrlLabel, r.queueUrl),
 		attribute.String(rtsemconv.HostnameLabel, hostname),
 		attribute.String(rtsemconv.EARSReceiverName, r.name),
 	}
@@ -117,6 +160,30 @@ const (
 	attributeNames              = "All"
 )
 
+func (r *Receiver) LogSuccess() {
+	r.Lock()
+	r.successCounter++
+	if time.Now().Unix() != r.currentSec {
+		r.successVelocityCounter = r.currentSuccessVelocityCounter
+		r.currentSuccessVelocityCounter = 0
+		r.currentSec = time.Now().Unix()
+	}
+	r.currentSuccessVelocityCounter++
+	r.Unlock()
+}
+
+func (r *Receiver) logError() {
+	r.Lock()
+	r.errorCounter++
+	if time.Now().Unix() != r.currentSec {
+		r.errorVelocityCounter = r.currentErrorVelocityCounter
+		r.currentErrorVelocityCounter = 0
+		r.currentSec = time.Now().Unix()
+	}
+	r.currentErrorVelocityCounter++
+	r.Unlock()
+}
+
 func (r *Receiver) startReceiveWorker(svc *sqs.SQS, n int) {
 	go func() {
 		defer func() {
@@ -141,11 +208,12 @@ func (r *Receiver) startReceiveWorker(svc *sqs.SQS, n int) {
 			ctx := context.Background()
 			for {
 				queueAttributesParams := &sqs.GetQueueAttributesInput{
-					QueueUrl:       aws.String(r.config.QueueUrl),
+					QueueUrl:       aws.String(r.queueUrl),
 					AttributeNames: []*string{aws.String(approximateNumberOfMessages)},
 				}
 				queueAttributesResp, err := svc.GetQueueAttributes(queueAttributesParams)
 				if err != nil {
+					r.logError()
 					r.logger.Error().Str("op", "SQS.receiveWorker").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Int("workerNum", n).Msg(err.Error())
 				} else {
 					if queueAttributesResp.Attributes[approximateNumberOfMessages] != nil {
@@ -191,16 +259,14 @@ func (r *Receiver) startReceiveWorker(svc *sqs.SQS, n int) {
 					}
 					deleteParams := &sqs.DeleteMessageBatchInput{
 						Entries:  deleteBatch,
-						QueueUrl: aws.String(r.config.QueueUrl),
+						QueueUrl: aws.String(r.queueUrl),
 					}
 					_, err := svc.DeleteMessageBatch(deleteParams)
 					if err != nil {
+						r.logError()
 						r.logger.Error().Str("op", "SQS.receiveWorker").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Msg("delete error: " + err.Error())
 					} else {
-						r.Lock()
-						r.deleteCount += len(deleteBatch)
-						r.logger.Debug().Str("op", "SQS.receiveWorker").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Int("deleteCount", r.deleteCount).Int("batchSize", len(deleteBatch)).Int("workerNum", n).Msg("deleted message batch")
-						r.Unlock()
+						r.logger.Debug().Str("op", "SQS.receiveWorker").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Int("batchSize", len(deleteBatch)).Int("workerNum", n).Msg("deleted message batch")
 						/*for _, entry := range deleteBatch {
 							r.logger.Info().Str("op", "SQS.receiveWorker").Int("batchSize", len(deleteBatch)).Int("workerNum", n).Msg("deleted message " + (*entry.Id))
 						}*/
@@ -219,7 +285,7 @@ func (r *Receiver) startReceiveWorker(svc *sqs.SQS, n int) {
 		// receive messages
 		for {
 			sqsParams := &sqs.ReceiveMessageInput{
-				QueueUrl:              aws.String(r.config.QueueUrl),
+				QueueUrl:              aws.String(r.queueUrl),
 				MaxNumberOfMessages:   aws.Int64(int64(*r.config.MaxNumberOfMessages)),
 				VisibilityTimeout:     aws.Int64(int64(*r.config.VisibilityTimeout)),
 				WaitTimeSeconds:       aws.Int64(int64(*r.config.WaitTimeSeconds)),
@@ -235,23 +301,18 @@ func (r *Receiver) startReceiveWorker(svc *sqs.SQS, n int) {
 				return
 			}
 			if err != nil {
+				r.logError()
 				r.logger.Error().Str("op", "SQS.receiveWorker").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Int("workerNum", n).Msg(err.Error())
 				time.Sleep(1 * time.Second)
 				continue
 			}
 			if len(sqsResp.Messages) > 0 {
 				r.Lock()
-				r.logger.Debug().Str("op", "SQS.receiveWorker").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Int("receiveCount", r.receiveCount).Int("batchSize", len(sqsResp.Messages)).Int("workerNum", n).Msg("received message batch")
+				r.logger.Debug().Str("op", "SQS.receiveWorker").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Int("batchSize", len(sqsResp.Messages)).Int("workerNum", n).Msg("received message batch")
 				r.Unlock()
 			}
 			for _, message := range sqsResp.Messages {
-				//logger.Debug().Str("op", "SQS.Receive").Msg(*message.Body)
-				r.Lock()
-				r.receiveCount++
-				r.Unlock()
-
 				ctx, cancel := context.WithTimeout(context.Background(), time.Duration(*r.config.AcknowledgeTimeout)*time.Second)
-
 				//extract otel tracing info
 				if message.MessageAttributes != nil {
 					ctx = otel.GetTextMapPropagator().Extract(ctx, NewSqsMessageAttributeCarrier(message.MessageAttributes))
@@ -279,6 +340,7 @@ func (r *Receiver) startReceiveWorker(svc *sqs.SQS, n int) {
 				var payload interface{}
 				err = json.Unmarshal([]byte(*message.Body), &payload)
 				if err != nil {
+					r.logError()
 					r.logger.Error().Str("op", "SQS.receiveWorker").Str(rtsemconv.EarsLogTraceIdKey, traceId).Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Int("workerNum", n).Msg("cannot parse message " + (*message.MessageId) + ": " + err.Error())
 					entry := sqs.DeleteMessageBatchRequestEntry{Id: message.MessageId, ReceiptHandle: message.ReceiptHandle}
 					entries <- &entry
@@ -294,6 +356,7 @@ func (r *Receiver) startReceiveWorker(svc *sqs.SQS, n int) {
 							entry := sqs.DeleteMessageBatchRequestEntry{Id: msg.MessageId, ReceiptHandle: msg.ReceiptHandle}
 							entries <- &entry
 							r.eventSuccessCounter.Add(ctx, 1)
+							r.LogSuccess()
 						} else {
 							log.Ctx(e.Context()).Error().Str("op", "SQS.receiveWorker").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Int("workerNum", n).Msg("failed to process message with missing sqs metadata")
 						}
@@ -308,6 +371,7 @@ func (r *Receiver) startReceiveWorker(svc *sqs.SQS, n int) {
 						}
 						// a nack below max retries - this is the only case where we do not delete the message yet
 						r.eventFailureCounter.Add(ctx, 1)
+						r.logError()
 						cancel()
 					}),
 					event.WithTenant(r.Tenant()),
@@ -336,61 +400,18 @@ func (r *Receiver) Receive(next receiver.NextFn) error {
 		}
 	}
 	r.Lock()
-	r.startTime = time.Now()
 	r.stopped = false
 	r.done = make(chan struct{})
 	r.next = next
 	r.Unlock()
-	// create sqs session
-	sess, err := session.NewSession()
-	if nil != err {
-		return &SQSError{op: "NewSession", err: err}
-	}
-	var creds *credentials.Credentials
-	if r.config.AWSRoleARN != "" {
-		creds = stscreds.NewCredentials(sess, r.config.AWSRoleARN)
-	} else if r.config.AWSAccessKeyId != "" && r.config.AWSSecretAccessKey != "" {
-		awsAccessKeyId := r.secrets.Secret(r.config.AWSAccessKeyId)
-		if awsAccessKeyId == "" {
-			awsAccessKeyId = r.config.AWSAccessKeyId
-		}
-		awsSecretAccessKey := r.secrets.Secret(r.config.AWSSecretAccessKey)
-		if awsSecretAccessKey == "" {
-			awsSecretAccessKey = r.config.AWSSecretAccessKey
-		}
-		creds = credentials.NewStaticCredentials(awsAccessKeyId, awsSecretAccessKey, "")
-	} else {
-		creds = sess.Config.Credentials
-	}
-	sess, err = session.NewSession(&aws.Config{Region: aws.String(r.config.AWSRegion), Credentials: creds})
-	if nil != err {
-		return &SQSError{op: "NewSession", err: err}
-	}
-	_, err = sess.Config.Credentials.Get()
-	if nil != err {
-		return &SQSError{op: "GetCredentials", err: err}
-	}
 	for i := 0; i < *r.config.ReceiverPoolSize; i++ {
 		r.logger.Info().Str("op", "SQS.Receive").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Int("workerNum", i).Msg("launching receiver pool thread")
-		r.startReceiveWorker(sqs.New(sess), i)
+		r.startReceiveWorker(r.sqs, i)
 	}
 	r.logger.Info().Str("op", "SQS.Receive").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Msg("waiting for receive done")
 	<-r.done
-	r.Lock()
-	elapsedMs := time.Since(r.startTime).Milliseconds()
-	receiveThroughput := 1000 * r.receiveCount / (int(elapsedMs) + 1)
-	deleteThroughput := 1000 * r.deleteCount / (int(elapsedMs) + 1)
-	receiveCnt := r.receiveCount
-	deleteCnt := r.deleteCount
-	r.Unlock()
-	r.logger.Info().Str("op", "SQS.Receive").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Int("elapsedMs", int(elapsedMs)).Int("deleteCount", deleteCnt).Int("receiveCount", receiveCnt).Int("receiveThroughput", receiveThroughput).Int("deleteThroughput", deleteThroughput).Msg("receive done")
+	r.logger.Info().Str("op", "SQS.Receive").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Msg("receive done")
 	return nil
-}
-
-func (r *Receiver) Count() int {
-	r.Lock()
-	defer r.Unlock()
-	return r.receiveCount
 }
 
 func (r *Receiver) StopReceiving(ctx context.Context) error {
@@ -430,4 +451,62 @@ func (r *Receiver) Plugin() string {
 
 func (r *Receiver) Tenant() tenant.Id {
 	return r.tid
+}
+
+func (r *Receiver) getLocalMetric() *syncer.EarsMetric {
+	r.Lock()
+	defer r.Unlock()
+	metrics := &syncer.EarsMetric{
+		r.successCounter,
+		r.errorCounter,
+		0,
+		r.successVelocityCounter,
+		r.errorVelocityCounter,
+		0,
+		r.currentSec,
+	}
+	return metrics
+}
+
+func (r *Receiver) EventSuccessCount() int {
+	hash := r.Hash()
+	r.tableSyncer.WriteMetrics(hash, r.getLocalMetric())
+	return r.tableSyncer.ReadMetrics(hash).SuccessCount
+}
+
+func (r *Receiver) EventSuccessVelocity() int {
+	hash := r.Hash()
+	r.tableSyncer.WriteMetrics(hash, r.getLocalMetric())
+	return r.tableSyncer.ReadMetrics(hash).SuccessVelocity
+}
+
+func (r *Receiver) EventErrorCount() int {
+	hash := r.Hash()
+	r.tableSyncer.WriteMetrics(hash, r.getLocalMetric())
+	return r.tableSyncer.ReadMetrics(hash).ErrorCount
+}
+
+func (r *Receiver) EventErrorVelocity() int {
+	hash := r.Hash()
+	r.tableSyncer.WriteMetrics(hash, r.getLocalMetric())
+	return r.tableSyncer.ReadMetrics(hash).ErrorVelocity
+}
+
+func (r *Receiver) EventTs() int64 {
+	hash := r.Hash()
+	r.tableSyncer.WriteMetrics(hash, r.getLocalMetric())
+	return r.tableSyncer.ReadMetrics(hash).LastEventTs
+}
+
+func (r *Receiver) Hash() string {
+	cfg := ""
+	if r.Config() != nil {
+		buf, _ := json.Marshal(r.Config())
+		if buf != nil {
+			cfg = string(buf)
+		}
+	}
+	str := r.name + r.plugin + cfg
+	hash := hasher.String(str)
+	return hash
 }

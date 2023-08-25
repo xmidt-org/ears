@@ -15,6 +15,7 @@
 package discord
 
 import (
+	"github.com/xmidt-org/ears/internal/pkg/syncer"
 	"sync"
 
 	"github.com/bwmarrin/discordgo"
@@ -67,16 +68,25 @@ var DefaultReceiverConfig = ReceiverConfig{
 }
 
 type Sender struct {
-	sess                *discordgo.Session
-	config              SenderConfig
-	name                string
-	plugin              string
-	tid                 tenant.Id
-	eventSuccessCounter metric.BoundInt64Counter
-	eventFailureCounter metric.BoundInt64Counter
-	eventBytesCounter   metric.BoundInt64Counter
-	eventProcessingTime metric.BoundInt64Histogram
-	eventSendOutTime    metric.BoundInt64Histogram
+	sync.Mutex
+	sess                          *discordgo.Session
+	config                        SenderConfig
+	name                          string
+	plugin                        string
+	tid                           tenant.Id
+	eventSuccessCounter           metric.BoundInt64Counter
+	eventFailureCounter           metric.BoundInt64Counter
+	eventBytesCounter             metric.BoundInt64Counter
+	eventProcessingTime           metric.BoundInt64Histogram
+	eventSendOutTime              metric.BoundInt64Histogram
+	successCounter                int
+	errorCounter                  int
+	successVelocityCounter        int
+	errorVelocityCounter          int
+	currentSuccessVelocityCounter int
+	currentErrorVelocityCounter   int
+	currentSec                    int64
+	tableSyncer                   syncer.DeltaSyncer
 }
 
 type Receiver struct {
@@ -99,4 +109,12 @@ type Receiver struct {
 	eventFailureCounter            metric.BoundInt64Counter
 	eventBytesCounter              metric.BoundInt64Counter
 	next                           receiver.NextFn
+	successCounter                 int
+	errorCounter                   int
+	successVelocityCounter         int
+	errorVelocityCounter           int
+	currentSuccessVelocityCounter  int
+	currentErrorVelocityCounter    int
+	currentSec                     int64
+	tableSyncer                    syncer.DeltaSyncer
 }

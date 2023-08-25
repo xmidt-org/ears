@@ -17,6 +17,7 @@ package gears
 import (
 	"github.com/Shopify/sarama"
 	"github.com/rs/zerolog"
+	"github.com/xmidt-org/ears/internal/pkg/syncer"
 	pkgplugin "github.com/xmidt-org/ears/pkg/plugin"
 	"github.com/xmidt-org/ears/pkg/secret"
 	"github.com/xmidt-org/ears/pkg/sender"
@@ -108,16 +109,24 @@ type SenderMetrics struct {
 
 type Sender struct {
 	sync.Mutex
-	name     string
-	plugin   string
-	tid      tenant.Id
-	config   SenderConfig
-	count    int
-	logger   *zerolog.Logger
-	producer *Producer
-	stopped  bool
-	secrets  secret.Vault
-	metrics  map[string]*SenderMetrics
+	name                          string
+	plugin                        string
+	tid                           tenant.Id
+	config                        SenderConfig
+	count                         int
+	logger                        *zerolog.Logger
+	producer                      *Producer
+	stopped                       bool
+	secrets                       secret.Vault
+	metrics                       map[string]*SenderMetrics
+	successCounter                int
+	errorCounter                  int
+	successVelocityCounter        int
+	errorVelocityCounter          int
+	currentSuccessVelocityCounter int
+	currentErrorVelocityCounter   int
+	currentSec                    int64
+	tableSyncer                   syncer.DeltaSyncer
 }
 
 type ManualHashPartitioner struct {

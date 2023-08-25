@@ -18,15 +18,14 @@ import (
 	"context"
 	"github.com/Shopify/sarama"
 	"github.com/rs/zerolog"
+	"github.com/xmidt-org/ears/internal/pkg/syncer"
+	pkgplugin "github.com/xmidt-org/ears/pkg/plugin"
 	"github.com/xmidt-org/ears/pkg/secret"
 	"github.com/xmidt-org/ears/pkg/tenant"
 	"github.com/xorcare/pointer"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
 	"sync"
-	"time"
-
-	pkgplugin "github.com/xmidt-org/ears/pkg/plugin"
 
 	"github.com/xmidt-org/ears/pkg/receiver"
 	"github.com/xmidt-org/ears/pkg/sender"
@@ -89,28 +88,34 @@ type ReceiverConfig struct {
 
 type Receiver struct {
 	sync.Mutex
-	done      chan struct{}
-	stopped   bool
-	config    ReceiverConfig
-	name      string
-	plugin    string
-	tid       tenant.Id
-	next      receiver.NextFn
-	logger    *zerolog.Logger
-	count     int
-	startTime time.Time
+	done    chan struct{}
+	stopped bool
+	config  ReceiverConfig
+	name    string
+	plugin  string
+	tid     tenant.Id
+	next    receiver.NextFn
+	logger  *zerolog.Logger
 	sarama.ConsumerGroupSession
-	wg                  sync.WaitGroup
-	ready               chan bool
-	cancel              context.CancelFunc
-	ctx                 context.Context
-	client              sarama.ConsumerGroup
-	topics              []string
-	handler             func(message *sarama.ConsumerMessage) bool
-	eventSuccessCounter metric.BoundInt64Counter
-	eventFailureCounter metric.BoundInt64Counter
-	eventBytesCounter   metric.BoundInt64Counter
-	secrets             secret.Vault
+	wg                            sync.WaitGroup
+	ready                         chan bool
+	cancel                        context.CancelFunc
+	ctx                           context.Context
+	client                        sarama.ConsumerGroup
+	topics                        []string
+	handler                       func(message *sarama.ConsumerMessage) bool
+	eventSuccessCounter           metric.BoundInt64Counter
+	eventFailureCounter           metric.BoundInt64Counter
+	eventBytesCounter             metric.BoundInt64Counter
+	successCounter                int
+	errorCounter                  int
+	successVelocityCounter        int
+	errorVelocityCounter          int
+	currentSuccessVelocityCounter int
+	currentErrorVelocityCounter   int
+	currentSec                    int64
+	secrets                       secret.Vault
+	tableSyncer                   syncer.DeltaSyncer
 }
 
 var DefaultSenderConfig = SenderConfig{
@@ -180,12 +185,20 @@ type Sender struct {
 	stopped  bool
 	secrets  secret.Vault
 	//metrics  map[string]*SenderMetrics
-	commonLabels        []attribute.KeyValue
-	eventSuccessCounter metric.Int64Counter
-	eventFailureCounter metric.Int64Counter
-	eventBytesCounter   metric.Int64Counter
-	eventProcessingTime metric.Int64Histogram
-	eventSendOutTime    metric.Int64Histogram
+	commonLabels                  []attribute.KeyValue
+	eventSuccessCounter           metric.Int64Counter
+	eventFailureCounter           metric.Int64Counter
+	eventBytesCounter             metric.Int64Counter
+	eventProcessingTime           metric.Int64Histogram
+	eventSendOutTime              metric.Int64Histogram
+	successCounter                int
+	errorCounter                  int
+	successVelocityCounter        int
+	errorVelocityCounter          int
+	currentSuccessVelocityCounter int
+	currentErrorVelocityCounter   int
+	currentSec                    int64
+	tableSyncer                   syncer.DeltaSyncer
 }
 
 type ManualHashPartitioner struct {

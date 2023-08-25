@@ -23,6 +23,7 @@ import (
 	"github.com/xmidt-org/ears/internal/pkg/appsecret"
 	"github.com/xmidt-org/ears/internal/pkg/quota"
 	"github.com/xmidt-org/ears/internal/pkg/rtsemconv"
+	"github.com/xmidt-org/ears/internal/pkg/syncer"
 	"github.com/xmidt-org/ears/pkg/logs"
 	"github.com/xmidt-org/ears/pkg/panics"
 	"github.com/xmidt-org/ears/pkg/secret"
@@ -63,7 +64,9 @@ type manager struct {
 	logger *zerolog.Logger
 
 	quotaManager *quota.QuotaManager
+	tenantStorer tenant.TenantStorer
 	secrets      secret.Vault
+	tableSyncer  syncer.DeltaSyncer
 }
 
 // === Initialization ================================================
@@ -147,12 +150,12 @@ func (m *manager) RegisterReceiver(
 
 		var secrets secret.Vault
 		if m.secrets != nil {
-			secrets = appsecret.NewTenantConfigVault(tid, m.secrets)
+			secrets = appsecret.NewTenantConfigVault(tid, m.secrets, m.tenantStorer)
 		}
 
 		receiverChan := make(chan pkgreceiver.Receiver, 1)
 		go func() {
-			r, err = ns.NewReceiver(tid, plugin, name, config, secrets)
+			r, err = ns.NewReceiver(tid, plugin, name, config, secrets, m.tableSyncer)
 			receiverChan <- r
 		}()
 		select {
@@ -185,7 +188,6 @@ func (m *manager) RegisterReceiver(
 							Str("stackTrace", panicErr.StackTrace()).Msg("A panic has occurred")
 					}
 				}()
-
 				if m.quotaManager != nil {
 					//ratelimit
 					tracer := otel.Tracer(rtsemconv.EARSTracerName)
@@ -202,12 +204,10 @@ func (m *manager) RegisterReceiver(
 			})
 			if err != nil {
 				m.logger.Error().Str("op", "RegisterReceiver.Receive").Err(err).Str("key", key).Str("name", name).Msg("Error calling Receive function")
-
-				//TODO figure out if we need to cleanup the receiver (or how to)
+				// most errors are captured during registration
 			}
 		}()
 	}
-
 	u, err := uuid.NewRandom()
 	if err != nil {
 		return nil, &RegistrationError{
@@ -217,7 +217,6 @@ func (m *manager) RegisterReceiver(
 			Err:     err,
 		}
 	}
-
 	w := &receiver{
 		id:       u.String(),
 		tid:      tid,
@@ -228,14 +227,10 @@ func (m *manager) RegisterReceiver(
 		receiver: r,
 		active:   true,
 	}
-
 	m.receiversWrapped[w.id] = w
 	m.receiversCount[key]++
-
 	log.Ctx(ctx).Info().Str("op", "RegisterReceiver").Str("key", key).Str("wid", w.id).Str("name", name).Msg("Receiver registered")
-
 	return w, nil
-
 }
 
 func (m *manager) Receivers() map[string]pkgreceiver.Receiver {
@@ -259,7 +254,18 @@ func (m *manager) ReceiversStatus() map[string]ReceiverStatus {
 			status.ReferenceCount++
 			receivers[mapKey] = status
 		} else {
-			receivers[mapKey] = ReceiverStatus{Name: v.Name(), Plugin: v.Plugin(), Config: v.Config(), ReferenceCount: 1, Tid: v.tid}
+			receivers[mapKey] = ReceiverStatus{
+				Name:            v.Name(),
+				Plugin:          v.Plugin(),
+				Config:          v.Config(),
+				ReferenceCount:  1,
+				LastEventTs:     v.EventTs(),
+				SuccessCount:    v.EventSuccessCount(),
+				ErrorCount:      v.EventErrorCount(),
+				SuccessVelocity: v.EventSuccessVelocity(),
+				ErrorVelocity:   v.EventErrorVelocity(),
+				Tid:             v.tid,
+			}
 		}
 	}
 	return receivers
@@ -389,11 +395,7 @@ func (m *manager) Filterers() map[string]pkgfilter.NewFilterer {
 	return m.pm.Filterers()
 }
 
-func (m *manager) RegisterFilter(
-	ctx context.Context, plugin string,
-	name string, config interface{},
-	tid tenant.Id,
-) (pkgfilter.Filterer, error) {
+func (m *manager) RegisterFilter(ctx context.Context, plugin string, name string, config interface{}, tid tenant.Id) (pkgfilter.Filterer, error) {
 
 	factory, err := m.pm.Filterer(plugin)
 	if err != nil {
@@ -426,12 +428,12 @@ func (m *manager) RegisterFilter(
 
 		var secrets secret.Vault
 		if m.secrets != nil {
-			secrets = appsecret.NewTenantConfigVault(tid, m.secrets)
+			secrets = appsecret.NewTenantConfigVault(tid, m.secrets, m.tenantStorer)
 		}
 
 		filterChan := make(chan pkgfilter.Filterer, 1)
 		go func() {
-			f, err = factory.NewFilterer(tid, plugin, name, config, secrets)
+			f, err = factory.NewFilterer(tid, plugin, name, config, secrets, m.tableSyncer)
 			filterChan <- f
 		}()
 		select {
@@ -503,7 +505,20 @@ func (m *manager) FiltersStatus() map[string]FilterStatus {
 			status.ReferenceCount++
 			filters[mapKey] = status
 		} else {
-			filters[mapKey] = FilterStatus{Name: v.Name(), Plugin: v.Plugin(), Config: v.Config(), ReferenceCount: 1, Tid: v.tid}
+			filters[mapKey] = FilterStatus{
+				Name:            v.Name(),
+				Plugin:          v.Plugin(),
+				Config:          v.Config(),
+				ReferenceCount:  1,
+				LastEventTs:     v.EventTs(),
+				SuccessCount:    v.EventSuccessCount(),
+				ErrorCount:      v.EventErrorCount(),
+				FilterCount:     v.EventFilterCount(),
+				SuccessVelocity: v.EventSuccessVelocity(),
+				ErrorVelocity:   v.EventErrorVelocity(),
+				FilterVelocity:  v.EventFilterVelocity(),
+				Tid:             v.tid,
+			}
 		}
 	}
 	return filters
@@ -592,13 +607,14 @@ func (m *manager) RegisterSender(
 	if !ok {
 
 		var secrets secret.Vault
+
 		if m.secrets != nil {
-			secrets = appsecret.NewTenantConfigVault(tid, m.secrets)
+			secrets = appsecret.NewTenantConfigVault(tid, m.secrets, m.tenantStorer)
 		}
 
 		senderChan := make(chan pkgsender.Sender, 1)
 		go func() {
-			s, err = ns.NewSender(tid, plugin, name, config, secrets)
+			s, err = ns.NewSender(tid, plugin, name, config, secrets, m.tableSyncer)
 			senderChan <- s
 		}()
 		select {
@@ -668,7 +684,18 @@ func (m *manager) SendersStatus() map[string]SenderStatus {
 			status.ReferenceCount++
 			senders[mapKey] = status
 		} else {
-			senders[mapKey] = SenderStatus{Name: v.Name(), Plugin: v.Plugin(), Config: v.Config(), ReferenceCount: 1, Tid: v.tid}
+			senders[mapKey] = SenderStatus{
+				Name:            v.Name(),
+				Plugin:          v.Plugin(),
+				Config:          v.Config(),
+				ReferenceCount:  1,
+				LastEventTs:     v.EventTs(),
+				SuccessCount:    v.EventSuccessCount(),
+				ErrorCount:      v.EventErrorCount(),
+				SuccessVelocity: v.EventSuccessVelocity(),
+				ErrorVelocity:   v.EventErrorVelocity(),
+				Tid:             v.tid,
+			}
 		}
 	}
 	return senders

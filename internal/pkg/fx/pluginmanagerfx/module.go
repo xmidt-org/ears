@@ -16,6 +16,8 @@ package pluginmanagerfx
 
 import (
 	"fmt"
+	"github.com/xmidt-org/ears/internal/pkg/syncer"
+	"github.com/xmidt-org/ears/pkg/tenant"
 
 	"github.com/rs/zerolog"
 	p "github.com/xmidt-org/ears/internal/pkg/plugin"
@@ -73,6 +75,8 @@ type PluginIn struct {
 	Logger       *zerolog.Logger
 	QuotaManager *quota.QuotaManager
 	Secrets      secret.Vault
+	TenantStorer tenant.TenantStorer
+	TableSyncer  syncer.DeltaSyncer
 }
 
 type PluginOut struct {
@@ -243,8 +247,10 @@ func ProvidePluginManager(in PluginIn) (PluginOut, error) {
 
 	m, err := p.NewManager(p.WithPluginManager(mgr),
 		p.WithLogger(in.Logger),
+		p.WithSyncer(in.TableSyncer),
 		p.WithQuotaManager(in.QuotaManager),
-		p.WithSecretVaults(in.Secrets))
+		p.WithSecretVaults(in.Secrets),
+		p.WithTenantStorer(in.TenantStorer))
 	if err != nil {
 		return out, fmt.Errorf("could not provide plugin manager: %w", err)
 	}

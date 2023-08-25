@@ -16,6 +16,7 @@ package http
 
 import (
 	"github.com/rs/zerolog"
+	"github.com/xmidt-org/ears/internal/pkg/syncer"
 	"github.com/xmidt-org/ears/pkg/errs"
 	pkgplugin "github.com/xmidt-org/ears/pkg/plugin"
 	"github.com/xmidt-org/ears/pkg/receiver"
@@ -86,16 +87,24 @@ var DefaultReceiverConfig = ReceiverConfig{
 
 type Receiver struct {
 	sync.Mutex
-	logger              *zerolog.Logger
-	srv                 *http.Server
-	config              ReceiverConfig
-	name                string
-	plugin              string
-	tid                 tenant.Id
-	eventSuccessCounter metric.BoundInt64Counter
-	eventFailureCounter metric.BoundInt64Counter
-	eventBytesCounter   metric.BoundInt64Counter
-	next                receiver.NextFn
+	logger                        *zerolog.Logger
+	srv                           *http.Server
+	config                        ReceiverConfig
+	name                          string
+	plugin                        string
+	tid                           tenant.Id
+	eventSuccessCounter           metric.BoundInt64Counter
+	eventFailureCounter           metric.BoundInt64Counter
+	eventBytesCounter             metric.BoundInt64Counter
+	next                          receiver.NextFn
+	successCounter                int
+	errorCounter                  int
+	successVelocityCounter        int
+	errorVelocityCounter          int
+	currentSuccessVelocityCounter int
+	currentErrorVelocityCounter   int
+	currentSec                    int64
+	tableSyncer                   syncer.DeltaSyncer
 }
 
 type SenderConfig struct {
@@ -104,17 +113,26 @@ type SenderConfig struct {
 }
 
 type Sender struct {
-	client              *http.Client
-	config              SenderConfig
-	name                string
-	plugin              string
-	tid                 tenant.Id
-	eventSuccessCounter metric.BoundInt64Counter
-	eventFailureCounter metric.BoundInt64Counter
-	eventBytesCounter   metric.BoundInt64Counter
-	eventProcessingTime metric.BoundInt64Histogram
-	eventSendOutTime    metric.BoundInt64Histogram
-	b3Propagator        propagation.TextMapPropagator
+	sync.Mutex
+	client                        *http.Client
+	config                        SenderConfig
+	name                          string
+	plugin                        string
+	tid                           tenant.Id
+	eventSuccessCounter           metric.BoundInt64Counter
+	eventFailureCounter           metric.BoundInt64Counter
+	eventBytesCounter             metric.BoundInt64Counter
+	eventProcessingTime           metric.BoundInt64Histogram
+	eventSendOutTime              metric.BoundInt64Histogram
+	b3Propagator                  propagation.TextMapPropagator
+	successCounter                int
+	errorCounter                  int
+	successVelocityCounter        int
+	errorVelocityCounter          int
+	currentSuccessVelocityCounter int
+	currentErrorVelocityCounter   int
+	currentSec                    int64
+	tableSyncer                   syncer.DeltaSyncer
 }
 
 type BadHttpStatusError struct {

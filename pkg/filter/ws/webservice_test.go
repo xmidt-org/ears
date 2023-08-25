@@ -43,7 +43,7 @@ func TestFilterWsBasic(t *testing.T) {
 		Url:                    "http://echo.jsontest.com/key/value/one/two",
 		Method:                 "GET",
 		EmptyPathValueRequired: pointer.Bool(true),
-	}, secrets)
+	}, secrets, nil)
 	if err != nil {
 		t.Fatalf("encode test failed: %s\n", err.Error())
 	}
@@ -88,7 +88,7 @@ func TestFilterWsUrlEval(t *testing.T) {
 		ToPath: ".value",
 		Url:    "{.url}",
 		Method: "GET",
-	}, secrets)
+	}, secrets, nil)
 	if err != nil {
 		t.Fatalf("encode test failed: %s\n", err.Error())
 	}
@@ -134,7 +134,7 @@ func TestFilterWsEmptyPathValueNotMet(t *testing.T) {
 		Url:                    "http://echo.jsontest.com/key/value/one/two",
 		Method:                 "GET",
 		EmptyPathValueRequired: pointer.Bool(true),
-	}, secrets)
+	}, secrets, nil)
 	if err != nil {
 		t.Fatalf("encode test failed: %s\n", err.Error())
 	}

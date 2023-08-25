@@ -233,6 +233,7 @@ func (r *DefaultRoutingTableManager) RouteEvent(ctx context.Context, tid tenant.
 	e, err := event.New(ctx, payload, event.WithAck(
 		func(evt event.Event) {
 			r.logger.Info().Str("op", "routeEventWebhook").Msg("success")
+			lrw.Receiver.LogSuccess()
 			wg.Done()
 			//cancel()
 		}, func(evt event.Event, err error) {

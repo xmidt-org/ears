@@ -27,8 +27,10 @@ import (
 	"github.com/goccy/go-yaml"
 	"github.com/rs/zerolog/log"
 	"github.com/xmidt-org/ears/internal/pkg/rtsemconv"
+	"github.com/xmidt-org/ears/internal/pkg/syncer"
 	"github.com/xmidt-org/ears/pkg/checkpoint"
 	"github.com/xmidt-org/ears/pkg/event"
+	"github.com/xmidt-org/ears/pkg/hasher"
 	"github.com/xmidt-org/ears/pkg/panics"
 	pkgplugin "github.com/xmidt-org/ears/pkg/plugin"
 	"github.com/xmidt-org/ears/pkg/receiver"
@@ -55,7 +57,7 @@ const (
 
 // https://docs.aws.amazon.com/streams/latest/dev/troubleshooting-consumers.html
 
-func NewReceiver(tid tenant.Id, plugin string, name string, config interface{}, secrets secret.Vault) (receiver.Receiver, error) {
+func NewReceiver(tid tenant.Id, plugin string, name string, config interface{}, secrets secret.Vault, tableSyncer syncer.DeltaSyncer) (receiver.Receiver, error) {
 	var cfg ReceiverConfig
 	var err error
 	switch c := config.(type) {
@@ -78,6 +80,7 @@ func NewReceiver(tid tenant.Id, plugin string, name string, config interface{}, 
 	if err != nil {
 		return nil, err
 	}
+	ctx := context.Background()
 	r := &Receiver{
 		config:                         cfg,
 		name:                           name,
@@ -88,6 +91,14 @@ func NewReceiver(tid tenant.Id, plugin string, name string, config interface{}, 
 		secrets:                        secrets,
 		shardMonitorStopChannel:        make(chan bool),
 		shardUpdateListenerStopChannel: make(chan bool),
+		awsRoleArn:                     secrets.Secret(ctx, cfg.AWSRoleARN),
+		awsAccessKey:                   secrets.Secret(ctx, cfg.AWSAccessKeyId),
+		awsAccessSecret:                secrets.Secret(ctx, cfg.AWSSecretAccessKey),
+		awsRegion:                      secrets.Secret(ctx, cfg.AWSRegion),
+		streamName:                     secrets.Secret(ctx, cfg.StreamName),
+		consumerName:                   secrets.Secret(ctx, cfg.ConsumerName),
+		currentSec:                     time.Now().Unix(),
+		tableSyncer:                    tableSyncer,
 	}
 	r.Lock()
 	r.stopChannelMap = make(map[int]chan bool)
@@ -100,7 +111,7 @@ func NewReceiver(tid tenant.Id, plugin string, name string, config interface{}, 
 		attribute.String(rtsemconv.EARSPluginNameLabel, r.Name()),
 		attribute.String(rtsemconv.EARSAppIdLabel, r.tid.AppId),
 		attribute.String(rtsemconv.EARSOrgIdLabel, r.tid.OrgId),
-		attribute.String(rtsemconv.KinesisStreamNameLabel, r.config.StreamName),
+		attribute.String(rtsemconv.KinesisStreamNameLabel, r.streamName),
 		attribute.String(rtsemconv.HostnameLabel, hostname),
 	}
 	r.eventSuccessCounter = metric.Must(meter).
@@ -125,6 +136,30 @@ func NewReceiver(tid tenant.Id, plugin string, name string, config interface{}, 
 
 //TODO: generic solution for retry policy on nack
 //TODO: checkpoint to advance on nack after final retry
+
+func (r *Receiver) LogSuccess() {
+	r.Lock()
+	r.successCounter++
+	if time.Now().Unix() != r.currentSec {
+		r.successVelocityCounter = r.currentSuccessVelocityCounter
+		r.currentSuccessVelocityCounter = 0
+		r.currentSec = time.Now().Unix()
+	}
+	r.currentSuccessVelocityCounter++
+	r.Unlock()
+}
+
+func (r *Receiver) logError() {
+	r.Lock()
+	r.errorCounter++
+	if time.Now().Unix() != r.currentSec {
+		r.errorVelocityCounter = r.currentErrorVelocityCounter
+		r.currentErrorVelocityCounter = 0
+		r.currentSec = time.Now().Unix()
+	}
+	r.currentErrorVelocityCounter++
+	r.Unlock()
+}
 
 func (r *Receiver) getStopChannel(shardIdx int) chan bool {
 	var c chan bool
@@ -151,7 +186,7 @@ func (r *Receiver) stopShardReceiver(shardIdx int) {
 }
 
 func (r *Receiver) getCheckpointId(shardID int) string {
-	return r.name + "-" + r.config.ConsumerName + "-" + r.config.StreamName + "-" + strconv.Itoa(shardID)
+	return r.name + "-" + r.consumerName + "-" + r.streamName + "-" + strconv.Itoa(shardID)
 }
 
 func (r *Receiver) shardMonitor(svc *kinesis.Kinesis, distributor sharder.ShardDistributor) {
@@ -179,7 +214,7 @@ func (r *Receiver) shardMonitor(svc *kinesis.Kinesis, distributor sharder.ShardD
 				continue
 			}
 			stream, err := svc.DescribeStream(&kinesis.DescribeStreamInput{
-				StreamName: &r.config.StreamName,
+				StreamName: &r.streamName,
 			})
 			if err != nil {
 				r.logger.Error().Str("op", "Kinesis.shardMonitor").Str("stream", *r.stream.StreamDescription.StreamName).Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Msg("cannot get number of shards: " + err.Error())
@@ -247,7 +282,7 @@ func (r *Receiver) startShardReceiverEFO(svc *kinesis.Kinesis, stream *kinesis.D
 		attribute.String(rtsemconv.EARSPluginNameLabel, r.Name()),
 		attribute.String(rtsemconv.EARSAppIdLabel, r.tid.AppId),
 		attribute.String(rtsemconv.EARSOrgIdLabel, r.tid.OrgId),
-		attribute.String(rtsemconv.KinesisStreamNameLabel, r.config.StreamName),
+		attribute.String(rtsemconv.KinesisStreamNameLabel, r.streamName),
 		attribute.Int(rtsemconv.KinesisShardIdxLabel, shardIdx),
 	}
 	r.eventLagMillis = metric.Must(meter).
@@ -277,6 +312,7 @@ func (r *Receiver) startShardReceiverEFO(svc *kinesis.Kinesis, stream *kinesis.D
 		r.Unlock()
 		checkpoint, err := checkpoint.GetDefaultCheckpointManager(nil)
 		if err != nil {
+			r.logError()
 			r.logger.Error().Str("op", "kinesis.startShardReceiverEFO").Str("stream", *r.stream.StreamDescription.StreamName).Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Int("shardIdx", shardIdx).Msg("checkpoint error: " + err.Error())
 			return
 		}
@@ -300,6 +336,7 @@ func (r *Receiver) startShardReceiverEFO(svc *kinesis.Kinesis, stream *kinesis.D
 					params.StartingPosition.SequenceNumber = aws.String(sequenceId)
 				}
 			} else {
+				r.logError()
 				r.logger.Error().Str("op", "kinesis.startShardReceiverEFO").Str("stream", *r.stream.StreamDescription.StreamName).Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Int("shardIdx", shardIdx).Msg("checkpoint error: " + err.Error())
 			}
 			//} else if *r.config.StartingTimestamp > 0 {
@@ -323,6 +360,7 @@ func (r *Receiver) startShardReceiverEFO(svc *kinesis.Kinesis, stream *kinesis.D
 			sub, err := svc.SubscribeToShard(params)
 			if err != nil {
 				r.logger.Error().Str("op", "kinesis.startShardReceiverEFO").Str("stream", *r.stream.StreamDescription.StreamName).Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Int("shardIdx", shardIdx).Msg("subscribe error: " + err.Error())
+				r.logError()
 				// a fully processed parent shard will cause errors here until its decommission
 				time.Sleep(errorTimeoutSecLong * time.Second)
 				continue
@@ -376,12 +414,10 @@ func (r *Receiver) startShardReceiverEFO(svc *kinesis.Kinesis, stream *kinesis.D
 						if len(rec.Data) == 0 {
 							continue
 						} else {
-							r.Lock()
-							r.receiveCount++
-							r.Unlock()
 							var payload interface{}
 							err = json.Unmarshal(rec.Data, &payload)
 							if err != nil {
+								r.logError()
 								r.logger.Error().Str("op", "kinesis.startShardReceiverEFO").Str("stream", *r.stream.StreamDescription.StreamName).Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Int("shardIdx", shardIdx).Msg("cannot parse message " + (*rec.SequenceNumber) + ": " + err.Error())
 								continue
 							}
@@ -394,6 +430,7 @@ func (r *Receiver) startShardReceiverEFO(svc *kinesis.Kinesis, stream *kinesis.D
 							e, err := event.New(ctx, payload, event.WithMetadataKeyValue("kinesisMessage", rec), event.WithAck(
 								func(e event.Event) {
 									r.eventSuccessCounter.Add(ctx, 1)
+									r.LogSuccess()
 									if kinEvt.ContinuationSequenceNumber != nil {
 										checkpoint.SetCheckpoint(checkpointId, *kinEvt.ContinuationSequenceNumber)
 									}
@@ -401,6 +438,7 @@ func (r *Receiver) startShardReceiverEFO(svc *kinesis.Kinesis, stream *kinesis.D
 								},
 								func(e event.Event, err error) {
 									r.eventFailureCounter.Add(ctx, 1)
+									r.logError()
 									if kinEvt.ContinuationSequenceNumber != nil {
 										checkpoint.SetCheckpoint(checkpointId, *kinEvt.ContinuationSequenceNumber)
 									}
@@ -410,6 +448,7 @@ func (r *Receiver) startShardReceiverEFO(svc *kinesis.Kinesis, stream *kinesis.D
 								event.WithOtelTracing(r.Name()),
 								event.WithTracePayloadOnNack(*r.config.TracePayloadOnNack))
 							if err != nil {
+								r.logError()
 								r.logger.Error().Str("op", "kinesis.startShardReceiverEFO").Str("stream", *r.stream.StreamDescription.StreamName).Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Int("shardIdx", shardIdx).Msg("cannot create event: " + err.Error())
 								return
 							}
@@ -420,6 +459,7 @@ func (r *Receiver) startShardReceiverEFO(svc *kinesis.Kinesis, stream *kinesis.D
 			}
 			if err := sub.EventStream.Err(); err != nil {
 				r.logger.Error().Str("op", "kinesis.startShardReceiverEFO").Str("stream", *r.stream.StreamDescription.StreamName).Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Int("shardIdx", shardIdx).Msg("subscription event stream error: " + err.Error())
+				r.logError()
 				if sub != nil && sub.EventStream != nil && sub.EventStream.Reader != nil {
 					sub.EventStream.Close()
 				}
@@ -441,7 +481,7 @@ func (r *Receiver) startShardReceiver(svc *kinesis.Kinesis, stream *kinesis.Desc
 		attribute.String(rtsemconv.EARSPluginNameLabel, r.Name()),
 		attribute.String(rtsemconv.EARSAppIdLabel, r.tid.AppId),
 		attribute.String(rtsemconv.EARSOrgIdLabel, r.tid.OrgId),
-		attribute.String(rtsemconv.KinesisStreamNameLabel, r.config.StreamName),
+		attribute.String(rtsemconv.KinesisStreamNameLabel, r.streamName),
 		attribute.Int(rtsemconv.KinesisShardIdxLabel, shardIdx),
 	}
 	r.eventLagMillis = metric.Must(meter).
@@ -485,7 +525,7 @@ func (r *Receiver) startShardReceiver(svc *kinesis.Kinesis, stream *kinesis.Desc
 				ShardIteratorType: aws.String(r.config.ShardIteratorType),
 				// Timestamp:         aws.Time(startingTimestamp),
 				// StartingSequenceNumber: aws.String(""),
-				StreamName: aws.String(r.config.StreamName),
+				StreamName: aws.String(r.streamName),
 			}
 			if *r.config.UseCheckpoint {
 				sequenceId, lastUpdate, err := checkpoint.GetCheckpoint(checkpointId)
@@ -495,6 +535,7 @@ func (r *Receiver) startShardReceiver(svc *kinesis.Kinesis, stream *kinesis.Desc
 						shardIteratorInput.StartingSequenceNumber = aws.String(sequenceId)
 					}
 				} else {
+					r.logError()
 					r.logger.Error().Str("op", "kinesis.startShardReceiver").Str("stream", *r.stream.StreamDescription.StreamName).Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Int("shardIdx", shardIdx).Msg("checkpoint error: " + err.Error())
 				}
 				//} else if *r.config.StartingTimestamp > 0 {
@@ -506,6 +547,7 @@ func (r *Receiver) startShardReceiver(svc *kinesis.Kinesis, stream *kinesis.Desc
 			}
 			iteratorOutput, err := svc.GetShardIterator(shardIteratorInput)
 			if err != nil {
+				r.logError()
 				r.logger.Error().Str("op", "kinesis.startShardReceiver").Str("stream", *r.stream.StreamDescription.StreamName).Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Int("shardIdx", shardIdx).Msg(err.Error())
 				time.Sleep(errorTimeoutSecShort * time.Second)
 				continue
@@ -526,6 +568,7 @@ func (r *Receiver) startShardReceiver(svc *kinesis.Kinesis, stream *kinesis.Desc
 					ShardIterator: shardIterator,
 				})
 				if err != nil {
+					r.logError()
 					r.logger.Error().Str("op", "kinesis.startShardReceiver").Str("stream", *r.stream.StreamDescription.StreamName).Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Int("shardIdx", shardIdx).Msg(err.Error())
 					time.Sleep(errorTimeoutSecShort * time.Second)
 					continue
@@ -533,7 +576,7 @@ func (r *Receiver) startShardReceiver(svc *kinesis.Kinesis, stream *kinesis.Desc
 				records := getRecordsOutput.Records
 				if len(records) > 0 {
 					r.Lock()
-					r.logger.Debug().Str("op", "kinesis.startShardReceiver").Str("stream", *r.stream.StreamDescription.StreamName).Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Int("receiveCount", r.receiveCount).Int("batchSize", len(records)).Int("shardIdx", shardIdx).Msg("received message batch")
+					r.logger.Debug().Str("op", "kinesis.startShardReceiver").Str("stream", *r.stream.StreamDescription.StreamName).Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Int("batchSize", len(records)).Int("shardIdx", shardIdx).Msg("received message batch")
 					r.Unlock()
 				} else {
 					r.logger.Debug().Str("op", "kinesis.startShardReceiver").Msg("no new records")
@@ -543,12 +586,10 @@ func (r *Receiver) startShardReceiver(svc *kinesis.Kinesis, stream *kinesis.Desc
 						continue
 					} else {
 						go func() {
-							r.Lock()
-							r.receiveCount++
-							r.Unlock()
 							var payload interface{}
 							err = json.Unmarshal(msg.Data, &payload)
 							if err != nil {
+								r.logError()
 								r.logger.Error().Str("op", "kinesis.startShardReceiver").Str("stream", *r.stream.StreamDescription.StreamName).Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Int("shardIdx", shardIdx).Msg("cannot parse message " + (*msg.SequenceNumber) + ": " + err.Error())
 								return
 							}
@@ -560,11 +601,13 @@ func (r *Receiver) startShardReceiver(svc *kinesis.Kinesis, stream *kinesis.Desc
 							e, err := event.New(ctx, payload, event.WithMetadataKeyValue("kinesisMessage", *msg), event.WithAck(
 								func(e event.Event) {
 									r.eventSuccessCounter.Add(ctx, 1)
+									r.LogSuccess()
 									checkpoint.SetCheckpoint(checkpointId, *msg.SequenceNumber)
 									cancel()
 								},
 								func(e event.Event, err error) {
 									r.eventFailureCounter.Add(ctx, 1)
+									r.logError()
 									checkpoint.SetCheckpoint(checkpointId, *msg.SequenceNumber)
 									cancel()
 								}),
@@ -681,7 +724,6 @@ func (r *Receiver) Receive(next receiver.NextFn) error {
 		}
 	}
 	r.Lock()
-	r.startTime = time.Now()
 	r.stopped = false
 	r.done = make(chan struct{})
 	r.next = next
@@ -691,18 +733,10 @@ func (r *Receiver) Receive(next receiver.NextFn) error {
 		return &KinesisError{op: "NewSession", err: err}
 	}
 	var creds *credentials.Credentials
-	if r.config.AWSRoleARN != "" {
-		creds = stscreds.NewCredentials(sess, r.config.AWSRoleARN)
-	} else if r.config.AWSAccessKeyId != "" && r.config.AWSSecretAccessKey != "" {
-		awsAccessKeyId := r.secrets.Secret(r.config.AWSAccessKeyId)
-		if awsAccessKeyId == "" {
-			awsAccessKeyId = r.config.AWSAccessKeyId
-		}
-		awsSecretAccessKey := r.secrets.Secret(r.config.AWSSecretAccessKey)
-		if awsSecretAccessKey == "" {
-			awsSecretAccessKey = r.config.AWSSecretAccessKey
-		}
-		creds = credentials.NewStaticCredentials(awsAccessKeyId, awsSecretAccessKey, "")
+	if r.awsRoleArn != "" {
+		creds = stscreds.NewCredentials(sess, r.awsRoleArn)
+	} else if r.awsAccessKey != "" && r.awsAccessSecret != "" {
+		creds = credentials.NewStaticCredentials(r.awsAccessKey, r.awsAccessSecret, "")
 	} else {
 		creds = sess.Config.Credentials
 	}
@@ -717,50 +751,42 @@ func (r *Receiver) Receive(next receiver.NextFn) error {
 	httpClient := &http.Client{
 		Transport: tr,
 	}
-	sess, err = session.NewSession(&aws.Config{Region: aws.String(r.config.AWSRegion), Credentials: creds, HTTPClient: httpClient})
+	sess, err = session.NewSession(&aws.Config{Region: aws.String(r.awsRegion), Credentials: creds, HTTPClient: httpClient})
 	if nil != err {
+		r.logError()
 		return &KinesisError{op: "NewSession", err: err}
 	}
 	_, err = sess.Config.Credentials.Get()
 	if nil != err {
+		r.logError()
 		return &KinesisError{op: "GetCredentials", err: err}
 	}
 	r.svc = kinesis.New(sess)
 	//r.svc = kinesis.New(sess, aws.NewConfig().WithLogLevel(aws.LogDebug))
-	r.stream, err = r.svc.DescribeStream(&kinesis.DescribeStreamInput{StreamName: aws.String(r.config.StreamName)})
+	r.stream, err = r.svc.DescribeStream(&kinesis.DescribeStreamInput{StreamName: aws.String(r.streamName)})
 	if err != nil {
+		r.logError()
 		return &KinesisError{op: "DescribeStream", err: err}
 	}
 	if *r.config.EnhancedFanOut {
-		r.consumer, err = r.registerStreamConsumer(r.svc, r.config.StreamName, r.config.ConsumerName)
+		r.consumer, err = r.registerStreamConsumer(r.svc, r.streamName, r.consumerName)
 		if err != nil {
+			r.logError()
 			return &KinesisError{op: "registerStreamConsumer", err: err}
 		}
 	}
 	sharderConfig := sharder.DefaultControllerConfig()
 	r.shardDistributor, err = sharder.GetDefaultHashDistributor(sharderConfig.NodeName, len(r.stream.StreamDescription.Shards), sharderConfig.StorageConfig)
 	if err != nil {
+		r.logError()
 		return &KinesisError{op: "GetDefaultHashDistributor", err: err}
 	}
 	r.shardUpdateListener(r.shardDistributor)
 	r.shardMonitor(r.svc, r.shardDistributor)
 	r.logger.Info().Str("op", "Kinesis.Receive").Str("stream", *r.stream.StreamDescription.StreamName).Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Msg("waiting for receive done")
 	<-r.done
-	r.Lock()
-	elapsedMs := time.Since(r.startTime).Milliseconds()
-	receiveThroughput := 1000 * r.receiveCount / (int(elapsedMs) + 1)
-	deleteThroughput := 1000 * r.deleteCount / (int(elapsedMs) + 1)
-	receiveCnt := r.receiveCount
-	deleteCnt := r.deleteCount
-	r.Unlock()
-	r.logger.Info().Str("op", "Kinesis.Receive").Str("stream", *r.stream.StreamDescription.StreamName).Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Int("elapsedMs", int(elapsedMs)).Int("deleteCount", deleteCnt).Int("receiveCount", receiveCnt).Int("receiveThroughput", receiveThroughput).Int("deleteThroughput", deleteThroughput).Msg("receive done")
+	r.logger.Info().Str("op", "Kinesis.Receive").Str("stream", *r.stream.StreamDescription.StreamName).Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Msg("receive done")
 	return nil
-}
-
-func (r *Receiver) Count() int {
-	r.Lock()
-	defer r.Unlock()
-	return r.receiveCount
 }
 
 func (r *Receiver) StopReceiving(ctx context.Context) error {
@@ -816,4 +842,62 @@ func (r *Receiver) Plugin() string {
 
 func (r *Receiver) Tenant() tenant.Id {
 	return r.tid
+}
+
+func (r *Receiver) getLocalMetric() *syncer.EarsMetric {
+	r.Lock()
+	defer r.Unlock()
+	metrics := &syncer.EarsMetric{
+		r.successCounter,
+		r.errorCounter,
+		0,
+		r.successVelocityCounter,
+		r.errorVelocityCounter,
+		0,
+		r.currentSec,
+	}
+	return metrics
+}
+
+func (r *Receiver) EventSuccessCount() int {
+	hash := r.Hash()
+	r.tableSyncer.WriteMetrics(hash, r.getLocalMetric())
+	return r.tableSyncer.ReadMetrics(hash).SuccessCount
+}
+
+func (r *Receiver) EventSuccessVelocity() int {
+	hash := r.Hash()
+	r.tableSyncer.WriteMetrics(hash, r.getLocalMetric())
+	return r.tableSyncer.ReadMetrics(hash).SuccessVelocity
+}
+
+func (r *Receiver) EventErrorCount() int {
+	hash := r.Hash()
+	r.tableSyncer.WriteMetrics(hash, r.getLocalMetric())
+	return r.tableSyncer.ReadMetrics(hash).ErrorCount
+}
+
+func (r *Receiver) EventErrorVelocity() int {
+	hash := r.Hash()
+	r.tableSyncer.WriteMetrics(hash, r.getLocalMetric())
+	return r.tableSyncer.ReadMetrics(hash).ErrorVelocity
+}
+
+func (r *Receiver) EventTs() int64 {
+	hash := r.Hash()
+	r.tableSyncer.WriteMetrics(hash, r.getLocalMetric())
+	return r.tableSyncer.ReadMetrics(hash).LastEventTs
+}
+
+func (r *Receiver) Hash() string {
+	cfg := ""
+	if r.Config() != nil {
+		buf, _ := json.Marshal(r.Config())
+		if buf != nil {
+			cfg = string(buf)
+		}
+	}
+	str := r.name + r.plugin + cfg
+	hash := hasher.String(str)
+	return hash
 }

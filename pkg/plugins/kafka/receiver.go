@@ -23,6 +23,8 @@ import (
 	"crypto/x509"
 	"encoding/json"
 	"fmt"
+	"github.com/xmidt-org/ears/internal/pkg/syncer"
+	"github.com/xmidt-org/ears/pkg/hasher"
 	"strings"
 	"time"
 
@@ -45,7 +47,7 @@ import (
 	"github.com/xmidt-org/ears/pkg/receiver"
 )
 
-func NewReceiver(tid tenant.Id, plugin string, name string, config interface{}, secrets secret.Vault) (receiver.Receiver, error) {
+func NewReceiver(tid tenant.Id, plugin string, name string, config interface{}, secrets secret.Vault, tableSyncer syncer.DeltaSyncer) (receiver.Receiver, error) {
 	var cfg ReceiverConfig
 	var err error
 	switch c := config.(type) {
@@ -71,28 +73,25 @@ func NewReceiver(tid tenant.Id, plugin string, name string, config interface{}, 
 	ctx := context.Background()
 	cctx, cancel := context.WithCancel(ctx)
 	r := &Receiver{
-		config:  cfg,
-		name:    name,
-		plugin:  plugin,
-		tid:     tid,
-		logger:  event.GetEventLogger(),
-		cancel:  cancel,
-		ctx:     cctx,
-		ready:   make(chan bool),
-		topics:  []string{cfg.Topic},
-		stopped: true,
-		secrets: secrets,
+		config:      cfg,
+		name:        name,
+		plugin:      plugin,
+		tid:         tid,
+		logger:      event.GetEventLogger(),
+		cancel:      cancel,
+		ctx:         cctx,
+		ready:       make(chan bool),
+		topics:      []string{cfg.Topic},
+		stopped:     true,
+		secrets:     secrets,
+		currentSec:  time.Now().Unix(),
+		tableSyncer: tableSyncer,
 	}
 	saramaConfig, err := r.getSaramaConfig(*r.config.CommitInterval)
 	if err != nil {
 		return nil, err
 	}
-
-	brokers := secrets.Secret(r.config.Brokers)
-	if brokers == "" {
-		brokers = r.config.Brokers
-	}
-	client, err := sarama.NewConsumerGroup(strings.Split(brokers, ","), r.config.GroupId, saramaConfig)
+	client, err := sarama.NewConsumerGroup(strings.Split(secrets.Secret(ctx, r.config.Brokers), ","), secrets.Secret(ctx, r.config.GroupId), saramaConfig)
 	if nil != err {
 		return nil, err
 	}
@@ -104,8 +103,8 @@ func NewReceiver(tid tenant.Id, plugin string, name string, config interface{}, 
 		attribute.String(rtsemconv.EARSPluginNameLabel, r.Name()),
 		attribute.String(rtsemconv.EARSAppIdLabel, r.tid.AppId),
 		attribute.String(rtsemconv.EARSOrgIdLabel, r.tid.OrgId),
-		attribute.String(rtsemconv.KafkaTopicLabel, r.config.Topic),
-		attribute.String(rtsemconv.KafkaGroupIdLabel, r.config.GroupId),
+		attribute.String(rtsemconv.KafkaTopicLabel, secrets.Secret(ctx, r.config.Topic)),
+		attribute.String(rtsemconv.KafkaGroupIdLabel, secrets.Secret(ctx, r.config.GroupId)),
 		attribute.String(rtsemconv.EARSReceiverName, r.name),
 	}
 	r.eventSuccessCounter = metric.Must(meter).
@@ -125,6 +124,30 @@ func NewReceiver(tid tenant.Id, plugin string, name string, config interface{}, 
 			metric.WithUnit(unit.Bytes),
 		).Bind(commonLabels...)
 	return r, nil
+}
+
+func (r *Receiver) LogSuccess() {
+	r.Lock()
+	r.successCounter++
+	if time.Now().Unix() != r.currentSec {
+		r.successVelocityCounter = r.currentSuccessVelocityCounter
+		r.currentSuccessVelocityCounter = 0
+		r.currentSec = time.Now().Unix()
+	}
+	r.currentSuccessVelocityCounter++
+	r.Unlock()
+}
+
+func (r *Receiver) logError() {
+	r.Lock()
+	r.errorCounter++
+	if time.Now().Unix() != r.currentSec {
+		r.errorVelocityCounter = r.currentErrorVelocityCounter
+		r.currentErrorVelocityCounter = 0
+		r.currentSec = time.Now().Unix()
+	}
+	r.currentErrorVelocityCounter++
+	r.Unlock()
 }
 
 // Setup is run at the beginning of a new session, before ConsumeClaim
@@ -168,6 +191,7 @@ func (r *Receiver) Start(handler func(*sarama.ConsumerMessage) bool) {
 		err := r.client.Consume(r.ctx, r.topics, r)
 		if err != nil { // the receiver itself is the group handler
 			r.logger.Error().Str("op", "kafka.Start").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Msg(err.Error())
+			r.logError()
 			//Sleep for a little bit to prevent busy loop
 			time.Sleep(time.Second)
 		} else {
@@ -175,6 +199,7 @@ func (r *Receiver) Start(handler func(*sarama.ConsumerMessage) bool) {
 		}
 		// check if context was canceled, signaling that the consumer should stop
 		if nil != r.ctx.Err() {
+			r.logError()
 			r.logger.Error().Str("op", "kafka.Start").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Msg("context canceled, stopping consumption")
 			return
 		}
@@ -219,28 +244,16 @@ func (r *Receiver) getSaramaConfig(commitIntervalSec int) (*sarama.Config, error
 		config.ChannelBufferSize = *r.config.ChannelBufferSize
 	}
 	config.Net.TLS.Enable = r.config.TLSEnable
-	if "" != r.config.Username {
+	ctx := context.Background()
+	if "" != r.secrets.Secret(ctx, r.config.Username) {
 		config.Net.TLS.Enable = true
 		config.Net.SASL.Enable = true
-		config.Net.SASL.User = r.config.Username
-		config.Net.SASL.Password = r.secrets.Secret(r.config.Password)
-		if config.Net.SASL.Password == "" {
-			config.Net.SASL.Password = r.config.Password
-		}
-
-	} else if "" != r.config.AccessCert {
-		accessCert := r.secrets.Secret(r.config.AccessCert)
-		if accessCert == "" {
-			accessCert = r.config.AccessCert
-		}
-		accessKey := r.secrets.Secret(r.config.AccessKey)
-		if accessKey == "" {
-			accessKey = r.config.AccessKey
-		}
-		caCert := r.secrets.Secret(r.config.CACert)
-		if caCert == "" {
-			caCert = r.config.CACert
-		}
+		config.Net.SASL.User = r.secrets.Secret(ctx, r.config.Username)
+		config.Net.SASL.Password = r.secrets.Secret(ctx, r.config.Password)
+	} else if "" != r.secrets.Secret(ctx, r.config.AccessCert) {
+		accessCert := r.secrets.Secret(ctx, r.config.AccessCert)
+		accessKey := r.secrets.Secret(ctx, r.config.AccessKey)
+		caCert := r.secrets.Secret(ctx, r.config.CACert)
 		keypair, err := tls.X509KeyPair([]byte(accessCert), []byte(accessKey))
 		if err != nil {
 			return nil, err
@@ -271,7 +284,6 @@ func (r *Receiver) Receive(next receiver.NextFn) error {
 		}
 	}
 	r.Lock()
-	r.startTime = time.Now()
 	r.next = next
 	r.done = make(chan struct{})
 	r.stopped = false
@@ -295,43 +307,41 @@ func (r *Receiver) Receive(next receiver.NextFn) error {
 						Str("stackTrace", panicErr.StackTrace()).Msg("A panic has occurred while handling a message")
 				}
 			}()
-
 			// bail if context has been canceled
 			if r.ctx.Err() != nil {
 				r.logger.Info().Str("op", "kafka.Receive").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Msg("abandoning message due to canceled context")
 				return false
 			}
 			r.logger.Debug().Str("op", "kafka.Receive").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Str("topic", msg.Topic).Int("partition", int(msg.Partition)).Int("offset", int(msg.Offset)).Msg("message received")
-			r.Lock()
-			r.count++
-			r.Unlock()
 			var pl interface{}
 			err := json.Unmarshal(msg.Value, &pl)
 			if err != nil {
+				r.logError()
 				r.logger.Error().Str("op", "kafka.Receive").Msg("cannot parse payload: " + err.Error())
 				return false
 			}
 			ctx, cancel := context.WithTimeout(context.Background(), time.Duration(5)*time.Second)
-
 			//extract otel tracing info
 			ctx = otel.GetTextMapPropagator().Extract(ctx, otelsarama.NewConsumerMessageCarrier(msg))
-
 			r.eventBytesCounter.Add(ctx, int64(len(msg.Value)))
 			e, err := event.New(ctx, pl, event.WithAck(
 				func(e event.Event) {
 					log.Ctx(e.Context()).Debug().Str("op", "kafka.Receive").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Msg("processed message from kafka topic")
 					r.eventSuccessCounter.Add(ctx, 1)
+					r.LogSuccess()
 					cancel()
 				},
 				func(e event.Event, err error) {
 					log.Ctx(e.Context()).Error().Str("op", "kafka.Receive").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Msg("failed to process message: " + err.Error())
 					r.eventFailureCounter.Add(ctx, 1)
+					r.logError()
 					cancel()
 				}),
 				event.WithOtelTracing(r.Name()),
 				event.WithTenant(r.Tenant()),
 				event.WithTracePayloadOnNack(*r.config.TracePayloadOnNack))
 			if err != nil {
+				r.logError()
 				r.logger.Error().Str("op", "kafka.Receive").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Msg("cannot create event: " + err.Error())
 				return false
 			}
@@ -341,19 +351,8 @@ func (r *Receiver) Receive(next receiver.NextFn) error {
 	}()
 	r.logger.Info().Str("op", "kafka.Receive").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Msg("waiting for receive done")
 	<-r.done
-	r.Lock()
-	elapsedMs := time.Since(r.startTime).Milliseconds()
-	throughput := 1000 * r.count / (int(elapsedMs) + 1)
-	cnt := r.count
-	r.Unlock()
-	r.logger.Info().Str("op", "kafka.Receive").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Int("elapsedMs", int(elapsedMs)).Int("count", cnt).Int("throughput", throughput).Msg("receive done")
+	r.logger.Info().Str("op", "kafka.Receive").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Msg("receive done")
 	return nil
-}
-
-func (r *Receiver) Count() int {
-	r.Lock()
-	defer r.Unlock()
-	return r.count
 }
 
 func (r *Receiver) StopReceiving(ctx context.Context) error {
@@ -396,4 +395,62 @@ func (r *Receiver) Plugin() string {
 
 func (r *Receiver) Tenant() tenant.Id {
 	return r.tid
+}
+
+func (r *Receiver) getLocalMetric() *syncer.EarsMetric {
+	r.Lock()
+	defer r.Unlock()
+	metrics := &syncer.EarsMetric{
+		r.successCounter,
+		r.errorCounter,
+		0,
+		r.successVelocityCounter,
+		r.errorVelocityCounter,
+		0,
+		r.currentSec,
+	}
+	return metrics
+}
+
+func (r *Receiver) EventSuccessCount() int {
+	hash := r.Hash()
+	r.tableSyncer.WriteMetrics(hash, r.getLocalMetric())
+	return r.tableSyncer.ReadMetrics(hash).SuccessCount
+}
+
+func (r *Receiver) EventSuccessVelocity() int {
+	hash := r.Hash()
+	r.tableSyncer.WriteMetrics(hash, r.getLocalMetric())
+	return r.tableSyncer.ReadMetrics(hash).SuccessVelocity
+}
+
+func (r *Receiver) EventErrorCount() int {
+	hash := r.Hash()
+	r.tableSyncer.WriteMetrics(hash, r.getLocalMetric())
+	return r.tableSyncer.ReadMetrics(hash).ErrorCount
+}
+
+func (r *Receiver) EventErrorVelocity() int {
+	hash := r.Hash()
+	r.tableSyncer.WriteMetrics(hash, r.getLocalMetric())
+	return r.tableSyncer.ReadMetrics(hash).ErrorVelocity
+}
+
+func (r *Receiver) EventTs() int64 {
+	hash := r.Hash()
+	r.tableSyncer.WriteMetrics(hash, r.getLocalMetric())
+	return r.tableSyncer.ReadMetrics(hash).LastEventTs
+}
+
+func (r *Receiver) Hash() string {
+	cfg := ""
+	if r.Config() != nil {
+		buf, _ := json.Marshal(r.Config())
+		if buf != nil {
+			cfg = string(buf)
+		}
+	}
+	str := r.name + r.plugin + cfg
+	hash := hasher.String(str)
+	return hash
 }

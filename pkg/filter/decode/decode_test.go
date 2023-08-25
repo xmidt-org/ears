@@ -30,7 +30,7 @@ func TestFilterDecodeBasic(t *testing.T) {
 		FromPath: ".value",
 		ToPath:   ".",
 		Encoding: "base64",
-	}, nil)
+	}, nil, nil)
 	if err != nil {
 		t.Fatalf("decode test failed: %s\n", err.Error())
 	}
@@ -66,7 +66,7 @@ func TestFilterDecodeString(t *testing.T) {
 		FromPath: ".value",
 		ToPath:   ".value",
 		Encoding: "string",
-	}, nil)
+	}, nil, nil)
 	if err != nil {
 		t.Fatalf("decode test failed: %s\n", err.Error())
 	}

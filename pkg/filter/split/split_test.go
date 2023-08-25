@@ -28,7 +28,7 @@ func TestFilterSplitBasic(t *testing.T) {
 	ctx := context.Background()
 	f, err := split.NewFilter(tenant.Id{AppId: "myapp", OrgId: "myorg"}, "split", "mysplit", split.Config{
 		Path: ".foo",
-	}, nil)
+	}, nil, nil)
 	if err != nil {
 		t.Fatalf("split test failed: %s\n", err.Error())
 	}

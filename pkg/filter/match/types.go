@@ -15,10 +15,12 @@
 package match
 
 import (
+	"github.com/xmidt-org/ears/internal/pkg/syncer"
 	"github.com/xmidt-org/ears/pkg/event"
 	"github.com/xmidt-org/ears/pkg/filter/match/comparison"
 	"github.com/xmidt-org/ears/pkg/tenant"
 	"github.com/xorcare/pointer"
+	"sync"
 )
 
 type Matcher interface {
@@ -69,9 +71,21 @@ var DefaultConfig = Config{
 }
 
 type Filter struct {
-	matcher Matcher
-	config  Config
-	name    string
-	plugin  string
-	tid     tenant.Id
+	sync.RWMutex
+	matcher                       Matcher
+	config                        Config
+	name                          string
+	plugin                        string
+	tid                           tenant.Id
+	successCounter                int
+	errorCounter                  int
+	filterCounter                 int
+	successVelocityCounter        int
+	errorVelocityCounter          int
+	filterVelocityCounter         int
+	currentSuccessVelocityCounter int
+	currentErrorVelocityCounter   int
+	currentFilterVelocityCounter  int
+	currentSec                    int64
+	tableSyncer                   syncer.DeltaSyncer
 }

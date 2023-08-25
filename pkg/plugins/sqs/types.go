@@ -18,16 +18,15 @@ import (
 	"github.com/aws/aws-sdk-go/aws/endpoints"
 	"github.com/aws/aws-sdk-go/service/sqs"
 	"github.com/rs/zerolog"
+	"github.com/xmidt-org/ears/internal/pkg/syncer"
 	"github.com/xmidt-org/ears/pkg/errs"
 	"github.com/xmidt-org/ears/pkg/event"
+	pkgplugin "github.com/xmidt-org/ears/pkg/plugin"
 	"github.com/xmidt-org/ears/pkg/secret"
 	"github.com/xmidt-org/ears/pkg/tenant"
 	"github.com/xorcare/pointer"
 	"go.opentelemetry.io/otel/metric"
 	"sync"
-	"time"
-
-	pkgplugin "github.com/xmidt-org/ears/pkg/plugin"
 
 	"github.com/xmidt-org/ears/pkg/receiver"
 	"github.com/xmidt-org/ears/pkg/sender"
@@ -92,22 +91,33 @@ type ReceiverConfig struct {
 
 type Receiver struct {
 	sync.Mutex
-	done                chan struct{}
-	stopped             bool
-	config              ReceiverConfig
-	name                string
-	plugin              string
-	tid                 tenant.Id
-	next                receiver.NextFn
-	logger              *zerolog.Logger
-	secrets             secret.Vault
-	receiveCount        int
-	deleteCount         int
-	startTime           time.Time
-	eventSuccessCounter metric.BoundInt64Counter
-	eventFailureCounter metric.BoundInt64Counter
-	eventBytesCounter   metric.BoundInt64Counter
-	eventQueueDepth     metric.BoundInt64Histogram
+	done                          chan struct{}
+	stopped                       bool
+	config                        ReceiverConfig
+	name                          string
+	plugin                        string
+	tid                           tenant.Id
+	next                          receiver.NextFn
+	logger                        *zerolog.Logger
+	secrets                       secret.Vault
+	eventSuccessCounter           metric.BoundInt64Counter
+	eventFailureCounter           metric.BoundInt64Counter
+	eventBytesCounter             metric.BoundInt64Counter
+	eventQueueDepth               metric.BoundInt64Histogram
+	sqs                           *sqs.SQS
+	queueUrl                      string
+	awsRoleArn                    string
+	awsAccessKey                  string
+	awsAccessSecret               string
+	awsRegion                     string
+	successCounter                int
+	errorCounter                  int
+	successVelocityCounter        int
+	errorVelocityCounter          int
+	currentSuccessVelocityCounter int
+	currentErrorVelocityCounter   int
+	currentSec                    int64
+	tableSyncer                   syncer.DeltaSyncer
 }
 
 var DefaultSenderConfig = SenderConfig{
@@ -136,21 +146,33 @@ type SenderConfig struct {
 
 type Sender struct {
 	sync.Mutex
-	sqsService          *sqs.SQS
-	name                string
-	plugin              string
-	tid                 tenant.Id
-	config              SenderConfig
-	count               int
-	logger              *zerolog.Logger
-	eventBatch          []event.Event
-	done                chan struct{}
-	secrets             secret.Vault
-	eventSuccessCounter metric.BoundInt64Counter
-	eventFailureCounter metric.BoundInt64Counter
-	eventBytesCounter   metric.BoundInt64Counter
-	eventProcessingTime metric.BoundInt64Histogram
-	eventSendOutTime    metric.BoundInt64Histogram
+	sqsService                    *sqs.SQS
+	name                          string
+	plugin                        string
+	tid                           tenant.Id
+	config                        SenderConfig
+	logger                        *zerolog.Logger
+	eventBatch                    []event.Event
+	done                          chan struct{}
+	secrets                       secret.Vault
+	eventSuccessCounter           metric.BoundInt64Counter
+	eventFailureCounter           metric.BoundInt64Counter
+	eventBytesCounter             metric.BoundInt64Counter
+	eventProcessingTime           metric.BoundInt64Histogram
+	eventSendOutTime              metric.BoundInt64Histogram
+	queueUrl                      string
+	awsRoleArn                    string
+	awsAccessKey                  string
+	awsAccessSecret               string
+	awsRegion                     string
+	successCounter                int
+	errorCounter                  int
+	successVelocityCounter        int
+	errorVelocityCounter          int
+	currentSuccessVelocityCounter int
+	currentErrorVelocityCounter   int
+	currentSec                    int64
+	tableSyncer                   syncer.DeltaSyncer
 }
 
 type SQSError struct {
@@ -159,7 +181,7 @@ type SQSError struct {
 }
 
 func (e *SQSError) Error() string {
-	return errs.String("KinesisError", map[string]interface{}{"op": e.op}, e.err)
+	return errs.String("SQSError", map[string]interface{}{"op": e.op}, e.err)
 }
 
 func (e *SQSError) Unwrap() error {

@@ -21,6 +21,8 @@ import (
 	"github.com/goccy/go-yaml"
 	"github.com/rs/zerolog"
 	"github.com/xmidt-org/ears/internal/pkg/rtsemconv"
+	"github.com/xmidt-org/ears/internal/pkg/syncer"
+	"github.com/xmidt-org/ears/pkg/hasher"
 	"github.com/xmidt-org/ears/pkg/secret"
 	"github.com/xmidt-org/ears/pkg/tenant"
 	"go.opentelemetry.io/otel/attribute"
@@ -40,7 +42,7 @@ import (
 
 var debugMaxTO = time.Second * 10 //Default acknowledge timeout (10 seconds)
 
-func NewReceiver(tid tenant.Id, plugin string, name string, config interface{}, secrets secret.Vault) (receiver.Receiver, error) {
+func NewReceiver(tid tenant.Id, plugin string, name string, config interface{}, secrets secret.Vault, tableSyncer syncer.DeltaSyncer) (receiver.Receiver, error) {
 	var cfg ReceiverConfig
 	var err error
 	switch c := config.(type) {
@@ -66,12 +68,14 @@ func NewReceiver(tid tenant.Id, plugin string, name string, config interface{}, 
 	logger := zerolog.New(os.Stdout).Level(zerolog.DebugLevel)
 	//zerolog.LevelFieldName = "log.level"
 	r := &Receiver{
-		config:  cfg,
-		name:    name,
-		plugin:  plugin,
-		tid:     tid,
-		logger:  logger,
-		stopped: true,
+		config:      cfg,
+		name:        name,
+		plugin:      plugin,
+		tid:         tid,
+		logger:      logger,
+		stopped:     true,
+		currentSec:  time.Now().Unix(),
+		tableSyncer: tableSyncer,
 	}
 	r.history = newHistory(*r.config.MaxHistory)
 	// metric recorders
@@ -99,6 +103,30 @@ func NewReceiver(tid tenant.Id, plugin string, name string, config interface{}, 
 			metric.WithUnit(unit.Bytes),
 		).Bind(commonLabels...)
 	return r, nil
+}
+
+func (r *Receiver) LogSuccess() {
+	r.Lock()
+	r.successCounter++
+	if time.Now().Unix() != r.currentSec {
+		r.successVelocityCounter = r.currentSuccessVelocityCounter
+		r.currentSuccessVelocityCounter = 0
+		r.currentSec = time.Now().Unix()
+	}
+	r.currentSuccessVelocityCounter++
+	r.Unlock()
+}
+
+func (r *Receiver) logError() {
+	r.Lock()
+	r.errorCounter++
+	if time.Now().Unix() != r.currentSec {
+		r.errorVelocityCounter = r.currentErrorVelocityCounter
+		r.currentErrorVelocityCounter = 0
+		r.currentSec = time.Now().Unix()
+	}
+	r.currentErrorVelocityCounter++
+	r.Unlock()
 }
 
 func (r *Receiver) Receive(next receiver.NextFn) error {
@@ -146,6 +174,7 @@ func (r *Receiver) Receive(next receiver.NextFn) error {
 							eventsDone.Done()
 						}
 						r.eventSuccessCounter.Add(ctx, 1)
+						r.LogSuccess()
 						cancel()
 					}, func(evt event.Event, err error) {
 						r.logger.Error().Str("op", "debug.Receive").Msg("failed to process message: " + err.Error())
@@ -153,6 +182,7 @@ func (r *Receiver) Receive(next receiver.NextFn) error {
 							eventsDone.Done()
 						}
 						r.eventFailureCounter.Add(ctx, 1)
+						r.logError()
 						cancel()
 					}),
 					event.WithOtelTracing(r.Name()),
@@ -228,4 +258,62 @@ func (r *Receiver) Plugin() string {
 
 func (r *Receiver) Tenant() tenant.Id {
 	return r.tid
+}
+
+func (r *Receiver) getLocalMetric() *syncer.EarsMetric {
+	r.Lock()
+	defer r.Unlock()
+	metrics := &syncer.EarsMetric{
+		r.successCounter,
+		r.errorCounter,
+		0,
+		r.successVelocityCounter,
+		r.errorVelocityCounter,
+		0,
+		r.currentSec,
+	}
+	return metrics
+}
+
+func (r *Receiver) EventSuccessCount() int {
+	hash := r.Hash()
+	r.tableSyncer.WriteMetrics(hash, r.getLocalMetric())
+	return r.tableSyncer.ReadMetrics(hash).SuccessCount
+}
+
+func (r *Receiver) EventSuccessVelocity() int {
+	hash := r.Hash()
+	r.tableSyncer.WriteMetrics(hash, r.getLocalMetric())
+	return r.tableSyncer.ReadMetrics(hash).SuccessVelocity
+}
+
+func (r *Receiver) EventErrorCount() int {
+	hash := r.Hash()
+	r.tableSyncer.WriteMetrics(hash, r.getLocalMetric())
+	return r.tableSyncer.ReadMetrics(hash).ErrorCount
+}
+
+func (r *Receiver) EventErrorVelocity() int {
+	hash := r.Hash()
+	r.tableSyncer.WriteMetrics(hash, r.getLocalMetric())
+	return r.tableSyncer.ReadMetrics(hash).ErrorVelocity
+}
+
+func (r *Receiver) EventTs() int64 {
+	hash := r.Hash()
+	r.tableSyncer.WriteMetrics(hash, r.getLocalMetric())
+	return r.tableSyncer.ReadMetrics(hash).LastEventTs
+}
+
+func (r *Receiver) Hash() string {
+	cfg := ""
+	if r.Config() != nil {
+		buf, _ := json.Marshal(r.Config())
+		if buf != nil {
+			cfg = string(buf)
+		}
+	}
+	str := r.name + r.plugin + cfg
+	hash := hasher.String(str)
+	return hash
 }

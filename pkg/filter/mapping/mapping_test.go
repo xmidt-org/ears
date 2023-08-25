@@ -31,7 +31,7 @@ func TestFilterMappingBasic(t *testing.T) {
 		ArrayPath:    "",
 		Map:          []mapping.FromTo{mapping.FromTo{From: "bar", To: true}},
 		DefaultValue: nil,
-	}, nil)
+	}, nil, nil)
 	if err != nil {
 		t.Fatalf("mapping test failed: %s\n", err.Error())
 	}
@@ -67,7 +67,7 @@ func TestFilterMappingDefault(t *testing.T) {
 		ArrayPath:    "",
 		Map:          []mapping.FromTo{mapping.FromTo{From: "baz", To: true}},
 		DefaultValue: "default",
-	}, nil)
+	}, nil, nil)
 	if err != nil {
 		t.Fatalf("mapping test failed: %s\n", err.Error())
 	}
@@ -103,7 +103,7 @@ func TestFilterMappingArray(t *testing.T) {
 		ArrayPath:    ".foo",
 		Map:          []mapping.FromTo{mapping.FromTo{From: "earth", To: "planet"}, mapping.FromTo{From: "mars", To: "planet"}},
 		DefaultValue: nil,
-	}, nil)
+	}, nil, nil)
 	if err != nil {
 		t.Fatalf("mapping test failed: %s\n", err.Error())
 	}

@@ -16,6 +16,7 @@ package main
 
 import (
 	"context"
+	"github.com/xmidt-org/ears/internal/pkg/syncer"
 	"github.com/xmidt-org/ears/pkg/event"
 	"github.com/xmidt-org/ears/pkg/secret"
 	"github.com/xmidt-org/ears/pkg/tenant"
@@ -62,7 +63,7 @@ func NewPluginVersion(name string, version string, commitID string) (*pkgplugin.
 
 // Receiver ==========================================================
 
-func NewReceiver(tid tenant.Id, pluginType string, name string, config interface{}, secrets secret.Vault) (receiver.Receiver, error) {
+func NewReceiver(tid tenant.Id, pluginType string, name string, config interface{}, secrets secret.Vault, tableSyncer syncer.DeltaSyncer) (receiver.Receiver, error) {
 	return &plugin{}, nil
 }
 
@@ -92,3 +93,25 @@ func (p *plugin) Tenant() tenant.Id {
 
 func (p *plugin) Trigger(e event.Event) {
 }
+
+func (p *plugin) EventSuccessCount() int {
+	return 0
+}
+
+func (p *plugin) EventSuccessVelocity() int {
+	return 0
+}
+
+func (p *plugin) EventErrorCount() int {
+	return 0
+}
+
+func (p *plugin) EventErrorVelocity() int {
+	return 0
+}
+
+func (p *plugin) EventTs() int64 {
+	return 0
+}
+
+func (p *plugin) LogSuccess() {}

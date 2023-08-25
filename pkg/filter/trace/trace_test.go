@@ -28,7 +28,7 @@ func TestFilterTraceBasic(t *testing.T) {
 	ctx := context.Background()
 	f, err := trace.NewFilter(tenant.Id{AppId: "myapp", OrgId: "myorg"}, "trace", "mytrace", trace.Config{
 		Path: ".traceId",
-	}, nil)
+	}, nil, nil)
 	if err != nil {
 		t.Fatalf("trace test failed: %s\n", err.Error())
 	}

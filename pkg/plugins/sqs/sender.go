@@ -26,7 +26,9 @@ import (
 	"github.com/goccy/go-yaml"
 	"github.com/rs/zerolog/log"
 	"github.com/xmidt-org/ears/internal/pkg/rtsemconv"
+	"github.com/xmidt-org/ears/internal/pkg/syncer"
 	"github.com/xmidt-org/ears/pkg/event"
+	"github.com/xmidt-org/ears/pkg/hasher"
 	pkgplugin "github.com/xmidt-org/ears/pkg/plugin"
 	"github.com/xmidt-org/ears/pkg/secret"
 	"github.com/xmidt-org/ears/pkg/sender"
@@ -43,7 +45,7 @@ import (
 //TODO: MessageAttributes
 //TODO: improve graceful shutdown
 
-func NewSender(tid tenant.Id, plugin string, name string, config interface{}, secrets secret.Vault) (sender.Sender, error) {
+func NewSender(tid tenant.Id, plugin string, name string, config interface{}, secrets secret.Vault, tableSyncer syncer.DeltaSyncer) (sender.Sender, error) {
 	var cfg SenderConfig
 	var err error
 	switch c := config.(type) {
@@ -61,20 +63,31 @@ func NewSender(tid tenant.Id, plugin string, name string, config interface{}, se
 			Err: err,
 		}
 	}
+	ctx := context.Background()
 	cfg = cfg.WithDefaults()
 	err = cfg.Validate()
 	if err != nil {
 		return nil, err
 	}
 	s := &Sender{
-		name:    name,
-		plugin:  plugin,
-		tid:     tid,
-		config:  cfg,
-		logger:  event.GetEventLogger(),
-		secrets: secrets,
+		name:            name,
+		plugin:          plugin,
+		tid:             tid,
+		config:          cfg,
+		logger:          event.GetEventLogger(),
+		secrets:         secrets,
+		queueUrl:        secrets.Secret(ctx, cfg.QueueUrl),
+		awsRoleArn:      secrets.Secret(ctx, cfg.AWSRoleARN),
+		awsAccessKey:    secrets.Secret(ctx, cfg.AWSAccessKeyId),
+		awsAccessSecret: secrets.Secret(ctx, cfg.AWSSecretAccessKey),
+		awsRegion:       secrets.Secret(ctx, cfg.AWSRegion),
+		currentSec:      time.Now().Unix(),
+		tableSyncer:     tableSyncer,
 	}
-	s.initPlugin()
+	err = s.initPlugin()
+	if err != nil {
+		return nil, err
+	}
 	hostname, _ := os.Hostname()
 	// metric recorders
 	meter := global.Meter(rtsemconv.EARSMeterName)
@@ -117,6 +130,30 @@ func NewSender(tid tenant.Id, plugin string, name string, config interface{}, se
 	return s, nil
 }
 
+func (s *Sender) logSuccess() {
+	s.Lock()
+	s.successCounter++
+	if time.Now().Unix() != s.currentSec {
+		s.successVelocityCounter = s.currentSuccessVelocityCounter
+		s.currentSuccessVelocityCounter = 0
+		s.currentSec = time.Now().Unix()
+	}
+	s.currentSuccessVelocityCounter++
+	s.Unlock()
+}
+
+func (s *Sender) logError() {
+	s.Lock()
+	s.errorCounter++
+	if time.Now().Unix() != s.currentSec {
+		s.errorVelocityCounter = s.currentErrorVelocityCounter
+		s.currentErrorVelocityCounter = 0
+		s.currentSec = time.Now().Unix()
+	}
+	s.currentErrorVelocityCounter++
+	s.Unlock()
+}
+
 func (s *Sender) initPlugin() error {
 	s.Lock()
 	defer s.Unlock()
@@ -125,30 +162,33 @@ func (s *Sender) initPlugin() error {
 		return &SQSError{op: "NewSession", err: err}
 	}
 	var creds *credentials.Credentials
-	if s.config.AWSRoleARN != "" {
-		creds = stscreds.NewCredentials(sess, s.config.AWSRoleARN)
-	} else if s.config.AWSAccessKeyId != "" && s.config.AWSSecretAccessKey != "" {
-		awsAccessKeyId := s.secrets.Secret(s.config.AWSAccessKeyId)
-		if awsAccessKeyId == "" {
-			awsAccessKeyId = s.config.AWSAccessKeyId
-		}
-		awsSecretAccessKey := s.secrets.Secret(s.config.AWSSecretAccessKey)
-		if awsSecretAccessKey == "" {
-			awsSecretAccessKey = s.config.AWSSecretAccessKey
-		}
-		creds = credentials.NewStaticCredentials(awsAccessKeyId, awsSecretAccessKey, "")
+	if s.awsRoleArn != "" {
+		creds = stscreds.NewCredentials(sess, s.awsRoleArn)
+	} else if s.awsAccessKey != "" && s.awsAccessSecret != "" {
+		creds = credentials.NewStaticCredentials(s.awsAccessKey, s.awsAccessSecret, "")
 	} else {
 		creds = sess.Config.Credentials
 	}
-	sess, err = session.NewSession(&aws.Config{Region: aws.String(s.config.AWSRegion), Credentials: creds})
+	sess, err = session.NewSession(&aws.Config{Region: aws.String(s.awsRegion), Credentials: creds})
 	if nil != err {
+		s.logError()
 		return &SQSError{op: "NewSession", err: err}
 	}
 	_, err = sess.Config.Credentials.Get()
 	if nil != err {
+		s.logError()
 		return &SQSError{op: "GetCredentials", err: err}
 	}
 	s.sqsService = sqs.New(sess)
+	queueAttributesParams := &sqs.GetQueueAttributesInput{
+		QueueUrl:       aws.String(s.queueUrl),
+		AttributeNames: []*string{aws.String(approximateNumberOfMessages)},
+	}
+	_, err = s.sqsService.GetQueueAttributes(queueAttributesParams)
+	if nil != err {
+		s.logError()
+		return &SQSError{op: "GetQueueAttributes", err: err}
+	}
 	s.done = make(chan struct{})
 	s.startTimedSender()
 	return nil
@@ -159,7 +199,7 @@ func (s *Sender) startTimedSender() {
 		for {
 			select {
 			case <-s.done:
-				s.logger.Info().Str("op", "SQS.timedSender").Str("name", s.Name()).Str("tid", s.Tenant().ToString()).Int("sendCount", s.count).Msg("stopping sqs sender")
+				s.logger.Info().Str("op", "SQS.timedSender").Str("name", s.Name()).Str("tid", s.Tenant().ToString()).Msg("stopping sqs sender")
 				return
 			case <-time.After(time.Duration(*s.config.SendTimeout) * time.Second):
 			}
@@ -175,12 +215,6 @@ func (s *Sender) startTimedSender() {
 			}
 		}
 	}()
-}
-
-func (s *Sender) Count() int {
-	s.Lock()
-	defer s.Unlock()
-	return s.count
 }
 
 func (s *Sender) StopSending(ctx context.Context) {
@@ -204,10 +238,11 @@ func (s *Sender) send(events []event.Event) {
 	entries := make([]*sqs.SendMessageBatchRequestEntry, 0)
 	for idx, evt := range events {
 		if idx == 0 {
-			log.Ctx(evt.Context()).Debug().Str("op", "SQS.sendWorker").Str("name", s.Name()).Str("tid", s.Tenant().ToString()).Int("eventIdx", idx).Int("batchSize", len(events)).Int("sendCount", s.count).Msg("send message batch")
+			log.Ctx(evt.Context()).Debug().Str("op", "SQS.sendWorker").Str("name", s.Name()).Str("tid", s.Tenant().ToString()).Int("eventIdx", idx).Int("batchSize", len(events)).Msg("send message batch")
 		}
 		buf, err := json.Marshal(evt.Payload())
 		if err != nil {
+			s.logError()
 			continue
 		}
 		attributes := make(map[string]*sqs.MessageAttributeValue)
@@ -228,7 +263,7 @@ func (s *Sender) send(events []event.Event) {
 	}
 	sqsSendBatchParams := &sqs.SendMessageBatchInput{
 		Entries:  entries,
-		QueueUrl: aws.String(s.config.QueueUrl),
+		QueueUrl: aws.String(s.queueUrl),
 	}
 	start := time.Now()
 	output, err := s.sqsService.SendMessageBatch(sqsSendBatchParams)
@@ -236,6 +271,7 @@ func (s *Sender) send(events []event.Event) {
 	if err != nil {
 		for _, evt := range events {
 			s.eventFailureCounter.Add(evt.Context(), 1)
+			s.logError()
 			evt.Nack(err)
 			break
 		}
@@ -244,6 +280,7 @@ func (s *Sender) send(events []event.Event) {
 			for _, evt := range events {
 				if evt.Id() == *failEvent.Id {
 					s.eventFailureCounter.Add(evt.Context(), 1)
+					s.logError()
 					evt.Nack(errors.New(*failEvent.Message))
 					break
 				}
@@ -253,10 +290,8 @@ func (s *Sender) send(events []event.Event) {
 			for _, evt := range events {
 				if evt.Id() == *successEvent.Id {
 					s.eventSuccessCounter.Add(evt.Context(), 1)
+					s.logSuccess()
 					evt.Ack()
-					s.Lock()
-					s.count++
-					s.Unlock()
 					break
 				}
 			}
@@ -298,4 +333,62 @@ func (s *Sender) Plugin() string {
 
 func (s *Sender) Tenant() tenant.Id {
 	return s.tid
+}
+
+func (s *Sender) getLocalMetric() *syncer.EarsMetric {
+	s.Lock()
+	defer s.Unlock()
+	metrics := &syncer.EarsMetric{
+		s.successCounter,
+		s.errorCounter,
+		0,
+		s.successVelocityCounter,
+		s.errorVelocityCounter,
+		0,
+		s.currentSec,
+	}
+	return metrics
+}
+
+func (s *Sender) EventSuccessCount() int {
+	hash := s.Hash()
+	s.tableSyncer.WriteMetrics(hash, s.getLocalMetric())
+	return s.tableSyncer.ReadMetrics(hash).SuccessCount
+}
+
+func (s *Sender) EventSuccessVelocity() int {
+	hash := s.Hash()
+	s.tableSyncer.WriteMetrics(hash, s.getLocalMetric())
+	return s.tableSyncer.ReadMetrics(hash).SuccessVelocity
+}
+
+func (s *Sender) EventErrorCount() int {
+	hash := s.Hash()
+	s.tableSyncer.WriteMetrics(hash, s.getLocalMetric())
+	return s.tableSyncer.ReadMetrics(hash).ErrorCount
+}
+
+func (s *Sender) EventErrorVelocity() int {
+	hash := s.Hash()
+	s.tableSyncer.WriteMetrics(hash, s.getLocalMetric())
+	return s.tableSyncer.ReadMetrics(hash).ErrorVelocity
+}
+
+func (s *Sender) EventTs() int64 {
+	hash := s.Hash()
+	s.tableSyncer.WriteMetrics(hash, s.getLocalMetric())
+	return s.tableSyncer.ReadMetrics(hash).LastEventTs
+}
+
+func (s *Sender) Hash() string {
+	cfg := ""
+	if s.Config() != nil {
+		buf, _ := json.Marshal(s.Config())
+		if buf != nil {
+			cfg = string(buf)
+		}
+	}
+	str := s.name + s.plugin + cfg
+	hash := hasher.String(str)
+	return hash
 }

@@ -18,6 +18,7 @@
 package filter
 
 import (
+	"github.com/xmidt-org/ears/internal/pkg/syncer"
 	"github.com/xmidt-org/ears/pkg/secret"
 	"github.com/xmidt-org/ears/pkg/tenant"
 	"sync"
@@ -52,22 +53,26 @@ type NewFilterer interface {
 	Hasher
 
 	// NewFilterer returns an object that implements the Filterer interface
-	NewFilterer(tid tenant.Id, plugin string, name string, config interface{}, secrets secret.Vault) (Filterer, error)
+	NewFilterer(tid tenant.Id, plugin string, name string, config interface{}, secrets secret.Vault, tableSyncer syncer.DeltaSyncer) (Filterer, error)
 }
 
 // Filterer defines the interface that a filterer must implement
-// TODO: https://github.com/xmidt-org/ears/issues/74
 type Filterer interface {
 	Filter(e event.Event) []event.Event
-	//
 	Config() interface{}
 	Name() string
 	Plugin() string
 	Tenant() tenant.Id
+	EventSuccessCount() int
+	EventSuccessVelocity() int
+	EventFilterCount() int
+	EventFilterVelocity() int
+	EventErrorCount() int
+	EventErrorVelocity() int
+	EventTs() int64
 }
 
 // Chainer
-// TODO: https://github.com/xmidt-org/ears/issues/74
 type Chainer interface {
 	Filterer
 

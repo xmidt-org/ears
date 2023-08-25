@@ -18,6 +18,7 @@ import (
 	"context"
 	"github.com/rs/zerolog"
 	"github.com/xmidt-org/ears/internal/pkg/quota"
+	"github.com/xmidt-org/ears/internal/pkg/syncer"
 	"github.com/xmidt-org/ears/pkg/secret"
 	"github.com/xmidt-org/ears/pkg/tenant"
 	"time"
@@ -74,9 +75,23 @@ func WithPluginManager(p pkgmanager.Manager) ManagerOption {
 	}
 }
 
+func WithSyncer(tableSyncer syncer.DeltaSyncer) ManagerOption {
+	return func(m *manager) error {
+		m.tableSyncer = tableSyncer
+		return nil
+	}
+}
+
 func WithLogger(l *zerolog.Logger) ManagerOption {
 	return func(m *manager) error {
 		m.logger = l
+		return nil
+	}
+}
+
+func WithTenantStorer(t tenant.TenantStorer) ManagerOption {
+	return func(m *manager) error {
+		m.tenantStorer = t
 		return nil
 	}
 }
@@ -103,27 +118,44 @@ func WithNextFnDeadline(d time.Duration) ManagerOption {
 }
 
 type ReceiverStatus struct {
-	Name           string
-	Plugin         string
-	Config         interface{}
-	ReferenceCount int
-	Tid            tenant.Id
+	Name            string
+	Plugin          string
+	Config          interface{}
+	ReferenceCount  int
+	SuccessCount    int
+	ErrorCount      int
+	SuccessVelocity int
+	ErrorVelocity   int
+	LastEventTs     int64
+	Tid             tenant.Id
 }
 
 type SenderStatus struct {
-	Name           string
-	Plugin         string
-	Config         interface{}
-	ReferenceCount int
-	Tid            tenant.Id
+	Name            string
+	Plugin          string
+	Config          interface{}
+	ReferenceCount  int
+	SuccessCount    int
+	ErrorCount      int
+	SuccessVelocity int
+	ErrorVelocity   int
+	LastEventTs     int64
+	Tid             tenant.Id
 }
 
 type FilterStatus struct {
-	Name           string
-	Plugin         string
-	Config         interface{}
-	ReferenceCount int
-	Tid            tenant.Id
+	Name            string
+	Plugin          string
+	Config          interface{}
+	ReferenceCount  int
+	SuccessCount    int
+	ErrorCount      int
+	FilterCount     int
+	SuccessVelocity int
+	ErrorVelocity   int
+	FilterVelocity  int
+	LastEventTs     int64
+	Tid             tenant.Id
 }
 
 type OptionError struct {

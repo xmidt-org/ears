@@ -17,6 +17,7 @@ package debug
 import (
 	"container/ring"
 	"github.com/rs/zerolog"
+	"github.com/xmidt-org/ears/internal/pkg/syncer"
 	"github.com/xmidt-org/ears/pkg/tenant"
 	"go.opentelemetry.io/otel/metric"
 	"sync"
@@ -78,18 +79,26 @@ type ReceiverConfig struct {
 
 type Receiver struct {
 	sync.Mutex
-	done                chan struct{}
-	stopped             bool
-	config              ReceiverConfig
-	name                string
-	plugin              string
-	tid                 tenant.Id
-	history             *history
-	next                receiver.NextFn
-	logger              zerolog.Logger
-	eventSuccessCounter metric.BoundInt64Counter
-	eventFailureCounter metric.BoundInt64Counter
-	eventBytesCounter   metric.BoundInt64Counter
+	done                          chan struct{}
+	stopped                       bool
+	config                        ReceiverConfig
+	name                          string
+	plugin                        string
+	tid                           tenant.Id
+	history                       *history
+	next                          receiver.NextFn
+	logger                        zerolog.Logger
+	successCounter                int
+	errorCounter                  int
+	successVelocityCounter        int
+	errorVelocityCounter          int
+	currentSuccessVelocityCounter int
+	currentErrorVelocityCounter   int
+	currentSec                    int64
+	eventSuccessCounter           metric.BoundInt64Counter
+	eventFailureCounter           metric.BoundInt64Counter
+	eventBytesCounter             metric.BoundInt64Counter
+	tableSyncer                   syncer.DeltaSyncer
 }
 
 type EventWriter interface {
@@ -155,17 +164,25 @@ type SenderConfig struct {
 
 type Sender struct {
 	sync.Mutex
-	name                string
-	plugin              string
-	tid                 tenant.Id
-	config              SenderConfig
-	history             *history
-	destination         EventWriter
-	eventSuccessCounter metric.BoundInt64Counter
-	eventFailureCounter metric.BoundInt64Counter
-	eventBytesCounter   metric.BoundInt64Counter
-	eventProcessingTime metric.BoundInt64Histogram
-	eventSendOutTime    metric.BoundInt64Histogram
+	name                          string
+	plugin                        string
+	tid                           tenant.Id
+	config                        SenderConfig
+	history                       *history
+	destination                   EventWriter
+	tableSyncer                   syncer.DeltaSyncer
+	eventSuccessCounter           metric.BoundInt64Counter
+	eventFailureCounter           metric.BoundInt64Counter
+	eventBytesCounter             metric.BoundInt64Counter
+	eventProcessingTime           metric.BoundInt64Histogram
+	eventSendOutTime              metric.BoundInt64Histogram
+	successCounter                int
+	errorCounter                  int
+	successVelocityCounter        int
+	errorVelocityCounter          int
+	currentSuccessVelocityCounter int
+	currentErrorVelocityCounter   int
+	currentSec                    int64
 }
 
 type history struct {

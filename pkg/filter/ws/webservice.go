@@ -22,8 +22,10 @@ import (
 	"fmt"
 	"github.com/boriwo/deepcopy"
 	"github.com/rs/zerolog/log"
+	"github.com/xmidt-org/ears/internal/pkg/syncer"
 	"github.com/xmidt-org/ears/pkg/event"
 	"github.com/xmidt-org/ears/pkg/filter"
+	"github.com/xmidt-org/ears/pkg/hasher"
 	"github.com/xmidt-org/ears/pkg/secret"
 	"github.com/xmidt-org/ears/pkg/tenant"
 	"go.opentelemetry.io/otel/trace"
@@ -40,9 +42,21 @@ const (
 	HTTP_AUTH_TYPE_SAT    = "sat"
 	HTTP_AUTH_TYPE_OAUTH  = "oauth"
 	HTTP_AUTH_TYPE_OAUTH2 = "oauth2"
+
+	SAT_URL = "https://sat-prod.codebig2.net/oauth/token"
 )
 
-func NewFilter(tid tenant.Id, plugin string, name string, config interface{}, secrets secret.Vault) (*Filter, error) {
+type (
+	SatToken struct {
+		AccessToken string `json:"access_token"`
+		ExpiresIn   int    `json:"expires_in"`
+		Scope       string `json:"scope"`
+		TokenType   string `json:"token_type"`
+		ExpiresAt   int64  `json:"timestamp"`
+	}
+)
+
+func NewFilter(tid tenant.Id, plugin string, name string, config interface{}, secrets secret.Vault, tableSyncer syncer.DeltaSyncer) (*Filter, error) {
 	cfg, err := NewConfig(config)
 	if err != nil {
 		return nil, &filter.InvalidConfigError{
@@ -55,14 +69,53 @@ func NewFilter(tid tenant.Id, plugin string, name string, config interface{}, se
 		return nil, err
 	}
 	f := &Filter{
-		config:  *cfg,
-		name:    name,
-		plugin:  plugin,
-		tid:     tid,
-		secrets: secrets,
-		clients: make(map[string]*http.Client),
+		config:      *cfg,
+		name:        name,
+		plugin:      plugin,
+		tid:         tid,
+		secrets:     secrets,
+		clients:     make(map[string]*http.Client),
+		satTokens:   make(map[string]*SatToken),
+		currentSec:  time.Now().Unix(),
+		tableSyncer: tableSyncer,
 	}
 	return f, nil
+}
+
+func (f *Filter) logSuccess() {
+	f.Lock()
+	f.successCounter++
+	if time.Now().Unix() != f.currentSec {
+		f.successVelocityCounter = f.currentSuccessVelocityCounter
+		f.currentSuccessVelocityCounter = 0
+		f.currentSec = time.Now().Unix()
+	}
+	f.currentSuccessVelocityCounter++
+	f.Unlock()
+}
+
+func (f *Filter) logError() {
+	f.Lock()
+	f.errorCounter++
+	if time.Now().Unix() != f.currentSec {
+		f.errorVelocityCounter = f.currentErrorVelocityCounter
+		f.currentErrorVelocityCounter = 0
+		f.currentSec = time.Now().Unix()
+	}
+	f.currentErrorVelocityCounter++
+	f.Unlock()
+}
+
+func (f *Filter) logFilter() {
+	f.Lock()
+	f.filterCounter++
+	if time.Now().Unix() != f.currentSec {
+		f.filterVelocityCounter = f.currentFilterVelocityCounter
+		f.currentFilterVelocityCounter = 0
+		f.currentSec = time.Now().Unix()
+	}
+	f.currentFilterVelocityCounter++
+	f.Unlock()
 }
 
 func (f *Filter) Filter(evt event.Event) []event.Event {
@@ -83,6 +136,7 @@ func (f *Filter) Filter(evt event.Event) []event.Event {
 	if err != nil {
 		// legitimate filter nack because it involves an external service
 		evt.Nack(err)
+		f.logError()
 		return []event.Event{}
 	}
 	var resObj interface{}
@@ -93,6 +147,7 @@ func (f *Filter) Filter(evt event.Event) []event.Event {
 			span.AddEvent(err.Error())
 		}
 		evt.Ack()
+		f.logError()
 		return []event.Event{}
 	}
 	if f.config.FromPath != "" {
@@ -106,6 +161,7 @@ func (f *Filter) Filter(evt event.Event) []event.Event {
 			span.AddEvent(err.Error())
 		}
 		evt.Ack()
+		f.logError()
 		return []event.Event{}
 	}
 	_, _, err = evt.SetPathValue(f.config.ToPath, resObj, true)
@@ -115,9 +171,11 @@ func (f *Filter) Filter(evt event.Event) []event.Event {
 			span.AddEvent(err.Error())
 		}
 		evt.Ack()
+		f.logError()
 		return []event.Event{}
 	}
 	log.Ctx(evt.Context()).Debug().Str("op", "filter").Str("filterType", "ws").Str("name", f.Name()).Msg("ws")
+	f.logSuccess()
 	return []event.Event{evt}
 }
 
@@ -171,10 +229,55 @@ func (f *Filter) evalStr(evt event.Event, tt string) string {
 	return tt
 }
 
+func (f *Filter) getSatBearerToken(ctx context.Context, clientId string, clientSecret string) string {
+	//curl -s -X POST -H "X-Client-Id: ***" -H "X-Client-Secret: ***" -H "Cache-Control: no-cache" https://sat-prod.codebig2.net/oauth/token
+	//echo "Bearer $TOKEN"
+	f.Lock()
+	if time.Now().Unix() >= f.satTokens[clientId].ExpiresAt {
+		delete(f.satTokens, clientId)
+	}
+	f.Unlock()
+	if f.satTokens[clientId].AccessToken != "" {
+		f.Lock()
+		token := f.satTokens[clientId].TokenType + " " + f.satTokens[clientId].AccessToken
+		f.Unlock()
+		return token
+	}
+	httpClient := &http.Client{
+		Timeout: 10 * time.Second,
+	}
+	req, err := http.NewRequest("POST", SAT_URL, nil)
+	if err != nil {
+		return ""
+	}
+	req.Header.Add("X-Client-Id", clientId)
+	req.Header.Add("X-Client-Secret", clientSecret)
+	req.Header.Add("Cache-Control", "no-cache")
+	resp, err := httpClient.Do(req)
+	if err != nil {
+		return ""
+	}
+	buf, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return ""
+	}
+	defer resp.Body.Close()
+	var satToken SatToken
+	err = json.Unmarshal(buf, &satToken)
+	if err != nil {
+		return ""
+	}
+	satToken.ExpiresAt = time.Now().Unix() + int64(satToken.ExpiresIn)
+	f.Lock()
+	f.satTokens[clientId] = &satToken
+	f.Unlock()
+	return satToken.TokenType + " " + satToken.AccessToken
+}
+
 func (f *Filter) hitEndpoint(ctx context.Context, evt event.Event) (string, int, error) {
 	e1 := f.evalStr(evt, f.config.Url)
 	e2 := f.evalStr(evt, f.config.UrlPath)
-	url := f.secrets.Secret(e1)
+	url := f.secrets.Secret(ctx, e1)
 	if url == "" {
 		url = e1
 	}
@@ -198,7 +301,7 @@ func (f *Filter) hitEndpoint(ctx context.Context, evt event.Event) (string, int,
 	}
 	var client *http.Client
 	if f.config.Auth.Type == HTTP_AUTH_TYPE_BASIC {
-		password := f.secrets.Secret(f.config.Auth.Password)
+		password := f.secrets.Secret(ctx, f.config.Auth.Password)
 		if password == "" {
 			password = f.config.Auth.Password
 		}
@@ -214,7 +317,18 @@ func (f *Filter) hitEndpoint(ctx context.Context, evt event.Event) (string, int,
 			f.Unlock()
 		}
 	} else if f.config.Auth.Type == HTTP_AUTH_TYPE_SAT {
-		return "", 0, errors.New("sat auth not supported")
+		var ok bool
+		f.RLock()
+		client, ok = f.clients[HTTP_AUTH_TYPE_BASIC]
+		f.RUnlock()
+		if !ok {
+			client = InitHttpTransportWithDialer()
+			f.Lock()
+			f.clients[HTTP_AUTH_TYPE_BASIC] = client
+			f.Unlock()
+		}
+		token := f.getSatBearerToken(ctx, f.secrets.Secret(ctx, f.config.Auth.ClientID), f.secrets.Secret(ctx, f.config.Auth.ClientSecret))
+		req.Header.Add("Authorization", token)
 	} else if f.config.Auth.Type == HTTP_AUTH_TYPE_OAUTH {
 		return "", 0, errors.New("oauth auth not supported")
 	} else if f.config.Auth.Type == HTTP_AUTH_TYPE_OAUTH2 {
@@ -224,19 +338,10 @@ func (f *Filter) hitEndpoint(ctx context.Context, evt event.Event) (string, int,
 		f.RUnlock()
 		if !ok {
 			conf := &clientcredentials.Config{
-				ClientID:     f.secrets.Secret(f.config.Auth.ClientID),
-				ClientSecret: f.secrets.Secret(f.config.Auth.ClientSecret),
-				TokenURL:     f.secrets.Secret(f.config.Auth.TokenURL),
+				ClientID:     f.secrets.Secret(ctx, f.config.Auth.ClientID),
+				ClientSecret: f.secrets.Secret(ctx, f.config.Auth.ClientSecret),
+				TokenURL:     f.secrets.Secret(ctx, f.config.Auth.TokenURL),
 				Scopes:       f.config.Auth.Scopes,
-			}
-			if conf.ClientID == "" {
-				conf.ClientID = f.config.Auth.ClientID
-			}
-			if conf.ClientSecret == "" {
-				conf.ClientSecret = f.config.Auth.ClientSecret
-			}
-			if conf.TokenURL == "" {
-				conf.TokenURL = f.config.Auth.TokenURL
 			}
 			client = conf.Client(context.Background())
 			f.Lock()
@@ -298,4 +403,74 @@ func InitHttpTransportWithDialer() *http.Client {
 	client := &http.Client{Transport: tr}
 	client.Timeout = 3000 * time.Millisecond
 	return client
+}
+
+func (f *Filter) getLocalMetric() *syncer.EarsMetric {
+	f.Lock()
+	defer f.Unlock()
+	metrics := &syncer.EarsMetric{
+		f.successCounter,
+		f.errorCounter,
+		f.filterCounter,
+		f.successVelocityCounter,
+		f.errorVelocityCounter,
+		f.filterVelocityCounter,
+		f.currentSec,
+	}
+	return metrics
+}
+
+func (f *Filter) EventSuccessCount() int {
+	hash := f.Hash()
+	f.tableSyncer.WriteMetrics(hash, f.getLocalMetric())
+	return f.tableSyncer.ReadMetrics(hash).SuccessCount
+}
+
+func (f *Filter) EventSuccessVelocity() int {
+	hash := f.Hash()
+	f.tableSyncer.WriteMetrics(hash, f.getLocalMetric())
+	return f.tableSyncer.ReadMetrics(hash).SuccessVelocity
+}
+
+func (f *Filter) EventFilterCount() int {
+	hash := f.Hash()
+	f.tableSyncer.WriteMetrics(hash, f.getLocalMetric())
+	return f.tableSyncer.ReadMetrics(hash).FilterCount
+}
+
+func (f *Filter) EventFilterVelocity() int {
+	hash := f.Hash()
+	f.tableSyncer.WriteMetrics(hash, f.getLocalMetric())
+	return f.tableSyncer.ReadMetrics(hash).FilterVelocity
+}
+
+func (f *Filter) EventErrorCount() int {
+	hash := f.Hash()
+	f.tableSyncer.WriteMetrics(hash, f.getLocalMetric())
+	return f.tableSyncer.ReadMetrics(hash).ErrorCount
+}
+
+func (f *Filter) EventErrorVelocity() int {
+	hash := f.Hash()
+	f.tableSyncer.WriteMetrics(hash, f.getLocalMetric())
+	return f.tableSyncer.ReadMetrics(hash).ErrorVelocity
+}
+
+func (f *Filter) EventTs() int64 {
+	hash := f.Hash()
+	f.tableSyncer.WriteMetrics(hash, f.getLocalMetric())
+	return f.tableSyncer.ReadMetrics(hash).LastEventTs
+}
+
+func (f *Filter) Hash() string {
+	cfg := ""
+	if f.Config() != nil {
+		buf, _ := json.Marshal(f.Config())
+		if buf != nil {
+			cfg = string(buf)
+		}
+	}
+	str := f.name + f.plugin + cfg
+	hash := hasher.String(str)
+	return hash
 }

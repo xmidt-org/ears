@@ -16,6 +16,7 @@ package main
 
 import (
 	"context"
+	"github.com/xmidt-org/ears/internal/pkg/syncer"
 	pkgplugin "github.com/xmidt-org/ears/pkg/plugin"
 	"github.com/xmidt-org/ears/pkg/secret"
 	"github.com/xmidt-org/ears/pkg/tenant"
@@ -61,7 +62,7 @@ func NewPluginVersion(name string, version string, commitID string) (*pkgplugin.
 
 // Sender ===========================================================
 
-func NewSender(tid tenant.Id, pluginType string, name string, config interface{}, secrets secret.Vault) (sender.Sender, error) {
+func NewSender(tid tenant.Id, pluginType string, name string, config interface{}, secrets secret.Vault, tableSyncer syncer.DeltaSyncer) (sender.Sender, error) {
 	return &plugin{}, nil
 }
 
@@ -89,4 +90,24 @@ func (p *plugin) Plugin() string {
 
 func (p *plugin) Tenant() tenant.Id {
 	return tenant.Id{OrgId: "myorg", AppId: "myapp"}
+}
+
+func (p *plugin) EventSuccessCount() int {
+	return 0
+}
+
+func (p *plugin) EventSuccessVelocity() int {
+	return 0
+}
+
+func (p *plugin) EventErrorCount() int {
+	return 0
+}
+
+func (p *plugin) EventErrorVelocity() int {
+	return 0
+}
+
+func (p *plugin) EventTs() int64 {
+	return 0
 }

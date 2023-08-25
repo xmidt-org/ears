@@ -12,34 +12,19 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package validate
+package pass
 
 import (
-	"github.com/xeipuuv/gojsonschema"
 	"github.com/xmidt-org/ears/internal/pkg/syncer"
 	"github.com/xmidt-org/ears/pkg/tenant"
 	"sync"
 )
 
-// Config can be passed into NewFilter() in order to configure
-// the behavior of the sender.
-type Config struct {
-	Path   string      `json:"path,omitempty"`
-	Schema interface{} `json:"schema,omitempty"`
-}
-
-var DefaultConfig = Config{
-	Path:   ".",
-	Schema: map[string]interface{}{},
-}
-
 type Filter struct {
 	sync.RWMutex
-	config                        Config
 	name                          string
 	plugin                        string
 	tid                           tenant.Id
-	schema                        gojsonschema.JSONLoader
 	successCounter                int
 	errorCounter                  int
 	filterCounter                 int

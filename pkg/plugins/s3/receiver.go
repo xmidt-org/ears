@@ -27,7 +27,9 @@ import (
 	"github.com/goccy/go-yaml"
 	"github.com/rs/zerolog/log"
 	"github.com/xmidt-org/ears/internal/pkg/rtsemconv"
+	"github.com/xmidt-org/ears/internal/pkg/syncer"
 	"github.com/xmidt-org/ears/pkg/event"
+	"github.com/xmidt-org/ears/pkg/hasher"
 	pkgplugin "github.com/xmidt-org/ears/pkg/plugin"
 	"github.com/xmidt-org/ears/pkg/receiver"
 	"github.com/xmidt-org/ears/pkg/secret"
@@ -40,7 +42,7 @@ import (
 	"time"
 )
 
-func NewReceiver(tid tenant.Id, plugin string, name string, config interface{}, secrets secret.Vault) (receiver.Receiver, error) {
+func NewReceiver(tid tenant.Id, plugin string, name string, config interface{}, secrets secret.Vault, tableSyncer syncer.DeltaSyncer) (receiver.Receiver, error) {
 	var cfg ReceiverConfig
 	var err error
 	switch c := config.(type) {
@@ -63,14 +65,22 @@ func NewReceiver(tid tenant.Id, plugin string, name string, config interface{}, 
 	if err != nil {
 		return nil, err
 	}
+	ctx := context.Background()
 	r := &Receiver{
-		config:  cfg,
-		name:    name,
-		plugin:  plugin,
-		tid:     tid,
-		logger:  event.GetEventLogger(),
-		stopped: true,
-		secrets: secrets,
+		config:          cfg,
+		name:            name,
+		plugin:          plugin,
+		tid:             tid,
+		logger:          event.GetEventLogger(),
+		stopped:         true,
+		secrets:         secrets,
+		awsRoleArn:      secrets.Secret(ctx, cfg.AWSRoleARN),
+		awsAccessKey:    secrets.Secret(ctx, cfg.AWSAccessKeyId),
+		awsAccessSecret: secrets.Secret(ctx, cfg.AWSSecretAccessKey),
+		awsRegion:       secrets.Secret(ctx, cfg.AWSRegion),
+		bucket:          secrets.Secret(ctx, cfg.Bucket),
+		currentSec:      time.Now().Unix(),
+		tableSyncer:     tableSyncer,
 	}
 	r.initPlugin()
 	hostname, _ := os.Hostname()
@@ -81,7 +91,7 @@ func NewReceiver(tid tenant.Id, plugin string, name string, config interface{}, 
 		attribute.String(rtsemconv.EARSPluginNameLabel, r.Name()),
 		attribute.String(rtsemconv.EARSAppIdLabel, r.tid.AppId),
 		attribute.String(rtsemconv.EARSOrgIdLabel, r.tid.OrgId),
-		attribute.String(rtsemconv.S3Bucket, r.config.Bucket),
+		attribute.String(rtsemconv.S3Bucket, r.bucket),
 		attribute.String(rtsemconv.HostnameLabel, hostname),
 		attribute.String(rtsemconv.EARSReceiverName, r.name),
 	}
@@ -104,6 +114,30 @@ func NewReceiver(tid tenant.Id, plugin string, name string, config interface{}, 
 	return r, nil
 }
 
+func (r *Receiver) LogSuccess() {
+	r.Lock()
+	r.successCounter++
+	if time.Now().Unix() != r.currentSec {
+		r.successVelocityCounter = r.currentSuccessVelocityCounter
+		r.currentSuccessVelocityCounter = 0
+		r.currentSec = time.Now().Unix()
+	}
+	r.currentSuccessVelocityCounter++
+	r.Unlock()
+}
+
+func (r *Receiver) logError() {
+	r.Lock()
+	r.errorCounter++
+	if time.Now().Unix() != r.currentSec {
+		r.errorVelocityCounter = r.currentErrorVelocityCounter
+		r.currentErrorVelocityCounter = 0
+		r.currentSec = time.Now().Unix()
+	}
+	r.currentErrorVelocityCounter++
+	r.Unlock()
+}
+
 func (r *Receiver) initPlugin() error {
 	r.Lock()
 	defer r.Unlock()
@@ -113,27 +147,21 @@ func (r *Receiver) initPlugin() error {
 		return &S3Error{op: "NewSession", err: err}
 	}
 	var creds *credentials.Credentials
-	if r.config.AWSRoleARN != "" {
-		creds = stscreds.NewCredentials(sess, r.config.AWSRoleARN)
-	} else if r.config.AWSAccessKeyId != "" && r.config.AWSSecretAccessKey != "" {
-		awsAccessKeyId := r.secrets.Secret(r.config.AWSAccessKeyId)
-		if awsAccessKeyId == "" {
-			awsAccessKeyId = r.config.AWSAccessKeyId
-		}
-		awsSecretAccessKey := r.secrets.Secret(r.config.AWSSecretAccessKey)
-		if awsSecretAccessKey == "" {
-			awsSecretAccessKey = r.config.AWSSecretAccessKey
-		}
-		creds = credentials.NewStaticCredentials(awsAccessKeyId, awsSecretAccessKey, "")
+	if r.awsRoleArn != "" {
+		creds = stscreds.NewCredentials(sess, r.awsRoleArn)
+	} else if r.awsAccessKey != "" && r.awsAccessSecret != "" {
+		creds = credentials.NewStaticCredentials(r.awsAccessKey, r.awsAccessSecret, "")
 	} else {
 		creds = sess.Config.Credentials
 	}
-	sess, err = session.NewSession(&aws.Config{Region: aws.String(r.config.AWSRegion), Credentials: creds})
+	sess, err = session.NewSession(&aws.Config{Region: aws.String(r.awsRegion), Credentials: creds})
 	if nil != err {
+		r.logError()
 		return &S3Error{op: "NewSession", err: err}
 	}
 	_, err = sess.Config.Credentials.Get()
 	if nil != err {
+		r.logError()
 		return &S3Error{op: "GetCredentials", err: err}
 	}
 	r.s3Service = s3.New(sess)
@@ -160,7 +188,7 @@ func (r *Receiver) Receive(next receiver.NextFn) error {
 	r.next = next
 	r.Unlock()
 	params := &s3.ListObjectsV2Input{
-		Bucket: aws.String(r.config.Bucket),
+		Bucket: aws.String(r.bucket),
 		Prefix: aws.String(r.config.Path),
 	}
 	resp, err := r.s3Service.ListObjectsV2(params)
@@ -177,22 +205,21 @@ func (r *Receiver) Receive(next receiver.NextFn) error {
 		downloader := s3manager.NewDownloaderWithClient(r.s3Service)
 		downloader.Concurrency = 1
 		params := &s3.GetObjectInput{
-			Bucket: aws.String(r.config.Bucket),
+			Bucket: aws.String(r.bucket),
 			Key:    aws.String(item),
 		}
 		wabuf := aws.NewWriteAtBuffer([]byte{})
 		_, err = downloader.Download(wabuf, params)
 		if err != nil {
+			r.logError()
 			r.logger.Error().Str("op", "SQS.receiveWorker").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Msg("cannot download message from s3: " + err.Error())
 			continue
 		}
 		buf := wabuf.Bytes()
-		r.Lock()
-		r.count++
-		r.Unlock()
 		var payload interface{}
 		err = json.Unmarshal(buf, &payload)
 		if err != nil {
+			r.logError()
 			r.logger.Error().Str("op", "SQS.receiveWorker").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Msg("cannot parse message: " + err.Error())
 			continue
 		}
@@ -201,16 +228,19 @@ func (r *Receiver) Receive(next receiver.NextFn) error {
 		e, err := event.New(ctx, payload, event.WithAck(
 			func(e event.Event) {
 				r.eventSuccessCounter.Add(ctx, 1)
+				r.LogSuccess()
 				cancel()
 			},
 			func(e event.Event, err error) {
 				log.Ctx(e.Context()).Error().Str("op", "SQS.receiveWorker").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Msg("failed to process message: " + err.Error())
 				r.eventFailureCounter.Add(ctx, 1)
+				r.logError()
 				cancel()
 			}),
 			event.WithTenant(r.Tenant()),
 			event.WithOtelTracing(r.Name()))
 		if err != nil {
+			r.logError()
 			r.logger.Error().Str("op", "SQS.receiveWorker").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Msg("cannot create event: " + err.Error())
 		}
 		r.Trigger(e)
@@ -223,12 +253,6 @@ func (r *Receiver) Receive(next receiver.NextFn) error {
 	r.Unlock()
 	r.logger.Info().Str("op", "SQS.Receive").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Int("elapsedMs", int(elapsedMs)).Msg("receive done")
 	return nil
-}
-
-func (r *Receiver) Count() int {
-	r.Lock()
-	defer r.Unlock()
-	return r.count
 }
 
 func (r *Receiver) StopReceiving(ctx context.Context) error {
@@ -267,4 +291,62 @@ func (r *Receiver) Plugin() string {
 
 func (r *Receiver) Tenant() tenant.Id {
 	return r.tid
+}
+
+func (r *Receiver) getLocalMetric() *syncer.EarsMetric {
+	r.Lock()
+	defer r.Unlock()
+	metrics := &syncer.EarsMetric{
+		r.successCounter,
+		r.errorCounter,
+		0,
+		r.successVelocityCounter,
+		r.errorVelocityCounter,
+		0,
+		r.currentSec,
+	}
+	return metrics
+}
+
+func (r *Receiver) EventSuccessCount() int {
+	hash := r.Hash()
+	r.tableSyncer.WriteMetrics(hash, r.getLocalMetric())
+	return r.tableSyncer.ReadMetrics(hash).SuccessCount
+}
+
+func (r *Receiver) EventSuccessVelocity() int {
+	hash := r.Hash()
+	r.tableSyncer.WriteMetrics(hash, r.getLocalMetric())
+	return r.tableSyncer.ReadMetrics(hash).SuccessVelocity
+}
+
+func (r *Receiver) EventErrorCount() int {
+	hash := r.Hash()
+	r.tableSyncer.WriteMetrics(hash, r.getLocalMetric())
+	return r.tableSyncer.ReadMetrics(hash).ErrorCount
+}
+
+func (r *Receiver) EventErrorVelocity() int {
+	hash := r.Hash()
+	r.tableSyncer.WriteMetrics(hash, r.getLocalMetric())
+	return r.tableSyncer.ReadMetrics(hash).ErrorVelocity
+}
+
+func (r *Receiver) EventTs() int64 {
+	hash := r.Hash()
+	r.tableSyncer.WriteMetrics(hash, r.getLocalMetric())
+	return r.tableSyncer.ReadMetrics(hash).LastEventTs
+}
+
+func (r *Receiver) Hash() string {
+	cfg := ""
+	if r.Config() != nil {
+		buf, _ := json.Marshal(r.Config())
+		if buf != nil {
+			cfg = string(buf)
+		}
+	}
+	str := r.name + r.plugin + cfg
+	hash := hasher.String(str)
+	return hash
 }

@@ -20,7 +20,9 @@ import (
 	"encoding/json"
 	"github.com/goccy/go-yaml"
 	"github.com/xmidt-org/ears/internal/pkg/rtsemconv"
+	"github.com/xmidt-org/ears/internal/pkg/syncer"
 	"github.com/xmidt-org/ears/pkg/event"
+	"github.com/xmidt-org/ears/pkg/hasher"
 	pkgplugin "github.com/xmidt-org/ears/pkg/plugin"
 	"github.com/xmidt-org/ears/pkg/secret"
 	"github.com/xmidt-org/ears/pkg/sender"
@@ -40,7 +42,7 @@ import (
 
 const DEFAULT_TIMEOUT = 10
 
-func NewSender(tid tenant.Id, plugin string, name string, config interface{}, secrets secret.Vault) (sender.Sender, error) {
+func NewSender(tid tenant.Id, plugin string, name string, config interface{}, secrets secret.Vault, tableSyncer syncer.DeltaSyncer) (sender.Sender, error) {
 	var cfg SenderConfig
 	var err error
 	switch c := config.(type) {
@@ -69,10 +71,12 @@ func NewSender(tid tenant.Id, plugin string, name string, config interface{}, se
 		client: &http.Client{
 			Timeout: DEFAULT_TIMEOUT * time.Second,
 		},
-		config: cfg,
-		name:   name,
-		plugin: plugin,
-		tid:    tid,
+		config:      cfg,
+		name:        name,
+		plugin:      plugin,
+		tid:         tid,
+		currentSec:  time.Now().Unix(),
+		tableSyncer: tableSyncer,
 	}
 	// metric recorders
 	hostname, _ := os.Hostname()
@@ -117,11 +121,36 @@ func NewSender(tid tenant.Id, plugin string, name string, config interface{}, se
 	return s, nil
 }
 
+func (s *Sender) logSuccess() {
+	s.Lock()
+	s.successCounter++
+	if time.Now().Unix() != s.currentSec {
+		s.successVelocityCounter = s.currentSuccessVelocityCounter
+		s.currentSuccessVelocityCounter = 0
+		s.currentSec = time.Now().Unix()
+	}
+	s.currentSuccessVelocityCounter++
+	s.Unlock()
+}
+
+func (s *Sender) logError() {
+	s.Lock()
+	s.errorCounter++
+	if time.Now().Unix() != s.currentSec {
+		s.errorVelocityCounter = s.currentErrorVelocityCounter
+		s.currentErrorVelocityCounter = 0
+		s.currentSec = time.Now().Unix()
+	}
+	s.currentErrorVelocityCounter++
+	s.Unlock()
+}
+
 func (s *Sender) Send(event event.Event) {
 	payload := event.Payload()
 	body, err := json.Marshal(payload)
 	if err != nil {
 		s.eventFailureCounter.Add(event.Context(), 1)
+		s.logError()
 		event.Nack(err)
 		return
 	}
@@ -130,17 +159,18 @@ func (s *Sender) Send(event event.Event) {
 	req, err := http.NewRequest(s.config.Method, s.config.Url, bytes.NewReader(body))
 	if err != nil {
 		s.eventFailureCounter.Add(event.Context(), 1)
+		s.logError()
 		event.Nack(err)
 		return
 	}
 	ctx := event.Context()
 	s.b3Propagator.Inject(ctx, propagation.HeaderCarrier(req.Header))
-
 	start := time.Now()
 	resp, err := s.client.Do(req)
 	s.eventSendOutTime.Record(event.Context(), time.Since(start).Milliseconds())
 	if err != nil {
 		s.eventFailureCounter.Add(event.Context(), 1)
+		s.logError()
 		event.Nack(err)
 		return
 	}
@@ -148,10 +178,12 @@ func (s *Sender) Send(event event.Event) {
 	defer resp.Body.Close()
 	if resp.StatusCode < http.StatusOK || resp.StatusCode >= http.StatusBadRequest {
 		s.eventFailureCounter.Add(event.Context(), 1)
+		s.logError()
 		event.Nack(&BadHttpStatusError{resp.StatusCode})
 		return
 	}
 	s.eventSuccessCounter.Add(event.Context(), 1)
+	s.logSuccess()
 	event.Ack()
 }
 
@@ -181,4 +213,62 @@ func (s *Sender) Plugin() string {
 
 func (s *Sender) Tenant() tenant.Id {
 	return s.tid
+}
+
+func (s *Sender) getLocalMetric() *syncer.EarsMetric {
+	s.Lock()
+	defer s.Unlock()
+	metrics := &syncer.EarsMetric{
+		s.successCounter,
+		s.errorCounter,
+		0,
+		s.successVelocityCounter,
+		s.errorVelocityCounter,
+		0,
+		s.currentSec,
+	}
+	return metrics
+}
+
+func (s *Sender) EventSuccessCount() int {
+	hash := s.Hash()
+	s.tableSyncer.WriteMetrics(hash, s.getLocalMetric())
+	return s.tableSyncer.ReadMetrics(hash).SuccessCount
+}
+
+func (s *Sender) EventSuccessVelocity() int {
+	hash := s.Hash()
+	s.tableSyncer.WriteMetrics(hash, s.getLocalMetric())
+	return s.tableSyncer.ReadMetrics(hash).SuccessVelocity
+}
+
+func (s *Sender) EventErrorCount() int {
+	hash := s.Hash()
+	s.tableSyncer.WriteMetrics(hash, s.getLocalMetric())
+	return s.tableSyncer.ReadMetrics(hash).ErrorCount
+}
+
+func (s *Sender) EventErrorVelocity() int {
+	hash := s.Hash()
+	s.tableSyncer.WriteMetrics(hash, s.getLocalMetric())
+	return s.tableSyncer.ReadMetrics(hash).ErrorVelocity
+}
+
+func (s *Sender) EventTs() int64 {
+	hash := s.Hash()
+	s.tableSyncer.WriteMetrics(hash, s.getLocalMetric())
+	return s.tableSyncer.ReadMetrics(hash).LastEventTs
+}
+
+func (s *Sender) Hash() string {
+	cfg := ""
+	if s.Config() != nil {
+		buf, _ := json.Marshal(s.Config())
+		if buf != nil {
+			cfg = string(buf)
+		}
+	}
+	str := s.name + s.plugin + cfg
+	hash := hasher.String(str)
+	return hash
 }

@@ -29,7 +29,7 @@ func TestFilterEncodeBasic(t *testing.T) {
 	f, err := encode.NewFilter(tenant.Id{AppId: "myapp", OrgId: "myorg"}, "encode", "myencode", encode.Config{
 		FromPath: ".",
 		ToPath:   ".value",
-	}, nil)
+	}, nil, nil)
 	if err != nil {
 		t.Fatalf("encode test failed: %s\n", err.Error())
 	}

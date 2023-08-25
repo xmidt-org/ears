@@ -20,6 +20,8 @@ import (
 	"crypto/x509"
 	"encoding/json"
 	"fmt"
+	"github.com/xmidt-org/ears/internal/pkg/syncer"
+	"github.com/xmidt-org/ears/pkg/hasher"
 	"os"
 	"strings"
 	"time"
@@ -42,9 +44,8 @@ import (
 )
 
 //TODO: support headers
-//
 
-func NewSender(tid tenant.Id, plugin string, name string, config interface{}, secrets secret.Vault) (sender.Sender, error) {
+func NewSender(tid tenant.Id, plugin string, name string, config interface{}, secrets secret.Vault, tableSyncer syncer.DeltaSyncer) (sender.Sender, error) {
 	var cfg SenderConfig
 	var err error
 	switch c := config.(type) {
@@ -68,29 +69,30 @@ func NewSender(tid tenant.Id, plugin string, name string, config interface{}, se
 		return nil, err
 	}
 	s := &Sender{
-		name:    name,
-		plugin:  plugin,
-		tid:     tid,
-		config:  cfg,
-		logger:  event.GetEventLogger(),
-		secrets: secrets,
+		name:        name,
+		plugin:      plugin,
+		tid:         tid,
+		config:      cfg,
+		logger:      event.GetEventLogger(),
+		secrets:     secrets,
+		currentSec:  time.Now().Unix(),
+		tableSyncer: tableSyncer,
 	}
 	err = s.initPlugin()
 	if err != nil {
 		return nil, err
 	}
-
 	hostname, _ := os.Hostname()
+	ctx := context.Background()
 	meter := global.Meter(rtsemconv.EARSMeterName)
 	s.commonLabels = []attribute.KeyValue{
 		attribute.String(rtsemconv.EARSPluginTypeLabel, rtsemconv.EARSPluginTypeKafkaSender),
 		attribute.String(rtsemconv.EARSPluginNameLabel, s.Name()),
 		attribute.String(rtsemconv.EARSAppIdLabel, s.tid.AppId),
 		attribute.String(rtsemconv.EARSOrgIdLabel, s.tid.OrgId),
-		attribute.String(rtsemconv.KafkaTopicLabel, s.config.Topic),
+		attribute.String(rtsemconv.KafkaTopicLabel, s.secrets.Secret(ctx, s.config.Topic)),
 		attribute.String(rtsemconv.HostnameLabel, hostname),
 	}
-
 	s.eventSuccessCounter = metric.Must(meter).
 		NewInt64Counter(
 			rtsemconv.EARSMetricEventSuccess,
@@ -136,6 +138,30 @@ func (s *Sender) getAttributes(e event.Event, labels []DynamicMetricLabel) []att
 		attrs = append(attrs, attribute.String(label.Label, value))
 	}
 	return attrs
+}
+
+func (s *Sender) logSuccess() {
+	s.Lock()
+	s.successCounter++
+	if time.Now().Unix() != s.currentSec {
+		s.successVelocityCounter = s.currentSuccessVelocityCounter
+		s.currentSuccessVelocityCounter = 0
+		s.currentSec = time.Now().Unix()
+	}
+	s.currentSuccessVelocityCounter++
+	s.Unlock()
+}
+
+func (s *Sender) logError() {
+	s.Lock()
+	s.errorCounter++
+	if time.Now().Unix() != s.currentSec {
+		s.errorVelocityCounter = s.currentErrorVelocityCounter
+		s.currentErrorVelocityCounter = 0
+		s.currentSec = time.Now().Unix()
+	}
+	s.currentErrorVelocityCounter++
+	s.Unlock()
 }
 
 func (s *Sender) initPlugin() error {
@@ -203,27 +229,19 @@ func (s *Sender) setConfig(config *sarama.Config) error {
 		config.ChannelBufferSize = *s.config.ChannelBufferSize
 	}
 	config.Net.TLS.Enable = s.config.TLSEnable
-	if "" != s.config.Username {
+	ctx := context.Background()
+	if "" != s.secrets.Secret(ctx, s.config.Username) {
 		config.Net.TLS.Enable = true
 		config.Net.SASL.Enable = true
-		config.Net.SASL.User = s.config.Username
-		config.Net.SASL.Password = s.secrets.Secret(s.config.Password)
+		config.Net.SASL.User = s.secrets.Secret(ctx, s.config.Username)
+		config.Net.SASL.Password = s.secrets.Secret(ctx, s.config.Password)
 		if config.Net.SASL.Password == "" {
 			config.Net.SASL.Password = s.config.Password
 		}
-	} else if "" != s.config.AccessCert {
-		accessCert := s.secrets.Secret(s.config.AccessCert)
-		if accessCert == "" {
-			accessCert = s.config.AccessCert
-		}
-		accessKey := s.secrets.Secret(s.config.AccessKey)
-		if accessKey == "" {
-			accessKey = s.config.AccessKey
-		}
-		caCert := s.secrets.Secret(s.config.CACert)
-		if caCert == "" {
-			caCert = s.config.CACert
-		}
+	} else if "" != s.secrets.Secret(ctx, s.config.AccessCert) {
+		accessCert := s.secrets.Secret(ctx, s.config.AccessCert)
+		accessKey := s.secrets.Secret(ctx, s.config.AccessKey)
+		caCert := s.secrets.Secret(ctx, s.config.CACert)
 		keypair, err := tls.X509KeyPair([]byte(accessCert), []byte(accessKey))
 		if err != nil {
 			return err
@@ -243,12 +261,8 @@ func (s *Sender) setConfig(config *sarama.Config) error {
 }
 
 func (s *Sender) NewSyncProducers(count int) ([]sarama.SyncProducer, sarama.Client, error) {
-	brokersStr := s.secrets.Secret(s.config.Brokers)
-	if brokersStr == "" {
-		brokersStr = s.config.Brokers
-	}
-
-	brokers := strings.Split(brokersStr, ",")
+	ctx := context.Background()
+	brokers := strings.Split(s.secrets.Secret(ctx, s.config.Brokers), ",")
 	config := sarama.NewConfig()
 	config.Producer.Partitioner = NewManualHashPartitioner
 	config.Producer.RequiredAcks = sarama.WaitForLocal //as long as one broker gets it
@@ -274,14 +288,15 @@ func (s *Sender) NewSyncProducers(count int) ([]sarama.SyncProducer, sarama.Clie
 	for i := 0; i < count; i++ {
 		c, err := sarama.NewClient(brokers, config)
 		if err != nil {
+			s.logError()
 			return nil, nil, err
 		}
 		p, err := sarama.NewSyncProducerFromClient(c)
 		if nil != err {
+			s.logError()
 			c.Close()
 			return nil, nil, err
 		}
-
 		//producers[i] = otelsarama.WrapSyncProducer(config, p)
 		producers[i] = p
 		client = c
@@ -343,7 +358,6 @@ func (p *Producer) SendMessage(ctx context.Context, topic string, partition int,
 		Timestamp: time.Now(),
 	}
 	otel.GetTextMapPropagator().Inject(ctx, otelsarama.NewProducerMessageCarrier(message))
-
 	part, offset, err := producer.SendMessage(message)
 	if nil != err {
 		return err
@@ -374,6 +388,7 @@ func (s *Sender) Send(e event.Event) {
 	if err != nil {
 		log.Ctx(e.Context()).Error().Str("op", "kafka.Send").Str("name", s.Name()).Str("tid", s.Tenant().ToString()).Msg("failed to marshal message: " + err.Error())
 		s.eventFailureCounter.Add(e.Context(), 1.0, s.getAttributes(e, s.config.DynamicMetricLabels)...)
+		s.logError()
 		e.Nack(err)
 		return
 	}
@@ -389,14 +404,17 @@ func (s *Sender) Send(e event.Event) {
 	} else {
 		partition = *s.config.Partition
 	}
-	err = s.producer.SendMessage(e.Context(), s.config.Topic, partition, nil, buf, e)
+	ctx := context.Background()
+	err = s.producer.SendMessage(e.Context(), s.secrets.Secret(ctx, s.config.Topic), partition, nil, buf, e)
 	if err != nil {
 		log.Ctx(e.Context()).Error().Str("op", "kafka.Send").Str("name", s.Name()).Str("tid", s.Tenant().ToString()).Msg("failed to send message: " + err.Error())
 		s.eventFailureCounter.Add(e.Context(), 1, s.getAttributes(e, s.config.DynamicMetricLabels)...)
+		s.logError()
 		e.Nack(err)
 		return
 	}
 	s.eventSuccessCounter.Add(e.Context(), 1, s.getAttributes(e, s.config.DynamicMetricLabels)...)
+	s.logSuccess()
 	s.Lock()
 	s.count++
 	log.Ctx(e.Context()).Debug().Str("op", "kafka.Send").Str("name", s.Name()).Str("tid", s.Tenant().ToString()).Int("count", s.count).Msg("sent message on kafka topic")
@@ -422,4 +440,62 @@ func (s *Sender) Plugin() string {
 
 func (s *Sender) Tenant() tenant.Id {
 	return s.tid
+}
+
+func (s *Sender) getLocalMetric() *syncer.EarsMetric {
+	s.Lock()
+	defer s.Unlock()
+	metrics := &syncer.EarsMetric{
+		s.successCounter,
+		s.errorCounter,
+		0,
+		s.successVelocityCounter,
+		s.errorVelocityCounter,
+		0,
+		s.currentSec,
+	}
+	return metrics
+}
+
+func (s *Sender) EventSuccessCount() int {
+	hash := s.Hash()
+	s.tableSyncer.WriteMetrics(hash, s.getLocalMetric())
+	return s.tableSyncer.ReadMetrics(hash).SuccessCount
+}
+
+func (s *Sender) EventSuccessVelocity() int {
+	hash := s.Hash()
+	s.tableSyncer.WriteMetrics(hash, s.getLocalMetric())
+	return s.tableSyncer.ReadMetrics(hash).SuccessVelocity
+}
+
+func (s *Sender) EventErrorCount() int {
+	hash := s.Hash()
+	s.tableSyncer.WriteMetrics(hash, s.getLocalMetric())
+	return s.tableSyncer.ReadMetrics(hash).ErrorCount
+}
+
+func (s *Sender) EventErrorVelocity() int {
+	hash := s.Hash()
+	s.tableSyncer.WriteMetrics(hash, s.getLocalMetric())
+	return s.tableSyncer.ReadMetrics(hash).ErrorVelocity
+}
+
+func (s *Sender) EventTs() int64 {
+	hash := s.Hash()
+	s.tableSyncer.WriteMetrics(hash, s.getLocalMetric())
+	return s.tableSyncer.ReadMetrics(hash).LastEventTs
+}
+
+func (s *Sender) Hash() string {
+	cfg := ""
+	if s.Config() != nil {
+		buf, _ := json.Marshal(s.Config())
+		if buf != nil {
+			cfg = string(buf)
+		}
+	}
+	str := s.name + s.plugin + cfg
+	hash := hasher.String(str)
+	return hash
 }

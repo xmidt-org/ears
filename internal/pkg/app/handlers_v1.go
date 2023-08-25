@@ -154,6 +154,7 @@ func NewAPIManager(routingMgr tablemgr.RoutingTableManager, tenantStorer tenant.
 
 	api.muxRouter.HandleFunc("/ears/v1/orgs/{orgId}/applications/{appId}/routes/{routeId}", api.addRouteHandler).Methods(http.MethodPut)
 	api.muxRouter.HandleFunc("/ears/v1/orgs/{orgId}/applications/{appId}/routes/{routeId}/event", api.sendEventHandler).Methods(http.MethodPost)
+	api.muxRouter.HandleFunc("/ears/v1/orgs/{orgId}/applications/{appId}/routes/{routeId}/toggleEnable", api.enableDisableRouteHandler).Methods(http.MethodPut)
 	api.muxRouter.HandleFunc("/ears/v1/orgs/{orgId}/applications/{appId}/routes", api.addRouteHandler).Methods(http.MethodPost)
 	api.muxRouter.HandleFunc("/ears/v1/orgs/{orgId}/applications/{appId}/routes/{routeId}", api.removeRouteHandler).Methods(http.MethodDelete)
 	api.muxRouter.HandleFunc("/ears/v1/orgs/{orgId}/applications/{appId}/routes/{routeId}", api.getRouteHandler).Methods(http.MethodGet)
@@ -404,6 +405,62 @@ func (a *APIManager) sendEventHandler(w http.ResponseWriter, r *http.Request) {
 	resp.Respond(ctx, w, doYaml(r))
 }
 
+func (a *APIManager) enableDisableRouteHandler(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	vars := mux.Vars(r)
+	tid, apiErr := getTenant(ctx, vars)
+	if apiErr != nil {
+		log.Ctx(ctx).Error().Str("op", "enableDisableRouteHandler").Str("error", apiErr.Error()).Msg("orgId or appId empty")
+		a.addRouteFailureRecorder.Add(ctx, 1.0)
+		resp := ErrorResponse(apiErr)
+		resp.Respond(ctx, w, doYaml(r))
+		return
+	}
+	_, err := a.tenantStorer.GetConfig(ctx, *tid)
+	if err != nil {
+		log.Ctx(ctx).Error().Str("op", "enableDisableRouteHandler").Str("error", err.Error()).Msg("error getting tenant config")
+		resp := ErrorResponse(convertToApiError(ctx, err))
+		resp.Respond(ctx, w, doYaml(r))
+		return
+	}
+	routeId := vars["routeId"]
+	trace.SpanFromContext(ctx).SetAttributes(rtsemconv.EARSRouteId.String(routeId))
+	route, err := a.routingTableMgr.GetRoute(ctx, *tid, routeId)
+	if err != nil {
+		log.Ctx(ctx).Error().Str("op", "enableDisableRouteHandler").Msg(err.Error())
+		resp := ErrorResponse(convertToApiError(ctx, err))
+		resp.Respond(ctx, w, doYaml(r))
+		return
+	}
+	route.Inactive = !route.Inactive
+	if routeId != "" && route.Id != "" && routeId != route.Id {
+		err := &BadRequestError{"route ID mismatch " + routeId + " vs " + route.Id, nil}
+		log.Ctx(ctx).Error().Str("op", "enableDisableRouteHandler").Msg(err.Error())
+		a.addRouteFailureRecorder.Add(ctx, 1.0)
+		resp := ErrorResponse(err)
+		resp.Respond(ctx, w, doYaml(r))
+		return
+	}
+	if routeId != "" && route.Id == "" {
+		route.Id = routeId
+	}
+	trace.SpanFromContext(ctx).SetAttributes(rtsemconv.EARSRouteId.String(routeId))
+	route.TenantId.AppId = tid.AppId
+	route.TenantId.OrgId = tid.OrgId
+	err = a.routingTableMgr.AddRoute(ctx, route)
+	if err != nil {
+		log.Ctx(ctx).Error().Str("op", "enableDisableRouteHandler").Msg(err.Error())
+		a.addRouteFailureRecorder.Add(ctx, 1.0)
+		resp := ErrorResponse(convertToApiError(ctx, err))
+		resp.Respond(ctx, w, doYaml(r))
+		return
+	} else {
+		a.addRouteSuccessRecorder.Add(ctx, 1.0)
+	}
+	resp := ItemResponse(route)
+	resp.Respond(ctx, w, doYaml(r))
+}
+
 func (a *APIManager) addRouteHandler(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	vars := mux.Vars(r)
@@ -597,16 +654,18 @@ func (a *APIManager) getAllSendersHandler(w http.ResponseWriter, r *http.Request
 		resp.Respond(ctx, w, doYaml(r))
 		return
 	}
-	senders := make(map[string]plugin.SenderStatus)
+	senders := make([]plugin.SenderStatus, 0)
 	tid, _ := getTenant(ctx, vars)
 	if tid != nil {
-		for k, v := range allSenders {
+		for _, v := range allSenders {
 			if tid.Equal(v.Tid) {
-				senders[k] = v
+				senders = append(senders, v)
 			}
 		}
 	} else {
-		senders = allSenders
+		for _, v := range allSenders {
+			senders = append(senders, v)
+		}
 	}
 	trace.SpanFromContext(ctx).SetAttributes(attribute.Int("senderCount", len(senders)))
 	resp := ItemsResponse(senders)
@@ -623,16 +682,18 @@ func (a *APIManager) getAllReceiversHandler(w http.ResponseWriter, r *http.Reque
 		resp.Respond(ctx, w, doYaml(r))
 		return
 	}
-	receivers := make(map[string]plugin.ReceiverStatus)
+	receivers := make([]plugin.ReceiverStatus, 0)
 	tid, _ := getTenant(ctx, vars)
 	if tid != nil {
-		for k, v := range allReceivers {
+		for _, v := range allReceivers {
 			if tid.Equal(v.Tid) {
-				receivers[k] = v
+				receivers = append(receivers, v)
 			}
 		}
 	} else {
-		receivers = allReceivers
+		for _, v := range allReceivers {
+			receivers = append(receivers, v)
+		}
 	}
 	trace.SpanFromContext(ctx).SetAttributes(attribute.Int("receiverCount", len(receivers)))
 	resp := ItemsResponse(receivers)
@@ -649,16 +710,18 @@ func (a *APIManager) getAllFiltersHandler(w http.ResponseWriter, r *http.Request
 		resp.Respond(ctx, w, doYaml(r))
 		return
 	}
-	filters := make(map[string]plugin.FilterStatus)
+	filters := make([]plugin.FilterStatus, 0)
 	tid, _ := getTenant(ctx, vars)
 	if tid != nil {
-		for k, v := range allFilters {
+		for _, v := range allFilters {
 			if tid.Equal(v.Tid) {
-				filters[k] = v
+				filters = append(filters, v)
 			}
 		}
 	} else {
-		filters = allFilters
+		for _, v := range allFilters {
+			filters = append(filters, v)
+		}
 	}
 	trace.SpanFromContext(ctx).SetAttributes(attribute.Int("filterCount", len(filters)))
 	resp := ItemsResponse(filters)

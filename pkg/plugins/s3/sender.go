@@ -26,7 +26,9 @@ import (
 	"github.com/aws/aws-sdk-go/service/s3/s3manager"
 	"github.com/goccy/go-yaml"
 	"github.com/xmidt-org/ears/internal/pkg/rtsemconv"
+	"github.com/xmidt-org/ears/internal/pkg/syncer"
 	"github.com/xmidt-org/ears/pkg/event"
+	"github.com/xmidt-org/ears/pkg/hasher"
 	pkgplugin "github.com/xmidt-org/ears/pkg/plugin"
 	"github.com/xmidt-org/ears/pkg/secret"
 	"github.com/xmidt-org/ears/pkg/sender"
@@ -41,7 +43,7 @@ import (
 	"time"
 )
 
-func NewSender(tid tenant.Id, plugin string, name string, config interface{}, secrets secret.Vault) (sender.Sender, error) {
+func NewSender(tid tenant.Id, plugin string, name string, config interface{}, secrets secret.Vault, tableSyncer syncer.DeltaSyncer) (sender.Sender, error) {
 	var cfg SenderConfig
 	var err error
 	switch c := config.(type) {
@@ -64,13 +66,21 @@ func NewSender(tid tenant.Id, plugin string, name string, config interface{}, se
 	if err != nil {
 		return nil, err
 	}
+	ctx := context.Background()
 	s := &Sender{
-		name:    name,
-		plugin:  plugin,
-		tid:     tid,
-		config:  cfg,
-		logger:  event.GetEventLogger(),
-		secrets: secrets,
+		name:            name,
+		plugin:          plugin,
+		tid:             tid,
+		config:          cfg,
+		logger:          event.GetEventLogger(),
+		secrets:         secrets,
+		awsRoleArn:      secrets.Secret(ctx, cfg.AWSRoleARN),
+		awsAccessKey:    secrets.Secret(ctx, cfg.AWSAccessKeyId),
+		awsAccessSecret: secrets.Secret(ctx, cfg.AWSSecretAccessKey),
+		awsRegion:       secrets.Secret(ctx, cfg.AWSRegion),
+		bucket:          secrets.Secret(ctx, cfg.Bucket),
+		currentSec:      time.Now().Unix(),
+		tableSyncer:     tableSyncer,
 	}
 	s.initPlugin()
 	hostname, _ := os.Hostname()
@@ -81,7 +91,7 @@ func NewSender(tid tenant.Id, plugin string, name string, config interface{}, se
 		attribute.String(rtsemconv.EARSPluginNameLabel, s.Name()),
 		attribute.String(rtsemconv.EARSAppIdLabel, s.tid.AppId),
 		attribute.String(rtsemconv.EARSOrgIdLabel, s.tid.OrgId),
-		attribute.String(rtsemconv.S3Bucket, s.config.Bucket),
+		attribute.String(rtsemconv.S3Bucket, s.bucket),
 		attribute.String(rtsemconv.HostnameLabel, hostname),
 	}
 	s.eventSuccessCounter = metric.Must(meter).
@@ -115,6 +125,30 @@ func NewSender(tid tenant.Id, plugin string, name string, config interface{}, se
 	return s, nil
 }
 
+func (s *Sender) logSuccess() {
+	s.Lock()
+	s.successCounter++
+	if time.Now().Unix() != s.currentSec {
+		s.successVelocityCounter = s.currentSuccessVelocityCounter
+		s.currentSuccessVelocityCounter = 0
+		s.currentSec = time.Now().Unix()
+	}
+	s.currentSuccessVelocityCounter++
+	s.Unlock()
+}
+
+func (s *Sender) logError() {
+	s.Lock()
+	s.errorCounter++
+	if time.Now().Unix() != s.currentSec {
+		s.errorVelocityCounter = s.currentErrorVelocityCounter
+		s.currentErrorVelocityCounter = 0
+		s.currentSec = time.Now().Unix()
+	}
+	s.currentErrorVelocityCounter++
+	s.Unlock()
+}
+
 func (s *Sender) initPlugin() error {
 	s.Lock()
 	defer s.Unlock()
@@ -124,39 +158,27 @@ func (s *Sender) initPlugin() error {
 		return &S3Error{op: "NewSession", err: err}
 	}
 	var creds *credentials.Credentials
-	if s.config.AWSRoleARN != "" {
-		creds = stscreds.NewCredentials(sess, s.config.AWSRoleARN)
-	} else if s.config.AWSAccessKeyId != "" && s.config.AWSSecretAccessKey != "" {
-		awsAccessKeyId := s.secrets.Secret(s.config.AWSAccessKeyId)
-		if awsAccessKeyId == "" {
-			awsAccessKeyId = s.config.AWSAccessKeyId
-		}
-		awsSecretAccessKey := s.secrets.Secret(s.config.AWSSecretAccessKey)
-		if awsSecretAccessKey == "" {
-			awsSecretAccessKey = s.config.AWSSecretAccessKey
-		}
-		creds = credentials.NewStaticCredentials(awsAccessKeyId, awsSecretAccessKey, "")
+	if s.awsRoleArn != "" {
+		creds = stscreds.NewCredentials(sess, s.awsRoleArn)
+	} else if s.awsAccessKey != "" && s.awsAccessSecret != "" {
+		creds = credentials.NewStaticCredentials(s.awsAccessKey, s.awsAccessSecret, "")
 	} else {
 		creds = sess.Config.Credentials
 	}
-	sess, err = session.NewSession(&aws.Config{Region: aws.String(s.config.AWSRegion), Credentials: creds})
+	sess, err = session.NewSession(&aws.Config{Region: aws.String(s.awsRegion), Credentials: creds})
 	if nil != err {
+		s.logError()
 		return &S3Error{op: "NewSession", err: err}
 	}
 	_, err = sess.Config.Credentials.Get()
 	if nil != err {
+		s.logError()
 		return &S3Error{op: "GetCredentials", err: err}
 	}
 	s.s3Service = s3.New(sess)
 	s.session = sess
 	s.done = make(chan struct{})
 	return nil
-}
-
-func (s *Sender) Count() int {
-	s.Lock()
-	defer s.Unlock()
-	return s.count
 }
 
 func (s *Sender) StopSending(ctx context.Context) {
@@ -187,6 +209,7 @@ func (s *Sender) Send(evt event.Event) {
 	filePath, ok := fp.(string)
 	if !ok {
 		s.eventFailureCounter.Add(evt.Context(), 1)
+		s.logError()
 		evt.Nack(errors.New("s3 file path not a string"))
 		return
 	}
@@ -194,25 +217,25 @@ func (s *Sender) Send(evt event.Event) {
 	fileName, ok := fn.(string)
 	if !ok {
 		s.eventFailureCounter.Add(evt.Context(), 1)
+		s.logError()
 		evt.Nack(errors.New("s3 file name not a string"))
 		return
 	}
 	path := filepath.Join(filePath, fileName)
 	uploader := s3manager.NewUploader(s.session)
 	_, err = uploader.Upload(&s3manager.UploadInput{
-		Bucket: aws.String(s.config.Bucket),
+		Bucket: aws.String(s.bucket),
 		Key:    aws.String(path),
 		Body:   strings.NewReader(string(buf)),
 	})
 	s.eventSendOutTime.Record(evt.Context(), time.Since(start).Milliseconds())
 	if err != nil {
 		s.eventFailureCounter.Add(evt.Context(), 1)
+		s.logError()
 		evt.Nack(err)
 	} else {
-		s.Lock()
-		s.count++
-		s.Unlock()
 		s.eventSuccessCounter.Add(evt.Context(), 1)
+		s.logSuccess()
 		evt.Ack()
 	}
 }
@@ -235,4 +258,62 @@ func (s *Sender) Plugin() string {
 
 func (s *Sender) Tenant() tenant.Id {
 	return s.tid
+}
+
+func (s *Sender) getLocalMetric() *syncer.EarsMetric {
+	s.Lock()
+	defer s.Unlock()
+	metrics := &syncer.EarsMetric{
+		s.successCounter,
+		s.errorCounter,
+		0,
+		s.successVelocityCounter,
+		s.errorVelocityCounter,
+		0,
+		s.currentSec,
+	}
+	return metrics
+}
+
+func (s *Sender) EventSuccessCount() int {
+	hash := s.Hash()
+	s.tableSyncer.WriteMetrics(hash, s.getLocalMetric())
+	return s.tableSyncer.ReadMetrics(hash).SuccessCount
+}
+
+func (s *Sender) EventSuccessVelocity() int {
+	hash := s.Hash()
+	s.tableSyncer.WriteMetrics(hash, s.getLocalMetric())
+	return s.tableSyncer.ReadMetrics(hash).SuccessVelocity
+}
+
+func (s *Sender) EventErrorCount() int {
+	hash := s.Hash()
+	s.tableSyncer.WriteMetrics(hash, s.getLocalMetric())
+	return s.tableSyncer.ReadMetrics(hash).ErrorCount
+}
+
+func (s *Sender) EventErrorVelocity() int {
+	hash := s.Hash()
+	s.tableSyncer.WriteMetrics(hash, s.getLocalMetric())
+	return s.tableSyncer.ReadMetrics(hash).ErrorVelocity
+}
+
+func (s *Sender) EventTs() int64 {
+	hash := s.Hash()
+	s.tableSyncer.WriteMetrics(hash, s.getLocalMetric())
+	return s.tableSyncer.ReadMetrics(hash).LastEventTs
+}
+
+func (s *Sender) Hash() string {
+	cfg := ""
+	if s.Config() != nil {
+		buf, _ := json.Marshal(s.Config())
+		if buf != nil {
+			cfg = string(buf)
+		}
+	}
+	str := s.name + s.plugin + cfg
+	hash := hasher.String(str)
+	return hash
 }

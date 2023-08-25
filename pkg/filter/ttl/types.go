@@ -15,9 +15,11 @@
 package ttl
 
 import (
+	"github.com/xmidt-org/ears/internal/pkg/syncer"
 	"github.com/xmidt-org/ears/pkg/tenant"
 	"github.com/xorcare/pointer"
 	"go.opentelemetry.io/otel/metric"
+	"sync"
 )
 
 // Config can be passed into NewFilter() in order to configure
@@ -37,9 +39,21 @@ var DefaultConfig = Config{
 }
 
 type Filter struct {
-	config                    Config
-	name                      string
-	plugin                    string
-	tid                       tenant.Id
-	eventTtlExpirationCounter metric.BoundInt64Counter
+	sync.RWMutex
+	config                        Config
+	name                          string
+	plugin                        string
+	tid                           tenant.Id
+	eventTtlExpirationCounter     metric.BoundInt64Counter
+	successCounter                int
+	errorCounter                  int
+	filterCounter                 int
+	successVelocityCounter        int
+	errorVelocityCounter          int
+	filterVelocityCounter         int
+	currentSuccessVelocityCounter int
+	currentErrorVelocityCounter   int
+	currentFilterVelocityCounter  int
+	currentSec                    int64
+	tableSyncer                   syncer.DeltaSyncer
 }

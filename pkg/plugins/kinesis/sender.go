@@ -26,7 +26,9 @@ import (
 	"github.com/google/uuid"
 	"github.com/rs/zerolog/log"
 	"github.com/xmidt-org/ears/internal/pkg/rtsemconv"
+	"github.com/xmidt-org/ears/internal/pkg/syncer"
 	"github.com/xmidt-org/ears/pkg/event"
+	"github.com/xmidt-org/ears/pkg/hasher"
 	pkgplugin "github.com/xmidt-org/ears/pkg/plugin"
 	"github.com/xmidt-org/ears/pkg/secret"
 	"github.com/xmidt-org/ears/pkg/sender"
@@ -39,7 +41,7 @@ import (
 	"time"
 )
 
-func NewSender(tid tenant.Id, plugin string, name string, config interface{}, secrets secret.Vault) (sender.Sender, error) {
+func NewSender(tid tenant.Id, plugin string, name string, config interface{}, secrets secret.Vault, tableSyncer syncer.DeltaSyncer) (sender.Sender, error) {
 	var cfg SenderConfig
 	var err error
 	switch c := config.(type) {
@@ -62,13 +64,21 @@ func NewSender(tid tenant.Id, plugin string, name string, config interface{}, se
 	if err != nil {
 		return nil, err
 	}
+	ctx := context.Background()
 	s := &Sender{
-		name:    name,
-		plugin:  plugin,
-		tid:     tid,
-		config:  cfg,
-		logger:  event.GetEventLogger(),
-		secrets: secrets,
+		name:            name,
+		plugin:          plugin,
+		tid:             tid,
+		config:          cfg,
+		logger:          event.GetEventLogger(),
+		secrets:         secrets,
+		awsRoleArn:      secrets.Secret(ctx, cfg.AWSRoleARN),
+		awsAccessKey:    secrets.Secret(ctx, cfg.AWSAccessKeyId),
+		awsAccessSecret: secrets.Secret(ctx, cfg.AWSSecretAccessKey),
+		awsRegion:       secrets.Secret(ctx, cfg.AWSRegion),
+		streamName:      secrets.Secret(ctx, cfg.StreamName),
+		currentSec:      time.Now().Unix(),
+		tableSyncer:     tableSyncer,
 	}
 	s.initPlugin()
 	hostname, _ := os.Hostname()
@@ -79,7 +89,7 @@ func NewSender(tid tenant.Id, plugin string, name string, config interface{}, se
 		attribute.String(rtsemconv.EARSPluginNameLabel, s.Name()),
 		attribute.String(rtsemconv.EARSAppIdLabel, s.tid.AppId),
 		attribute.String(rtsemconv.EARSOrgIdLabel, s.tid.OrgId),
-		attribute.String(rtsemconv.KinesisStreamNameLabel, s.config.StreamName),
+		attribute.String(rtsemconv.KinesisStreamNameLabel, s.streamName),
 		attribute.String(rtsemconv.HostnameLabel, hostname),
 	}
 	s.eventSuccessCounter = metric.Must(meter).
@@ -113,6 +123,30 @@ func NewSender(tid tenant.Id, plugin string, name string, config interface{}, se
 	return s, nil
 }
 
+func (s *Sender) logSuccess() {
+	s.Lock()
+	s.successCounter++
+	if time.Now().Unix() != s.currentSec {
+		s.successVelocityCounter = s.currentSuccessVelocityCounter
+		s.currentSuccessVelocityCounter = 0
+		s.currentSec = time.Now().Unix()
+	}
+	s.currentSuccessVelocityCounter++
+	s.Unlock()
+}
+
+func (s *Sender) logError() {
+	s.Lock()
+	s.errorCounter++
+	if time.Now().Unix() != s.currentSec {
+		s.errorVelocityCounter = s.currentErrorVelocityCounter
+		s.currentErrorVelocityCounter = 0
+		s.currentSec = time.Now().Unix()
+	}
+	s.currentErrorVelocityCounter++
+	s.Unlock()
+}
+
 func (s *Sender) initPlugin() error {
 	s.Lock()
 	defer s.Unlock()
@@ -121,32 +155,27 @@ func (s *Sender) initPlugin() error {
 		return &KinesisError{op: "NewSession", err: err}
 	}
 	var creds *credentials.Credentials
-	if s.config.AWSRoleARN != "" {
-		creds = stscreds.NewCredentials(sess, s.config.AWSRoleARN)
-	} else if s.config.AWSAccessKeyId != "" && s.config.AWSSecretAccessKey != "" {
-		awsAccessKeyId := s.secrets.Secret(s.config.AWSAccessKeyId)
-		if awsAccessKeyId == "" {
-			awsAccessKeyId = s.config.AWSAccessKeyId
-		}
-		awsSecretAccessKey := s.secrets.Secret(s.config.AWSSecretAccessKey)
-		if awsSecretAccessKey == "" {
-			awsSecretAccessKey = s.config.AWSSecretAccessKey
-		}
-		creds = credentials.NewStaticCredentials(awsAccessKeyId, awsSecretAccessKey, "")
+	if s.awsRoleArn != "" {
+		creds = stscreds.NewCredentials(sess, s.awsRoleArn)
+	} else if s.awsAccessKey != "" && s.awsAccessSecret != "" {
+		creds = credentials.NewStaticCredentials(s.awsAccessKey, s.awsAccessSecret, "")
 	} else {
 		creds = sess.Config.Credentials
 	}
-	sess, err = session.NewSession(&aws.Config{Region: aws.String(s.config.AWSRegion), Credentials: creds})
+	sess, err = session.NewSession(&aws.Config{Region: aws.String(s.awsRegion), Credentials: creds})
 	if nil != err {
+		s.logError()
 		return &KinesisError{op: "NewSession", err: err}
 	}
 	_, err = sess.Config.Credentials.Get()
 	if nil != err {
+		s.logError()
 		return &KinesisError{op: "GetCredentials", err: err}
 	}
 	s.kinesisService = kinesis.New(sess)
-	_, err = s.kinesisService.DescribeStream(&kinesis.DescribeStreamInput{StreamName: aws.String(s.config.StreamName)})
+	_, err = s.kinesisService.DescribeStream(&kinesis.DescribeStreamInput{StreamName: aws.String(s.streamName)})
 	if err != nil {
+		s.logError()
 		return err
 	}
 	s.done = make(chan struct{})
@@ -159,7 +188,7 @@ func (s *Sender) startTimedSender() {
 		for {
 			select {
 			case <-s.done:
-				s.logger.Info().Str("op", "Kinesis.timedSender").Str("name", s.Name()).Str("tid", s.Tenant().ToString()).Int("sendCount", s.count).Msg("stopping kinesis sender")
+				s.logger.Info().Str("op", "Kinesis.timedSender").Str("name", s.Name()).Str("tid", s.Tenant().ToString()).Msg("stopping kinesis sender")
 				return
 			case <-time.After(time.Duration(*s.config.SendTimeout) * time.Second):
 			}
@@ -175,12 +204,6 @@ func (s *Sender) startTimedSender() {
 			}
 		}
 	}()
-}
-
-func (s *Sender) Count() int {
-	s.Lock()
-	defer s.Unlock()
-	return s.count
 }
 
 func (s *Sender) StopSending(ctx context.Context) {
@@ -204,10 +227,11 @@ func (s *Sender) send(events []event.Event) {
 	batchReqs := []*kinesis.PutRecordsRequestEntry{}
 	for idx, evt := range events {
 		if idx == 0 {
-			log.Ctx(evt.Context()).Debug().Str("op", "Kinesis.sendWorker").Str("name", s.Name()).Str("tid", s.Tenant().ToString()).Int("eventIdx", idx).Int("batchSize", len(events)).Int("sendCount", s.count).Msg("send message batch")
+			log.Ctx(evt.Context()).Debug().Str("op", "Kinesis.sendWorker").Str("name", s.Name()).Str("tid", s.Tenant().ToString()).Int("eventIdx", idx).Int("batchSize", len(events)).Msg("send message batch")
 		}
 		buf, err := json.Marshal(evt.Payload())
 		if err != nil {
+			s.logError()
 			continue
 		}
 		partitionKey := s.config.PartitionKey
@@ -231,15 +255,15 @@ func (s *Sender) send(events []event.Event) {
 	}
 	batchPut := kinesis.PutRecordsInput{
 		Records:    batchReqs,
-		StreamName: aws.String(s.config.StreamName),
+		StreamName: aws.String(s.streamName),
 	}
 	start := time.Now()
 	putResults, err := s.kinesisService.PutRecordsWithContext(events[0].Context(), &batchPut)
 	s.eventSendOutTime.Record(events[0].Context(), time.Since(start).Milliseconds())
-	successCount := 0
 	if err != nil {
 		log.Ctx(events[0].Context()).Error().Str("op", "Kinesis.sendWorker").Str("name", s.Name()).Str("tid", s.Tenant().ToString()).Int("batchSize", len(events)).Msg("batch send error: " + err.Error())
 		for idx := range events {
+			s.logError()
 			s.eventFailureCounter.Add(events[idx].Context(), 1)
 			events[idx].Nack(err)
 		}
@@ -247,17 +271,15 @@ func (s *Sender) send(events []event.Event) {
 		for idx, putResult := range putResults.Records {
 			if putResult.ErrorCode == nil {
 				s.eventSuccessCounter.Add(events[idx].Context(), 1)
-				successCount++
+				s.logSuccess()
 				events[idx].Ack()
 			} else {
 				s.eventFailureCounter.Add(events[idx].Context(), 1)
+				s.logError()
 				events[idx].Nack(err)
 			}
 		}
 	}
-	s.Lock()
-	s.count += successCount
-	s.Unlock()
 }
 
 func (s *Sender) Send(e event.Event) {
@@ -294,4 +316,62 @@ func (s *Sender) Plugin() string {
 
 func (s *Sender) Tenant() tenant.Id {
 	return s.tid
+}
+
+func (s *Sender) getLocalMetric() *syncer.EarsMetric {
+	s.Lock()
+	defer s.Unlock()
+	metrics := &syncer.EarsMetric{
+		s.successCounter,
+		s.errorCounter,
+		0,
+		s.successVelocityCounter,
+		s.errorVelocityCounter,
+		0,
+		s.currentSec,
+	}
+	return metrics
+}
+
+func (s *Sender) EventSuccessCount() int {
+	hash := s.Hash()
+	s.tableSyncer.WriteMetrics(hash, s.getLocalMetric())
+	return s.tableSyncer.ReadMetrics(hash).SuccessCount
+}
+
+func (s *Sender) EventSuccessVelocity() int {
+	hash := s.Hash()
+	s.tableSyncer.WriteMetrics(hash, s.getLocalMetric())
+	return s.tableSyncer.ReadMetrics(hash).SuccessVelocity
+}
+
+func (s *Sender) EventErrorCount() int {
+	hash := s.Hash()
+	s.tableSyncer.WriteMetrics(hash, s.getLocalMetric())
+	return s.tableSyncer.ReadMetrics(hash).ErrorCount
+}
+
+func (s *Sender) EventErrorVelocity() int {
+	hash := s.Hash()
+	s.tableSyncer.WriteMetrics(hash, s.getLocalMetric())
+	return s.tableSyncer.ReadMetrics(hash).ErrorVelocity
+}
+
+func (s *Sender) EventTs() int64 {
+	hash := s.Hash()
+	s.tableSyncer.WriteMetrics(hash, s.getLocalMetric())
+	return s.tableSyncer.ReadMetrics(hash).LastEventTs
+}
+
+func (s *Sender) Hash() string {
+	cfg := ""
+	if s.Config() != nil {
+		buf, _ := json.Marshal(s.Config())
+		if buf != nil {
+			cfg = string(buf)
+		}
+	}
+	str := s.name + s.plugin + cfg
+	hash := hasher.String(str)
+	return hash
 }

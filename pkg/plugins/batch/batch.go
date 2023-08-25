@@ -12,18 +12,19 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package pass
+package batch
 
 import (
+	"github.com/xmidt-org/ears/internal/pkg/syncer"
 	"github.com/xmidt-org/ears/pkg/filter"
-	pkgpass "github.com/xmidt-org/ears/pkg/filter/pass"
+	pkgdebatch "github.com/xmidt-org/ears/pkg/filter/batch"
 	pkgplugin "github.com/xmidt-org/ears/pkg/plugin"
 	"github.com/xmidt-org/ears/pkg/secret"
 	"github.com/xmidt-org/ears/pkg/tenant"
 )
 
 var (
-	Name    = "pass"
+	Name    = "batch"
 	Version = "v0.0.0"
 	Commit  = ""
 )
@@ -41,6 +42,6 @@ func NewPluginVersion(name string, version string, commitID string) (*pkgplugin.
 	)
 }
 
-func NewFilterer(tid tenant.Id, plugin string, name string, config interface{}, secrets secret.Vault) (filter.Filterer, error) {
-	return pkgpass.NewFilter(tid, plugin, name, config, secrets)
+func NewFilterer(tid tenant.Id, plugin string, name string, config interface{}, secrets secret.Vault, tableSyncer syncer.DeltaSyncer) (filter.Filterer, error) {
+	return pkgdebatch.NewFilter(tid, plugin, name, config, secrets, tableSyncer)
 }

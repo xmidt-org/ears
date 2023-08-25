@@ -4,6 +4,7 @@
 package filter
 
 import (
+	"github.com/xmidt-org/ears/internal/pkg/syncer"
 	"github.com/xmidt-org/ears/pkg/event"
 	"github.com/xmidt-org/ears/pkg/secret"
 	"github.com/xmidt-org/ears/pkg/tenant"
@@ -102,7 +103,7 @@ type NewFiltererMock struct {
 	FiltererHashFunc func(config interface{}) (string, error)
 
 	// NewFiltererFunc mocks the NewFilterer method.
-	NewFiltererFunc func(tid tenant.Id, plugin string, name string, config interface{}, secrets secret.Vault) (Filterer, error)
+	NewFiltererFunc func(tid tenant.Id, plugin string, name string, config interface{}, secrets secret.Vault, tableSyncer syncer.DeltaSyncer) (Filterer, error)
 
 	// calls tracks calls to the methods.
 	calls struct {
@@ -161,7 +162,7 @@ func (mock *NewFiltererMock) FiltererHashCalls() []struct {
 }
 
 // NewFilterer calls NewFiltererFunc.
-func (mock *NewFiltererMock) NewFilterer(tid tenant.Id, plugin string, name string, config interface{}, secrets secret.Vault) (Filterer, error) {
+func (mock *NewFiltererMock) NewFilterer(tid tenant.Id, plugin string, name string, config interface{}, secrets secret.Vault, tableSyncer syncer.DeltaSyncer) (Filterer, error) {
 	if mock.NewFiltererFunc == nil {
 		panic("NewFiltererMock.NewFiltererFunc: method is nil but NewFilterer.NewFilterer was just called")
 	}
@@ -181,7 +182,7 @@ func (mock *NewFiltererMock) NewFilterer(tid tenant.Id, plugin string, name stri
 	mock.lockNewFilterer.Lock()
 	mock.calls.NewFilterer = append(mock.calls.NewFilterer, callInfo)
 	mock.lockNewFilterer.Unlock()
-	return mock.NewFiltererFunc(tid, plugin, name, config, secrets)
+	return mock.NewFiltererFunc(tid, plugin, name, config, secrets, nil)
 }
 
 // NewFiltererCalls gets all the calls that were made to NewFilterer.
@@ -279,6 +280,34 @@ type FiltererMock struct {
 	lockName   sync.RWMutex
 	lockPlugin sync.RWMutex
 	lockTenant sync.RWMutex
+}
+
+func (mock *FiltererMock) EventSuccessCount() int {
+	return 0
+}
+
+func (mock *FiltererMock) EventSuccessVelocity() int {
+	return 0
+}
+
+func (mock *FiltererMock) EventFilterCount() int {
+	return 0
+}
+
+func (mock *FiltererMock) EventFilterVelocity() int {
+	return 0
+}
+
+func (mock *FiltererMock) EventErrorCount() int {
+	return 0
+}
+
+func (mock *FiltererMock) EventErrorVelocity() int {
+	return 0
+}
+
+func (mock *FiltererMock) EventTs() int64 {
+	return 0
 }
 
 // Config calls ConfigFunc.
@@ -702,4 +731,32 @@ func (mock *ChainerMock) TenantCalls() []struct {
 	calls = mock.calls.Tenant
 	mock.lockTenant.RUnlock()
 	return calls
+}
+
+func (mock *ChainerMock) EventSuccessCount() int {
+	return 0
+}
+
+func (mock *ChainerMock) EventSuccessVelocity() int {
+	return 0
+}
+
+func (mock *ChainerMock) EventFilterCount() int {
+	return 0
+}
+
+func (mock *ChainerMock) EventFilterVelocity() int {
+	return 0
+}
+
+func (mock *ChainerMock) EventErrorCount() int {
+	return 0
+}
+
+func (mock *ChainerMock) EventErrorVelocity() int {
+	return 0
+}
+
+func (mock *ChainerMock) EventTs() int64 {
+	return 0
 }
