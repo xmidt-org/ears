@@ -571,7 +571,8 @@ func (r *Receiver) startShardReceiver(svc *kinesis.Kinesis, stream *kinesis.Desc
 					r.logError()
 					r.logger.Error().Str("op", "kinesis.startShardReceiver").Str("stream", *r.stream.StreamDescription.StreamName).Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Int("shardIdx", shardIdx).Msg(err.Error())
 					time.Sleep(errorTimeoutSecShort * time.Second)
-					continue
+					// if get records fails we should get a new iterator
+					break
 				}
 				records := getRecordsOutput.Records
 				if len(records) > 0 {
