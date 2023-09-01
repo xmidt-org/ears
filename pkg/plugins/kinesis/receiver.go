@@ -581,6 +581,8 @@ func (r *Receiver) startShardReceiver(svc *kinesis.Kinesis, stream *kinesis.Desc
 					r.Unlock()
 				} else {
 					r.logger.Debug().Str("op", "kinesis.startShardReceiver").Msg("no new records")
+					// sleep a little if the stream is empty to avoid rate limit exceeded errors
+					time.Sleep(errorTimeoutSecShort * time.Second)
 				}
 				for _, msg := range records {
 					if len(msg.Data) == 0 {
