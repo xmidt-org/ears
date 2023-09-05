@@ -171,11 +171,11 @@ func NewAPIManager(routingMgr tablemgr.RoutingTableManager, tenantStorer tenant.
 	api.muxRouter.HandleFunc("/ears/v1/orgs/{orgId}/applications/{appId}/fragments", api.getAllTenantFragmentsHandler).Methods(http.MethodGet)
 
 	api.muxRouter.HandleFunc("/ears/v1/orgs/{orgId}/applications/{appId}/config", api.getTenantConfigHandler).Methods(http.MethodGet)
-	api.muxRouter.HandleFunc("/ears/v1/orgs/{orgId}/applications/{appId}/config", api.setTenantConfigHandler).Methods(http.MethodPut)
+	api.muxRouter.HandleFunc("/ears/v1/orgs/{orgId}/applications/{appId}/config", api.addTenantConfigHandler).Methods(http.MethodPut)
 	api.muxRouter.HandleFunc("/ears/v1/orgs/{orgId}/applications/{appId}/config", api.deleteTenantConfigHandler).Methods(http.MethodDelete)
 
 	api.muxRouter.HandleFunc("/ears/v1/orgs/{orgId}/applications/{appId}", api.getTenantConfigHandler).Methods(http.MethodGet)
-	api.muxRouter.HandleFunc("/ears/v1/orgs/{orgId}/applications/{appId}", api.setTenantConfigHandler).Methods(http.MethodPut)
+	api.muxRouter.HandleFunc("/ears/v1/orgs/{orgId}/applications/{appId}", api.addTenantConfigHandler).Methods(http.MethodPut)
 	api.muxRouter.HandleFunc("/ears/v1/orgs/{orgId}/applications/{appId}", api.deleteTenantConfigHandler).Methods(http.MethodDelete)
 
 	api.muxRouter.HandleFunc("/ears/v1/routes", api.getAllRoutesHandler).Methods(http.MethodGet)
@@ -895,7 +895,7 @@ func (a *APIManager) getAllTenantConfigsHandler(w http.ResponseWriter, r *http.R
 	resp.Respond(ctx, w, doYaml(r))
 }
 
-func (a *APIManager) setTenantConfigHandler(w http.ResponseWriter, r *http.Request) {
+func (a *APIManager) addTenantConfigHandler(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	vars := mux.Vars(r)
 	tid, apiErr := getTenant(ctx, vars)
