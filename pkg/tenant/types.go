@@ -21,8 +21,8 @@ import (
 
 const (
 	delimiter    = "."
-	APP_ID_REGEX = `^[a-zA-Z0-9][a-zA-Z0-9_\-]*[a-zA-Z0-9]$`
-	ORG_ID_REGEX = `^[a-zA-Z0-9][a-zA-Z0-9_\-]*[a-zA-Z0-9]$`
+	APP_ID_REGEX = `^[a-zA-Z0-9][a-zA-Z0-9_\-]*[a-zA-Z0-9]$|^[a-zA-Z0-9]+$`
+	ORG_ID_REGEX = `^[a-zA-Z0-9][a-zA-Z0-9_\-]*[a-zA-Z0-9]$|^[a-zA-Z0-9]+$`
 )
 
 type Id struct {
