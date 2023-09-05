@@ -99,8 +99,8 @@ func (f *Filter) Filter(evt event.Event) []event.Event {
 		return nil
 	}
 	f.Lock()
-	defer f.Unlock()
 	f.batch = append(f.batch, evt)
+	f.Unlock()
 	if len(f.batch) >= *f.config.BatchSize {
 		newEvt, err := evt.Clone(evt.Context())
 		if err != nil {
@@ -113,13 +113,17 @@ func (f *Filter) Filter(evt event.Event) []event.Event {
 				f.logError()
 				e.Ack()
 			}
+			f.Lock()
 			f.batch = make([]event.Event, 0)
+			f.Unlock()
 			return []event.Event{}
 		}
 		batchPayload := make([]interface{}, 0)
+		f.Lock()
 		for _, e := range f.batch {
 			batchPayload = append(batchPayload, e.Payload())
 		}
+		f.Unlock()
 		err = newEvt.SetMetadata(deepcopy.DeepCopy(evt.Metadata()).(map[string]interface{}))
 		if err != nil {
 			log.Ctx(evt.Context()).Error().Str("op", "filter").Str("filterType", "batch").Str("name", f.Name()).Msg(err.Error())
@@ -131,7 +135,9 @@ func (f *Filter) Filter(evt event.Event) []event.Event {
 				f.logError()
 				e.Ack()
 			}
+			f.Lock()
 			f.batch = make([]event.Event, 0)
+			f.Unlock()
 			return []event.Event{}
 		}
 		err = newEvt.SetPayload(batchPayload)
@@ -145,7 +151,9 @@ func (f *Filter) Filter(evt event.Event) []event.Event {
 				f.logError()
 				e.Ack()
 			}
+			f.Lock()
 			f.batch = make([]event.Event, 0)
+			f.Unlock()
 			return []event.Event{}
 		}
 		for _, e := range f.batch {
@@ -153,7 +161,9 @@ func (f *Filter) Filter(evt event.Event) []event.Event {
 			e.Ack()
 		}
 		log.Ctx(evt.Context()).Debug().Str("op", "filter").Str("filterType", "match").Str("name", f.Name()).Int("eventCount", len(f.batch)).Msg("match")
+		f.Lock()
 		f.batch = make([]event.Event, 0)
+		f.Unlock()
 		return []event.Event{newEvt}
 	}
 	log.Ctx(evt.Context()).Debug().Str("op", "filter").Str("filterType", "batch").Str("name", f.Name()).Int("eventCount", 0).Msg("batch")
