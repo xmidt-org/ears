@@ -63,6 +63,7 @@ type Config struct {
 	Region       string         `json:"region,omitempty"`       // optional region of route for active-active scenarios - if present, route will only be active in a single region
 	Inactive     bool           `json:"inactive"`               // if true, route will not execute
 	Status       string         `json:"status,omitempty"`       // a route running on this instance will have status running, otherwise status will be stopped
+	RouteType    string         `json:"routeType,omitempty"`    // route type can be trigger, action, trigger-action or blank
 	Name         string         `json:"name,omitempty"`         // optional unique name for route
 	Desc         string         `json:"desc,omitempty"`         // optional description for route
 	Origin       string         `json:"origin,omitempty"`       // optional reference to route owner, e.g. Flow ID in case of Gears
