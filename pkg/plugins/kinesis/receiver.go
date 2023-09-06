@@ -570,7 +570,7 @@ func (r *Receiver) startShardReceiver(svc *kinesis.Kinesis, stream *kinesis.Desc
 				if err != nil {
 					r.logError()
 					r.logger.Error().Str("op", "kinesis.startShardReceiver").Str("stream", *r.stream.StreamDescription.StreamName).Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Int("shardIdx", shardIdx).Msg(err.Error())
-					time.Sleep(errorTimeoutSecShort * time.Second)
+					time.Sleep(time.Duration(*r.config.EmptyStreamWaitSeconds) * time.Second)
 					// if get records fails we should get a new iterator
 					break
 				}
@@ -582,7 +582,7 @@ func (r *Receiver) startShardReceiver(svc *kinesis.Kinesis, stream *kinesis.Desc
 				} else {
 					r.logger.Debug().Str("op", "kinesis.startShardReceiver").Msg("no new records")
 					// sleep a little if the stream is empty to avoid rate limit exceeded errors
-					time.Sleep(errorTimeoutSecShort * time.Second)
+					time.Sleep(time.Duration(*r.config.EmptyStreamWaitSeconds) * time.Second)
 				}
 				for _, msg := range records {
 					if len(msg.Data) == 0 {
