@@ -72,6 +72,7 @@ var DefaultReceiverConfig = ReceiverConfig{
 	UseShardMonitor:         pointer.Bool(false),
 	StartingTimestamp:       pointer.Int64(0),
 	StartingSequenceNumber:  "",
+	EmptyStreamWaitSeconds:  pointer.Int(1),
 }
 
 type ReceiverConfig struct {
@@ -90,6 +91,7 @@ type ReceiverConfig struct {
 	UseShardMonitor         *bool  `json:"useShardMonitor,omitempty"`
 	StartingSequenceNumber  string `json:"startingSequenceNumber,omitempty"`
 	StartingTimestamp       *int64 `json:"startingTimestamp,omitempty"`
+	EmptyStreamWaitSeconds  *int   `json:"emptyStreamWaitSeconds,omitempty"`
 }
 
 type Receiver struct {

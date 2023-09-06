@@ -51,6 +51,9 @@ func (rc *ReceiverConfig) WithDefaults() ReceiverConfig {
 	if cfg.StartingTimestamp == nil {
 		cfg.StartingTimestamp = DefaultReceiverConfig.StartingTimestamp
 	}
+	if cfg.EmptyStreamWaitSeconds == nil {
+		cfg.EmptyStreamWaitSeconds = DefaultReceiverConfig.EmptyStreamWaitSeconds
+	}
 	return cfg
 }
 
@@ -129,6 +132,10 @@ const receiverSchema = `
 					"default": false
 				},
 				"maxCheckpointAgeSeconds" : {
+                    "type": "integer", 
+					"minimum": 0
+				},
+				"emptyStreamWaitSeconds" : {
                     "type": "integer", 
 					"minimum": 0
 				}
