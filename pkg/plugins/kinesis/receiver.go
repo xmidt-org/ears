@@ -45,6 +45,7 @@ import (
 	"net/http"
 	"os"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -551,6 +552,8 @@ func (r *Receiver) startShardReceiver(svc *kinesis.Kinesis, stream *kinesis.Desc
 				r.logger.Error().Str("op", "kinesis.startShardReceiver").Str("stream", *r.stream.StreamDescription.StreamName).Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Int("shardIdx", shardIdx).Msg(err.Error())
 				time.Sleep(errorTimeoutSecShort * time.Second)
 				continue
+			} else {
+				r.logger.Info().Str("op", "kinesis.startShardReceiver").Str("stream", *r.stream.StreamDescription.StreamName).Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Int("shardIdx", shardIdx).Msg("get shard iterator")
 			}
 			shardIterator := iteratorOutput.ShardIterator
 			for {
@@ -569,18 +572,22 @@ func (r *Receiver) startShardReceiver(svc *kinesis.Kinesis, stream *kinesis.Desc
 				})
 				if err != nil {
 					r.logError()
-					r.logger.Error().Str("op", "kinesis.startShardReceiver").Str("stream", *r.stream.StreamDescription.StreamName).Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Int("shardIdx", shardIdx).Msg(err.Error())
-					time.Sleep(time.Duration(*r.config.EmptyStreamWaitSeconds) * time.Second)
-					// if get records fails we should get a new iterator
-					break
+					if strings.Contains(err.Error(), "ExpiredIteratorException") {
+						// if get records fails with expired iterator we should get a new iterator
+						r.logger.Error().Str("op", "kinesis.startShardReceiver").Str("stream", *r.stream.StreamDescription.StreamName).Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Int("shardIdx", shardIdx).Str("action", "new_iterator").Msg(err.Error())
+						time.Sleep(time.Duration(*r.config.EmptyStreamWaitSeconds) * time.Second)
+						break
+					} else {
+						r.logger.Error().Str("op", "kinesis.startShardReceiver").Str("stream", *r.stream.StreamDescription.StreamName).Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Int("shardIdx", shardIdx).Msg(err.Error())
+						time.Sleep(time.Duration(*r.config.EmptyStreamWaitSeconds) * time.Second)
+						continue
+					}
 				}
 				records := getRecordsOutput.Records
 				if len(records) > 0 {
-					r.Lock()
-					r.logger.Debug().Str("op", "kinesis.startShardReceiver").Str("stream", *r.stream.StreamDescription.StreamName).Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Int("batchSize", len(records)).Int("shardIdx", shardIdx).Msg("received message batch")
-					r.Unlock()
+					r.logger.Info().Str("op", "kinesis.startShardReceiver").Str("stream", *r.stream.StreamDescription.StreamName).Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Int("batchSize", len(records)).Int("shardIdx", shardIdx).Msg("received message batch")
 				} else {
-					r.logger.Debug().Str("op", "kinesis.startShardReceiver").Msg("no new records")
+					r.logger.Info().Str("op", "kinesis.startShardReceiver").Str("stream", *r.stream.StreamDescription.StreamName).Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Int("batchSize", len(records)).Int("shardIdx", shardIdx).Msg("no messages")
 					// sleep a little if the stream is empty to avoid rate limit exceeded errors
 					time.Sleep(time.Duration(*r.config.EmptyStreamWaitSeconds) * time.Second)
 				}
