@@ -25,6 +25,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/kinesis"
 	"github.com/goccy/go-yaml"
+	"github.com/google/uuid"
 	"github.com/rs/zerolog/log"
 	"github.com/xmidt-org/ears/internal/pkg/rtsemconv"
 	"github.com/xmidt-org/ears/internal/pkg/syncer"
@@ -508,12 +509,13 @@ func (r *Receiver) startShardReceiver(svc *kinesis.Kinesis, stream *kinesis.Desc
 					Str("stackTrace", panicErr.StackTrace()).Msg("a panic has occurred in shard receiver")
 			}
 		}()
+		routineId := uuid.New().String()
 		r.Lock()
 		r.stopChannelMap[shardIdx] = make(chan bool)
 		r.Unlock()
 		checkpoint, err := checkpoint.GetDefaultCheckpointManager(nil)
 		if err != nil {
-			r.logger.Error().Str("op", "kinesis.startShardReceiver").Str("stream", *r.stream.StreamDescription.StreamName).Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Int("shardIdx", shardIdx).Msg("checkpoint error: " + err.Error())
+			r.logger.Error().Str("op", "kinesis.startShardReceiver").Str("stream", *r.stream.StreamDescription.StreamName).Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Str("rid", routineId).Int("shardIdx", shardIdx).Msg("checkpoint error: " + err.Error())
 			return
 		}
 		checkpointId := r.getCheckpointId(shardIdx)
@@ -537,7 +539,7 @@ func (r *Receiver) startShardReceiver(svc *kinesis.Kinesis, stream *kinesis.Desc
 					}
 				} else {
 					r.logError()
-					r.logger.Error().Str("op", "kinesis.startShardReceiver").Str("stream", *r.stream.StreamDescription.StreamName).Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Int("shardIdx", shardIdx).Msg("checkpoint error: " + err.Error())
+					r.logger.Error().Str("op", "kinesis.startShardReceiver").Str("stream", *r.stream.StreamDescription.StreamName).Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Str("rid", routineId).Int("shardIdx", shardIdx).Msg("checkpoint error: " + err.Error())
 				}
 				//} else if *r.config.StartingTimestamp > 0 {
 				//	shardIteratorInput.ShardIteratorType = aws.String(kinesis.ShardIteratorTypeAtTimestamp)
@@ -549,17 +551,17 @@ func (r *Receiver) startShardReceiver(svc *kinesis.Kinesis, stream *kinesis.Desc
 			iteratorOutput, err := svc.GetShardIterator(shardIteratorInput)
 			if err != nil {
 				r.logError()
-				r.logger.Error().Str("op", "kinesis.startShardReceiver").Str("stream", *r.stream.StreamDescription.StreamName).Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Int("shardIdx", shardIdx).Msg(err.Error())
+				r.logger.Error().Str("op", "kinesis.startShardReceiver").Str("stream", *r.stream.StreamDescription.StreamName).Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Str("rid", routineId).Int("shardIdx", shardIdx).Msg(err.Error())
 				time.Sleep(errorTimeoutSecShort * time.Second)
 				continue
 			} else {
-				r.logger.Info().Str("op", "kinesis.startShardReceiver").Str("stream", *r.stream.StreamDescription.StreamName).Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Int("shardIdx", shardIdx).Msg("get shard iterator")
+				r.logger.Info().Str("op", "kinesis.startShardReceiver").Str("stream", *r.stream.StreamDescription.StreamName).Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Str("rid", routineId).Int("shardIdx", shardIdx).Msg("get shard iterator")
 			}
 			shardIterator := iteratorOutput.ShardIterator
 			for {
 				select {
 				case <-r.getStopChannel(shardIdx):
-					r.logger.Info().Str("op", "kinesis.startShardReceiver").Str("stream", *r.stream.StreamDescription.StreamName).Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Int("shardIdx", shardIdx).Msg("receive loop stopped")
+					r.logger.Info().Str("op", "kinesis.startShardReceiver").Str("stream", *r.stream.StreamDescription.StreamName).Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Str("rid", routineId).Int("shardIdx", shardIdx).Msg("receive loop stopped")
 					r.Lock()
 					close(r.stopChannelMap[shardIdx])
 					delete(r.stopChannelMap, shardIdx)
@@ -574,20 +576,20 @@ func (r *Receiver) startShardReceiver(svc *kinesis.Kinesis, stream *kinesis.Desc
 					r.logError()
 					if strings.Contains(err.Error(), "ExpiredIteratorException") {
 						// if get records fails with expired iterator we should get a new iterator
-						r.logger.Error().Str("op", "kinesis.startShardReceiver").Str("stream", *r.stream.StreamDescription.StreamName).Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Int("shardIdx", shardIdx).Str("action", "new_iterator").Msg(err.Error())
+						r.logger.Error().Str("op", "kinesis.startShardReceiver").Str("stream", *r.stream.StreamDescription.StreamName).Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Str("rid", routineId).Int("shardIdx", shardIdx).Str("action", "new_iterator").Msg(err.Error())
 						time.Sleep(time.Duration(*r.config.EmptyStreamWaitSeconds) * time.Second)
 						break
 					} else {
-						r.logger.Error().Str("op", "kinesis.startShardReceiver").Str("stream", *r.stream.StreamDescription.StreamName).Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Int("shardIdx", shardIdx).Msg(err.Error())
+						r.logger.Error().Str("op", "kinesis.startShardReceiver").Str("stream", *r.stream.StreamDescription.StreamName).Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Str("rid", routineId).Int("shardIdx", shardIdx).Msg(err.Error())
 						time.Sleep(time.Duration(*r.config.EmptyStreamWaitSeconds) * time.Second)
 						continue
 					}
 				}
 				records := getRecordsOutput.Records
 				if len(records) > 0 {
-					r.logger.Info().Str("op", "kinesis.startShardReceiver").Str("stream", *r.stream.StreamDescription.StreamName).Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Int("batchSize", len(records)).Int("shardIdx", shardIdx).Msg("received message batch")
+					r.logger.Info().Str("op", "kinesis.startShardReceiver").Str("stream", *r.stream.StreamDescription.StreamName).Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Str("rid", routineId).Int("batchSize", len(records)).Int("shardIdx", shardIdx).Msg("received message batch")
 				} else {
-					r.logger.Info().Str("op", "kinesis.startShardReceiver").Str("stream", *r.stream.StreamDescription.StreamName).Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Int("batchSize", len(records)).Int("shardIdx", shardIdx).Msg("no messages")
+					r.logger.Info().Str("op", "kinesis.startShardReceiver").Str("stream", *r.stream.StreamDescription.StreamName).Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Str("rid", routineId).Int("batchSize", len(records)).Int("shardIdx", shardIdx).Msg("no messages")
 					// sleep a little if the stream is empty to avoid rate limit exceeded errors
 					time.Sleep(time.Duration(*r.config.EmptyStreamWaitSeconds) * time.Second)
 				}
@@ -600,7 +602,7 @@ func (r *Receiver) startShardReceiver(svc *kinesis.Kinesis, stream *kinesis.Desc
 							err = json.Unmarshal(msg.Data, &payload)
 							if err != nil {
 								r.logError()
-								r.logger.Error().Str("op", "kinesis.startShardReceiver").Str("stream", *r.stream.StreamDescription.StreamName).Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Int("shardIdx", shardIdx).Msg("cannot parse message " + (*msg.SequenceNumber) + ": " + err.Error())
+								r.logger.Error().Str("op", "kinesis.startShardReceiver").Str("stream", *r.stream.StreamDescription.StreamName).Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Str("rid", routineId).Int("shardIdx", shardIdx).Msg("cannot parse message " + (*msg.SequenceNumber) + ": " + err.Error())
 								return
 							}
 							ctx, cancel := context.WithTimeout(context.Background(), time.Duration(*r.config.AcknowledgeTimeout)*time.Second)
@@ -625,7 +627,7 @@ func (r *Receiver) startShardReceiver(svc *kinesis.Kinesis, stream *kinesis.Desc
 								event.WithOtelTracing(r.Name()),
 								event.WithTracePayloadOnNack(*r.config.TracePayloadOnNack))
 							if err != nil {
-								r.logger.Error().Str("op", "kinesis.startShardReceiver").Str("stream", *r.stream.StreamDescription.StreamName).Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Int("shardIdx", shardIdx).Msg("cannot create event: " + err.Error())
+								r.logger.Error().Str("op", "kinesis.startShardReceiver").Str("stream", *r.stream.StreamDescription.StreamName).Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Str("rid", routineId).Int("shardIdx", shardIdx).Msg("cannot create event: " + err.Error())
 								return
 							}
 							r.Trigger(e)
@@ -639,14 +641,14 @@ func (r *Receiver) startShardReceiver(svc *kinesis.Kinesis, stream *kinesis.Desc
 						// just wait for shard decommission
 						select {
 						case <-r.getStopChannel(shardIdx):
-							r.logger.Info().Str("op", "kinesis.startShardReceiver").Str("stream", *r.stream.StreamDescription.StreamName).Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Int("shardIdx", shardIdx).Msg("receive loop stopped")
+							r.logger.Info().Str("op", "kinesis.startShardReceiver").Str("stream", *r.stream.StreamDescription.StreamName).Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Str("rid", routineId).Int("shardIdx", shardIdx).Msg("receive loop stopped")
 							r.Lock()
 							close(r.stopChannelMap[shardIdx])
 							delete(r.stopChannelMap, shardIdx)
 							r.Unlock()
 							return
 						case <-time.After(monitorTimeoutSecShort * time.Second):
-							r.logger.Info().Str("op", "kinesis.startShardReceiver").Str("stream", *r.stream.StreamDescription.StreamName).Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Int("shardIdx", shardIdx).Msg("waiting for decommission")
+							r.logger.Info().Str("op", "kinesis.startShardReceiver").Str("stream", *r.stream.StreamDescription.StreamName).Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Str("rid", routineId).Int("shardIdx", shardIdx).Msg("waiting for decommission")
 						}
 					}
 				}
