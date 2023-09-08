@@ -65,17 +65,12 @@ func NewRedisDeltaSyncer(logger *zerolog.Logger, config config.Config) syncer.De
 	s.localSyncers = make(map[string][]syncer.LocalSyncer)
 	hostname, _ := os.Hostname()
 	s.instanceId = hostname + "_" + uuid.New().String()
-	s.active = config.GetBool("ears.synchronization.active")
-	if !s.active {
-		logger.Info().Msg("Redis Delta Syncer Not Activated")
-	} else {
-		s.client = redis.NewClient(&redis.Options{
-			Addr:     s.redisEndpoint,
-			Password: "",
-			DB:       0,
-		})
-		//logger.Info().Msg("Redis Syncer Started")
-	}
+	s.client = redis.NewClient(&redis.Options{
+		Addr:     s.redisEndpoint,
+		Password: "",
+		DB:       0,
+	})
+	//logger.Info().Msg("Redis Syncer Started")
 	return s
 }
 
