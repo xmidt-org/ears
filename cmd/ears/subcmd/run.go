@@ -162,7 +162,7 @@ func init() {
 			},
 			cli.Argument{
 				Name: "redisEndpoint", Shorthand: "", Type: cli.ArgTypeString,
-				Default: "gears-redis-qa-001.6bteey.0001.usw2.cache.amazonaws.com:6379", LookupKey: "ears.synchronization.endpoint",
+				Default: "localhost:6379", LookupKey: "ears.synchronization.endpoint",
 				Description: "redis endpoint for routing table synchronization",
 			},
 		},
