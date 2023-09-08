@@ -178,7 +178,7 @@ func (s *Sender) Send(e event.Event) {
 		e.Nack(err)
 		return
 	}
-	log.Ctx(e.Context()).Debug().Str("op", "redis.Send").Str("name", s.Name()).Str("tid", s.Tenant().ToString()).Msg("sent message on redis channel")
+	log.Ctx(e.Context()).Debug().Str("op", "redis.Send").Str("name", s.Name()).Str("tid", s.Tenant().ToString()).Str("app.id", s.Tenant().AppId).Str("partner.id", s.Tenant().OrgId).Msg("sent message on redis channel")
 	s.eventSuccessCounter.Add(e.Context(), 1)
 	s.logSuccess()
 	e.Ack()

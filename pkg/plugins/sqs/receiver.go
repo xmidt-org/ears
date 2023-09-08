@@ -214,12 +214,12 @@ func (r *Receiver) startReceiveWorker(svc *sqs.SQS, n int) {
 				queueAttributesResp, err := svc.GetQueueAttributes(queueAttributesParams)
 				if err != nil {
 					r.logError()
-					r.logger.Error().Str("op", "SQS.receiveWorker").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Int("workerNum", n).Msg(err.Error())
+					r.logger.Error().Str("op", "SQS.receiveWorker").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Str("app.id", r.Tenant().AppId).Str("partner.id", r.Tenant().OrgId).Int("workerNum", n).Msg(err.Error())
 				} else {
 					if queueAttributesResp.Attributes[approximateNumberOfMessages] != nil {
 						numMsgs, err := strconv.Atoi(*queueAttributesResp.Attributes[approximateNumberOfMessages])
 						if err != nil {
-							r.logger.Error().Str("op", "SQS.receiveWorker").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Int("workerNum", n).Msg("error parsing message count: " + err.Error())
+							r.logger.Error().Str("op", "SQS.receiveWorker").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Str("app.id", r.Tenant().AppId).Str("partner.id", r.Tenant().OrgId).Int("workerNum", n).Msg("error parsing message count: " + err.Error())
 						}
 						r.eventQueueDepth.Record(ctx, int64(numMsgs))
 					}
@@ -264,9 +264,9 @@ func (r *Receiver) startReceiveWorker(svc *sqs.SQS, n int) {
 					_, err := svc.DeleteMessageBatch(deleteParams)
 					if err != nil {
 						r.logError()
-						r.logger.Error().Str("op", "SQS.receiveWorker").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Msg("delete error: " + err.Error())
+						r.logger.Error().Str("op", "SQS.receiveWorker").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Str("app.id", r.Tenant().AppId).Str("partner.id", r.Tenant().OrgId).Msg("delete error: " + err.Error())
 					} else {
-						r.logger.Debug().Str("op", "SQS.receiveWorker").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Int("batchSize", len(deleteBatch)).Int("workerNum", n).Msg("deleted message batch")
+						r.logger.Debug().Str("op", "SQS.receiveWorker").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Str("app.id", r.Tenant().AppId).Str("partner.id", r.Tenant().OrgId).Int("batchSize", len(deleteBatch)).Int("workerNum", n).Msg("deleted message batch")
 						/*for _, entry := range deleteBatch {
 							r.logger.Info().Str("op", "SQS.receiveWorker").Int("batchSize", len(deleteBatch)).Int("workerNum", n).Msg("deleted message " + (*entry.Id))
 						}*/
@@ -277,7 +277,7 @@ func (r *Receiver) startReceiveWorker(svc *sqs.SQS, n int) {
 				stopNow := r.stopped
 				r.Unlock()
 				if stopNow {
-					r.logger.Info().Str("op", "SQS.receiveWorker").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Int("workerNum", n).Msg("delete loop stopped")
+					r.logger.Info().Str("op", "SQS.receiveWorker").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Str("app.id", r.Tenant().AppId).Str("partner.id", r.Tenant().OrgId).Int("workerNum", n).Msg("delete loop stopped")
 					return
 				}
 			}
@@ -297,18 +297,18 @@ func (r *Receiver) startReceiveWorker(svc *sqs.SQS, n int) {
 			stopNow := r.stopped
 			r.Unlock()
 			if stopNow {
-				r.logger.Info().Str("op", "SQS.receiveWorker").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Int("workerNum", n).Msg("receive loop stopped")
+				r.logger.Info().Str("op", "SQS.receiveWorker").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Str("app.id", r.Tenant().AppId).Str("partner.id", r.Tenant().OrgId).Int("workerNum", n).Msg("receive loop stopped")
 				return
 			}
 			if err != nil {
 				r.logError()
-				r.logger.Error().Str("op", "SQS.receiveWorker").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Int("workerNum", n).Msg(err.Error())
+				r.logger.Error().Str("op", "SQS.receiveWorker").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Str("app.id", r.Tenant().AppId).Str("partner.id", r.Tenant().OrgId).Int("workerNum", n).Msg(err.Error())
 				time.Sleep(1 * time.Second)
 				continue
 			}
 			if len(sqsResp.Messages) > 0 {
 				r.Lock()
-				r.logger.Debug().Str("op", "SQS.receiveWorker").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Int("batchSize", len(sqsResp.Messages)).Int("workerNum", n).Msg("received message batch")
+				r.logger.Debug().Str("op", "SQS.receiveWorker").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Str("app.id", r.Tenant().AppId).Str("partner.id", r.Tenant().OrgId).Int("batchSize", len(sqsResp.Messages)).Int("workerNum", n).Msg("received message batch")
 				r.Unlock()
 			}
 			for _, message := range sqsResp.Messages {
@@ -326,12 +326,12 @@ func (r *Receiver) startReceiveWorker(svc *sqs.SQS, n int) {
 				if message.Attributes[approximateReceiveCount] != nil {
 					retryAttempt, err = strconv.Atoi(*message.Attributes[approximateReceiveCount])
 					if err != nil {
-						r.logger.Error().Str("op", "SQS.receiveWorker").Str(rtsemconv.EarsLogTraceIdKey, traceId).Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Int("workerNum", n).Msg("error parsing receive count: " + err.Error())
+						r.logger.Error().Str("op", "SQS.receiveWorker").Str(rtsemconv.EarsLogTraceIdKey, traceId).Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Str("app.id", r.Tenant().AppId).Str("partner.id", r.Tenant().OrgId).Int("workerNum", n).Msg("error parsing receive count: " + err.Error())
 					}
 					retryAttempt--
 				}
 				if retryAttempt > *(r.config.NumRetries) {
-					r.logger.Error().Str("op", "SQS.receiveWorker").Str(rtsemconv.EarsLogTraceIdKey, traceId).Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Int("workerNum", n).Msg("max retries reached for " + (*message.MessageId))
+					r.logger.Error().Str("op", "SQS.receiveWorker").Str(rtsemconv.EarsLogTraceIdKey, traceId).Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Str("app.id", r.Tenant().AppId).Str("partner.id", r.Tenant().OrgId).Int("workerNum", n).Msg("max retries reached for " + (*message.MessageId))
 					entry := sqs.DeleteMessageBatchRequestEntry{Id: message.MessageId, ReceiptHandle: message.ReceiptHandle}
 					entries <- &entry
 					cancel()
@@ -341,7 +341,7 @@ func (r *Receiver) startReceiveWorker(svc *sqs.SQS, n int) {
 				err = json.Unmarshal([]byte(*message.Body), &payload)
 				if err != nil {
 					r.logError()
-					r.logger.Error().Str("op", "SQS.receiveWorker").Str(rtsemconv.EarsLogTraceIdKey, traceId).Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Int("workerNum", n).Msg("cannot parse message " + (*message.MessageId) + ": " + err.Error())
+					r.logger.Error().Str("op", "SQS.receiveWorker").Str(rtsemconv.EarsLogTraceIdKey, traceId).Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Str("app.id", r.Tenant().AppId).Str("partner.id", r.Tenant().OrgId).Int("workerNum", n).Msg("cannot parse message " + (*message.MessageId) + ": " + err.Error())
 					entry := sqs.DeleteMessageBatchRequestEntry{Id: message.MessageId, ReceiptHandle: message.ReceiptHandle}
 					entries <- &entry
 					cancel()
@@ -358,16 +358,16 @@ func (r *Receiver) startReceiveWorker(svc *sqs.SQS, n int) {
 							r.eventSuccessCounter.Add(ctx, 1)
 							r.LogSuccess()
 						} else {
-							log.Ctx(e.Context()).Error().Str("op", "SQS.receiveWorker").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Int("workerNum", n).Msg("failed to process message with missing sqs metadata")
+							log.Ctx(e.Context()).Error().Str("op", "SQS.receiveWorker").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Str("app.id", r.Tenant().AppId).Str("partner.id", r.Tenant().OrgId).Int("workerNum", n).Msg("failed to process message with missing sqs metadata")
 						}
 						cancel()
 					},
 					func(e event.Event, err error) {
 						msg, ok := e.Metadata()["sqsMessage"].(sqs.Message) // get metadata associated with this event
 						if ok {
-							log.Ctx(e.Context()).Error().Str("op", "SQS.receiveWorker").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Int("workerNum", n).Msg("failed to process message " + (*msg.MessageId) + ": " + err.Error())
+							log.Ctx(e.Context()).Error().Str("op", "SQS.receiveWorker").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Str("app.id", r.Tenant().AppId).Str("partner.id", r.Tenant().OrgId).Int("workerNum", n).Msg("failed to process message " + (*msg.MessageId) + ": " + err.Error())
 						} else {
-							log.Ctx(e.Context()).Error().Str("op", "SQS.receiveWorker").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Int("workerNum", n).Msg("failed to process message with missing sqs metadata: " + err.Error())
+							log.Ctx(e.Context()).Error().Str("op", "SQS.receiveWorker").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Str("app.id", r.Tenant().AppId).Str("partner.id", r.Tenant().OrgId).Int("workerNum", n).Msg("failed to process message with missing sqs metadata: " + err.Error())
 						}
 						// a nack below max retries - this is the only case where we do not delete the message yet
 						r.eventFailureCounter.Add(ctx, 1)
@@ -379,7 +379,7 @@ func (r *Receiver) startReceiveWorker(svc *sqs.SQS, n int) {
 					event.WithTracePayloadOnNack(*r.config.TracePayloadOnNack))
 				if err != nil {
 					cancel()
-					r.logger.Error().Str("op", "SQS.receiveWorker").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Int("workerNum", n).Msg("cannot create event: " + err.Error())
+					r.logger.Error().Str("op", "SQS.receiveWorker").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Str("app.id", r.Tenant().AppId).Str("partner.id", r.Tenant().OrgId).Int("workerNum", n).Msg("cannot create event: " + err.Error())
 					return
 				}
 				r.Trigger(e)
@@ -405,12 +405,12 @@ func (r *Receiver) Receive(next receiver.NextFn) error {
 	r.next = next
 	r.Unlock()
 	for i := 0; i < *r.config.ReceiverPoolSize; i++ {
-		r.logger.Info().Str("op", "SQS.Receive").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Int("workerNum", i).Msg("launching receiver pool thread")
+		r.logger.Info().Str("op", "SQS.Receive").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Str("app.id", r.Tenant().AppId).Str("partner.id", r.Tenant().OrgId).Int("workerNum", i).Msg("launching receiver pool thread")
 		r.startReceiveWorker(r.sqs, i)
 	}
-	r.logger.Info().Str("op", "SQS.Receive").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Msg("waiting for receive done")
+	r.logger.Info().Str("op", "SQS.Receive").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Str("app.id", r.Tenant().AppId).Str("partner.id", r.Tenant().OrgId).Msg("waiting for receive done")
 	<-r.done
-	r.logger.Info().Str("op", "SQS.Receive").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Msg("receive done")
+	r.logger.Info().Str("op", "SQS.Receive").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Str("app.id", r.Tenant().AppId).Str("partner.id", r.Tenant().OrgId).Msg("receive done")
 	return nil
 }
 

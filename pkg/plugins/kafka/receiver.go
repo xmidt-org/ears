@@ -190,17 +190,17 @@ func (r *Receiver) Start(handler func(*sarama.ConsumerMessage) bool) {
 		//err := r.client.Consume(r.ctx, r.topics, otelsarama.WrapConsumerGroupHandler(r))
 		err := r.client.Consume(r.ctx, r.topics, r)
 		if err != nil { // the receiver itself is the group handler
-			r.logger.Error().Str("op", "kafka.Start").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Msg(err.Error())
+			r.logger.Error().Str("op", "kafka.Start").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Str("app.id", r.Tenant().AppId).Str("partner.id", r.Tenant().OrgId).Msg(err.Error())
 			r.logError()
 			//Sleep for a little bit to prevent busy loop
 			time.Sleep(time.Second)
 		} else {
-			r.logger.Info().Str("op", "kafka.Start").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Msg("kafka consumer finished without error")
+			r.logger.Info().Str("op", "kafka.Start").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Str("app.id", r.Tenant().AppId).Str("partner.id", r.Tenant().OrgId).Msg("kafka consumer finished without error")
 		}
 		// check if context was canceled, signaling that the consumer should stop
 		if nil != r.ctx.Err() {
 			r.logError()
-			r.logger.Error().Str("op", "kafka.Start").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Msg("context canceled, stopping consumption")
+			r.logger.Error().Str("op", "kafka.Start").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Str("app.id", r.Tenant().AppId).Str("partner.id", r.Tenant().OrgId).Msg("context canceled, stopping consumption")
 			return
 		}
 		r.ready = make(chan bool)
@@ -217,9 +217,9 @@ func (r *Receiver) Close() {
 	//r.logger.Info().Str("op", "kafka.Close").Msg("wait group done")
 	err := r.client.Close()
 	if err != nil {
-		r.logger.Error().Str("op", "kafka.Close").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Msg(err.Error())
+		r.logger.Error().Str("op", "kafka.Close").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Str("app.id", r.Tenant().AppId).Str("partner.id", r.Tenant().OrgId).Msg(err.Error())
 	} else {
-		r.logger.Info().Str("op", "kafka.Close").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Msg("kafka consumer closed")
+		r.logger.Info().Str("op", "kafka.Close").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Str("app.id", r.Tenant().AppId).Str("partner.id", r.Tenant().OrgId).Msg("kafka consumer closed")
 	}
 }
 
@@ -309,10 +309,10 @@ func (r *Receiver) Receive(next receiver.NextFn) error {
 			}()
 			// bail if context has been canceled
 			if r.ctx.Err() != nil {
-				r.logger.Info().Str("op", "kafka.Receive").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Msg("abandoning message due to canceled context")
+				r.logger.Info().Str("op", "kafka.Receive").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Str("app.id", r.Tenant().AppId).Str("partner.id", r.Tenant().OrgId).Msg("abandoning message due to canceled context")
 				return false
 			}
-			r.logger.Debug().Str("op", "kafka.Receive").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Str("topic", msg.Topic).Int("partition", int(msg.Partition)).Int("offset", int(msg.Offset)).Msg("message received")
+			r.logger.Debug().Str("op", "kafka.Receive").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Str("app.id", r.Tenant().AppId).Str("partner.id", r.Tenant().OrgId).Str("topic", msg.Topic).Int("partition", int(msg.Partition)).Int("offset", int(msg.Offset)).Msg("message received")
 			var pl interface{}
 			err := json.Unmarshal(msg.Value, &pl)
 			if err != nil {
@@ -326,13 +326,13 @@ func (r *Receiver) Receive(next receiver.NextFn) error {
 			r.eventBytesCounter.Add(ctx, int64(len(msg.Value)))
 			e, err := event.New(ctx, pl, event.WithAck(
 				func(e event.Event) {
-					log.Ctx(e.Context()).Debug().Str("op", "kafka.Receive").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Msg("processed message from kafka topic")
+					log.Ctx(e.Context()).Debug().Str("op", "kafka.Receive").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Str("app.id", r.Tenant().AppId).Str("partner.id", r.Tenant().OrgId).Msg("processed message from kafka topic")
 					r.eventSuccessCounter.Add(ctx, 1)
 					r.LogSuccess()
 					cancel()
 				},
 				func(e event.Event, err error) {
-					log.Ctx(e.Context()).Error().Str("op", "kafka.Receive").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Msg("failed to process message: " + err.Error())
+					log.Ctx(e.Context()).Error().Str("op", "kafka.Receive").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Str("app.id", r.Tenant().AppId).Str("partner.id", r.Tenant().OrgId).Msg("failed to process message: " + err.Error())
 					r.eventFailureCounter.Add(ctx, 1)
 					r.logError()
 					cancel()
@@ -342,21 +342,21 @@ func (r *Receiver) Receive(next receiver.NextFn) error {
 				event.WithTracePayloadOnNack(*r.config.TracePayloadOnNack))
 			if err != nil {
 				r.logError()
-				r.logger.Error().Str("op", "kafka.Receive").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Msg("cannot create event: " + err.Error())
+				r.logger.Error().Str("op", "kafka.Receive").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Str("app.id", r.Tenant().AppId).Str("partner.id", r.Tenant().OrgId).Msg("cannot create event: " + err.Error())
 				return false
 			}
 			r.Trigger(e)
 			return true
 		})
 	}()
-	r.logger.Info().Str("op", "kafka.Receive").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Msg("waiting for receive done")
+	r.logger.Info().Str("op", "kafka.Receive").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Str("app.id", r.Tenant().AppId).Str("app.id", r.Tenant().AppId).Str("partner.id", r.Tenant().OrgId).Str("partner.id", r.Tenant().OrgId).Msg("waiting for receive done")
 	<-r.done
 	r.logger.Info().Str("op", "kafka.Receive").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Msg("receive done")
 	return nil
 }
 
 func (r *Receiver) StopReceiving(ctx context.Context) error {
-	r.logger.Info().Str("op", "kafka.StopReceiving").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Msg("stop receiving")
+	r.logger.Info().Str("op", "kafka.StopReceiving").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Str("app.id", r.Tenant().AppId).Str("partner.id", r.Tenant().OrgId).Msg("stop receiving")
 	r.Lock()
 	if !r.stopped {
 		r.stopped = true
@@ -366,9 +366,9 @@ func (r *Receiver) StopReceiving(ctx context.Context) error {
 		close(r.done)
 	}
 	r.Unlock()
-	r.logger.Info().Str("op", "kafka.StopReceiving").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Msg("done sent to receiver func")
+	r.logger.Info().Str("op", "kafka.StopReceiving").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Str("app.id", r.Tenant().AppId).Str("partner.id", r.Tenant().OrgId).Msg("done sent to receiver func")
 	r.Close()
-	r.logger.Info().Str("op", "kafka.StopReceiving").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Msg("kafka client closed")
+	r.logger.Info().Str("op", "kafka.StopReceiving").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Str("app.id", r.Tenant().AppId).Str("partner.id", r.Tenant().OrgId).Msg("kafka client closed")
 	return nil
 }
 

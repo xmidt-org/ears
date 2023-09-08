@@ -380,13 +380,13 @@ func (mp *ManualHashPartitioner) Partition(message *sarama.ProducerMessage, numP
 
 func (s *Sender) Send(e event.Event) {
 	if s.stopped {
-		log.Ctx(e.Context()).Error().Str("op", "kafka.Send").Str("name", s.Name()).Str("tid", s.Tenant().ToString()).Msg("drop message due to closed sender")
+		log.Ctx(e.Context()).Error().Str("op", "kafka.Send").Str("name", s.Name()).Str("tid", s.Tenant().ToString()).Str("app.id", s.Tenant().AppId).Str("partner.id", s.Tenant().OrgId).Msg("drop message due to closed sender")
 		s.eventFailureCounter.Add(e.Context(), 1.0, s.getAttributes(e, s.config.DynamicMetricLabels)...)
 		return
 	}
 	buf, err := json.Marshal(e.Payload())
 	if err != nil {
-		log.Ctx(e.Context()).Error().Str("op", "kafka.Send").Str("name", s.Name()).Str("tid", s.Tenant().ToString()).Msg("failed to marshal message: " + err.Error())
+		log.Ctx(e.Context()).Error().Str("op", "kafka.Send").Str("name", s.Name()).Str("tid", s.Tenant().ToString()).Str("app.id", s.Tenant().AppId).Str("partner.id", s.Tenant().OrgId).Msg("failed to marshal message: " + err.Error())
 		s.eventFailureCounter.Add(e.Context(), 1.0, s.getAttributes(e, s.config.DynamicMetricLabels)...)
 		s.logError()
 		e.Nack(err)
@@ -407,7 +407,7 @@ func (s *Sender) Send(e event.Event) {
 	ctx := context.Background()
 	err = s.producer.SendMessage(e.Context(), s.secrets.Secret(ctx, s.config.Topic), partition, nil, buf, e)
 	if err != nil {
-		log.Ctx(e.Context()).Error().Str("op", "kafka.Send").Str("name", s.Name()).Str("tid", s.Tenant().ToString()).Msg("failed to send message: " + err.Error())
+		log.Ctx(e.Context()).Error().Str("op", "kafka.Send").Str("name", s.Name()).Str("tid", s.Tenant().ToString()).Str("app.id", s.Tenant().AppId).Str("partner.id", s.Tenant().OrgId).Msg("failed to send message: " + err.Error())
 		s.eventFailureCounter.Add(e.Context(), 1, s.getAttributes(e, s.config.DynamicMetricLabels)...)
 		s.logError()
 		e.Nack(err)
@@ -417,7 +417,7 @@ func (s *Sender) Send(e event.Event) {
 	s.logSuccess()
 	s.Lock()
 	s.count++
-	log.Ctx(e.Context()).Debug().Str("op", "kafka.Send").Str("name", s.Name()).Str("tid", s.Tenant().ToString()).Int("count", s.count).Msg("sent message on kafka topic")
+	log.Ctx(e.Context()).Debug().Str("op", "kafka.Send").Str("name", s.Name()).Str("tid", s.Tenant().ToString()).Str("app.id", s.Tenant().AppId).Str("partner.id", s.Tenant().OrgId).Int("count", s.count).Msg("sent message on kafka topic")
 	s.Unlock()
 	e.Ack()
 }
