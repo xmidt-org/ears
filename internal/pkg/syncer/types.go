@@ -47,6 +47,7 @@ type EarsMetric struct {
 	ErrorVelocity   int
 	FilterVelocity  int
 	LastEventTs     int64
+	Ts              int64
 }
 
 type (

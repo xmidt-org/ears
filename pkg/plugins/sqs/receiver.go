@@ -464,6 +464,7 @@ func (r *Receiver) getLocalMetric() *syncer.EarsMetric {
 		r.errorVelocityCounter,
 		0,
 		r.currentSec,
+		0,
 	}
 	return metrics
 }
