@@ -126,7 +126,6 @@ func NewReceiver(tid tenant.Id, plugin string, name string, config interface{}, 
 		currentSec:  time.Now().Unix(),
 		tableSyncer: tableSyncer,
 	}
-
 	// metric recorders
 	meter := global.Meter(rtsemconv.EARSMeterName)
 	commonLabels := []attribute.KeyValue{

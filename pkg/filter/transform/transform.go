@@ -19,8 +19,6 @@ import (
 	"fmt"
 	"github.com/xmidt-org/ears/internal/pkg/syncer"
 	"github.com/xmidt-org/ears/pkg/hasher"
-	"time"
-
 	//"github.com/mohae/deepcopy"
 	//"github.com/gohobby/deepcopy"
 	"github.com/boriwo/deepcopy"
@@ -46,50 +44,13 @@ func NewFilter(tid tenant.Id, plugin string, name string, config interface{}, se
 		return nil, err
 	}
 	f := &Filter{
-		config:      *cfg,
-		name:        name,
-		plugin:      plugin,
-		tid:         tid,
-		currentSec:  time.Now().Unix(),
-		tableSyncer: tableSyncer,
+		config: *cfg,
+		name:   name,
+		plugin: plugin,
+		tid:    tid,
 	}
+	f.MetricFilter = filter.NewMetricFilter(tableSyncer)
 	return f, nil
-}
-
-func (f *Filter) logSuccess() {
-	f.Lock()
-	f.successCounter++
-	if time.Now().Unix() != f.currentSec {
-		f.successVelocityCounter = f.currentSuccessVelocityCounter
-		f.currentSuccessVelocityCounter = 0
-		f.currentSec = time.Now().Unix()
-	}
-	f.currentSuccessVelocityCounter++
-	f.Unlock()
-}
-
-func (f *Filter) logError() {
-	f.Lock()
-	f.errorCounter++
-	if time.Now().Unix() != f.currentSec {
-		f.errorVelocityCounter = f.currentErrorVelocityCounter
-		f.currentErrorVelocityCounter = 0
-		f.currentSec = time.Now().Unix()
-	}
-	f.currentErrorVelocityCounter++
-	f.Unlock()
-}
-
-func (f *Filter) logFilter() {
-	f.Lock()
-	f.filterCounter++
-	if time.Now().Unix() != f.currentSec {
-		f.filterVelocityCounter = f.currentFilterVelocityCounter
-		f.currentFilterVelocityCounter = 0
-		f.currentSec = time.Now().Unix()
-	}
-	f.currentFilterVelocityCounter++
-	f.Unlock()
 }
 
 // Filter splits an event containing an array into multiple events
@@ -111,7 +72,7 @@ func (f *Filter) Filter(evt event.Event) []event.Event {
 				span.AddEvent(err.Error())
 			}
 			evt.Ack()
-			f.logError()
+			f.LogError()
 			return []event.Event{}
 		}
 		obj, _, _ := evt.GetPathValue(f.config.FromPath)
@@ -130,7 +91,7 @@ func (f *Filter) Filter(evt event.Event) []event.Event {
 					span.AddEvent(err.Error())
 				}
 				evt.Ack()
-				f.logError()
+				f.LogError()
 				return []event.Event{}
 			}
 			thisTransform := deepcopy.DeepCopy(f.config.Transformation)
@@ -146,14 +107,14 @@ func (f *Filter) Filter(evt event.Event) []event.Event {
 					span.AddEvent(err.Error())
 				}
 				evt.Ack()
-				f.logError()
+				f.LogError()
 				return []event.Event{}
 			}
 		}
 		events = append(events, evt)
 	}
 	log.Ctx(evt.Context()).Debug().Str("op", "filter").Str("filterType", "transform").Str("name", f.Name()).Int("eventCount", len(events)).Msg("transform")
-	f.logSuccess()
+	f.LogSuccess()
 	return events
 }
 
@@ -221,64 +182,6 @@ func (f *Filter) Plugin() string {
 
 func (f *Filter) Tenant() tenant.Id {
 	return f.tid
-}
-
-func (f *Filter) getLocalMetric() *syncer.EarsMetric {
-	f.Lock()
-	defer f.Unlock()
-	metrics := &syncer.EarsMetric{
-		f.successCounter,
-		f.errorCounter,
-		f.filterCounter,
-		f.successVelocityCounter,
-		f.errorVelocityCounter,
-		f.filterVelocityCounter,
-		f.currentSec,
-		0,
-	}
-	return metrics
-}
-
-func (f *Filter) EventSuccessCount() int {
-	hash := f.Hash()
-	f.tableSyncer.WriteMetrics(hash, f.getLocalMetric())
-	return f.tableSyncer.ReadMetrics(hash).SuccessCount
-}
-
-func (f *Filter) EventSuccessVelocity() int {
-	hash := f.Hash()
-	f.tableSyncer.WriteMetrics(hash, f.getLocalMetric())
-	return f.tableSyncer.ReadMetrics(hash).SuccessVelocity
-}
-
-func (f *Filter) EventFilterCount() int {
-	hash := f.Hash()
-	f.tableSyncer.WriteMetrics(hash, f.getLocalMetric())
-	return f.tableSyncer.ReadMetrics(hash).FilterCount
-}
-
-func (f *Filter) EventFilterVelocity() int {
-	hash := f.Hash()
-	f.tableSyncer.WriteMetrics(hash, f.getLocalMetric())
-	return f.tableSyncer.ReadMetrics(hash).FilterVelocity
-}
-
-func (f *Filter) EventErrorCount() int {
-	hash := f.Hash()
-	f.tableSyncer.WriteMetrics(hash, f.getLocalMetric())
-	return f.tableSyncer.ReadMetrics(hash).ErrorCount
-}
-
-func (f *Filter) EventErrorVelocity() int {
-	hash := f.Hash()
-	f.tableSyncer.WriteMetrics(hash, f.getLocalMetric())
-	return f.tableSyncer.ReadMetrics(hash).ErrorVelocity
-}
-
-func (f *Filter) EventTs() int64 {
-	hash := f.Hash()
-	f.tableSyncer.WriteMetrics(hash, f.getLocalMetric())
-	return f.tableSyncer.ReadMetrics(hash).LastEventTs
 }
 
 func (f *Filter) Hash() string {

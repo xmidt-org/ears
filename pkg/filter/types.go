@@ -22,6 +22,7 @@ import (
 	"github.com/xmidt-org/ears/pkg/secret"
 	"github.com/xmidt-org/ears/pkg/tenant"
 	"sync"
+	"time"
 
 	"github.com/xmidt-org/ears/pkg/event"
 )
@@ -87,4 +88,147 @@ type Chain struct {
 	sync.RWMutex
 
 	filterers []Filterer
+}
+
+type MetricFilter struct {
+	sync.Mutex
+	successCounter                int
+	errorCounter                  int
+	filterCounter                 int
+	successVelocityCounter        int
+	errorVelocityCounter          int
+	filterVelocityCounter         int
+	currentSuccessVelocityCounter int
+	currentErrorVelocityCounter   int
+	currentFilterVelocityCounter  int
+	currentSec                    int64
+	lastMetricWriteSec            int64
+	tableSyncer                   syncer.DeltaSyncer
+}
+
+func NewMetricFilter(tableSyncer syncer.DeltaSyncer) MetricFilter {
+	return MetricFilter{
+		currentSec:         time.Now().Unix(),
+		lastMetricWriteSec: time.Now().Unix(),
+		tableSyncer:        tableSyncer,
+	}
+}
+
+func (f *MetricFilter) LogSuccess() {
+	f.Lock()
+	f.successCounter++
+	if time.Now().Unix() != f.currentSec {
+		f.successVelocityCounter = f.currentSuccessVelocityCounter
+		f.currentSuccessVelocityCounter = 0
+		f.currentSec = time.Now().Unix()
+	}
+	f.currentSuccessVelocityCounter++
+	if time.Now().Unix()-f.lastMetricWriteSec > 60 {
+		hash := f.Hash()
+		f.lastMetricWriteSec = time.Now().Unix()
+		f.Unlock()
+		f.tableSyncer.WriteMetrics(hash, f.getLocalMetric())
+	} else {
+		f.Unlock()
+	}
+}
+
+func (f *MetricFilter) LogError() {
+	f.Lock()
+	f.errorCounter++
+	if time.Now().Unix() != f.currentSec {
+		f.errorVelocityCounter = f.currentErrorVelocityCounter
+		f.currentErrorVelocityCounter = 0
+		f.currentSec = time.Now().Unix()
+	}
+	f.currentErrorVelocityCounter++
+	if time.Now().Unix()-f.lastMetricWriteSec > 60 {
+		hash := f.Hash()
+		f.lastMetricWriteSec = time.Now().Unix()
+		f.Unlock()
+		f.tableSyncer.WriteMetrics(hash, f.getLocalMetric())
+	} else {
+		f.Unlock()
+	}
+}
+
+func (f *MetricFilter) LogFilter() {
+	f.Lock()
+	f.filterCounter++
+	if time.Now().Unix() != f.currentSec {
+		f.filterVelocityCounter = f.currentFilterVelocityCounter
+		f.currentFilterVelocityCounter = 0
+		f.currentSec = time.Now().Unix()
+	}
+	f.currentFilterVelocityCounter++
+	if time.Now().Unix()-f.lastMetricWriteSec > 60 {
+		hash := f.Hash()
+		f.lastMetricWriteSec = time.Now().Unix()
+		f.Unlock()
+		f.tableSyncer.WriteMetrics(hash, f.getLocalMetric())
+	} else {
+		f.Unlock()
+	}
+}
+
+func (f *MetricFilter) Hash() string {
+	return ""
+}
+
+func (f *MetricFilter) getLocalMetric() *syncer.EarsMetric {
+	f.Lock()
+	defer f.Unlock()
+	metrics := &syncer.EarsMetric{
+		f.successCounter,
+		f.errorCounter,
+		f.filterCounter,
+		f.successVelocityCounter,
+		f.errorVelocityCounter,
+		f.filterVelocityCounter,
+		f.currentSec,
+		0,
+	}
+	return metrics
+}
+
+func (f *MetricFilter) EventSuccessCount() int {
+	hash := f.Hash()
+	f.tableSyncer.WriteMetrics(hash, f.getLocalMetric())
+	return f.tableSyncer.ReadMetrics(hash).SuccessCount
+}
+
+func (f *MetricFilter) EventSuccessVelocity() int {
+	hash := f.Hash()
+	f.tableSyncer.WriteMetrics(hash, f.getLocalMetric())
+	return f.tableSyncer.ReadMetrics(hash).SuccessVelocity
+}
+
+func (f *MetricFilter) EventFilterCount() int {
+	hash := f.Hash()
+	f.tableSyncer.WriteMetrics(hash, f.getLocalMetric())
+	return f.tableSyncer.ReadMetrics(hash).FilterCount
+}
+
+func (f *MetricFilter) EventFilterVelocity() int {
+	hash := f.Hash()
+	f.tableSyncer.WriteMetrics(hash, f.getLocalMetric())
+	return f.tableSyncer.ReadMetrics(hash).FilterVelocity
+}
+
+func (f *MetricFilter) EventErrorCount() int {
+	hash := f.Hash()
+	f.tableSyncer.WriteMetrics(hash, f.getLocalMetric())
+	return f.tableSyncer.ReadMetrics(hash).ErrorCount
+}
+
+func (f *MetricFilter) EventErrorVelocity() int {
+	hash := f.Hash()
+	f.tableSyncer.WriteMetrics(hash, f.getLocalMetric())
+	return f.tableSyncer.ReadMetrics(hash).ErrorVelocity
+}
+
+func (f *MetricFilter) EventTs() int64 {
+	hash := f.Hash()
+	f.tableSyncer.WriteMetrics(hash, f.getLocalMetric())
+	return f.tableSyncer.ReadMetrics(hash).LastEventTs
 }

@@ -15,9 +15,8 @@
 package js
 
 import (
-	"github.com/xmidt-org/ears/internal/pkg/syncer"
+	"github.com/xmidt-org/ears/pkg/filter"
 	"github.com/xmidt-org/ears/pkg/tenant"
-	"sync"
 )
 
 // Config can be passed into NewFilter() in order to configure
@@ -29,20 +28,9 @@ type Config struct {
 var DefaultConfig = Config{Source: ""}
 
 type Filter struct {
-	sync.Mutex
-	config                        Config
-	name                          string
-	plugin                        string
-	tid                           tenant.Id
-	successCounter                int
-	errorCounter                  int
-	filterCounter                 int
-	successVelocityCounter        int
-	errorVelocityCounter          int
-	filterVelocityCounter         int
-	currentSuccessVelocityCounter int
-	currentErrorVelocityCounter   int
-	currentFilterVelocityCounter  int
-	currentSec                    int64
-	tableSyncer                   syncer.DeltaSyncer
+	config Config
+	name   string
+	plugin string
+	tid    tenant.Id
+	filter.MetricFilter
 }
