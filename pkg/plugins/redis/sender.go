@@ -60,14 +60,13 @@ func NewSender(tid tenant.Id, plugin string, name string, config interface{}, se
 		return nil, err
 	}
 	s := &Sender{
-		name:        name,
-		plugin:      plugin,
-		tid:         tid,
-		config:      cfg,
-		logger:      event.GetEventLogger(),
-		currentSec:  time.Now().Unix(),
-		tableSyncer: tableSyncer,
+		name:   name,
+		plugin: plugin,
+		tid:    tid,
+		config: cfg,
+		logger: event.GetEventLogger(),
 	}
+	s.MetricPlugin = pkgplugin.NewMetricPlugin(tableSyncer)
 	s.initPlugin()
 	hostname, _ := os.Hostname()
 	// metric recorders
@@ -111,30 +110,6 @@ func NewSender(tid tenant.Id, plugin string, name string, config interface{}, se
 	return s, nil
 }
 
-func (s *Sender) logSuccess() {
-	s.Lock()
-	s.successCounter++
-	if time.Now().Unix() != s.currentSec {
-		s.successVelocityCounter = s.currentSuccessVelocityCounter
-		s.currentSuccessVelocityCounter = 0
-		s.currentSec = time.Now().Unix()
-	}
-	s.currentSuccessVelocityCounter++
-	s.Unlock()
-}
-
-func (s *Sender) logError() {
-	s.Lock()
-	s.errorCounter++
-	if time.Now().Unix() != s.currentSec {
-		s.errorVelocityCounter = s.currentErrorVelocityCounter
-		s.currentErrorVelocityCounter = 0
-		s.currentSec = time.Now().Unix()
-	}
-	s.currentErrorVelocityCounter++
-	s.Unlock()
-}
-
 func (s *Sender) initPlugin() error {
 	s.Lock()
 	s.client = redis.NewClient(&redis.Options{
@@ -162,7 +137,7 @@ func (s *Sender) Send(e event.Event) {
 	if err != nil {
 		log.Ctx(e.Context()).Error().Str("op", "redis.Send").Msg("failed to marshal message: " + err.Error())
 		s.eventFailureCounter.Add(e.Context(), 1)
-		s.logError()
+		s.LogError()
 		e.Nack(err)
 		return
 	}
@@ -174,13 +149,13 @@ func (s *Sender) Send(e event.Event) {
 	if err != nil {
 		log.Ctx(e.Context()).Error().Str("op", "redis.Send").Msg("failed to send message on redis channel: " + err.Error())
 		s.eventFailureCounter.Add(e.Context(), 1)
-		s.logError()
+		s.LogError()
 		e.Nack(err)
 		return
 	}
 	log.Ctx(e.Context()).Debug().Str("op", "redis.Send").Str("name", s.Name()).Str("tid", s.Tenant().ToString()).Str("app.id", s.Tenant().AppId).Str("partner.id", s.Tenant().OrgId).Msg("sent message on redis channel")
 	s.eventSuccessCounter.Add(e.Context(), 1)
-	s.logSuccess()
+	s.LogSuccess()
 	e.Ack()
 }
 
@@ -202,52 +177,6 @@ func (s *Sender) Plugin() string {
 
 func (s *Sender) Tenant() tenant.Id {
 	return s.tid
-}
-
-func (s *Sender) getLocalMetric() *syncer.EarsMetric {
-	s.Lock()
-	defer s.Unlock()
-	metrics := &syncer.EarsMetric{
-		s.successCounter,
-		s.errorCounter,
-		0,
-		s.successVelocityCounter,
-		s.errorVelocityCounter,
-		0,
-		s.currentSec,
-		0,
-	}
-	return metrics
-}
-
-func (s *Sender) EventSuccessCount() int {
-	hash := s.Hash()
-	s.tableSyncer.WriteMetrics(hash, s.getLocalMetric())
-	return s.tableSyncer.ReadMetrics(hash).SuccessCount
-}
-
-func (s *Sender) EventSuccessVelocity() int {
-	hash := s.Hash()
-	s.tableSyncer.WriteMetrics(hash, s.getLocalMetric())
-	return s.tableSyncer.ReadMetrics(hash).SuccessVelocity
-}
-
-func (s *Sender) EventErrorCount() int {
-	hash := s.Hash()
-	s.tableSyncer.WriteMetrics(hash, s.getLocalMetric())
-	return s.tableSyncer.ReadMetrics(hash).ErrorCount
-}
-
-func (s *Sender) EventErrorVelocity() int {
-	hash := s.Hash()
-	s.tableSyncer.WriteMetrics(hash, s.getLocalMetric())
-	return s.tableSyncer.ReadMetrics(hash).ErrorVelocity
-}
-
-func (s *Sender) EventTs() int64 {
-	hash := s.Hash()
-	s.tableSyncer.WriteMetrics(hash, s.getLocalMetric())
-	return s.tableSyncer.ReadMetrics(hash).LastEventTs
 }
 
 func (s *Sender) Hash() string {

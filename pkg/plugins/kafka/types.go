@@ -18,7 +18,6 @@ import (
 	"context"
 	"github.com/Shopify/sarama"
 	"github.com/rs/zerolog"
-	"github.com/xmidt-org/ears/internal/pkg/syncer"
 	pkgplugin "github.com/xmidt-org/ears/pkg/plugin"
 	"github.com/xmidt-org/ears/pkg/secret"
 	"github.com/xmidt-org/ears/pkg/tenant"
@@ -87,7 +86,7 @@ type ReceiverConfig struct {
 }
 
 type Receiver struct {
-	sync.Mutex
+	pkgplugin.MetricPlugin
 	done    chan struct{}
 	stopped bool
 	config  ReceiverConfig
@@ -97,25 +96,17 @@ type Receiver struct {
 	next    receiver.NextFn
 	logger  *zerolog.Logger
 	sarama.ConsumerGroupSession
-	wg                            sync.WaitGroup
-	ready                         chan bool
-	cancel                        context.CancelFunc
-	ctx                           context.Context
-	client                        sarama.ConsumerGroup
-	topics                        []string
-	handler                       func(message *sarama.ConsumerMessage) bool
-	eventSuccessCounter           metric.BoundInt64Counter
-	eventFailureCounter           metric.BoundInt64Counter
-	eventBytesCounter             metric.BoundInt64Counter
-	successCounter                int
-	errorCounter                  int
-	successVelocityCounter        int
-	errorVelocityCounter          int
-	currentSuccessVelocityCounter int
-	currentErrorVelocityCounter   int
-	currentSec                    int64
-	secrets                       secret.Vault
-	tableSyncer                   syncer.DeltaSyncer
+	wg                  sync.WaitGroup
+	ready               chan bool
+	cancel              context.CancelFunc
+	ctx                 context.Context
+	client              sarama.ConsumerGroup
+	topics              []string
+	handler             func(message *sarama.ConsumerMessage) bool
+	eventSuccessCounter metric.BoundInt64Counter
+	eventFailureCounter metric.BoundInt64Counter
+	eventBytesCounter   metric.BoundInt64Counter
+	secrets             secret.Vault
 }
 
 var DefaultSenderConfig = SenderConfig{
@@ -174,7 +165,7 @@ type SenderMetrics struct {
 }
 
 type Sender struct {
-	sync.Mutex
+	pkgplugin.MetricPlugin
 	name     string
 	plugin   string
 	tid      tenant.Id
@@ -185,20 +176,12 @@ type Sender struct {
 	stopped  bool
 	secrets  secret.Vault
 	//metrics  map[string]*SenderMetrics
-	commonLabels                  []attribute.KeyValue
-	eventSuccessCounter           metric.Int64Counter
-	eventFailureCounter           metric.Int64Counter
-	eventBytesCounter             metric.Int64Counter
-	eventProcessingTime           metric.Int64Histogram
-	eventSendOutTime              metric.Int64Histogram
-	successCounter                int
-	errorCounter                  int
-	successVelocityCounter        int
-	errorVelocityCounter          int
-	currentSuccessVelocityCounter int
-	currentErrorVelocityCounter   int
-	currentSec                    int64
-	tableSyncer                   syncer.DeltaSyncer
+	commonLabels        []attribute.KeyValue
+	eventSuccessCounter metric.Int64Counter
+	eventFailureCounter metric.Int64Counter
+	eventBytesCounter   metric.Int64Counter
+	eventProcessingTime metric.Int64Histogram
+	eventSendOutTime    metric.Int64Histogram
 }
 
 type ManualHashPartitioner struct {

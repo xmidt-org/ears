@@ -19,13 +19,11 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/rs/zerolog"
-	"github.com/xmidt-org/ears/internal/pkg/syncer"
 	"github.com/xmidt-org/ears/pkg/errs"
 	"github.com/xmidt-org/ears/pkg/secret"
 	"github.com/xmidt-org/ears/pkg/tenant"
 	"github.com/xorcare/pointer"
 	"go.opentelemetry.io/otel/metric"
-	"sync"
 	"time"
 
 	pkgplugin "github.com/xmidt-org/ears/pkg/plugin"
@@ -78,35 +76,27 @@ type ReceiverConfig struct {
 }
 
 type Receiver struct {
-	sync.Mutex
-	s3Service                     *s3.S3
-	session                       *session.Session
-	done                          chan struct{}
-	stopped                       bool
-	config                        ReceiverConfig
-	name                          string
-	plugin                        string
-	tid                           tenant.Id
-	next                          receiver.NextFn
-	logger                        *zerolog.Logger
-	secrets                       secret.Vault
-	startTime                     time.Time
-	eventSuccessCounter           metric.BoundInt64Counter
-	eventFailureCounter           metric.BoundInt64Counter
-	eventBytesCounter             metric.BoundInt64Counter
-	awsRoleArn                    string
-	awsAccessKey                  string
-	awsAccessSecret               string
-	awsRegion                     string
-	bucket                        string
-	successCounter                int
-	errorCounter                  int
-	successVelocityCounter        int
-	errorVelocityCounter          int
-	currentSuccessVelocityCounter int
-	currentErrorVelocityCounter   int
-	currentSec                    int64
-	tableSyncer                   syncer.DeltaSyncer
+	pkgplugin.MetricPlugin
+	s3Service           *s3.S3
+	session             *session.Session
+	done                chan struct{}
+	stopped             bool
+	config              ReceiverConfig
+	name                string
+	plugin              string
+	tid                 tenant.Id
+	next                receiver.NextFn
+	logger              *zerolog.Logger
+	secrets             secret.Vault
+	startTime           time.Time
+	eventSuccessCounter metric.BoundInt64Counter
+	eventFailureCounter metric.BoundInt64Counter
+	eventBytesCounter   metric.BoundInt64Counter
+	awsRoleArn          string
+	awsAccessKey        string
+	awsAccessSecret     string
+	awsRegion           string
+	bucket              string
 }
 
 var DefaultSenderConfig = SenderConfig{
@@ -134,34 +124,26 @@ type SenderConfig struct {
 }
 
 type Sender struct {
-	sync.Mutex
-	s3Service                     *s3.S3
-	session                       *session.Session
-	name                          string
-	plugin                        string
-	tid                           tenant.Id
-	config                        SenderConfig
-	logger                        *zerolog.Logger
-	done                          chan struct{}
-	secrets                       secret.Vault
-	eventSuccessCounter           metric.BoundInt64Counter
-	eventFailureCounter           metric.BoundInt64Counter
-	eventBytesCounter             metric.BoundInt64Counter
-	eventProcessingTime           metric.BoundInt64Histogram
-	eventSendOutTime              metric.BoundInt64Histogram
-	awsRoleArn                    string
-	awsAccessKey                  string
-	awsAccessSecret               string
-	awsRegion                     string
-	bucket                        string
-	successCounter                int
-	errorCounter                  int
-	successVelocityCounter        int
-	errorVelocityCounter          int
-	currentSuccessVelocityCounter int
-	currentErrorVelocityCounter   int
-	currentSec                    int64
-	tableSyncer                   syncer.DeltaSyncer
+	pkgplugin.MetricPlugin
+	s3Service           *s3.S3
+	session             *session.Session
+	name                string
+	plugin              string
+	tid                 tenant.Id
+	config              SenderConfig
+	logger              *zerolog.Logger
+	done                chan struct{}
+	secrets             secret.Vault
+	eventSuccessCounter metric.BoundInt64Counter
+	eventFailureCounter metric.BoundInt64Counter
+	eventBytesCounter   metric.BoundInt64Counter
+	eventProcessingTime metric.BoundInt64Histogram
+	eventSendOutTime    metric.BoundInt64Histogram
+	awsRoleArn          string
+	awsAccessKey        string
+	awsAccessSecret     string
+	awsRegion           string
+	bucket              string
 }
 
 type S3Error struct {

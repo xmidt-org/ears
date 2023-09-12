@@ -17,14 +17,12 @@ package gears
 import (
 	"github.com/Shopify/sarama"
 	"github.com/rs/zerolog"
-	"github.com/xmidt-org/ears/internal/pkg/syncer"
 	pkgplugin "github.com/xmidt-org/ears/pkg/plugin"
 	"github.com/xmidt-org/ears/pkg/secret"
 	"github.com/xmidt-org/ears/pkg/sender"
 	"github.com/xmidt-org/ears/pkg/tenant"
 	"github.com/xorcare/pointer"
 	"go.opentelemetry.io/otel/metric"
-	"sync"
 )
 
 var _ sender.Sender = (*Sender)(nil)
@@ -108,25 +106,17 @@ type SenderMetrics struct {
 }
 
 type Sender struct {
-	sync.Mutex
-	name                          string
-	plugin                        string
-	tid                           tenant.Id
-	config                        SenderConfig
-	count                         int
-	logger                        *zerolog.Logger
-	producer                      *Producer
-	stopped                       bool
-	secrets                       secret.Vault
-	metrics                       map[string]*SenderMetrics
-	successCounter                int
-	errorCounter                  int
-	successVelocityCounter        int
-	errorVelocityCounter          int
-	currentSuccessVelocityCounter int
-	currentErrorVelocityCounter   int
-	currentSec                    int64
-	tableSyncer                   syncer.DeltaSyncer
+	pkgplugin.MetricPlugin
+	name     string
+	plugin   string
+	tid      tenant.Id
+	config   SenderConfig
+	count    int
+	logger   *zerolog.Logger
+	producer *Producer
+	stopped  bool
+	secrets  secret.Vault
+	metrics  map[string]*SenderMetrics
 }
 
 type ManualHashPartitioner struct {

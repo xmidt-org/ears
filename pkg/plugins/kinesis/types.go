@@ -18,19 +18,16 @@ import (
 	"github.com/aws/aws-sdk-go/aws/endpoints"
 	"github.com/aws/aws-sdk-go/service/kinesis"
 	"github.com/rs/zerolog"
-	"github.com/xmidt-org/ears/internal/pkg/syncer"
 	"github.com/xmidt-org/ears/pkg/errs"
 	"github.com/xmidt-org/ears/pkg/event"
 	pkgplugin "github.com/xmidt-org/ears/pkg/plugin"
+	"github.com/xmidt-org/ears/pkg/receiver"
 	"github.com/xmidt-org/ears/pkg/secret"
+	"github.com/xmidt-org/ears/pkg/sender"
 	"github.com/xmidt-org/ears/pkg/sharder"
 	"github.com/xmidt-org/ears/pkg/tenant"
 	"github.com/xorcare/pointer"
 	"go.opentelemetry.io/otel/metric"
-	"sync"
-
-	"github.com/xmidt-org/ears/pkg/receiver"
-	"github.com/xmidt-org/ears/pkg/sender"
 )
 
 var _ sender.Sender = (*Sender)(nil)
@@ -95,7 +92,7 @@ type ReceiverConfig struct {
 }
 
 type Receiver struct {
-	sync.Mutex
+	pkgplugin.MetricPlugin
 	done                           chan struct{}
 	stopped                        bool
 	stopChannelMap                 map[int]chan bool
@@ -124,14 +121,6 @@ type Receiver struct {
 	awsRegion                      string
 	streamName                     string
 	consumerName                   string
-	successCounter                 int
-	errorCounter                   int
-	successVelocityCounter         int
-	errorVelocityCounter           int
-	currentSuccessVelocityCounter  int
-	currentErrorVelocityCounter    int
-	currentSec                     int64
-	tableSyncer                    syncer.DeltaSyncer
 }
 
 var DefaultSenderConfig = SenderConfig{
@@ -159,34 +148,26 @@ type SenderConfig struct {
 }
 
 type Sender struct {
-	sync.Mutex
-	kinesisService                *kinesis.Kinesis
-	name                          string
-	plugin                        string
-	tid                           tenant.Id
-	config                        SenderConfig
-	logger                        *zerolog.Logger
-	eventBatch                    []event.Event
-	done                          chan struct{}
-	secrets                       secret.Vault
-	eventSuccessCounter           metric.BoundInt64Counter
-	eventFailureCounter           metric.BoundInt64Counter
-	eventBytesCounter             metric.BoundInt64Counter
-	eventProcessingTime           metric.BoundInt64Histogram
-	eventSendOutTime              metric.BoundInt64Histogram
-	awsRoleArn                    string
-	awsAccessKey                  string
-	awsAccessSecret               string
-	awsRegion                     string
-	streamName                    string
-	successCounter                int
-	errorCounter                  int
-	successVelocityCounter        int
-	errorVelocityCounter          int
-	currentSuccessVelocityCounter int
-	currentErrorVelocityCounter   int
-	currentSec                    int64
-	tableSyncer                   syncer.DeltaSyncer
+	pkgplugin.MetricPlugin
+	kinesisService      *kinesis.Kinesis
+	name                string
+	plugin              string
+	tid                 tenant.Id
+	config              SenderConfig
+	logger              *zerolog.Logger
+	eventBatch          []event.Event
+	done                chan struct{}
+	secrets             secret.Vault
+	eventSuccessCounter metric.BoundInt64Counter
+	eventFailureCounter metric.BoundInt64Counter
+	eventBytesCounter   metric.BoundInt64Counter
+	eventProcessingTime metric.BoundInt64Histogram
+	eventSendOutTime    metric.BoundInt64Histogram
+	awsRoleArn          string
+	awsAccessKey        string
+	awsAccessSecret     string
+	awsRegion           string
+	streamName          string
 }
 
 type KinesisError struct {

@@ -78,10 +78,8 @@ func NewReceiver(tid tenant.Id, plugin string, name string, config interface{}, 
 		logger:                         event.GetEventLogger(),
 		shardMonitorStopChannel:        make(chan bool),
 		shardUpdateListenerStopChannel: make(chan bool),
-		currentSec:                     time.Now().Unix(),
-		tableSyncer:                    tableSyncer,
 	}
-
+	r.MetricPlugin = pkgplugin.NewMetricPlugin(tableSyncer)
 	// metric recorders
 	meter := global.Meter(rtsemconv.EARSMeterName)
 	commonLabels := []attribute.KeyValue{
@@ -108,30 +106,6 @@ func NewReceiver(tid tenant.Id, plugin string, name string, config interface{}, 
 			metric.WithUnit(unit.Bytes),
 		).Bind(commonLabels...)
 	return r, nil
-}
-
-func (r *Receiver) LogSuccess() {
-	r.Lock()
-	r.successCounter++
-	if time.Now().Unix() != r.currentSec {
-		r.successVelocityCounter = r.currentSuccessVelocityCounter
-		r.currentSuccessVelocityCounter = 0
-		r.currentSec = time.Now().Unix()
-	}
-	r.currentSuccessVelocityCounter++
-	r.Unlock()
-}
-
-func (r *Receiver) logError() {
-	r.Lock()
-	r.errorCounter++
-	if time.Now().Unix() != r.currentSec {
-		r.errorVelocityCounter = r.currentErrorVelocityCounter
-		r.currentErrorVelocityCounter = 0
-		r.currentSec = time.Now().Unix()
-	}
-	r.currentErrorVelocityCounter++
-	r.Unlock()
 }
 
 func (r *Receiver) getStopChannel(shardIdx int) chan bool {
@@ -184,7 +158,7 @@ func (r *Receiver) shardMonitor(distributor sharder.ShardDistributor) {
 			sess, _ := discordgo.New("Bot " + r.config.BotToken)
 			gatewayResp, err := sess.GatewayBot()
 			if err != nil {
-				r.logError()
+				r.LogError()
 				r.logger.Error().Str("op", "Discord.shardMonitor").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Str("app.id", r.Tenant().AppId).Str("partner.id", r.Tenant().OrgId).Msg("cannot get number of shards: " + err.Error())
 				continue
 			}
@@ -284,13 +258,13 @@ func (r *Receiver) Receive(next receiver.NextFn) error {
 	var err error
 	r.shardDistributor, err = sharder.GetDefaultHashDistributor(sharderConfig.NodeName, 1, sharderConfig.StorageConfig)
 	if err != nil {
-		r.logError()
+		r.LogError()
 		return err
 	}
 	r.sess, _ = discordgo.New("Bot " + r.config.BotToken)
 	gatewayResp, err := r.sess.GatewayBot()
 	if err != nil {
-		r.logError()
+		r.LogError()
 		return err
 	}
 	r.shardsCount = &gatewayResp.Shards
@@ -356,7 +330,7 @@ func (r *Receiver) messageCreate(s *discordgo.Session, m *discordgo.MessageCreat
 		var payload interface{}
 		err := json.Unmarshal(msg, &payload)
 		if err != nil {
-			r.logError()
+			r.LogError()
 			r.logger.Error().Str("op", "Discord.startReceiver").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Str("app.id", r.Tenant().AppId).Str("partner.id", r.Tenant().OrgId).Msg("cannot parse message: " + err.Error())
 			return
 		}
@@ -369,7 +343,7 @@ func (r *Receiver) messageCreate(s *discordgo.Session, m *discordgo.MessageCreat
 			},
 			func(e event.Event, err error) {
 				r.eventFailureCounter.Add(ctx, 1)
-				r.logError()
+				r.LogError()
 				cancel()
 			}),
 			event.WithTenant(r.Tenant()),
@@ -404,52 +378,6 @@ func (r *Receiver) Plugin() string {
 
 func (r *Receiver) Tenant() tenant.Id {
 	return r.tid
-}
-
-func (r *Receiver) getLocalMetric() *syncer.EarsMetric {
-	r.Lock()
-	defer r.Unlock()
-	metrics := &syncer.EarsMetric{
-		r.successCounter,
-		r.errorCounter,
-		0,
-		r.successVelocityCounter,
-		r.errorVelocityCounter,
-		0,
-		r.currentSec,
-		0,
-	}
-	return metrics
-}
-
-func (r *Receiver) EventSuccessCount() int {
-	hash := r.Hash()
-	r.tableSyncer.WriteMetrics(hash, r.getLocalMetric())
-	return r.tableSyncer.ReadMetrics(hash).SuccessCount
-}
-
-func (r *Receiver) EventSuccessVelocity() int {
-	hash := r.Hash()
-	r.tableSyncer.WriteMetrics(hash, r.getLocalMetric())
-	return r.tableSyncer.ReadMetrics(hash).SuccessVelocity
-}
-
-func (r *Receiver) EventErrorCount() int {
-	hash := r.Hash()
-	r.tableSyncer.WriteMetrics(hash, r.getLocalMetric())
-	return r.tableSyncer.ReadMetrics(hash).ErrorCount
-}
-
-func (r *Receiver) EventErrorVelocity() int {
-	hash := r.Hash()
-	r.tableSyncer.WriteMetrics(hash, r.getLocalMetric())
-	return r.tableSyncer.ReadMetrics(hash).ErrorVelocity
-}
-
-func (r *Receiver) EventTs() int64 {
-	hash := r.Hash()
-	r.tableSyncer.WriteMetrics(hash, r.getLocalMetric())
-	return r.tableSyncer.ReadMetrics(hash).LastEventTs
 }
 
 func (r *Receiver) Hash() string {
