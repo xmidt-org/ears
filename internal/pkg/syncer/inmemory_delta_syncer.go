@@ -28,7 +28,6 @@ var (
 	syncerGroup = DeltaSyncerGroup{
 		syncers: make(map[string]*InmemoryDeltaSyncer),
 	}
-	earsMetrics = make(map[string]*EarsMetric, 0)
 )
 
 type (
@@ -43,6 +42,7 @@ type (
 		instanceId   string
 		localSyncers map[string][]LocalSyncer
 		logger       *zerolog.Logger
+		earsMetrics  map[string]*EarsMetric
 	}
 )
 
@@ -58,25 +58,26 @@ func NewInMemoryDeltaSyncer(logger *zerolog.Logger, config config.Config) DeltaS
 	if !s.active {
 		logger.Info().Msg("InMemory Delta Syncer Not Activated")
 	}
+	s.earsMetrics = make(map[string]*EarsMetric, 0)
 	return s
 }
 
 func (s *InmemoryDeltaSyncer) DeleteMetrics(id string) {
 	s.Lock()
 	defer s.Unlock()
-	delete(earsMetrics, id)
+	delete(s.earsMetrics, id)
 }
 
 func (s *InmemoryDeltaSyncer) WriteMetrics(id string, metric *EarsMetric) {
 	s.Lock()
 	defer s.Unlock()
-	earsMetrics[id] = metric
+	s.earsMetrics[id] = metric
 }
 
 func (s *InmemoryDeltaSyncer) ReadMetrics(id string) *EarsMetric {
 	s.Lock()
 	defer s.Unlock()
-	return earsMetrics[id]
+	return s.earsMetrics[id]
 }
 
 func (s *InmemoryDeltaSyncer) RegisterLocalSyncer(itemType string, localSyncer LocalSyncer) {
