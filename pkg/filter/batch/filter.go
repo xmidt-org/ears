@@ -47,7 +47,7 @@ func NewFilter(tid tenant.Id, plugin string, name string, config interface{}, se
 		plugin: plugin,
 		tid:    tid,
 	}
-	f.MetricFilter = filter.NewMetricFilter(tableSyncer)
+	f.MetricFilter = filter.NewMetricFilter(tableSyncer, f.Hash)
 	f.batch = make([]event.Event, 0)
 	return f, nil
 }

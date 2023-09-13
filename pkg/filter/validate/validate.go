@@ -49,7 +49,7 @@ func NewFilter(tid tenant.Id, plugin string, name string, config interface{}, se
 		tid:    tid,
 		schema: gojsonschema.NewGoLoader(cfg.Schema),
 	}
-	f.MetricFilter = filter.NewMetricFilter(tableSyncer)
+	f.MetricFilter = filter.NewMetricFilter(tableSyncer, f.Hash)
 	return f, nil
 }
 

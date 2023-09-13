@@ -46,7 +46,7 @@ func NewFilter(tid tenant.Id, plugin string, name string, config interface{}, se
 		plugin: plugin,
 		tid:    tid,
 	}
-	f.MetricFilter = filter.NewMetricFilter(tableSyncer)
+	f.MetricFilter = filter.NewMetricFilter(tableSyncer, f.Hash)
 	return f, nil
 }
 

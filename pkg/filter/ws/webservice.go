@@ -77,7 +77,7 @@ func NewFilter(tid tenant.Id, plugin string, name string, config interface{}, se
 		clients:   make(map[string]*http.Client),
 		satTokens: make(map[string]*SatToken),
 	}
-	f.MetricFilter = filter.NewMetricFilter(tableSyncer)
+	f.MetricFilter = filter.NewMetricFilter(tableSyncer, f.Hash)
 	return f, nil
 }
 

@@ -37,13 +37,17 @@ type MetricFilter struct {
 	currentSec                    int64
 	lastMetricWriteSec            int64
 	tableSyncer                   syncer.DeltaSyncer
+	Hash                          HashFct
 }
 
-func NewMetricFilter(tableSyncer syncer.DeltaSyncer) MetricFilter {
+type HashFct func() string
+
+func NewMetricFilter(tableSyncer syncer.DeltaSyncer, hashFct HashFct) MetricFilter {
 	return MetricFilter{
 		currentSec:         time.Now().Unix(),
 		lastMetricWriteSec: time.Now().Unix(),
 		tableSyncer:        tableSyncer,
+		Hash:               hashFct,
 	}
 }
 
@@ -102,10 +106,6 @@ func (f *MetricFilter) LogFilter() {
 	} else {
 		f.Unlock()
 	}
-}
-
-func (f *MetricFilter) Hash() string {
-	return ""
 }
 
 func (f *MetricFilter) getLocalMetric() *syncer.EarsMetric {

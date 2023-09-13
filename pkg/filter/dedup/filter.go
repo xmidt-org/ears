@@ -47,7 +47,7 @@ func NewFilter(tid tenant.Id, plugin string, name string, config interface{}, se
 		plugin: plugin,
 		tid:    tid,
 	}
-	f.MetricFilter = filter.NewMetricFilter(tableSyncer)
+	f.MetricFilter = filter.NewMetricFilter(tableSyncer, f.Hash)
 	f.lruCache, err = lru.New(*cfg.CacheSize)
 	if err != nil {
 		return nil, err
