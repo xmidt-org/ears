@@ -17,6 +17,9 @@ package debug_test
 import (
 	"context"
 	. "github.com/onsi/gomega"
+	"github.com/rs/zerolog"
+	"github.com/spf13/viper"
+	"github.com/xmidt-org/ears/internal/pkg/syncer"
 	"github.com/xmidt-org/ears/pkg/plugins/debug"
 	"testing"
 )
@@ -26,7 +29,8 @@ func TestSendReceive(t *testing.T) {
 	p, err := debug.NewPlugin()
 	a.Expect(err).To(BeNil())
 
-	r, err := p.NewReceiver(tid, "debug", "mydebug", "", nil, nil)
+	logger := zerolog.Nop()
+	r, err := p.NewReceiver(tid, "debug", "mydebug", "", nil, syncer.NewInMemoryDeltaSyncer(&logger, viper.New()))
 
 	a.Expect(err).To(BeNil())
 

@@ -79,9 +79,8 @@ func NewSender(tid tenant.Id, plugin string, name string, config interface{}, se
 		awsAccessSecret: secrets.Secret(ctx, cfg.AWSSecretAccessKey),
 		awsRegion:       secrets.Secret(ctx, cfg.AWSRegion),
 		bucket:          secrets.Secret(ctx, cfg.Bucket),
-		currentSec:      time.Now().Unix(),
-		tableSyncer:     tableSyncer,
 	}
+	s.MetricPlugin = pkgplugin.NewMetricPlugin(tableSyncer, s.Hash)
 	s.initPlugin()
 	hostname, _ := os.Hostname()
 	// metric recorders
@@ -125,30 +124,6 @@ func NewSender(tid tenant.Id, plugin string, name string, config interface{}, se
 	return s, nil
 }
 
-func (s *Sender) logSuccess() {
-	s.Lock()
-	s.successCounter++
-	if time.Now().Unix() != s.currentSec {
-		s.successVelocityCounter = s.currentSuccessVelocityCounter
-		s.currentSuccessVelocityCounter = 0
-		s.currentSec = time.Now().Unix()
-	}
-	s.currentSuccessVelocityCounter++
-	s.Unlock()
-}
-
-func (s *Sender) logError() {
-	s.Lock()
-	s.errorCounter++
-	if time.Now().Unix() != s.currentSec {
-		s.errorVelocityCounter = s.currentErrorVelocityCounter
-		s.currentErrorVelocityCounter = 0
-		s.currentSec = time.Now().Unix()
-	}
-	s.currentErrorVelocityCounter++
-	s.Unlock()
-}
-
 func (s *Sender) initPlugin() error {
 	s.Lock()
 	defer s.Unlock()
@@ -167,12 +142,12 @@ func (s *Sender) initPlugin() error {
 	}
 	sess, err = session.NewSession(&aws.Config{Region: aws.String(s.awsRegion), Credentials: creds})
 	if nil != err {
-		s.logError()
+		s.LogError()
 		return &S3Error{op: "NewSession", err: err}
 	}
 	_, err = sess.Config.Credentials.Get()
 	if nil != err {
-		s.logError()
+		s.LogError()
 		return &S3Error{op: "GetCredentials", err: err}
 	}
 	s.s3Service = s3.New(sess)
@@ -189,6 +164,7 @@ func (s *Sender) StopSending(ctx context.Context) {
 		s.eventBytesCounter.Unbind()
 		s.eventProcessingTime.Unbind()
 		s.eventSendOutTime.Unbind()
+		s.DeleteMetrics()
 		s.done <- struct{}{}
 		s.done = nil
 	}
@@ -209,7 +185,7 @@ func (s *Sender) Send(evt event.Event) {
 	filePath, ok := fp.(string)
 	if !ok {
 		s.eventFailureCounter.Add(evt.Context(), 1)
-		s.logError()
+		s.LogError()
 		evt.Nack(errors.New("s3 file path not a string"))
 		return
 	}
@@ -217,7 +193,7 @@ func (s *Sender) Send(evt event.Event) {
 	fileName, ok := fn.(string)
 	if !ok {
 		s.eventFailureCounter.Add(evt.Context(), 1)
-		s.logError()
+		s.LogError()
 		evt.Nack(errors.New("s3 file name not a string"))
 		return
 	}
@@ -231,11 +207,11 @@ func (s *Sender) Send(evt event.Event) {
 	s.eventSendOutTime.Record(evt.Context(), time.Since(start).Milliseconds())
 	if err != nil {
 		s.eventFailureCounter.Add(evt.Context(), 1)
-		s.logError()
+		s.LogError()
 		evt.Nack(err)
 	} else {
 		s.eventSuccessCounter.Add(evt.Context(), 1)
-		s.logSuccess()
+		s.LogSuccess()
 		evt.Ack()
 	}
 }
@@ -258,51 +234,6 @@ func (s *Sender) Plugin() string {
 
 func (s *Sender) Tenant() tenant.Id {
 	return s.tid
-}
-
-func (s *Sender) getLocalMetric() *syncer.EarsMetric {
-	s.Lock()
-	defer s.Unlock()
-	metrics := &syncer.EarsMetric{
-		s.successCounter,
-		s.errorCounter,
-		0,
-		s.successVelocityCounter,
-		s.errorVelocityCounter,
-		0,
-		s.currentSec,
-	}
-	return metrics
-}
-
-func (s *Sender) EventSuccessCount() int {
-	hash := s.Hash()
-	s.tableSyncer.WriteMetrics(hash, s.getLocalMetric())
-	return s.tableSyncer.ReadMetrics(hash).SuccessCount
-}
-
-func (s *Sender) EventSuccessVelocity() int {
-	hash := s.Hash()
-	s.tableSyncer.WriteMetrics(hash, s.getLocalMetric())
-	return s.tableSyncer.ReadMetrics(hash).SuccessVelocity
-}
-
-func (s *Sender) EventErrorCount() int {
-	hash := s.Hash()
-	s.tableSyncer.WriteMetrics(hash, s.getLocalMetric())
-	return s.tableSyncer.ReadMetrics(hash).ErrorCount
-}
-
-func (s *Sender) EventErrorVelocity() int {
-	hash := s.Hash()
-	s.tableSyncer.WriteMetrics(hash, s.getLocalMetric())
-	return s.tableSyncer.ReadMetrics(hash).ErrorVelocity
-}
-
-func (s *Sender) EventTs() int64 {
-	hash := s.Hash()
-	s.tableSyncer.WriteMetrics(hash, s.getLocalMetric())
-	return s.tableSyncer.ReadMetrics(hash).LastEventTs
 }
 
 func (s *Sender) Hash() string {

@@ -65,23 +65,26 @@ func NewRedisDeltaSyncer(logger *zerolog.Logger, config config.Config) syncer.De
 	s.localSyncers = make(map[string][]syncer.LocalSyncer)
 	hostname, _ := os.Hostname()
 	s.instanceId = hostname + "_" + uuid.New().String()
-	s.active = config.GetBool("ears.synchronization.active")
-	if !s.active {
-		logger.Info().Msg("Redis Delta Syncer Not Activated")
-	} else {
-		s.client = redis.NewClient(&redis.Options{
-			Addr:     s.redisEndpoint,
-			Password: "",
-			DB:       0,
-		})
-		//logger.Info().Msg("Redis Syncer Started")
-	}
+	s.client = redis.NewClient(&redis.Options{
+		Addr:     s.redisEndpoint,
+		Password: "",
+		DB:       0,
+	})
+	//logger.Info().Msg("Redis Syncer Started")
 	return s
 }
 
-// id should be a unique plugin id
+func (s *RedisDeltaSyncer) DeleteMetrics(id string) {
+	redisMapName := EARS_METRICS + "_" + s.env + "_" + id
+	err := s.client.Del(redisMapName).Err()
+	if err != nil {
+		s.logger.Error().Str("op", "DeleteMetrics").Str("mapKey", s.instanceId).Str("mapName", redisMapName).Str("error", err.Error()).Msg("failed to delete metrics")
+	}
+}
+
 func (s *RedisDeltaSyncer) WriteMetrics(id string, metric *syncer.EarsMetric) {
 	redisMapName := EARS_METRICS + "_" + s.env + "_" + id
+	metric.Ts = time.Now().Unix()
 	buf, err := json.Marshal(metric)
 	if err != nil {
 		s.logger.Error().Str("op", "WriteMetrics").Str("error", err.Error()).Msg("failed to write metrics")
@@ -89,30 +92,45 @@ func (s *RedisDeltaSyncer) WriteMetrics(id string, metric *syncer.EarsMetric) {
 	}
 	err = s.client.HSet(redisMapName, s.instanceId, string(buf)).Err()
 	if err != nil {
-		s.logger.Error().Str("op", "WriteMetrics").Str("error", err.Error()).Msg("failed to write metrics")
+		s.logger.Error().Str("op", "WriteMetrics").Str("mapKey", s.instanceId).Str("mapName", redisMapName).Str("error", err.Error()).Msg("failed to write metrics")
 	}
 }
 
-// id should be a unique plugin id
 func (s *RedisDeltaSyncer) ReadMetrics(id string) *syncer.EarsMetric {
 	redisMapName := EARS_METRICS + "_" + s.env + "_" + id
 	result := s.client.HGetAll(redisMapName)
-	str, err := result.Result()
+	metricsMap, err := result.Result()
 	if err != nil {
-		s.logger.Error().Str("op", "ReadMetrics").Str("error", err.Error()).Msg("failed to read metrics")
+		s.logger.Error().Str("op", "ReadMetrics").Str("mapName", redisMapName).Str("error", err.Error()).Msg("failed to read metrics")
 	}
+	delKeys := make([]string, 0)
 	var aggMetric syncer.EarsMetric
-	for _, v := range str {
+	aggMetric.Ts = time.Now().Unix()
+	for id, v := range metricsMap {
 		var metric syncer.EarsMetric
 		err = json.Unmarshal([]byte(v), &metric)
-		aggMetric.SuccessCount += metric.SuccessCount
-		aggMetric.ErrorCount += metric.ErrorCount
-		aggMetric.FilterCount += metric.FilterCount
-		aggMetric.SuccessVelocity += metric.SuccessVelocity
-		aggMetric.ErrorVelocity += metric.ErrorVelocity
-		aggMetric.FilterVelocity += metric.FilterVelocity
-		if metric.LastEventTs > aggMetric.LastEventTs {
-			aggMetric.LastEventTs = metric.LastEventTs
+		if err != nil {
+			s.logger.Error().Str("op", "ReadMetrics").Str("mapName", redisMapName).Str("error", err.Error()).Msg("failed to parse metrics")
+			continue
+		}
+		if aggMetric.Ts-metric.Ts > 5*60 {
+			delKeys = append(delKeys, id)
+		} else {
+			aggMetric.SuccessCount += metric.SuccessCount
+			aggMetric.ErrorCount += metric.ErrorCount
+			aggMetric.FilterCount += metric.FilterCount
+			aggMetric.SuccessVelocity += metric.SuccessVelocity
+			aggMetric.ErrorVelocity += metric.ErrorVelocity
+			aggMetric.FilterVelocity += metric.FilterVelocity
+			if metric.LastEventTs > aggMetric.LastEventTs {
+				aggMetric.LastEventTs = metric.LastEventTs
+			}
+		}
+	}
+	for _, id := range delKeys {
+		err = s.client.HDel(redisMapName, id).Err()
+		if err != nil {
+			s.logger.Error().Str("op", "ReadMetrics").Str("mapKey", id).Str("mapName", redisMapName).Str("error", err.Error()).Msg("failed to delete old metric")
 		}
 	}
 	return &aggMetric

@@ -69,15 +69,14 @@ func NewSender(tid tenant.Id, plugin string, name string, config interface{}, se
 		return nil, err
 	}
 	s := &Sender{
-		name:        name,
-		plugin:      plugin,
-		tid:         tid,
-		config:      cfg,
-		logger:      event.GetEventLogger(),
-		secrets:     secrets,
-		currentSec:  time.Now().Unix(),
-		tableSyncer: tableSyncer,
+		name:    name,
+		plugin:  plugin,
+		tid:     tid,
+		config:  cfg,
+		logger:  event.GetEventLogger(),
+		secrets: secrets,
 	}
+	s.MetricPlugin = pkgplugin.NewMetricPlugin(tableSyncer, s.Hash)
 	err = s.initPlugin()
 	if err != nil {
 		return nil, err
@@ -140,30 +139,6 @@ func (s *Sender) getAttributes(e event.Event, labels []DynamicMetricLabel) []att
 	return attrs
 }
 
-func (s *Sender) logSuccess() {
-	s.Lock()
-	s.successCounter++
-	if time.Now().Unix() != s.currentSec {
-		s.successVelocityCounter = s.currentSuccessVelocityCounter
-		s.currentSuccessVelocityCounter = 0
-		s.currentSec = time.Now().Unix()
-	}
-	s.currentSuccessVelocityCounter++
-	s.Unlock()
-}
-
-func (s *Sender) logError() {
-	s.Lock()
-	s.errorCounter++
-	if time.Now().Unix() != s.currentSec {
-		s.errorVelocityCounter = s.currentErrorVelocityCounter
-		s.currentErrorVelocityCounter = 0
-		s.currentSec = time.Now().Unix()
-	}
-	s.currentErrorVelocityCounter++
-	s.Unlock()
-}
-
 func (s *Sender) initPlugin() error {
 	var err error
 	s.Lock()
@@ -186,6 +161,7 @@ func (s *Sender) StopSending(ctx context.Context) {
 	defer s.Unlock()
 	if !s.stopped {
 		s.stopped = true
+		s.DeleteMetrics()
 		s.producer.Close(ctx)
 	}
 }
@@ -288,12 +264,12 @@ func (s *Sender) NewSyncProducers(count int) ([]sarama.SyncProducer, sarama.Clie
 	for i := 0; i < count; i++ {
 		c, err := sarama.NewClient(brokers, config)
 		if err != nil {
-			s.logError()
+			s.LogError()
 			return nil, nil, err
 		}
 		p, err := sarama.NewSyncProducerFromClient(c)
 		if nil != err {
-			s.logError()
+			s.LogError()
 			c.Close()
 			return nil, nil, err
 		}
@@ -380,15 +356,15 @@ func (mp *ManualHashPartitioner) Partition(message *sarama.ProducerMessage, numP
 
 func (s *Sender) Send(e event.Event) {
 	if s.stopped {
-		log.Ctx(e.Context()).Error().Str("op", "kafka.Send").Str("name", s.Name()).Str("tid", s.Tenant().ToString()).Msg("drop message due to closed sender")
+		log.Ctx(e.Context()).Error().Str("op", "kafka.Send").Str("name", s.Name()).Str("tid", s.Tenant().ToString()).Str("app.id", s.Tenant().AppId).Str("partner.id", s.Tenant().OrgId).Msg("drop message due to closed sender")
 		s.eventFailureCounter.Add(e.Context(), 1.0, s.getAttributes(e, s.config.DynamicMetricLabels)...)
 		return
 	}
 	buf, err := json.Marshal(e.Payload())
 	if err != nil {
-		log.Ctx(e.Context()).Error().Str("op", "kafka.Send").Str("name", s.Name()).Str("tid", s.Tenant().ToString()).Msg("failed to marshal message: " + err.Error())
+		log.Ctx(e.Context()).Error().Str("op", "kafka.Send").Str("name", s.Name()).Str("tid", s.Tenant().ToString()).Str("app.id", s.Tenant().AppId).Str("partner.id", s.Tenant().OrgId).Msg("failed to marshal message: " + err.Error())
 		s.eventFailureCounter.Add(e.Context(), 1.0, s.getAttributes(e, s.config.DynamicMetricLabels)...)
-		s.logError()
+		s.LogError()
 		e.Nack(err)
 		return
 	}
@@ -407,17 +383,17 @@ func (s *Sender) Send(e event.Event) {
 	ctx := context.Background()
 	err = s.producer.SendMessage(e.Context(), s.secrets.Secret(ctx, s.config.Topic), partition, nil, buf, e)
 	if err != nil {
-		log.Ctx(e.Context()).Error().Str("op", "kafka.Send").Str("name", s.Name()).Str("tid", s.Tenant().ToString()).Msg("failed to send message: " + err.Error())
+		log.Ctx(e.Context()).Error().Str("op", "kafka.Send").Str("name", s.Name()).Str("tid", s.Tenant().ToString()).Str("app.id", s.Tenant().AppId).Str("partner.id", s.Tenant().OrgId).Msg("failed to send message: " + err.Error())
 		s.eventFailureCounter.Add(e.Context(), 1, s.getAttributes(e, s.config.DynamicMetricLabels)...)
-		s.logError()
+		s.LogError()
 		e.Nack(err)
 		return
 	}
 	s.eventSuccessCounter.Add(e.Context(), 1, s.getAttributes(e, s.config.DynamicMetricLabels)...)
-	s.logSuccess()
+	s.LogSuccess()
 	s.Lock()
 	s.count++
-	log.Ctx(e.Context()).Debug().Str("op", "kafka.Send").Str("name", s.Name()).Str("tid", s.Tenant().ToString()).Int("count", s.count).Msg("sent message on kafka topic")
+	log.Ctx(e.Context()).Debug().Str("op", "kafka.Send").Str("name", s.Name()).Str("tid", s.Tenant().ToString()).Str("app.id", s.Tenant().AppId).Str("partner.id", s.Tenant().OrgId).Int("count", s.count).Msg("sent message on kafka topic")
 	s.Unlock()
 	e.Ack()
 }
@@ -440,51 +416,6 @@ func (s *Sender) Plugin() string {
 
 func (s *Sender) Tenant() tenant.Id {
 	return s.tid
-}
-
-func (s *Sender) getLocalMetric() *syncer.EarsMetric {
-	s.Lock()
-	defer s.Unlock()
-	metrics := &syncer.EarsMetric{
-		s.successCounter,
-		s.errorCounter,
-		0,
-		s.successVelocityCounter,
-		s.errorVelocityCounter,
-		0,
-		s.currentSec,
-	}
-	return metrics
-}
-
-func (s *Sender) EventSuccessCount() int {
-	hash := s.Hash()
-	s.tableSyncer.WriteMetrics(hash, s.getLocalMetric())
-	return s.tableSyncer.ReadMetrics(hash).SuccessCount
-}
-
-func (s *Sender) EventSuccessVelocity() int {
-	hash := s.Hash()
-	s.tableSyncer.WriteMetrics(hash, s.getLocalMetric())
-	return s.tableSyncer.ReadMetrics(hash).SuccessVelocity
-}
-
-func (s *Sender) EventErrorCount() int {
-	hash := s.Hash()
-	s.tableSyncer.WriteMetrics(hash, s.getLocalMetric())
-	return s.tableSyncer.ReadMetrics(hash).ErrorCount
-}
-
-func (s *Sender) EventErrorVelocity() int {
-	hash := s.Hash()
-	s.tableSyncer.WriteMetrics(hash, s.getLocalMetric())
-	return s.tableSyncer.ReadMetrics(hash).ErrorVelocity
-}
-
-func (s *Sender) EventTs() int64 {
-	hash := s.Hash()
-	s.tableSyncer.WriteMetrics(hash, s.getLocalMetric())
-	return s.tableSyncer.ReadMetrics(hash).LastEventTs
 }
 
 func (s *Sender) Hash() string {

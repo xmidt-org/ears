@@ -462,6 +462,7 @@ func (a *APIManager) enableDisableRouteHandler(w http.ResponseWriter, r *http.Re
 	} else {
 		a.addRouteSuccessRecorder.Add(ctx, 1.0)
 	}
+	log.Ctx(ctx).Info().Str("op", "enableDisableRouteHandler").Str("routeId", route.Id).Str("tid", tid.ToString()).Str("app.id", tid.AppId).Str("partner.id", tid.OrgId).Msg("success")
 	resp := ItemResponse(route)
 	resp.Respond(ctx, w, doYaml(r))
 }
@@ -526,6 +527,7 @@ func (a *APIManager) addRouteHandler(w http.ResponseWriter, r *http.Request) {
 	} else {
 		a.addRouteSuccessRecorder.Add(ctx, 1.0)
 	}
+	log.Ctx(ctx).Info().Str("op", "addRouteHandler").Str("routeId", route.Id).Str("tid", tid.ToString()).Str("app.id", tid.AppId).Str("partner.id", tid.OrgId).Msg("success")
 	resp := ItemResponse(route)
 	resp.Respond(ctx, w, doYaml(r))
 }
@@ -553,6 +555,7 @@ func (a *APIManager) removeRouteHandler(w http.ResponseWriter, r *http.Request) 
 	} else {
 		a.removeRouteSuccessRecorder.Add(ctx, 1.0)
 	}
+	log.Ctx(ctx).Info().Str("op", "removeRouteHandler").Str("routeId", routeId).Str("tid", tid.ToString()).Str("app.id", tid.AppId).Str("partner.id", tid.OrgId).Msg("success")
 	resp := ItemResponse(routeId)
 	resp.Respond(ctx, w, doYaml(r))
 }
@@ -576,6 +579,7 @@ func (a *APIManager) getRouteHandler(w http.ResponseWriter, r *http.Request) {
 		resp.Respond(ctx, w, doYaml(r))
 		return
 	}
+	log.Ctx(ctx).Info().Str("op", "getRouteHandler").Str("routeId", routeId).Str("tid", tid.ToString()).Str("app.id", tid.AppId).Str("partner.id", tid.OrgId).Msg("success")
 	resp := ItemResponse(routeConfig)
 	resp.Respond(ctx, w, doYaml(r))
 }
@@ -585,18 +589,19 @@ func (a *APIManager) getAllTenantRoutesHandler(w http.ResponseWriter, r *http.Re
 	vars := mux.Vars(r)
 	tid, apiErr := getTenant(ctx, vars)
 	if apiErr != nil {
-		log.Ctx(ctx).Error().Str("op", "GetAllTenantRoutes").Str("error", apiErr.Error()).Msg("orgId or appId empty")
+		log.Ctx(ctx).Error().Str("op", "getAllTenantRoutesHandler").Str("error", apiErr.Error()).Msg("orgId or appId empty")
 		resp := ErrorResponse(apiErr)
 		resp.Respond(ctx, w, doYaml(r))
 		return
 	}
 	allRouteConfigs, err := a.routingTableMgr.GetAllTenantRoutes(ctx, *tid)
 	if err != nil {
-		log.Ctx(ctx).Error().Str("op", "GetAllTenantRoutes").Msg(err.Error())
+		log.Ctx(ctx).Error().Str("op", "getAllTenantRoutesHandler").Msg(err.Error())
 		resp := ErrorResponse(convertToApiError(ctx, err))
 		resp.Respond(ctx, w, doYaml(r))
 		return
 	}
+	log.Ctx(ctx).Info().Str("op", "getAllTenantRoutesHandler").Str("tid", tid.ToString()).Str("app.id", tid.AppId).Str("partner.id", tid.OrgId).Msg("success")
 	trace.SpanFromContext(ctx).SetAttributes(attribute.Int("routeCount", len(allRouteConfigs)))
 	resp := ItemsResponse(allRouteConfigs)
 	resp.Respond(ctx, w, doYaml(r))
@@ -607,7 +612,7 @@ func (a *APIManager) getAllRoutesHandler(w http.ResponseWriter, r *http.Request)
 	allRouteConfigs := make([]route.Config, 0)
 	configs, err := a.tenantStorer.GetAllConfigs(ctx)
 	if err != nil {
-		log.Ctx(ctx).Error().Str("op", "GetAllRoutes").Str("error", err.Error()).Msg("tenant configs read error")
+		log.Ctx(ctx).Error().Str("op", "getAllRoutesHandler").Str("error", err.Error()).Msg("tenant configs read error")
 		resp := ErrorResponse(convertToApiError(ctx, err))
 		resp.Respond(ctx, w, doYaml(r))
 		return
@@ -615,13 +620,14 @@ func (a *APIManager) getAllRoutesHandler(w http.ResponseWriter, r *http.Request)
 	for _, config := range configs {
 		tenantRouteConfigs, err := a.routingTableMgr.GetAllTenantRoutes(ctx, config.Tenant)
 		if err != nil {
-			log.Ctx(ctx).Error().Str("op", "GetAllRoutes").Msg(err.Error())
+			log.Ctx(ctx).Error().Str("op", "getAllRoutesHandler").Msg(err.Error())
 			resp := ErrorResponse(convertToApiError(ctx, err))
 			resp.Respond(ctx, w, doYaml(r))
 			return
 		}
 		allRouteConfigs = append(allRouteConfigs, tenantRouteConfigs...)
 	}
+	log.Ctx(ctx).Info().Str("op", "getAllRoutesHandler").Msg("success")
 	trace.SpanFromContext(ctx).SetAttributes(attribute.Int("routeCount", len(allRouteConfigs)))
 	resp := ItemsResponse(allRouteConfigs)
 	resp.Respond(ctx, w, doYaml(r))
@@ -632,18 +638,19 @@ func (a *APIManager) getAllTenantFragmentsHandler(w http.ResponseWriter, r *http
 	vars := mux.Vars(r)
 	tid, apiErr := getTenant(ctx, vars)
 	if apiErr != nil {
-		log.Ctx(ctx).Error().Str("op", "GetAllTenantFragments").Str("error", apiErr.Error()).Msg("orgId or appId empty")
+		log.Ctx(ctx).Error().Str("op", "getAllTenantFragmentsHandler").Str("error", apiErr.Error()).Msg("orgId or appId empty")
 		resp := ErrorResponse(apiErr)
 		resp.Respond(ctx, w, doYaml(r))
 		return
 	}
 	allFragments, err := a.routingTableMgr.GetAllTenantFragments(ctx, *tid)
 	if err != nil {
-		log.Ctx(ctx).Error().Str("op", "GetAllTenantFragments").Msg(err.Error())
+		log.Ctx(ctx).Error().Str("op", "getAllTenantFragmentsHandler").Msg(err.Error())
 		resp := ErrorResponse(convertToApiError(ctx, err))
 		resp.Respond(ctx, w, doYaml(r))
 		return
 	}
+	log.Ctx(ctx).Info().Str("op", "getAllTenantFragmentsHandler").Str("tid", tid.ToString()).Str("app.id", tid.AppId).Str("partner.id", tid.OrgId).Msg("success")
 	trace.SpanFromContext(ctx).SetAttributes(attribute.Int("routeCount", len(allFragments)))
 	resp := ItemsResponse(allFragments)
 	resp.Respond(ctx, w, doYaml(r))
@@ -667,10 +674,12 @@ func (a *APIManager) getAllSendersHandler(w http.ResponseWriter, r *http.Request
 				senders = append(senders, v)
 			}
 		}
+		log.Ctx(ctx).Info().Str("op", "getAllSendersHandler").Str("tid", tid.ToString()).Str("app.id", tid.AppId).Str("partner.id", tid.OrgId).Msg("success")
 	} else {
 		for _, v := range allSenders {
 			senders = append(senders, v)
 		}
+		log.Ctx(ctx).Info().Str("op", "getAllSendersHandler").Msg("success")
 	}
 	trace.SpanFromContext(ctx).SetAttributes(attribute.Int("senderCount", len(senders)))
 	resp := ItemsResponse(senders)
@@ -695,10 +704,12 @@ func (a *APIManager) getAllReceiversHandler(w http.ResponseWriter, r *http.Reque
 				receivers = append(receivers, v)
 			}
 		}
+		log.Ctx(ctx).Info().Str("op", "getAllReceiversHandler").Str("tid", tid.ToString()).Str("app.id", tid.AppId).Str("partner.id", tid.OrgId).Msg("success")
 	} else {
 		for _, v := range allReceivers {
 			receivers = append(receivers, v)
 		}
+		log.Ctx(ctx).Info().Str("op", "getAllReceiversHandler").Msg("success")
 	}
 	trace.SpanFromContext(ctx).SetAttributes(attribute.Int("receiverCount", len(receivers)))
 	resp := ItemsResponse(receivers)
@@ -723,10 +734,12 @@ func (a *APIManager) getAllFiltersHandler(w http.ResponseWriter, r *http.Request
 				filters = append(filters, v)
 			}
 		}
+		log.Ctx(ctx).Info().Str("op", "getAllFiltersHandler").Str("tid", tid.ToString()).Str("app.id", tid.AppId).Str("partner.id", tid.OrgId).Msg("success")
 	} else {
 		for _, v := range allFilters {
 			filters = append(filters, v)
 		}
+		log.Ctx(ctx).Info().Str("op", "getAllFiltersHandler").Msg("success")
 	}
 	trace.SpanFromContext(ctx).SetAttributes(attribute.Int("filterCount", len(filters)))
 	resp := ItemsResponse(filters)
@@ -742,6 +755,7 @@ func (a *APIManager) getAllFragmentsHandler(w http.ResponseWriter, r *http.Reque
 		resp.Respond(ctx, w, doYaml(r))
 		return
 	}
+	log.Ctx(ctx).Info().Str("op", "getAllFragmentsHandler").Msg("success")
 	trace.SpanFromContext(ctx).SetAttributes(attribute.Int("fragmentCount", len(allFragments)))
 	resp := ItemsResponse(allFragments)
 	resp.Respond(ctx, w, doYaml(r))
@@ -766,6 +780,7 @@ func (a *APIManager) getFragmentHandler(w http.ResponseWriter, r *http.Request) 
 		resp.Respond(ctx, w, doYaml(r))
 		return
 	}
+	log.Ctx(ctx).Info().Str("op", "getFragmentHandler").Str("fragmentId", fragmentId).Str("tid", tid.ToString()).Str("app.id", tid.AppId).Str("partner.id", tid.OrgId).Msg("success")
 	resp := ItemResponse(fragmentConfig)
 	resp.Respond(ctx, w, doYaml(r))
 }
@@ -793,6 +808,7 @@ func (a *APIManager) removeFragmentHandler(w http.ResponseWriter, r *http.Reques
 	} else {
 		a.removeRouteSuccessRecorder.Add(ctx, 1.0)
 	}
+	log.Ctx(ctx).Info().Str("op", "removeFragmentHandler").Str("fragmentId", fragmentId).Str("tid", tid.ToString()).Str("app.id", tid.AppId).Str("partner.id", tid.OrgId).Msg("success")
 	resp := ItemResponse(fragmentId)
 	resp.Respond(ctx, w, doYaml(r))
 }
@@ -857,6 +873,7 @@ func (a *APIManager) addFragmentHandler(w http.ResponseWriter, r *http.Request) 
 		resp.Respond(ctx, w, doYaml(r))
 		return
 	}
+	log.Ctx(ctx).Info().Str("op", "addFragmentHandler").Str("fragmentId", fragmentId).Str("tid", tid.ToString()).Str("app.id", tid.AppId).Str("partner.id", tid.OrgId).Msg("success")
 	resp := ItemResponse(fragmentConfig)
 	resp.Respond(ctx, w, doYaml(r))
 }
@@ -878,6 +895,7 @@ func (a *APIManager) getTenantConfigHandler(w http.ResponseWriter, r *http.Reque
 		resp.Respond(ctx, w, doYaml(r))
 		return
 	}
+	log.Ctx(ctx).Info().Str("op", "getTenantConfigHandler").Str("tid", tid.ToString()).Str("app.id", tid.AppId).Str("partner.id", tid.OrgId).Msg("success")
 	resp := ItemResponse(config)
 	resp.Respond(ctx, w, doYaml(r))
 }
@@ -891,6 +909,7 @@ func (a *APIManager) getAllTenantConfigsHandler(w http.ResponseWriter, r *http.R
 		resp.Respond(ctx, w, doYaml(r))
 		return
 	}
+	log.Ctx(ctx).Info().Str("op", "getAllTenantConfigsHandler").Msg("success")
 	resp := ItemsResponse(configs)
 	resp.Respond(ctx, w, doYaml(r))
 }
@@ -900,14 +919,14 @@ func (a *APIManager) addTenantConfigHandler(w http.ResponseWriter, r *http.Reque
 	vars := mux.Vars(r)
 	tid, apiErr := getTenant(ctx, vars)
 	if apiErr != nil {
-		log.Ctx(ctx).Error().Str("op", "setTenantConfigHandler").Str("error", apiErr.Error()).Msg("orgId or appId empty")
+		log.Ctx(ctx).Error().Str("op", "addTenantConfigHandler").Str("error", apiErr.Error()).Msg("orgId or appId empty")
 		resp := ErrorResponse(apiErr)
 		resp.Respond(ctx, w, doYaml(r))
 		return
 	}
 	body, err := ioutil.ReadAll(r.Body)
 	if err != nil {
-		log.Ctx(ctx).Error().Str("op", "setTenantConfigHandler").Str("error", err.Error()).Msg("error reading request body")
+		log.Ctx(ctx).Error().Str("op", "addTenantConfigHandler").Str("error", err.Error()).Msg("error reading request body")
 		resp := ErrorResponse(&InternalServerError{err})
 		resp.Respond(ctx, w, doYaml(r))
 		return
@@ -915,7 +934,7 @@ func (a *APIManager) addTenantConfigHandler(w http.ResponseWriter, r *http.Reque
 	var tenantConfig tenant.Config
 	err = yaml.Unmarshal(body, &tenantConfig)
 	if err != nil {
-		log.Ctx(ctx).Error().Str("op", "setTenantConfigHandler").Str("error", err.Error()).Msg("error unmarshal request body")
+		log.Ctx(ctx).Error().Str("op", "addTenantConfigHandler").Str("error", err.Error()).Msg("error unmarshal request body")
 		resp := ErrorResponse(&BadRequestError{"Cannot unmarshal request body", err})
 		resp.Respond(ctx, w, doYaml(r))
 		return
@@ -923,12 +942,13 @@ func (a *APIManager) addTenantConfigHandler(w http.ResponseWriter, r *http.Reque
 	tenantConfig.Tenant = *tid
 	err = a.tenantStorer.SetConfig(ctx, tenantConfig)
 	if err != nil {
-		log.Ctx(ctx).Error().Str("op", "setTenantConfigHandler").Str("error", err.Error()).Msg("error setting tenant config")
+		log.Ctx(ctx).Error().Str("op", "addTenantConfigHandler").Str("error", err.Error()).Msg("error setting tenant config")
 		resp := ErrorResponse(convertToApiError(ctx, err))
 		resp.Respond(ctx, w, doYaml(r))
 		return
 	}
 	a.quotaManager.PublishQuota(ctx, *tid)
+	log.Ctx(ctx).Info().Str("op", "addTenantConfigHandler").Str("tid", tid.ToString()).Msg("success")
 	resp := ItemResponse(tenantConfig)
 	resp.Respond(ctx, w, doYaml(r))
 }
@@ -963,6 +983,7 @@ func (a *APIManager) deleteTenantConfigHandler(w http.ResponseWriter, r *http.Re
 		resp.Respond(ctx, w, doYaml(r))
 		return
 	}
+	log.Ctx(ctx).Info().Str("op", "deleteTenantConfigHandler").Str("tid", tid.ToString()).Msg("success")
 	resp := ItemResponse(tid)
 	resp.Respond(ctx, w, doYaml(r))
 }

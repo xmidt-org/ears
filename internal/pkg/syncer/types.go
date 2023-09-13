@@ -47,6 +47,7 @@ type EarsMetric struct {
 	ErrorVelocity   int
 	FilterVelocity  int
 	LastEventTs     int64
+	Ts              int64
 }
 
 type (
@@ -68,6 +69,8 @@ type (
 		PublishSyncRequest(ctx context.Context, tenantId tenant.Id, itemType string, itemId string, add bool)
 		// GetInstanceCount
 		GetInstanceCount(ctx context.Context) int
+		//
+		DeleteMetrics(id string)
 		//
 		WriteMetrics(id string, metric *EarsMetric)
 		//

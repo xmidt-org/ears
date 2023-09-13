@@ -232,12 +232,12 @@ func (r *DefaultRoutingTableManager) RouteEvent(ctx context.Context, tid tenant.
 	// no need to cancel context here because RouteEvent is only used synchronously via API call
 	e, err := event.New(ctx, payload, event.WithAck(
 		func(evt event.Event) {
-			r.logger.Info().Str("op", "routeEventWebhook").Msg("success")
+			r.logger.Info().Str("op", "routeEventWebhook").Str("tid", tid.ToString()).Str("app.id", tid.AppId).Str("partner.id", tid.OrgId).Msg("success")
 			lrw.Receiver.LogSuccess()
 			wg.Done()
 			//cancel()
 		}, func(evt event.Event, err error) {
-			r.logger.Error().Str("op", "routeEventWebhook").Msg("failed to process message: " + err.Error())
+			r.logger.Error().Str("op", "routeEventWebhook").Str("tid", tid.ToString()).Str("app.id", tid.AppId).Str("partner.id", tid.OrgId).Msg("failed to process message: " + err.Error())
 			wg.Done()
 			//cancel()
 		}),

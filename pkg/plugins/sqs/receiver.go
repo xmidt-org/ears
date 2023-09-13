@@ -82,9 +82,8 @@ func NewReceiver(tid tenant.Id, plugin string, name string, config interface{}, 
 		awsAccessKey:    secrets.Secret(ctx, cfg.AWSAccessKeyId),
 		awsAccessSecret: secrets.Secret(ctx, cfg.AWSSecretAccessKey),
 		awsRegion:       secrets.Secret(ctx, cfg.AWSRegion),
-		currentSec:      time.Now().Unix(),
-		tableSyncer:     tableSyncer,
 	}
+	r.MetricPlugin = pkgplugin.NewMetricPlugin(tableSyncer, r.Hash)
 	// create sqs session
 	sess, err := session.NewSession()
 	if nil != err {
@@ -100,12 +99,12 @@ func NewReceiver(tid tenant.Id, plugin string, name string, config interface{}, 
 	}
 	sess, err = session.NewSession(&aws.Config{Region: aws.String(r.awsRegion), Credentials: creds})
 	if nil != err {
-		r.logError()
+		r.LogError()
 		return r, &SQSError{op: "NewSession", err: err}
 	}
 	_, err = sess.Config.Credentials.Get()
 	if nil != err {
-		r.logError()
+		r.LogError()
 		return r, &SQSError{op: "GetCredentials", err: err}
 	}
 	r.sqs = sqs.New(sess)
@@ -115,7 +114,7 @@ func NewReceiver(tid tenant.Id, plugin string, name string, config interface{}, 
 	}
 	_, err = r.sqs.GetQueueAttributes(queueAttributesParams)
 	if nil != err {
-		r.logError()
+		r.LogError()
 		return r, &SQSError{op: "GetQueueAttributes", err: err}
 	}
 	hostname, _ := os.Hostname()
@@ -160,30 +159,6 @@ const (
 	attributeNames              = "All"
 )
 
-func (r *Receiver) LogSuccess() {
-	r.Lock()
-	r.successCounter++
-	if time.Now().Unix() != r.currentSec {
-		r.successVelocityCounter = r.currentSuccessVelocityCounter
-		r.currentSuccessVelocityCounter = 0
-		r.currentSec = time.Now().Unix()
-	}
-	r.currentSuccessVelocityCounter++
-	r.Unlock()
-}
-
-func (r *Receiver) logError() {
-	r.Lock()
-	r.errorCounter++
-	if time.Now().Unix() != r.currentSec {
-		r.errorVelocityCounter = r.currentErrorVelocityCounter
-		r.currentErrorVelocityCounter = 0
-		r.currentSec = time.Now().Unix()
-	}
-	r.currentErrorVelocityCounter++
-	r.Unlock()
-}
-
 func (r *Receiver) startReceiveWorker(svc *sqs.SQS, n int) {
 	go func() {
 		defer func() {
@@ -213,13 +188,13 @@ func (r *Receiver) startReceiveWorker(svc *sqs.SQS, n int) {
 				}
 				queueAttributesResp, err := svc.GetQueueAttributes(queueAttributesParams)
 				if err != nil {
-					r.logError()
-					r.logger.Error().Str("op", "SQS.receiveWorker").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Int("workerNum", n).Msg(err.Error())
+					r.LogError()
+					r.logger.Error().Str("op", "SQS.receiveWorker").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Str("app.id", r.Tenant().AppId).Str("partner.id", r.Tenant().OrgId).Int("workerNum", n).Msg(err.Error())
 				} else {
 					if queueAttributesResp.Attributes[approximateNumberOfMessages] != nil {
 						numMsgs, err := strconv.Atoi(*queueAttributesResp.Attributes[approximateNumberOfMessages])
 						if err != nil {
-							r.logger.Error().Str("op", "SQS.receiveWorker").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Int("workerNum", n).Msg("error parsing message count: " + err.Error())
+							r.logger.Error().Str("op", "SQS.receiveWorker").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Str("app.id", r.Tenant().AppId).Str("partner.id", r.Tenant().OrgId).Int("workerNum", n).Msg("error parsing message count: " + err.Error())
 						}
 						r.eventQueueDepth.Record(ctx, int64(numMsgs))
 					}
@@ -263,10 +238,10 @@ func (r *Receiver) startReceiveWorker(svc *sqs.SQS, n int) {
 					}
 					_, err := svc.DeleteMessageBatch(deleteParams)
 					if err != nil {
-						r.logError()
-						r.logger.Error().Str("op", "SQS.receiveWorker").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Msg("delete error: " + err.Error())
+						r.LogError()
+						r.logger.Error().Str("op", "SQS.receiveWorker").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Str("app.id", r.Tenant().AppId).Str("partner.id", r.Tenant().OrgId).Msg("delete error: " + err.Error())
 					} else {
-						r.logger.Debug().Str("op", "SQS.receiveWorker").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Int("batchSize", len(deleteBatch)).Int("workerNum", n).Msg("deleted message batch")
+						r.logger.Debug().Str("op", "SQS.receiveWorker").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Str("app.id", r.Tenant().AppId).Str("partner.id", r.Tenant().OrgId).Int("batchSize", len(deleteBatch)).Int("workerNum", n).Msg("deleted message batch")
 						/*for _, entry := range deleteBatch {
 							r.logger.Info().Str("op", "SQS.receiveWorker").Int("batchSize", len(deleteBatch)).Int("workerNum", n).Msg("deleted message " + (*entry.Id))
 						}*/
@@ -277,7 +252,7 @@ func (r *Receiver) startReceiveWorker(svc *sqs.SQS, n int) {
 				stopNow := r.stopped
 				r.Unlock()
 				if stopNow {
-					r.logger.Info().Str("op", "SQS.receiveWorker").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Int("workerNum", n).Msg("delete loop stopped")
+					r.logger.Info().Str("op", "SQS.receiveWorker").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Str("app.id", r.Tenant().AppId).Str("partner.id", r.Tenant().OrgId).Int("workerNum", n).Msg("delete loop stopped")
 					return
 				}
 			}
@@ -297,18 +272,18 @@ func (r *Receiver) startReceiveWorker(svc *sqs.SQS, n int) {
 			stopNow := r.stopped
 			r.Unlock()
 			if stopNow {
-				r.logger.Info().Str("op", "SQS.receiveWorker").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Int("workerNum", n).Msg("receive loop stopped")
+				r.logger.Info().Str("op", "SQS.receiveWorker").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Str("app.id", r.Tenant().AppId).Str("partner.id", r.Tenant().OrgId).Int("workerNum", n).Msg("receive loop stopped")
 				return
 			}
 			if err != nil {
-				r.logError()
-				r.logger.Error().Str("op", "SQS.receiveWorker").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Int("workerNum", n).Msg(err.Error())
+				r.LogError()
+				r.logger.Error().Str("op", "SQS.receiveWorker").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Str("app.id", r.Tenant().AppId).Str("partner.id", r.Tenant().OrgId).Int("workerNum", n).Msg(err.Error())
 				time.Sleep(1 * time.Second)
 				continue
 			}
 			if len(sqsResp.Messages) > 0 {
 				r.Lock()
-				r.logger.Debug().Str("op", "SQS.receiveWorker").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Int("batchSize", len(sqsResp.Messages)).Int("workerNum", n).Msg("received message batch")
+				r.logger.Debug().Str("op", "SQS.receiveWorker").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Str("app.id", r.Tenant().AppId).Str("partner.id", r.Tenant().OrgId).Int("batchSize", len(sqsResp.Messages)).Int("workerNum", n).Msg("received message batch")
 				r.Unlock()
 			}
 			for _, message := range sqsResp.Messages {
@@ -326,12 +301,12 @@ func (r *Receiver) startReceiveWorker(svc *sqs.SQS, n int) {
 				if message.Attributes[approximateReceiveCount] != nil {
 					retryAttempt, err = strconv.Atoi(*message.Attributes[approximateReceiveCount])
 					if err != nil {
-						r.logger.Error().Str("op", "SQS.receiveWorker").Str(rtsemconv.EarsLogTraceIdKey, traceId).Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Int("workerNum", n).Msg("error parsing receive count: " + err.Error())
+						r.logger.Error().Str("op", "SQS.receiveWorker").Str(rtsemconv.EarsLogTraceIdKey, traceId).Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Str("app.id", r.Tenant().AppId).Str("partner.id", r.Tenant().OrgId).Int("workerNum", n).Msg("error parsing receive count: " + err.Error())
 					}
 					retryAttempt--
 				}
 				if retryAttempt > *(r.config.NumRetries) {
-					r.logger.Error().Str("op", "SQS.receiveWorker").Str(rtsemconv.EarsLogTraceIdKey, traceId).Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Int("workerNum", n).Msg("max retries reached for " + (*message.MessageId))
+					r.logger.Error().Str("op", "SQS.receiveWorker").Str(rtsemconv.EarsLogTraceIdKey, traceId).Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Str("app.id", r.Tenant().AppId).Str("partner.id", r.Tenant().OrgId).Int("workerNum", n).Msg("max retries reached for " + (*message.MessageId))
 					entry := sqs.DeleteMessageBatchRequestEntry{Id: message.MessageId, ReceiptHandle: message.ReceiptHandle}
 					entries <- &entry
 					cancel()
@@ -340,8 +315,8 @@ func (r *Receiver) startReceiveWorker(svc *sqs.SQS, n int) {
 				var payload interface{}
 				err = json.Unmarshal([]byte(*message.Body), &payload)
 				if err != nil {
-					r.logError()
-					r.logger.Error().Str("op", "SQS.receiveWorker").Str(rtsemconv.EarsLogTraceIdKey, traceId).Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Int("workerNum", n).Msg("cannot parse message " + (*message.MessageId) + ": " + err.Error())
+					r.LogError()
+					r.logger.Error().Str("op", "SQS.receiveWorker").Str(rtsemconv.EarsLogTraceIdKey, traceId).Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Str("app.id", r.Tenant().AppId).Str("partner.id", r.Tenant().OrgId).Int("workerNum", n).Msg("cannot parse message " + (*message.MessageId) + ": " + err.Error())
 					entry := sqs.DeleteMessageBatchRequestEntry{Id: message.MessageId, ReceiptHandle: message.ReceiptHandle}
 					entries <- &entry
 					cancel()
@@ -358,20 +333,20 @@ func (r *Receiver) startReceiveWorker(svc *sqs.SQS, n int) {
 							r.eventSuccessCounter.Add(ctx, 1)
 							r.LogSuccess()
 						} else {
-							log.Ctx(e.Context()).Error().Str("op", "SQS.receiveWorker").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Int("workerNum", n).Msg("failed to process message with missing sqs metadata")
+							log.Ctx(e.Context()).Error().Str("op", "SQS.receiveWorker").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Str("app.id", r.Tenant().AppId).Str("partner.id", r.Tenant().OrgId).Int("workerNum", n).Msg("failed to process message with missing sqs metadata")
 						}
 						cancel()
 					},
 					func(e event.Event, err error) {
 						msg, ok := e.Metadata()["sqsMessage"].(sqs.Message) // get metadata associated with this event
 						if ok {
-							log.Ctx(e.Context()).Error().Str("op", "SQS.receiveWorker").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Int("workerNum", n).Msg("failed to process message " + (*msg.MessageId) + ": " + err.Error())
+							log.Ctx(e.Context()).Error().Str("op", "SQS.receiveWorker").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Str("app.id", r.Tenant().AppId).Str("partner.id", r.Tenant().OrgId).Int("workerNum", n).Msg("failed to process message " + (*msg.MessageId) + ": " + err.Error())
 						} else {
-							log.Ctx(e.Context()).Error().Str("op", "SQS.receiveWorker").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Int("workerNum", n).Msg("failed to process message with missing sqs metadata: " + err.Error())
+							log.Ctx(e.Context()).Error().Str("op", "SQS.receiveWorker").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Str("app.id", r.Tenant().AppId).Str("partner.id", r.Tenant().OrgId).Int("workerNum", n).Msg("failed to process message with missing sqs metadata: " + err.Error())
 						}
 						// a nack below max retries - this is the only case where we do not delete the message yet
 						r.eventFailureCounter.Add(ctx, 1)
-						r.logError()
+						r.LogError()
 						cancel()
 					}),
 					event.WithTenant(r.Tenant()),
@@ -379,7 +354,7 @@ func (r *Receiver) startReceiveWorker(svc *sqs.SQS, n int) {
 					event.WithTracePayloadOnNack(*r.config.TracePayloadOnNack))
 				if err != nil {
 					cancel()
-					r.logger.Error().Str("op", "SQS.receiveWorker").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Int("workerNum", n).Msg("cannot create event: " + err.Error())
+					r.logger.Error().Str("op", "SQS.receiveWorker").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Str("app.id", r.Tenant().AppId).Str("partner.id", r.Tenant().OrgId).Int("workerNum", n).Msg("cannot create event: " + err.Error())
 					return
 				}
 				r.Trigger(e)
@@ -405,12 +380,12 @@ func (r *Receiver) Receive(next receiver.NextFn) error {
 	r.next = next
 	r.Unlock()
 	for i := 0; i < *r.config.ReceiverPoolSize; i++ {
-		r.logger.Info().Str("op", "SQS.Receive").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Int("workerNum", i).Msg("launching receiver pool thread")
+		r.logger.Info().Str("op", "SQS.Receive").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Str("app.id", r.Tenant().AppId).Str("partner.id", r.Tenant().OrgId).Int("workerNum", i).Msg("launching receiver pool thread")
 		r.startReceiveWorker(r.sqs, i)
 	}
-	r.logger.Info().Str("op", "SQS.Receive").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Msg("waiting for receive done")
+	r.logger.Info().Str("op", "SQS.Receive").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Str("app.id", r.Tenant().AppId).Str("partner.id", r.Tenant().OrgId).Msg("waiting for receive done")
 	<-r.done
-	r.logger.Info().Str("op", "SQS.Receive").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Msg("receive done")
+	r.logger.Info().Str("op", "SQS.Receive").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Str("app.id", r.Tenant().AppId).Str("partner.id", r.Tenant().OrgId).Msg("receive done")
 	return nil
 }
 
@@ -422,6 +397,7 @@ func (r *Receiver) StopReceiving(ctx context.Context) error {
 		r.eventFailureCounter.Unbind()
 		r.eventBytesCounter.Unbind()
 		r.eventQueueDepth.Unbind()
+		r.DeleteMetrics()
 		close(r.done)
 	}
 	r.Unlock()
@@ -451,51 +427,6 @@ func (r *Receiver) Plugin() string {
 
 func (r *Receiver) Tenant() tenant.Id {
 	return r.tid
-}
-
-func (r *Receiver) getLocalMetric() *syncer.EarsMetric {
-	r.Lock()
-	defer r.Unlock()
-	metrics := &syncer.EarsMetric{
-		r.successCounter,
-		r.errorCounter,
-		0,
-		r.successVelocityCounter,
-		r.errorVelocityCounter,
-		0,
-		r.currentSec,
-	}
-	return metrics
-}
-
-func (r *Receiver) EventSuccessCount() int {
-	hash := r.Hash()
-	r.tableSyncer.WriteMetrics(hash, r.getLocalMetric())
-	return r.tableSyncer.ReadMetrics(hash).SuccessCount
-}
-
-func (r *Receiver) EventSuccessVelocity() int {
-	hash := r.Hash()
-	r.tableSyncer.WriteMetrics(hash, r.getLocalMetric())
-	return r.tableSyncer.ReadMetrics(hash).SuccessVelocity
-}
-
-func (r *Receiver) EventErrorCount() int {
-	hash := r.Hash()
-	r.tableSyncer.WriteMetrics(hash, r.getLocalMetric())
-	return r.tableSyncer.ReadMetrics(hash).ErrorCount
-}
-
-func (r *Receiver) EventErrorVelocity() int {
-	hash := r.Hash()
-	r.tableSyncer.WriteMetrics(hash, r.getLocalMetric())
-	return r.tableSyncer.ReadMetrics(hash).ErrorVelocity
-}
-
-func (r *Receiver) EventTs() int64 {
-	hash := r.Hash()
-	r.tableSyncer.WriteMetrics(hash, r.getLocalMetric())
-	return r.tableSyncer.ReadMetrics(hash).LastEventTs
 }
 
 func (r *Receiver) Hash() string {

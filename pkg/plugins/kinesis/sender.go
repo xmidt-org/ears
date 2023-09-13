@@ -77,9 +77,8 @@ func NewSender(tid tenant.Id, plugin string, name string, config interface{}, se
 		awsAccessSecret: secrets.Secret(ctx, cfg.AWSSecretAccessKey),
 		awsRegion:       secrets.Secret(ctx, cfg.AWSRegion),
 		streamName:      secrets.Secret(ctx, cfg.StreamName),
-		currentSec:      time.Now().Unix(),
-		tableSyncer:     tableSyncer,
 	}
+	s.MetricPlugin = pkgplugin.NewMetricPlugin(tableSyncer, s.Hash)
 	s.initPlugin()
 	hostname, _ := os.Hostname()
 	// metric recorders
@@ -123,30 +122,6 @@ func NewSender(tid tenant.Id, plugin string, name string, config interface{}, se
 	return s, nil
 }
 
-func (s *Sender) logSuccess() {
-	s.Lock()
-	s.successCounter++
-	if time.Now().Unix() != s.currentSec {
-		s.successVelocityCounter = s.currentSuccessVelocityCounter
-		s.currentSuccessVelocityCounter = 0
-		s.currentSec = time.Now().Unix()
-	}
-	s.currentSuccessVelocityCounter++
-	s.Unlock()
-}
-
-func (s *Sender) logError() {
-	s.Lock()
-	s.errorCounter++
-	if time.Now().Unix() != s.currentSec {
-		s.errorVelocityCounter = s.currentErrorVelocityCounter
-		s.currentErrorVelocityCounter = 0
-		s.currentSec = time.Now().Unix()
-	}
-	s.currentErrorVelocityCounter++
-	s.Unlock()
-}
-
 func (s *Sender) initPlugin() error {
 	s.Lock()
 	defer s.Unlock()
@@ -164,18 +139,18 @@ func (s *Sender) initPlugin() error {
 	}
 	sess, err = session.NewSession(&aws.Config{Region: aws.String(s.awsRegion), Credentials: creds})
 	if nil != err {
-		s.logError()
+		s.LogError()
 		return &KinesisError{op: "NewSession", err: err}
 	}
 	_, err = sess.Config.Credentials.Get()
 	if nil != err {
-		s.logError()
+		s.LogError()
 		return &KinesisError{op: "GetCredentials", err: err}
 	}
 	s.kinesisService = kinesis.New(sess)
 	_, err = s.kinesisService.DescribeStream(&kinesis.DescribeStreamInput{StreamName: aws.String(s.streamName)})
 	if err != nil {
-		s.logError()
+		s.LogError()
 		return err
 	}
 	s.done = make(chan struct{})
@@ -188,7 +163,7 @@ func (s *Sender) startTimedSender() {
 		for {
 			select {
 			case <-s.done:
-				s.logger.Info().Str("op", "Kinesis.timedSender").Str("name", s.Name()).Str("tid", s.Tenant().ToString()).Msg("stopping kinesis sender")
+				s.logger.Info().Str("op", "Kinesis.timedSender").Str("name", s.Name()).Str("tid", s.Tenant().ToString()).Str("app.id", s.Tenant().AppId).Str("partner.id", s.Tenant().OrgId).Msg("stopping kinesis sender")
 				return
 			case <-time.After(time.Duration(*s.config.SendTimeout) * time.Second):
 			}
@@ -214,6 +189,7 @@ func (s *Sender) StopSending(ctx context.Context) {
 		s.eventBytesCounter.Unbind()
 		s.eventProcessingTime.Unbind()
 		s.eventSendOutTime.Unbind()
+		s.DeleteMetrics()
 		s.done <- struct{}{}
 		s.done = nil
 	}
@@ -227,11 +203,11 @@ func (s *Sender) send(events []event.Event) {
 	batchReqs := []*kinesis.PutRecordsRequestEntry{}
 	for idx, evt := range events {
 		if idx == 0 {
-			log.Ctx(evt.Context()).Debug().Str("op", "Kinesis.sendWorker").Str("name", s.Name()).Str("tid", s.Tenant().ToString()).Int("eventIdx", idx).Int("batchSize", len(events)).Msg("send message batch")
+			log.Ctx(evt.Context()).Debug().Str("op", "Kinesis.sendWorker").Str("name", s.Name()).Str("tid", s.Tenant().ToString()).Str("app.id", s.Tenant().AppId).Str("partner.id", s.Tenant().OrgId).Int("eventIdx", idx).Int("batchSize", len(events)).Msg("send message batch")
 		}
 		buf, err := json.Marshal(evt.Payload())
 		if err != nil {
-			s.logError()
+			s.LogError()
 			continue
 		}
 		partitionKey := s.config.PartitionKey
@@ -261,9 +237,9 @@ func (s *Sender) send(events []event.Event) {
 	putResults, err := s.kinesisService.PutRecordsWithContext(events[0].Context(), &batchPut)
 	s.eventSendOutTime.Record(events[0].Context(), time.Since(start).Milliseconds())
 	if err != nil {
-		log.Ctx(events[0].Context()).Error().Str("op", "Kinesis.sendWorker").Str("name", s.Name()).Str("tid", s.Tenant().ToString()).Int("batchSize", len(events)).Msg("batch send error: " + err.Error())
+		log.Ctx(events[0].Context()).Error().Str("op", "Kinesis.sendWorker").Str("name", s.Name()).Str("tid", s.Tenant().ToString()).Str("app.id", s.Tenant().AppId).Str("partner.id", s.Tenant().OrgId).Int("batchSize", len(events)).Msg("batch send error: " + err.Error())
 		for idx := range events {
-			s.logError()
+			s.LogError()
 			s.eventFailureCounter.Add(events[idx].Context(), 1)
 			events[idx].Nack(err)
 		}
@@ -271,11 +247,11 @@ func (s *Sender) send(events []event.Event) {
 		for idx, putResult := range putResults.Records {
 			if putResult.ErrorCode == nil {
 				s.eventSuccessCounter.Add(events[idx].Context(), 1)
-				s.logSuccess()
+				s.LogSuccess()
 				events[idx].Ack()
 			} else {
 				s.eventFailureCounter.Add(events[idx].Context(), 1)
-				s.logError()
+				s.LogError()
 				events[idx].Nack(err)
 			}
 		}
@@ -316,51 +292,6 @@ func (s *Sender) Plugin() string {
 
 func (s *Sender) Tenant() tenant.Id {
 	return s.tid
-}
-
-func (s *Sender) getLocalMetric() *syncer.EarsMetric {
-	s.Lock()
-	defer s.Unlock()
-	metrics := &syncer.EarsMetric{
-		s.successCounter,
-		s.errorCounter,
-		0,
-		s.successVelocityCounter,
-		s.errorVelocityCounter,
-		0,
-		s.currentSec,
-	}
-	return metrics
-}
-
-func (s *Sender) EventSuccessCount() int {
-	hash := s.Hash()
-	s.tableSyncer.WriteMetrics(hash, s.getLocalMetric())
-	return s.tableSyncer.ReadMetrics(hash).SuccessCount
-}
-
-func (s *Sender) EventSuccessVelocity() int {
-	hash := s.Hash()
-	s.tableSyncer.WriteMetrics(hash, s.getLocalMetric())
-	return s.tableSyncer.ReadMetrics(hash).SuccessVelocity
-}
-
-func (s *Sender) EventErrorCount() int {
-	hash := s.Hash()
-	s.tableSyncer.WriteMetrics(hash, s.getLocalMetric())
-	return s.tableSyncer.ReadMetrics(hash).ErrorCount
-}
-
-func (s *Sender) EventErrorVelocity() int {
-	hash := s.Hash()
-	s.tableSyncer.WriteMetrics(hash, s.getLocalMetric())
-	return s.tableSyncer.ReadMetrics(hash).ErrorVelocity
-}
-
-func (s *Sender) EventTs() int64 {
-	hash := s.Hash()
-	s.tableSyncer.WriteMetrics(hash, s.getLocalMetric())
-	return s.tableSyncer.ReadMetrics(hash).LastEventTs
 }
 
 func (s *Sender) Hash() string {

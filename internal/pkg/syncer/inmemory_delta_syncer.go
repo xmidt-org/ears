@@ -28,7 +28,6 @@ var (
 	syncerGroup = DeltaSyncerGroup{
 		syncers: make(map[string]*InmemoryDeltaSyncer),
 	}
-	earsMetrics = make(map[string]*EarsMetric, 0)
 )
 
 type (
@@ -43,13 +42,13 @@ type (
 		instanceId   string
 		localSyncers map[string][]LocalSyncer
 		logger       *zerolog.Logger
+		earsMetrics  map[string]*EarsMetric
 	}
 )
 
 func NewInMemoryDeltaSyncer(logger *zerolog.Logger, config config.Config) DeltaSyncer {
 	// This delta syncer is mainly for testing purposes. For it to work, groups of
 	// in memory delta syncer will be able to see each other
-
 	s := new(InmemoryDeltaSyncer)
 	s.logger = logger
 	s.localSyncers = make(map[string][]LocalSyncer)
@@ -59,16 +58,26 @@ func NewInMemoryDeltaSyncer(logger *zerolog.Logger, config config.Config) DeltaS
 	if !s.active {
 		logger.Info().Msg("InMemory Delta Syncer Not Activated")
 	}
+	s.earsMetrics = make(map[string]*EarsMetric, 0)
 	return s
 }
 
-func (s *InmemoryDeltaSyncer) WriteMetrics(id string, metric *EarsMetric) {
-	earsMetrics[id] = metric
+func (s *InmemoryDeltaSyncer) DeleteMetrics(id string) {
+	s.Lock()
+	defer s.Unlock()
+	delete(s.earsMetrics, id)
 }
 
-// id should be a unique plugin id
+func (s *InmemoryDeltaSyncer) WriteMetrics(id string, metric *EarsMetric) {
+	s.Lock()
+	defer s.Unlock()
+	s.earsMetrics[id] = metric
+}
+
 func (s *InmemoryDeltaSyncer) ReadMetrics(id string) *EarsMetric {
-	return earsMetrics[id]
+	s.Lock()
+	defer s.Unlock()
+	return s.earsMetrics[id]
 }
 
 func (s *InmemoryDeltaSyncer) RegisterLocalSyncer(itemType string, localSyncer LocalSyncer) {
@@ -80,12 +89,10 @@ func (s *InmemoryDeltaSyncer) RegisterLocalSyncer(itemType string, localSyncer L
 func (s *InmemoryDeltaSyncer) UnregisterLocalSyncer(itemType string, localSyncer LocalSyncer) {
 	s.Lock()
 	defer s.Unlock()
-
 	syncers, ok := s.localSyncers[itemType]
 	if !ok {
 		return
 	}
-
 	for i, syncer := range syncers {
 		if syncer == localSyncer {
 			//delete by copy the last element to the current pos and then
@@ -116,7 +123,6 @@ func (s *InmemoryDeltaSyncer) PublishSyncRequest(ctx context.Context, tid tenant
 	if numSubscribers <= 1 {
 		s.logger.Info().Str("op", "PublishSyncRequest").Msg("no subscribers but me - no need to publish sync")
 	} else {
-
 		syncerGroup.Lock()
 		for id, syncer := range syncerGroup.syncers {
 			if id == s.instanceId {
@@ -199,6 +205,5 @@ func (s *InmemoryDeltaSyncer) GetInstanceCount(ctx context.Context) int {
 	}
 	s.Lock()
 	defer s.Unlock()
-
 	return len(syncerGroup.syncers)
 }

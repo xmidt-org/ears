@@ -118,15 +118,13 @@ func NewReceiver(tid tenant.Id, plugin string, name string, config interface{}, 
 		return nil, err
 	}
 	r := &Receiver{
-		config:      cfg,
-		name:        name,
-		plugin:      plugin,
-		tid:         tid,
-		logger:      event.GetEventLogger(),
-		currentSec:  time.Now().Unix(),
-		tableSyncer: tableSyncer,
+		config: cfg,
+		name:   name,
+		plugin: plugin,
+		tid:    tid,
+		logger: event.GetEventLogger(),
 	}
-
+	r.MetricPlugin = pkgplugin.NewMetricPlugin(tableSyncer, r.Hash)
 	// metric recorders
 	meter := global.Meter(rtsemconv.EARSMeterName)
 	commonLabels := []attribute.KeyValue{
@@ -155,68 +153,36 @@ func NewReceiver(tid tenant.Id, plugin string, name string, config interface{}, 
 	return r, nil
 }
 
-func (r *Receiver) LogSuccess() {
-	r.Lock()
-	r.successCounter++
-	if time.Now().Unix() != r.currentSec {
-		r.successVelocityCounter = r.currentSuccessVelocityCounter
-		r.currentSuccessVelocityCounter = 0
-		r.currentSec = time.Now().Unix()
-	}
-	r.currentSuccessVelocityCounter++
-	r.Unlock()
-}
-
-func (r *Receiver) logError() {
-	r.Lock()
-	r.errorCounter++
-	if time.Now().Unix() != r.currentSec {
-		r.errorVelocityCounter = r.currentErrorVelocityCounter
-		r.currentErrorVelocityCounter = 0
-		r.currentSec = time.Now().Unix()
-	}
-	r.currentErrorVelocityCounter++
-	r.Unlock()
-}
-
 func (r *Receiver) parseSyslogMessage(msg string) ([]byte, error) {
 	const severityMask = 0x07
 	const facilityShift = 3
 	const facilityMask = 0xf8
-
 	// Parse the priority value from the message
-
 	if !strings.HasPrefix(msg, "<") || !strings.Contains(msg, ">") {
-		r.logError()
+		r.LogError()
 		r.logger.Error().Str("op", "syslog.parseSyslogMessage").Msg("invalid property value")
 		return nil, errors.New("invalid property value")
 	}
-
 	priorityValue := (msg)[1:strings.Index(msg, ">")]
 	priorityNum, err := strconv.Atoi(priorityValue)
 	if err != nil {
-		r.logError()
+		r.LogError()
 		r.logger.Error().Str("op", "syslog.parseSyslogMessage").Msg(fmt.Sprintf("strconv.Atoi error: %s", err))
 		return nil, fmt.Errorf("strconv.Atoi error: %s", err)
 	}
-
 	// Parse the severity and facility values from the priority
-
 	if priorityNum < 0 || priorityNum > 191 {
-		r.logError()
+		r.LogError()
 		r.logger.Error().Str("op", "syslog.parseSyslogMessage").Msg(fmt.Sprintf("invalid priority value: %d", priorityNum))
 		return nil, fmt.Errorf("invalid priority value: %d", priorityNum)
 	}
-
 	severityVal := Severity(priorityNum & severityMask)
 	if severityVal < Emergency || severityVal > Debug {
-		r.logError()
+		r.LogError()
 		r.logger.Error().Str("op", "syslog.parseSyslogMessage").Msg(fmt.Sprintf("invalid severity value: %d", severityVal))
 		return nil, fmt.Errorf("invalid severity value: %d", severityVal)
 	}
-
 	facilityVal := Facility((priorityNum & facilityMask) >> facilityShift)
-
 	// Extract the hostname and message from the message string
 	hostname := "unknown"
 	message := ""
@@ -224,7 +190,6 @@ func (r *Receiver) parseSyslogMessage(msg string) ([]byte, error) {
 		hostname = msg[4:i]
 		message = msg[i+1:]
 	}
-
 	// Create a map with the parsed values
 	parsed := map[string]interface{}{
 		"severity": severityVal,
@@ -232,13 +197,11 @@ func (r *Receiver) parseSyslogMessage(msg string) ([]byte, error) {
 		"hostname": hostname,
 		"message":  message,
 	}
-
 	// Convert the map to JSON
 	jsonMessage, err := json.Marshal(parsed)
 	if err != nil {
 		return nil, err
 	}
-
 	return jsonMessage, nil
 }
 
@@ -263,12 +226,12 @@ func (r *Receiver) Receive(next receiver.NextFn) error {
 	r.syslogServer = NewSyslogServer(addr)
 	udpAddr, err := net.ResolveUDPAddr("udp", r.syslogServer.Addr)
 	if err != nil {
-		r.logError()
+		r.LogError()
 		r.logger.Error().Str("op", "syslog.Receive").Str("error", "error resolving UDP address").Msg(err.Error())
 	}
 	r.syslogServer.conn, err = net.ListenUDP("udp", udpAddr)
 	if err != nil {
-		r.logError()
+		r.LogError()
 		r.logger.Error().Str("op", "syslog.Receive").Str("error", "error listening to UDP address").Msg(err.Error())
 	}
 	r.logger.Info().Str("op", "syslog.Receive").Msg(fmt.Sprintf("syslog plugin listening on port %s", r.config.Port))
@@ -279,14 +242,14 @@ func (r *Receiver) Receive(next receiver.NextFn) error {
 		go func() {
 			parsedMessage, err := r.parseSyslogMessage(message)
 			if err != nil {
-				r.logError()
+				r.LogError()
 				r.logger.Error().Str("op", "syslog.Receive").Str("error", "error parsing message").Msg(err.Error())
 			} else {
 				ctx, cancel := context.WithTimeout(context.Background(), time.Duration(5)*time.Second)
 				var payload interface{}
 				err = json.Unmarshal(parsedMessage, &payload)
 				if err != nil {
-					r.logError()
+					r.LogError()
 					r.logger.Error().Str("op", "syslog.Receive").Str("error", "error reparsing message").Msg(err.Error())
 				} else {
 					e, err := event.New(ctx, payload, event.WithAck(
@@ -297,15 +260,15 @@ func (r *Receiver) Receive(next receiver.NextFn) error {
 						},
 						func(e event.Event, err error) {
 							r.eventFailureCounter.Add(ctx, 1)
-							r.logError()
+							r.LogError()
 							cancel()
 						}),
 						event.WithTenant(r.Tenant()),
 						event.WithOtelTracing(r.Name()))
 					if err != nil {
 						cancel()
-						r.logError()
-						r.logger.Error().Str("op", "syslog.Receive").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Msg("cannot create event: " + err.Error())
+						r.LogError()
+						r.logger.Error().Str("op", "syslog.Receive").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Str("app.id", r.Tenant().AppId).Str("partner.id", r.Tenant().OrgId).Msg("cannot create event: " + err.Error())
 						//return
 					}
 					r.Trigger(e)
@@ -315,14 +278,19 @@ func (r *Receiver) Receive(next receiver.NextFn) error {
 		}()
 	}
 	if err := scanner.Err(); err != nil {
-		r.logError()
+		r.LogError()
 		r.logger.Error().Str("op", "syslog.Receive").Msg(fmt.Sprintf("Scanner error: %s", err))
 	}
 	return nil
 }
 
 func (r *Receiver) StopReceiving(ctx context.Context) error {
-	return r.syslogServer.conn.Close()
+	r.DeleteMetrics()
+	r.eventSuccessCounter.Unbind()
+	r.eventFailureCounter.Unbind()
+	r.eventBytesCounter.Unbind()
+	err := r.syslogServer.conn.Close()
+	return err
 }
 
 func (r *Receiver) Trigger(e event.Event) {
@@ -348,51 +316,6 @@ func (r *Receiver) Plugin() string {
 
 func (r *Receiver) Tenant() tenant.Id {
 	return r.tid
-}
-
-func (r *Receiver) getLocalMetric() *syncer.EarsMetric {
-	r.Lock()
-	defer r.Unlock()
-	metrics := &syncer.EarsMetric{
-		r.successCounter,
-		r.errorCounter,
-		0,
-		r.successVelocityCounter,
-		r.errorVelocityCounter,
-		0,
-		r.currentSec,
-	}
-	return metrics
-}
-
-func (r *Receiver) EventSuccessCount() int {
-	hash := r.Hash()
-	r.tableSyncer.WriteMetrics(hash, r.getLocalMetric())
-	return r.tableSyncer.ReadMetrics(hash).SuccessCount
-}
-
-func (r *Receiver) EventSuccessVelocity() int {
-	hash := r.Hash()
-	r.tableSyncer.WriteMetrics(hash, r.getLocalMetric())
-	return r.tableSyncer.ReadMetrics(hash).SuccessVelocity
-}
-
-func (r *Receiver) EventErrorCount() int {
-	hash := r.Hash()
-	r.tableSyncer.WriteMetrics(hash, r.getLocalMetric())
-	return r.tableSyncer.ReadMetrics(hash).ErrorCount
-}
-
-func (r *Receiver) EventErrorVelocity() int {
-	hash := r.Hash()
-	r.tableSyncer.WriteMetrics(hash, r.getLocalMetric())
-	return r.tableSyncer.ReadMetrics(hash).ErrorVelocity
-}
-
-func (r *Receiver) EventTs() int64 {
-	hash := r.Hash()
-	r.tableSyncer.WriteMetrics(hash, r.getLocalMetric())
-	return r.tableSyncer.ReadMetrics(hash).LastEventTs
 }
 
 func (r *Receiver) Hash() string {

@@ -79,9 +79,8 @@ func NewReceiver(tid tenant.Id, plugin string, name string, config interface{}, 
 		awsAccessSecret: secrets.Secret(ctx, cfg.AWSSecretAccessKey),
 		awsRegion:       secrets.Secret(ctx, cfg.AWSRegion),
 		bucket:          secrets.Secret(ctx, cfg.Bucket),
-		currentSec:      time.Now().Unix(),
-		tableSyncer:     tableSyncer,
 	}
+	r.MetricPlugin = pkgplugin.NewMetricPlugin(tableSyncer, r.Hash)
 	r.initPlugin()
 	hostname, _ := os.Hostname()
 	// metric recorders
@@ -114,30 +113,6 @@ func NewReceiver(tid tenant.Id, plugin string, name string, config interface{}, 
 	return r, nil
 }
 
-func (r *Receiver) LogSuccess() {
-	r.Lock()
-	r.successCounter++
-	if time.Now().Unix() != r.currentSec {
-		r.successVelocityCounter = r.currentSuccessVelocityCounter
-		r.currentSuccessVelocityCounter = 0
-		r.currentSec = time.Now().Unix()
-	}
-	r.currentSuccessVelocityCounter++
-	r.Unlock()
-}
-
-func (r *Receiver) logError() {
-	r.Lock()
-	r.errorCounter++
-	if time.Now().Unix() != r.currentSec {
-		r.errorVelocityCounter = r.currentErrorVelocityCounter
-		r.currentErrorVelocityCounter = 0
-		r.currentSec = time.Now().Unix()
-	}
-	r.currentErrorVelocityCounter++
-	r.Unlock()
-}
-
 func (r *Receiver) initPlugin() error {
 	r.Lock()
 	defer r.Unlock()
@@ -156,12 +131,12 @@ func (r *Receiver) initPlugin() error {
 	}
 	sess, err = session.NewSession(&aws.Config{Region: aws.String(r.awsRegion), Credentials: creds})
 	if nil != err {
-		r.logError()
+		r.LogError()
 		return &S3Error{op: "NewSession", err: err}
 	}
 	_, err = sess.Config.Credentials.Get()
 	if nil != err {
-		r.logError()
+		r.LogError()
 		return &S3Error{op: "GetCredentials", err: err}
 	}
 	r.s3Service = s3.New(sess)
@@ -211,16 +186,16 @@ func (r *Receiver) Receive(next receiver.NextFn) error {
 		wabuf := aws.NewWriteAtBuffer([]byte{})
 		_, err = downloader.Download(wabuf, params)
 		if err != nil {
-			r.logError()
-			r.logger.Error().Str("op", "SQS.receiveWorker").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Msg("cannot download message from s3: " + err.Error())
+			r.LogError()
+			r.logger.Error().Str("op", "SQS.receiveWorker").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Str("app.id", r.Tenant().AppId).Str("partner.id", r.Tenant().OrgId).Msg("cannot download message from s3: " + err.Error())
 			continue
 		}
 		buf := wabuf.Bytes()
 		var payload interface{}
 		err = json.Unmarshal(buf, &payload)
 		if err != nil {
-			r.logError()
-			r.logger.Error().Str("op", "SQS.receiveWorker").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Msg("cannot parse message: " + err.Error())
+			r.LogError()
+			r.logger.Error().Str("op", "SQS.receiveWorker").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Str("app.id", r.Tenant().AppId).Str("partner.id", r.Tenant().OrgId).Msg("cannot parse message: " + err.Error())
 			continue
 		}
 		ctx, cancel := context.WithTimeout(context.Background(), time.Duration(*r.config.AcknowledgeTimeout)*time.Second)
@@ -232,26 +207,26 @@ func (r *Receiver) Receive(next receiver.NextFn) error {
 				cancel()
 			},
 			func(e event.Event, err error) {
-				log.Ctx(e.Context()).Error().Str("op", "SQS.receiveWorker").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Msg("failed to process message: " + err.Error())
+				log.Ctx(e.Context()).Error().Str("op", "SQS.receiveWorker").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Str("app.id", r.Tenant().AppId).Str("partner.id", r.Tenant().OrgId).Msg("failed to process message: " + err.Error())
 				r.eventFailureCounter.Add(ctx, 1)
-				r.logError()
+				r.LogError()
 				cancel()
 			}),
 			event.WithTenant(r.Tenant()),
 			event.WithOtelTracing(r.Name()))
 		if err != nil {
-			r.logError()
-			r.logger.Error().Str("op", "SQS.receiveWorker").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Msg("cannot create event: " + err.Error())
+			r.LogError()
+			r.logger.Error().Str("op", "SQS.receiveWorker").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Str("app.id", r.Tenant().AppId).Str("partner.id", r.Tenant().OrgId).Msg("cannot create event: " + err.Error())
 		}
 		r.Trigger(e)
 	}
 	//
-	r.logger.Info().Str("op", "SQS.Receive").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Msg("waiting for receive done")
+	r.logger.Info().Str("op", "SQS.Receive").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Str("app.id", r.Tenant().AppId).Str("partner.id", r.Tenant().OrgId).Msg("waiting for receive done")
 	<-r.done
 	r.Lock()
 	elapsedMs := time.Since(r.startTime).Milliseconds()
 	r.Unlock()
-	r.logger.Info().Str("op", "SQS.Receive").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Int("elapsedMs", int(elapsedMs)).Msg("receive done")
+	r.logger.Info().Str("op", "SQS.Receive").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Str("app.id", r.Tenant().AppId).Str("partner.id", r.Tenant().OrgId).Int("elapsedMs", int(elapsedMs)).Msg("receive done")
 	return nil
 }
 
@@ -262,6 +237,7 @@ func (r *Receiver) StopReceiving(ctx context.Context) error {
 		r.eventSuccessCounter.Unbind()
 		r.eventFailureCounter.Unbind()
 		r.eventBytesCounter.Unbind()
+		r.DeleteMetrics()
 		close(r.done)
 	}
 	r.Unlock()
@@ -291,51 +267,6 @@ func (r *Receiver) Plugin() string {
 
 func (r *Receiver) Tenant() tenant.Id {
 	return r.tid
-}
-
-func (r *Receiver) getLocalMetric() *syncer.EarsMetric {
-	r.Lock()
-	defer r.Unlock()
-	metrics := &syncer.EarsMetric{
-		r.successCounter,
-		r.errorCounter,
-		0,
-		r.successVelocityCounter,
-		r.errorVelocityCounter,
-		0,
-		r.currentSec,
-	}
-	return metrics
-}
-
-func (r *Receiver) EventSuccessCount() int {
-	hash := r.Hash()
-	r.tableSyncer.WriteMetrics(hash, r.getLocalMetric())
-	return r.tableSyncer.ReadMetrics(hash).SuccessCount
-}
-
-func (r *Receiver) EventSuccessVelocity() int {
-	hash := r.Hash()
-	r.tableSyncer.WriteMetrics(hash, r.getLocalMetric())
-	return r.tableSyncer.ReadMetrics(hash).SuccessVelocity
-}
-
-func (r *Receiver) EventErrorCount() int {
-	hash := r.Hash()
-	r.tableSyncer.WriteMetrics(hash, r.getLocalMetric())
-	return r.tableSyncer.ReadMetrics(hash).ErrorCount
-}
-
-func (r *Receiver) EventErrorVelocity() int {
-	hash := r.Hash()
-	r.tableSyncer.WriteMetrics(hash, r.getLocalMetric())
-	return r.tableSyncer.ReadMetrics(hash).ErrorVelocity
-}
-
-func (r *Receiver) EventTs() int64 {
-	hash := r.Hash()
-	r.tableSyncer.WriteMetrics(hash, r.getLocalMetric())
-	return r.tableSyncer.ReadMetrics(hash).LastEventTs
 }
 
 func (r *Receiver) Hash() string {

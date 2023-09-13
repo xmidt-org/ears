@@ -19,11 +19,10 @@ package filter
 
 import (
 	"github.com/xmidt-org/ears/internal/pkg/syncer"
+	"github.com/xmidt-org/ears/pkg/event"
 	"github.com/xmidt-org/ears/pkg/secret"
 	"github.com/xmidt-org/ears/pkg/tenant"
 	"sync"
-
-	"github.com/xmidt-org/ears/pkg/event"
 )
 
 //go:generate rm -f testing_mock.go

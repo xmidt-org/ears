@@ -81,9 +81,8 @@ func NewSender(tid tenant.Id, plugin string, name string, config interface{}, se
 		awsAccessKey:    secrets.Secret(ctx, cfg.AWSAccessKeyId),
 		awsAccessSecret: secrets.Secret(ctx, cfg.AWSSecretAccessKey),
 		awsRegion:       secrets.Secret(ctx, cfg.AWSRegion),
-		currentSec:      time.Now().Unix(),
-		tableSyncer:     tableSyncer,
 	}
+	s.MetricPlugin = pkgplugin.NewMetricPlugin(tableSyncer, s.Hash)
 	err = s.initPlugin()
 	if err != nil {
 		return nil, err
@@ -130,30 +129,6 @@ func NewSender(tid tenant.Id, plugin string, name string, config interface{}, se
 	return s, nil
 }
 
-func (s *Sender) logSuccess() {
-	s.Lock()
-	s.successCounter++
-	if time.Now().Unix() != s.currentSec {
-		s.successVelocityCounter = s.currentSuccessVelocityCounter
-		s.currentSuccessVelocityCounter = 0
-		s.currentSec = time.Now().Unix()
-	}
-	s.currentSuccessVelocityCounter++
-	s.Unlock()
-}
-
-func (s *Sender) logError() {
-	s.Lock()
-	s.errorCounter++
-	if time.Now().Unix() != s.currentSec {
-		s.errorVelocityCounter = s.currentErrorVelocityCounter
-		s.currentErrorVelocityCounter = 0
-		s.currentSec = time.Now().Unix()
-	}
-	s.currentErrorVelocityCounter++
-	s.Unlock()
-}
-
 func (s *Sender) initPlugin() error {
 	s.Lock()
 	defer s.Unlock()
@@ -171,12 +146,12 @@ func (s *Sender) initPlugin() error {
 	}
 	sess, err = session.NewSession(&aws.Config{Region: aws.String(s.awsRegion), Credentials: creds})
 	if nil != err {
-		s.logError()
+		s.LogError()
 		return &SQSError{op: "NewSession", err: err}
 	}
 	_, err = sess.Config.Credentials.Get()
 	if nil != err {
-		s.logError()
+		s.LogError()
 		return &SQSError{op: "GetCredentials", err: err}
 	}
 	s.sqsService = sqs.New(sess)
@@ -186,7 +161,7 @@ func (s *Sender) initPlugin() error {
 	}
 	_, err = s.sqsService.GetQueueAttributes(queueAttributesParams)
 	if nil != err {
-		s.logError()
+		s.LogError()
 		return &SQSError{op: "GetQueueAttributes", err: err}
 	}
 	s.done = make(chan struct{})
@@ -199,7 +174,7 @@ func (s *Sender) startTimedSender() {
 		for {
 			select {
 			case <-s.done:
-				s.logger.Info().Str("op", "SQS.timedSender").Str("name", s.Name()).Str("tid", s.Tenant().ToString()).Msg("stopping sqs sender")
+				s.logger.Info().Str("op", "SQS.timedSender").Str("name", s.Name()).Str("tid", s.Tenant().ToString()).Str("app.id", s.Tenant().AppId).Str("partner.id", s.Tenant().OrgId).Msg("stopping sqs sender")
 				return
 			case <-time.After(time.Duration(*s.config.SendTimeout) * time.Second):
 			}
@@ -225,6 +200,7 @@ func (s *Sender) StopSending(ctx context.Context) {
 		s.eventBytesCounter.Unbind()
 		s.eventProcessingTime.Unbind()
 		s.eventSendOutTime.Unbind()
+		s.DeleteMetrics()
 		s.done <- struct{}{}
 		s.done = nil
 	}
@@ -238,11 +214,11 @@ func (s *Sender) send(events []event.Event) {
 	entries := make([]*sqs.SendMessageBatchRequestEntry, 0)
 	for idx, evt := range events {
 		if idx == 0 {
-			log.Ctx(evt.Context()).Debug().Str("op", "SQS.sendWorker").Str("name", s.Name()).Str("tid", s.Tenant().ToString()).Int("eventIdx", idx).Int("batchSize", len(events)).Msg("send message batch")
+			log.Ctx(evt.Context()).Debug().Str("op", "SQS.sendWorker").Str("name", s.Name()).Str("tid", s.Tenant().ToString()).Str("app.id", s.Tenant().AppId).Str("partner.id", s.Tenant().OrgId).Int("eventIdx", idx).Int("batchSize", len(events)).Msg("send message batch")
 		}
 		buf, err := json.Marshal(evt.Payload())
 		if err != nil {
-			s.logError()
+			s.LogError()
 			continue
 		}
 		attributes := make(map[string]*sqs.MessageAttributeValue)
@@ -271,7 +247,7 @@ func (s *Sender) send(events []event.Event) {
 	if err != nil {
 		for _, evt := range events {
 			s.eventFailureCounter.Add(evt.Context(), 1)
-			s.logError()
+			s.LogError()
 			evt.Nack(err)
 			break
 		}
@@ -280,7 +256,7 @@ func (s *Sender) send(events []event.Event) {
 			for _, evt := range events {
 				if evt.Id() == *failEvent.Id {
 					s.eventFailureCounter.Add(evt.Context(), 1)
-					s.logError()
+					s.LogError()
 					evt.Nack(errors.New(*failEvent.Message))
 					break
 				}
@@ -290,7 +266,7 @@ func (s *Sender) send(events []event.Event) {
 			for _, evt := range events {
 				if evt.Id() == *successEvent.Id {
 					s.eventSuccessCounter.Add(evt.Context(), 1)
-					s.logSuccess()
+					s.LogSuccess()
 					evt.Ack()
 					break
 				}
@@ -333,51 +309,6 @@ func (s *Sender) Plugin() string {
 
 func (s *Sender) Tenant() tenant.Id {
 	return s.tid
-}
-
-func (s *Sender) getLocalMetric() *syncer.EarsMetric {
-	s.Lock()
-	defer s.Unlock()
-	metrics := &syncer.EarsMetric{
-		s.successCounter,
-		s.errorCounter,
-		0,
-		s.successVelocityCounter,
-		s.errorVelocityCounter,
-		0,
-		s.currentSec,
-	}
-	return metrics
-}
-
-func (s *Sender) EventSuccessCount() int {
-	hash := s.Hash()
-	s.tableSyncer.WriteMetrics(hash, s.getLocalMetric())
-	return s.tableSyncer.ReadMetrics(hash).SuccessCount
-}
-
-func (s *Sender) EventSuccessVelocity() int {
-	hash := s.Hash()
-	s.tableSyncer.WriteMetrics(hash, s.getLocalMetric())
-	return s.tableSyncer.ReadMetrics(hash).SuccessVelocity
-}
-
-func (s *Sender) EventErrorCount() int {
-	hash := s.Hash()
-	s.tableSyncer.WriteMetrics(hash, s.getLocalMetric())
-	return s.tableSyncer.ReadMetrics(hash).ErrorCount
-}
-
-func (s *Sender) EventErrorVelocity() int {
-	hash := s.Hash()
-	s.tableSyncer.WriteMetrics(hash, s.getLocalMetric())
-	return s.tableSyncer.ReadMetrics(hash).ErrorVelocity
-}
-
-func (s *Sender) EventTs() int64 {
-	hash := s.Hash()
-	s.tableSyncer.WriteMetrics(hash, s.getLocalMetric())
-	return s.tableSyncer.ReadMetrics(hash).LastEventTs
 }
 
 func (s *Sender) Hash() string {

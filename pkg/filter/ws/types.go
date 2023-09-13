@@ -15,7 +15,7 @@
 package ws
 
 import (
-	"github.com/xmidt-org/ears/internal/pkg/syncer"
+	"github.com/xmidt-org/ears/pkg/filter"
 	"github.com/xmidt-org/ears/pkg/secret"
 	"github.com/xmidt-org/ears/pkg/tenant"
 	"github.com/xorcare/pointer"
@@ -60,6 +60,7 @@ var DefaultConfig = Config{
 }
 
 type Filter struct {
+	sync.RWMutex
 	config    Config
 	name      string
 	plugin    string
@@ -67,16 +68,5 @@ type Filter struct {
 	secrets   secret.Vault
 	clients   map[string]*http.Client
 	satTokens map[string]*SatToken
-	sync.RWMutex
-	successCounter                int
-	errorCounter                  int
-	filterCounter                 int
-	successVelocityCounter        int
-	errorVelocityCounter          int
-	filterVelocityCounter         int
-	currentSuccessVelocityCounter int
-	currentErrorVelocityCounter   int
-	currentFilterVelocityCounter  int
-	currentSec                    int64
-	tableSyncer                   syncer.DeltaSyncer
+	filter.MetricFilter
 }
