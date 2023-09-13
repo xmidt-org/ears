@@ -66,7 +66,7 @@ func NewSender(tid tenant.Id, plugin string, name string, config interface{}, se
 		config: cfg,
 		logger: event.GetEventLogger(),
 	}
-	s.MetricPlugin = pkgplugin.NewMetricPlugin(tableSyncer)
+	s.MetricPlugin = pkgplugin.NewMetricPlugin(tableSyncer, s.Hash)
 	s.initPlugin()
 	hostname, _ := os.Hostname()
 	// metric recorders

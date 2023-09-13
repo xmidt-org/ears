@@ -83,7 +83,7 @@ func NewReceiver(tid tenant.Id, plugin string, name string, config interface{}, 
 		awsAccessSecret: secrets.Secret(ctx, cfg.AWSSecretAccessKey),
 		awsRegion:       secrets.Secret(ctx, cfg.AWSRegion),
 	}
-	r.MetricPlugin = pkgplugin.NewMetricPlugin(tableSyncer)
+	r.MetricPlugin = pkgplugin.NewMetricPlugin(tableSyncer, r.Hash)
 	// create sqs session
 	sess, err := session.NewSession()
 	if nil != err {

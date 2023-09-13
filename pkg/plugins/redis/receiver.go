@@ -68,7 +68,7 @@ func NewReceiver(tid tenant.Id, plugin string, name string, config interface{}, 
 		logger:  event.GetEventLogger(),
 		stopped: true,
 	}
-	r.MetricPlugin = pkgplugin.NewMetricPlugin(tableSyncer)
+	r.MetricPlugin = pkgplugin.NewMetricPlugin(tableSyncer, r.Hash)
 	// metric recorders
 	meter := global.Meter(rtsemconv.EARSMeterName)
 	commonLabels := []attribute.KeyValue{

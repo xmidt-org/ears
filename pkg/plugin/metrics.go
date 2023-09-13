@@ -34,13 +34,17 @@ type MetricPlugin struct {
 	currentSec                    int64
 	lastMetricWriteSec            int64
 	tableSyncer                   syncer.DeltaSyncer
+	Hash                          HashFct
 }
 
-func NewMetricPlugin(tableSyncer syncer.DeltaSyncer) MetricPlugin {
+type HashFct func() string
+
+func NewMetricPlugin(tableSyncer syncer.DeltaSyncer, hashFct HashFct) MetricPlugin {
 	return MetricPlugin{
 		currentSec:         time.Now().Unix(),
 		lastMetricWriteSec: time.Now().Unix(),
 		tableSyncer:        tableSyncer,
+		Hash:               hashFct,
 	}
 }
 
@@ -80,10 +84,6 @@ func (f *MetricPlugin) LogError() {
 	} else {
 		f.Unlock()
 	}
-}
-
-func (f *MetricPlugin) Hash() string {
-	return ""
 }
 
 func (f *MetricPlugin) getLocalMetric() *syncer.EarsMetric {

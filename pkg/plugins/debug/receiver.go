@@ -75,7 +75,7 @@ func NewReceiver(tid tenant.Id, plugin string, name string, config interface{}, 
 		logger:  logger,
 		stopped: true,
 	}
-	r.MetricPlugin = pkgplugin.NewMetricPlugin(tableSyncer)
+	r.MetricPlugin = pkgplugin.NewMetricPlugin(tableSyncer, r.Hash)
 	r.history = newHistory(*r.config.MaxHistory)
 	// metric recorders
 	meter := global.Meter(rtsemconv.EARSMeterName)

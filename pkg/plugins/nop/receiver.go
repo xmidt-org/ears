@@ -63,7 +63,7 @@ func NewReceiver(tid tenant.Id, plugin string, name string, config interface{}, 
 		logger:  logger,
 		stopped: true,
 	}
-	r.MetricPlugin = pkgplugin.NewMetricPlugin(tableSyncer)
+	r.MetricPlugin = pkgplugin.NewMetricPlugin(tableSyncer, r.Hash)
 	return r, nil
 }
 

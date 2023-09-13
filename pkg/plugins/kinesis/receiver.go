@@ -100,7 +100,7 @@ func NewReceiver(tid tenant.Id, plugin string, name string, config interface{}, 
 		streamName:                     secrets.Secret(ctx, cfg.StreamName),
 		consumerName:                   secrets.Secret(ctx, cfg.ConsumerName),
 	}
-	r.MetricPlugin = pkgplugin.NewMetricPlugin(tableSyncer)
+	r.MetricPlugin = pkgplugin.NewMetricPlugin(tableSyncer, r.Hash)
 	r.Lock()
 	r.stopChannelMap = make(map[int]chan bool)
 	r.Unlock()

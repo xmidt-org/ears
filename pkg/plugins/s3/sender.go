@@ -80,7 +80,7 @@ func NewSender(tid tenant.Id, plugin string, name string, config interface{}, se
 		awsRegion:       secrets.Secret(ctx, cfg.AWSRegion),
 		bucket:          secrets.Secret(ctx, cfg.Bucket),
 	}
-	s.MetricPlugin = pkgplugin.NewMetricPlugin(tableSyncer)
+	s.MetricPlugin = pkgplugin.NewMetricPlugin(tableSyncer, s.Hash)
 	s.initPlugin()
 	hostname, _ := os.Hostname()
 	// metric recorders

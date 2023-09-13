@@ -76,7 +76,7 @@ func NewSender(tid tenant.Id, plugin string, name string, config interface{}, se
 		logger:  event.GetEventLogger(),
 		secrets: secrets,
 	}
-	s.MetricPlugin = pkgplugin.NewMetricPlugin(tableSyncer)
+	s.MetricPlugin = pkgplugin.NewMetricPlugin(tableSyncer, s.Hash)
 	err = s.initPlugin()
 	if err != nil {
 		return nil, err

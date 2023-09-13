@@ -85,7 +85,7 @@ func NewReceiver(tid tenant.Id, plugin string, name string, config interface{}, 
 		stopped: true,
 		secrets: secrets,
 	}
-	r.MetricPlugin = pkgplugin.NewMetricPlugin(tableSyncer)
+	r.MetricPlugin = pkgplugin.NewMetricPlugin(tableSyncer, r.Hash)
 	saramaConfig, err := r.getSaramaConfig(*r.config.CommitInterval)
 	if err != nil {
 		return nil, err

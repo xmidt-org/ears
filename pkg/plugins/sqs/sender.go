@@ -82,7 +82,7 @@ func NewSender(tid tenant.Id, plugin string, name string, config interface{}, se
 		awsAccessSecret: secrets.Secret(ctx, cfg.AWSSecretAccessKey),
 		awsRegion:       secrets.Secret(ctx, cfg.AWSRegion),
 	}
-	s.MetricPlugin = pkgplugin.NewMetricPlugin(tableSyncer)
+	s.MetricPlugin = pkgplugin.NewMetricPlugin(tableSyncer, s.Hash)
 	err = s.initPlugin()
 	if err != nil {
 		return nil, err

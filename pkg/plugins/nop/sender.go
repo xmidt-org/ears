@@ -63,7 +63,7 @@ func NewSender(tid tenant.Id, plugin string, name string, config interface{}, se
 		plugin: plugin,
 		tid:    tid,
 	}
-	s.MetricPlugin = pkgplugin.NewMetricPlugin(tableSyncer)
+	s.MetricPlugin = pkgplugin.NewMetricPlugin(tableSyncer, s.Hash)
 	// metric recorders
 	meter := global.Meter(rtsemconv.EARSMeterName)
 	commonLabels := []attribute.KeyValue{
