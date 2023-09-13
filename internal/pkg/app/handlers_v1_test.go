@@ -483,7 +483,11 @@ func setupRestApi(config config.Config, storageMgr route.RouteStorer, setupQuota
 	if err != nil {
 		return &EarsRuntime{config, nil, nil, storageMgr, nil, nil}, err
 	}
-	pluginMgr, err := plugin.NewManager(plugin.WithPluginManager(mgr), plugin.WithLogger(&log.Logger))
+	tableSyncer, err := getTableSyncer(config, "")
+	if err != nil {
+		return &EarsRuntime{config, nil, nil, storageMgr, nil, nil}, err
+	}
+	pluginMgr, err := plugin.NewManager(plugin.WithPluginManager(mgr), plugin.WithLogger(&log.Logger), plugin.WithSyncer(tableSyncer))
 	if err != nil {
 		return &EarsRuntime{config, nil, nil, storageMgr, nil, nil}, err
 	}
@@ -631,10 +635,6 @@ func setupRestApi(config config.Config, storageMgr route.RouteStorer, setupQuota
 			return &EarsRuntime{config, nil, nil, storageMgr, nil, nil}, err
 		}
 	}
-	tableSyncer, err := getTableSyncer(config, "")
-	if err != nil {
-		return &EarsRuntime{config, nil, nil, storageMgr, nil, nil}, err
-	}
 	routingMgr := tablemgr.NewRoutingTableManager(pluginMgr, storageMgr, db.NewInMemoryFragmentStorer(config), tableSyncer, &log.Logger, config)
 	tenantStorer := db.NewTenantInmemoryStorer()
 	ctx := context.Background()
@@ -656,7 +656,7 @@ func setupRestApi(config config.Config, storageMgr route.RouteStorer, setupQuota
 		}
 	}
 	jwtMgr, _ := jwt.NewJWTConsumer("", nil, false, "", "", nil, nil, nil)
-	apiMgr, err := NewAPIManager(routingMgr, tenantStorer, quotaMgr, jwtMgr, nil)
+	apiMgr, err := NewAPIManager(routingMgr, tenantStorer, quotaMgr, jwtMgr, config)
 	if err != nil {
 		return &EarsRuntime{config, nil, nil, storageMgr, nil, nil}, err
 	}

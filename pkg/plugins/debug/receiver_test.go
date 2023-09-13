@@ -16,6 +16,9 @@ package debug_test
 
 import (
 	"context"
+	"github.com/rs/zerolog"
+	"github.com/spf13/viper"
+	"github.com/xmidt-org/ears/internal/pkg/syncer"
 	"github.com/xmidt-org/ears/pkg/tenant"
 	"testing"
 	"time"
@@ -80,8 +83,8 @@ func TestReceiver(t *testing.T) {
 
 			// Make sure we fill in all values
 			tc.config = tc.config.WithDefaults()
-
-			r, err := p.NewReceiver(tid, "debug", "mydebug", tc.config, nil, nil)
+			logger := zerolog.Nop()
+			r, err := p.NewReceiver(tid, "debug", "mydebug", tc.config, nil, syncer.NewInMemoryDeltaSyncer(&logger, viper.New()))
 			a.Expect(err).To(BeNil())
 
 			events := []event.Event{}
