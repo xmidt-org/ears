@@ -103,7 +103,11 @@ func (s *RedisDeltaSyncer) ReadMetrics(id string) *syncer.EarsMetric {
 	for id, v := range metricsMap {
 		var metric syncer.EarsMetric
 		err = json.Unmarshal([]byte(v), &metric)
-		if aggMetric.Ts-metric.Ts > 24*60*60 {
+		if err != nil {
+			s.logger.Error().Str("op", "ReadMetrics").Str("mapName", redisMapName).Str("error", err.Error()).Msg("failed to parse metrics")
+			continue
+		}
+		if aggMetric.Ts-metric.Ts > 5*60 {
 			delKeys = append(delKeys, id)
 		} else {
 			aggMetric.SuccessCount += metric.SuccessCount
