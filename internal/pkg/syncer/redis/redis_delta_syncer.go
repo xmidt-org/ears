@@ -74,7 +74,14 @@ func NewRedisDeltaSyncer(logger *zerolog.Logger, config config.Config) syncer.De
 	return s
 }
 
-// id should be a unique plugin id
+func (s *RedisDeltaSyncer) DeleteMetrics(id string) {
+	redisMapName := EARS_METRICS + "_" + s.env + "_" + id
+	err := s.client.Del(redisMapName).Err()
+	if err != nil {
+		s.logger.Error().Str("op", "DeleteMetrics").Str("mapKey", s.instanceId).Str("mapName", redisMapName).Str("error", err.Error()).Msg("failed to delete metrics")
+	}
+}
+
 func (s *RedisDeltaSyncer) WriteMetrics(id string, metric *syncer.EarsMetric) {
 	redisMapName := EARS_METRICS + "_" + s.env + "_" + id
 	metric.Ts = time.Now().Unix()
@@ -89,7 +96,6 @@ func (s *RedisDeltaSyncer) WriteMetrics(id string, metric *syncer.EarsMetric) {
 	}
 }
 
-// id should be a unique plugin id
 func (s *RedisDeltaSyncer) ReadMetrics(id string) *syncer.EarsMetric {
 	redisMapName := EARS_METRICS + "_" + s.env + "_" + id
 	result := s.client.HGetAll(redisMapName)

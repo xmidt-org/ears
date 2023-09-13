@@ -92,6 +92,7 @@ func (r *Receiver) StopReceiving(ctx context.Context) error {
 	defer r.Unlock()
 	if !r.stopped && r.done != nil {
 		close(r.done)
+		r.DeleteMetrics()
 		r.stopped = true
 	}
 	return nil

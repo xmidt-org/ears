@@ -62,11 +62,14 @@ func NewInMemoryDeltaSyncer(logger *zerolog.Logger, config config.Config) DeltaS
 	return s
 }
 
+func (s *InmemoryDeltaSyncer) DeleteMetrics(id string) {
+	delete(earsMetrics, id)
+}
+
 func (s *InmemoryDeltaSyncer) WriteMetrics(id string, metric *EarsMetric) {
 	earsMetrics[id] = metric
 }
 
-// id should be a unique plugin id
 func (s *InmemoryDeltaSyncer) ReadMetrics(id string) *EarsMetric {
 	return earsMetrics[id]
 }

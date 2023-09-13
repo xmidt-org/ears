@@ -161,6 +161,7 @@ func (s *Sender) StopSending(ctx context.Context) {
 	defer s.Unlock()
 	if !s.stopped {
 		s.stopped = true
+		s.DeleteMetrics()
 		s.producer.Close(ctx)
 	}
 }

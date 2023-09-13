@@ -285,7 +285,12 @@ func (r *Receiver) Receive(next receiver.NextFn) error {
 }
 
 func (r *Receiver) StopReceiving(ctx context.Context) error {
-	return r.syslogServer.conn.Close()
+	r.DeleteMetrics()
+	r.eventSuccessCounter.Unbind()
+	r.eventFailureCounter.Unbind()
+	r.eventBytesCounter.Unbind()
+	err := r.syslogServer.conn.Close()
+	return err
 }
 
 func (r *Receiver) Trigger(e event.Event) {

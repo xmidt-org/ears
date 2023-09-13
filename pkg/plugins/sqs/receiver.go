@@ -397,6 +397,7 @@ func (r *Receiver) StopReceiving(ctx context.Context) error {
 		r.eventFailureCounter.Unbind()
 		r.eventBytesCounter.Unbind()
 		r.eventQueueDepth.Unbind()
+		r.DeleteMetrics()
 		close(r.done)
 	}
 	r.Unlock()

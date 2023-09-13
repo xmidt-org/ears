@@ -188,6 +188,7 @@ func (s *Sender) StopSending(ctx context.Context) {
 			m.eventSendOutTime.Unbind()
 		}
 		s.producer.Close(ctx)
+		s.DeleteMetrics()
 	}
 }
 

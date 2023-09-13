@@ -70,6 +70,8 @@ type (
 		// GetInstanceCount
 		GetInstanceCount(ctx context.Context) int
 		//
+		DeleteMetrics(id string)
+		//
 		WriteMetrics(id string, metric *EarsMetric)
 		//
 		ReadMetrics(id string) *EarsMetric

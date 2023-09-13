@@ -132,6 +132,7 @@ func (s *Sender) StopSending(ctx context.Context) {
 	s.eventBytesCounter.Unbind()
 	s.eventProcessingTime.Unbind()
 	s.eventSendOutTime.Unbind()
+	s.DeleteMetrics()
 }
 
 func (s *Sender) Config() interface{} {

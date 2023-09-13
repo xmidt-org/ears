@@ -48,86 +48,91 @@ func NewMetricPlugin(tableSyncer syncer.DeltaSyncer, hashFct HashFct) MetricPlug
 	}
 }
 
-func (f *MetricPlugin) LogSuccess() {
-	f.Lock()
-	f.successCounter++
-	if time.Now().Unix() != f.currentSec {
-		f.successVelocityCounter = f.currentSuccessVelocityCounter
-		f.currentSuccessVelocityCounter = 0
-		f.currentSec = time.Now().Unix()
+func (mp *MetricPlugin) LogSuccess() {
+	mp.Lock()
+	mp.successCounter++
+	if time.Now().Unix() != mp.currentSec {
+		mp.successVelocityCounter = mp.currentSuccessVelocityCounter
+		mp.currentSuccessVelocityCounter = 0
+		mp.currentSec = time.Now().Unix()
 	}
-	f.currentSuccessVelocityCounter++
-	if time.Now().Unix()-f.lastMetricWriteSec > 60 {
-		hash := f.Hash()
-		f.lastMetricWriteSec = time.Now().Unix()
-		f.Unlock()
-		f.tableSyncer.WriteMetrics(hash, f.getLocalMetric())
+	mp.currentSuccessVelocityCounter++
+	if time.Now().Unix()-mp.lastMetricWriteSec > 60 {
+		hash := mp.Hash()
+		mp.lastMetricWriteSec = time.Now().Unix()
+		mp.Unlock()
+		mp.tableSyncer.WriteMetrics(hash, mp.getLocalMetric())
 	} else {
-		f.Unlock()
+		mp.Unlock()
 	}
 }
 
-func (f *MetricPlugin) LogError() {
-	f.Lock()
-	f.errorCounter++
-	if time.Now().Unix() != f.currentSec {
-		f.errorVelocityCounter = f.currentErrorVelocityCounter
-		f.currentErrorVelocityCounter = 0
-		f.currentSec = time.Now().Unix()
+func (mp *MetricPlugin) LogError() {
+	mp.Lock()
+	mp.errorCounter++
+	if time.Now().Unix() != mp.currentSec {
+		mp.errorVelocityCounter = mp.currentErrorVelocityCounter
+		mp.currentErrorVelocityCounter = 0
+		mp.currentSec = time.Now().Unix()
 	}
-	f.currentErrorVelocityCounter++
-	if time.Now().Unix()-f.lastMetricWriteSec > 60 {
-		hash := f.Hash()
-		f.lastMetricWriteSec = time.Now().Unix()
-		f.Unlock()
-		f.tableSyncer.WriteMetrics(hash, f.getLocalMetric())
+	mp.currentErrorVelocityCounter++
+	if time.Now().Unix()-mp.lastMetricWriteSec > 60 {
+		hash := mp.Hash()
+		mp.lastMetricWriteSec = time.Now().Unix()
+		mp.Unlock()
+		mp.tableSyncer.WriteMetrics(hash, mp.getLocalMetric())
 	} else {
-		f.Unlock()
+		mp.Unlock()
 	}
 }
 
-func (f *MetricPlugin) getLocalMetric() *syncer.EarsMetric {
-	f.Lock()
-	defer f.Unlock()
+func (mp *MetricPlugin) getLocalMetric() *syncer.EarsMetric {
+	mp.Lock()
+	defer mp.Unlock()
 	metrics := &syncer.EarsMetric{
-		f.successCounter,
-		f.errorCounter,
+		mp.successCounter,
+		mp.errorCounter,
 		0,
-		f.successVelocityCounter,
-		f.errorVelocityCounter,
+		mp.successVelocityCounter,
+		mp.errorVelocityCounter,
 		0,
-		f.currentSec,
+		mp.currentSec,
 		0,
 	}
 	return metrics
 }
 
-func (f *MetricPlugin) EventSuccessCount() int {
-	hash := f.Hash()
-	f.tableSyncer.WriteMetrics(hash, f.getLocalMetric())
-	return f.tableSyncer.ReadMetrics(hash).SuccessCount
+func (mp *MetricPlugin) DeleteMetrics() {
+	hash := mp.Hash()
+	mp.tableSyncer.DeleteMetrics(hash)
 }
 
-func (f *MetricPlugin) EventSuccessVelocity() int {
-	hash := f.Hash()
-	f.tableSyncer.WriteMetrics(hash, f.getLocalMetric())
-	return f.tableSyncer.ReadMetrics(hash).SuccessVelocity
+func (mp *MetricPlugin) EventSuccessCount() int {
+	hash := mp.Hash()
+	mp.tableSyncer.WriteMetrics(hash, mp.getLocalMetric())
+	return mp.tableSyncer.ReadMetrics(hash).SuccessCount
 }
 
-func (f *MetricPlugin) EventErrorCount() int {
-	hash := f.Hash()
-	f.tableSyncer.WriteMetrics(hash, f.getLocalMetric())
-	return f.tableSyncer.ReadMetrics(hash).ErrorCount
+func (mp *MetricPlugin) EventSuccessVelocity() int {
+	hash := mp.Hash()
+	mp.tableSyncer.WriteMetrics(hash, mp.getLocalMetric())
+	return mp.tableSyncer.ReadMetrics(hash).SuccessVelocity
 }
 
-func (f *MetricPlugin) EventErrorVelocity() int {
-	hash := f.Hash()
-	f.tableSyncer.WriteMetrics(hash, f.getLocalMetric())
-	return f.tableSyncer.ReadMetrics(hash).ErrorVelocity
+func (mp *MetricPlugin) EventErrorCount() int {
+	hash := mp.Hash()
+	mp.tableSyncer.WriteMetrics(hash, mp.getLocalMetric())
+	return mp.tableSyncer.ReadMetrics(hash).ErrorCount
 }
 
-func (f *MetricPlugin) EventTs() int64 {
-	hash := f.Hash()
-	f.tableSyncer.WriteMetrics(hash, f.getLocalMetric())
-	return f.tableSyncer.ReadMetrics(hash).LastEventTs
+func (mp *MetricPlugin) EventErrorVelocity() int {
+	hash := mp.Hash()
+	mp.tableSyncer.WriteMetrics(hash, mp.getLocalMetric())
+	return mp.tableSyncer.ReadMetrics(hash).ErrorVelocity
+}
+
+func (mp *MetricPlugin) EventTs() int64 {
+	hash := mp.Hash()
+	mp.tableSyncer.WriteMetrics(hash, mp.getLocalMetric())
+	return mp.tableSyncer.ReadMetrics(hash).LastEventTs
 }
