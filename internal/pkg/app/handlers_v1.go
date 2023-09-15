@@ -252,8 +252,9 @@ func getBearerToken(req *http.Request) string {
 func getTenant(ctx context.Context, vars map[string]string) (*tenant.Id, ApiError) {
 	orgId := vars["orgId"]
 	appId := vars["appId"]
-	logs2.StrToLogCtx(ctx, "orgId", orgId)
-	logs2.StrToLogCtx(ctx, "appId", appId)
+	logs2.StrToLogCtx(ctx, "partner.id", orgId)
+	logs2.StrToLogCtx(ctx, "app.id", appId)
+	logs2.StrToLogCtx(ctx, "service.name", "ears")
 	if orgId == "" || appId == "" {
 		var err ApiError
 		if orgId == "" {
@@ -274,7 +275,9 @@ func getTenant(ctx context.Context, vars map[string]string) (*tenant.Id, ApiErro
 	span := trace.SpanFromContext(ctx)
 	span.SetAttributes(rtsemconv.EARSOrgId.String(orgId))
 	span.SetAttributes(rtsemconv.EARSAppId.String(appId))
-	return &tenant.Id{OrgId: orgId, AppId: appId}, nil
+	tid := tenant.Id{OrgId: orgId, AppId: appId}
+	logs2.StrToLogCtx(ctx, "tid", tid.ToString())
+	return &tid, nil
 }
 
 func (a *APIManager) webhookHandler(w http.ResponseWriter, r *http.Request) {
@@ -347,7 +350,7 @@ func (a *APIManager) sendEventHandler(w http.ResponseWriter, r *http.Request) {
 		var err error
 		tenantConfig, err = a.tenantStorer.GetConfig(ctx, *tid)
 		if err != nil {
-			log.Ctx(ctx).Error().Str("op", "sendEventHandler").Str("tid", tid.ToString()).Str("gears.app.id", tid.AppId).Str("partner.id", tid.OrgId).Str("error", err.Error()).Msg("error getting tenant config")
+			log.Ctx(ctx).Error().Str("op", "sendEventHandler").Str("error", err.Error()).Msg("error getting tenant config")
 			resp := ErrorResponse(convertToApiError(ctx, err))
 			resp.Respond(ctx, w, doYaml(r))
 			return
@@ -360,7 +363,7 @@ func (a *APIManager) sendEventHandler(w http.ResponseWriter, r *http.Request) {
 		bearerToken := getBearerToken(r)
 		_, _, authErr := jwtMgr.VerifyToken(ctx, bearerToken, r.URL.Path, r.Method, tid)
 		if authErr != nil {
-			log.Ctx(ctx).Error().Str("op", "sendEventHandler").Str("tid", tid.ToString()).Str("gears.app.id", tid.AppId).Str("partner.id", tid.OrgId).Str("error", authErr.Error()).Msg("authorization error")
+			log.Ctx(ctx).Error().Str("op", "sendEventHandler").Str("error", authErr.Error()).Msg("authorization error")
 			resp := ErrorResponse(convertToApiError(ctx, authErr))
 			resp.Respond(ctx, w, doYaml(r))
 			return
@@ -368,7 +371,7 @@ func (a *APIManager) sendEventHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	body, err := ioutil.ReadAll(r.Body)
 	if err != nil {
-		log.Ctx(ctx).Error().Str("op", "sendEventHandler").Str("tid", tid.ToString()).Str("gears.app.id", tid.AppId).Str("partner.id", tid.OrgId).Msg(err.Error())
+		log.Ctx(ctx).Error().Str("op", "sendEventHandler").Msg(err.Error())
 		resp := ErrorResponse(&InternalServerError{err})
 		resp.Respond(ctx, w, doYaml(r))
 		return
@@ -376,7 +379,7 @@ func (a *APIManager) sendEventHandler(w http.ResponseWriter, r *http.Request) {
 	var payload interface{}
 	err = json.Unmarshal(body, &payload)
 	if err != nil {
-		log.Ctx(ctx).Error().Str("op", "sendEventHandler").Str("tid", tid.ToString()).Str("gears.app.id", tid.AppId).Str("partner.id", tid.OrgId).Msg(err.Error())
+		log.Ctx(ctx).Error().Str("op", "sendEventHandler").Msg(err.Error())
 		a.addRouteFailureRecorder.Add(ctx, 1.0)
 		resp := ErrorResponse(&BadRequestError{"cannot unmarshal request body", err})
 		resp.Respond(ctx, w, doYaml(r))
@@ -384,21 +387,21 @@ func (a *APIManager) sendEventHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	routeId := vars["routeId"]
 	if routeId == "" {
-		log.Ctx(ctx).Error().Str("op", "sendEventHandler").Str("tid", tid.ToString()).Str("gears.app.id", tid.AppId).Str("partner.id", tid.OrgId).Msg("missing route ID")
+		log.Ctx(ctx).Error().Str("op", "sendEventHandler").Msg("missing route ID")
 		resp := ErrorResponse(convertToApiError(ctx, err))
 		resp.Respond(ctx, w, doYaml(r))
 		return
 	}
 	_, err = a.routingTableMgr.GetRoute(ctx, *tid, routeId)
 	if err != nil {
-		log.Ctx(ctx).Error().Str("op", "sendEventHandler").Str("tid", tid.ToString()).Str("gears.app.id", tid.AppId).Str("partner.id", tid.OrgId).Msg(err.Error())
+		log.Ctx(ctx).Error().Str("op", "sendEventHandler").Msg(err.Error())
 		resp := ErrorResponse(convertToApiError(ctx, err))
 		resp.Respond(ctx, w, doYaml(r))
 		return
 	}
 	traceId, err := a.routingTableMgr.RouteEvent(ctx, *tid, routeId, payload)
 	if err != nil {
-		log.Ctx(ctx).Error().Str("op", "sendEventHandler").Str("tid", tid.ToString()).Str("gears.app.id", tid.AppId).Str("partner.id", tid.OrgId).Msg(err.Error())
+		log.Ctx(ctx).Error().Str("op", "sendEventHandler").Msg(err.Error())
 		resp := ErrorResponse(convertToApiError(ctx, err))
 		resp.Respond(ctx, w, doYaml(r))
 		return
@@ -423,7 +426,7 @@ func (a *APIManager) enableDisableRouteHandler(w http.ResponseWriter, r *http.Re
 	}
 	_, err := a.tenantStorer.GetConfig(ctx, *tid)
 	if err != nil {
-		log.Ctx(ctx).Error().Str("op", "enableDisableRouteHandler").Str("tid", tid.ToString()).Str("gears.app.id", tid.AppId).Str("partner.id", tid.OrgId).Str("error", err.Error()).Msg("error getting tenant config")
+		log.Ctx(ctx).Error().Str("op", "enableDisableRouteHandler").Str("error", err.Error()).Msg("error getting tenant config")
 		resp := ErrorResponse(convertToApiError(ctx, err))
 		resp.Respond(ctx, w, doYaml(r))
 		return
@@ -432,7 +435,7 @@ func (a *APIManager) enableDisableRouteHandler(w http.ResponseWriter, r *http.Re
 	trace.SpanFromContext(ctx).SetAttributes(rtsemconv.EARSRouteId.String(routeId))
 	route, err := a.routingTableMgr.GetRoute(ctx, *tid, routeId)
 	if err != nil {
-		log.Ctx(ctx).Error().Str("op", "enableDisableRouteHandler").Str("tid", tid.ToString()).Str("gears.app.id", tid.AppId).Str("partner.id", tid.OrgId).Msg(err.Error())
+		log.Ctx(ctx).Error().Str("op", "enableDisableRouteHandler").Msg(err.Error())
 		resp := ErrorResponse(convertToApiError(ctx, err))
 		resp.Respond(ctx, w, doYaml(r))
 		return
@@ -440,7 +443,7 @@ func (a *APIManager) enableDisableRouteHandler(w http.ResponseWriter, r *http.Re
 	route.Inactive = !route.Inactive
 	if routeId != "" && route.Id != "" && routeId != route.Id {
 		err := &BadRequestError{"route ID mismatch " + routeId + " vs " + route.Id, nil}
-		log.Ctx(ctx).Error().Str("op", "enableDisableRouteHandler").Str("tid", tid.ToString()).Str("gears.app.id", tid.AppId).Str("partner.id", tid.OrgId).Msg(err.Error())
+		log.Ctx(ctx).Error().Str("op", "enableDisableRouteHandler").Msg(err.Error())
 		a.addRouteFailureRecorder.Add(ctx, 1.0)
 		resp := ErrorResponse(err)
 		resp.Respond(ctx, w, doYaml(r))
@@ -454,7 +457,7 @@ func (a *APIManager) enableDisableRouteHandler(w http.ResponseWriter, r *http.Re
 	route.TenantId.OrgId = tid.OrgId
 	err = a.routingTableMgr.AddRoute(ctx, route)
 	if err != nil {
-		log.Ctx(ctx).Error().Str("op", "enableDisableRouteHandler").Str("tid", tid.ToString()).Str("gears.app.id", tid.AppId).Str("partner.id", tid.OrgId).Msg(err.Error())
+		log.Ctx(ctx).Error().Str("op", "enableDisableRouteHandler").Msg(err.Error())
 		a.addRouteFailureRecorder.Add(ctx, 1.0)
 		resp := ErrorResponse(convertToApiError(ctx, err))
 		resp.Respond(ctx, w, doYaml(r))
@@ -462,7 +465,7 @@ func (a *APIManager) enableDisableRouteHandler(w http.ResponseWriter, r *http.Re
 	} else {
 		a.addRouteSuccessRecorder.Add(ctx, 1.0)
 	}
-	log.Ctx(ctx).Info().Str("op", "enableDisableRouteHandler").Str("routeId", route.Id).Str("tid", tid.ToString()).Str("gears.app.id", tid.AppId).Str("partner.id", tid.OrgId).Msg("success")
+	log.Ctx(ctx).Info().Str("op", "enableDisableRouteHandler").Str("routeId", route.Id).Msg("success")
 	resp := ItemResponse(route)
 	resp.Respond(ctx, w, doYaml(r))
 }
@@ -480,7 +483,7 @@ func (a *APIManager) addRouteHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	_, err := a.tenantStorer.GetConfig(ctx, *tid)
 	if err != nil {
-		log.Ctx(ctx).Error().Str("op", "addRouteHandler").Str("tid", tid.ToString()).Str("gears.app.id", tid.AppId).Str("partner.id", tid.OrgId).Str("error", err.Error()).Msg("error getting tenant config")
+		log.Ctx(ctx).Error().Str("op", "addRouteHandler").Str("error", err.Error()).Msg("error getting tenant config")
 		resp := ErrorResponse(convertToApiError(ctx, err))
 		resp.Respond(ctx, w, doYaml(r))
 		return
@@ -488,7 +491,7 @@ func (a *APIManager) addRouteHandler(w http.ResponseWriter, r *http.Request) {
 	routeId := vars["routeId"]
 	body, err := ioutil.ReadAll(r.Body)
 	if err != nil {
-		log.Ctx(ctx).Error().Str("op", "addRouteHandler").Str("tid", tid.ToString()).Str("gears.app.id", tid.AppId).Str("partner.id", tid.OrgId).Msg(err.Error())
+		log.Ctx(ctx).Error().Str("op", "addRouteHandler").Msg(err.Error())
 		a.addRouteFailureRecorder.Add(ctx, 1.0)
 		resp := ErrorResponse(&InternalServerError{err})
 		resp.Respond(ctx, w, doYaml(r))
@@ -497,7 +500,7 @@ func (a *APIManager) addRouteHandler(w http.ResponseWriter, r *http.Request) {
 	var route route.Config
 	err = yaml.Unmarshal(body, &route)
 	if err != nil {
-		log.Ctx(ctx).Error().Str("op", "addRouteHandler").Str("tid", tid.ToString()).Str("gears.app.id", tid.AppId).Str("partner.id", tid.OrgId).Msg(err.Error())
+		log.Ctx(ctx).Error().Str("op", "addRouteHandler").Msg(err.Error())
 		a.addRouteFailureRecorder.Add(ctx, 1.0)
 		resp := ErrorResponse(&BadRequestError{"Cannot unmarshal request body", err})
 		resp.Respond(ctx, w, doYaml(r))
@@ -505,7 +508,7 @@ func (a *APIManager) addRouteHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	if routeId != "" && route.Id != "" && routeId != route.Id {
 		err := &BadRequestError{"route ID mismatch " + routeId + " vs " + route.Id, nil}
-		log.Ctx(ctx).Error().Str("op", "addRouteHandler").Str("tid", tid.ToString()).Str("gears.app.id", tid.AppId).Str("partner.id", tid.OrgId).Msg(err.Error())
+		log.Ctx(ctx).Error().Str("op", "addRouteHandler").Msg(err.Error())
 		a.addRouteFailureRecorder.Add(ctx, 1.0)
 		resp := ErrorResponse(err)
 		resp.Respond(ctx, w, doYaml(r))
@@ -519,7 +522,7 @@ func (a *APIManager) addRouteHandler(w http.ResponseWriter, r *http.Request) {
 	route.TenantId.OrgId = tid.OrgId
 	err = a.routingTableMgr.AddRoute(ctx, &route)
 	if err != nil {
-		log.Ctx(ctx).Error().Str("op", "addRouteHandler").Str("tid", tid.ToString()).Str("gears.app.id", tid.AppId).Str("partner.id", tid.OrgId).Msg(err.Error())
+		log.Ctx(ctx).Error().Str("op", "addRouteHandler").Msg(err.Error())
 		a.addRouteFailureRecorder.Add(ctx, 1.0)
 		resp := ErrorResponse(convertToApiError(ctx, err))
 		resp.Respond(ctx, w, doYaml(r))
@@ -527,7 +530,7 @@ func (a *APIManager) addRouteHandler(w http.ResponseWriter, r *http.Request) {
 	} else {
 		a.addRouteSuccessRecorder.Add(ctx, 1.0)
 	}
-	log.Ctx(ctx).Info().Str("op", "addRouteHandler").Str("routeId", route.Id).Str("tid", tid.ToString()).Str("gears.app.id", tid.AppId).Str("partner.id", tid.OrgId).Msg("success")
+	log.Ctx(ctx).Info().Str("op", "addRouteHandler").Str("routeId", route.Id).Msg("success")
 	resp := ItemResponse(route)
 	resp.Respond(ctx, w, doYaml(r))
 }
@@ -547,7 +550,7 @@ func (a *APIManager) removeRouteHandler(w http.ResponseWriter, r *http.Request) 
 	trace.SpanFromContext(ctx).SetAttributes(rtsemconv.EARSRouteId.String(routeId))
 	err := a.routingTableMgr.RemoveRoute(ctx, *tid, routeId)
 	if err != nil {
-		log.Ctx(ctx).Error().Str("op", "removeRouteHandler").Str("tid", tid.ToString()).Str("gears.app.id", tid.AppId).Str("partner.id", tid.OrgId).Msg(err.Error())
+		log.Ctx(ctx).Error().Str("op", "removeRouteHandler").Msg(err.Error())
 		a.removeRouteFailureRecorder.Add(ctx, 1.0)
 		resp := ErrorResponse(convertToApiError(ctx, err))
 		resp.Respond(ctx, w, doYaml(r))
@@ -555,7 +558,7 @@ func (a *APIManager) removeRouteHandler(w http.ResponseWriter, r *http.Request) 
 	} else {
 		a.removeRouteSuccessRecorder.Add(ctx, 1.0)
 	}
-	log.Ctx(ctx).Info().Str("op", "removeRouteHandler").Str("routeId", routeId).Str("tid", tid.ToString()).Str("gears.app.id", tid.AppId).Str("partner.id", tid.OrgId).Msg("success")
+	log.Ctx(ctx).Info().Str("op", "removeRouteHandler").Str("routeId", routeId).Msg("success")
 	resp := ItemResponse(routeId)
 	resp.Respond(ctx, w, doYaml(r))
 }
@@ -574,12 +577,12 @@ func (a *APIManager) getRouteHandler(w http.ResponseWriter, r *http.Request) {
 	trace.SpanFromContext(ctx).SetAttributes(rtsemconv.EARSRouteId.String(routeId))
 	routeConfig, err := a.routingTableMgr.GetRoute(ctx, *tid, routeId)
 	if err != nil {
-		log.Ctx(ctx).Error().Str("op", "getRouteHandler").Str("tid", tid.ToString()).Str("gears.app.id", tid.AppId).Str("partner.id", tid.OrgId).Msg(err.Error())
+		log.Ctx(ctx).Error().Str("op", "getRouteHandler").Msg(err.Error())
 		resp := ErrorResponse(convertToApiError(ctx, err))
 		resp.Respond(ctx, w, doYaml(r))
 		return
 	}
-	log.Ctx(ctx).Info().Str("op", "getRouteHandler").Str("routeId", routeId).Str("tid", tid.ToString()).Str("gears.app.id", tid.AppId).Str("partner.id", tid.OrgId).Msg("success")
+	log.Ctx(ctx).Info().Str("op", "getRouteHandler").Str("routeId", routeId).Msg("success")
 	resp := ItemResponse(routeConfig)
 	resp.Respond(ctx, w, doYaml(r))
 }
@@ -596,12 +599,12 @@ func (a *APIManager) getAllTenantRoutesHandler(w http.ResponseWriter, r *http.Re
 	}
 	allRouteConfigs, err := a.routingTableMgr.GetAllTenantRoutes(ctx, *tid)
 	if err != nil {
-		log.Ctx(ctx).Error().Str("op", "getAllTenantRoutesHandler").Str("tid", tid.ToString()).Str("gears.app.id", tid.AppId).Str("partner.id", tid.OrgId).Msg(err.Error())
+		log.Ctx(ctx).Error().Str("op", "getAllTenantRoutesHandler").Msg(err.Error())
 		resp := ErrorResponse(convertToApiError(ctx, err))
 		resp.Respond(ctx, w, doYaml(r))
 		return
 	}
-	log.Ctx(ctx).Info().Str("op", "getAllTenantRoutesHandler").Str("tid", tid.ToString()).Str("gears.app.id", tid.AppId).Str("partner.id", tid.OrgId).Msg("success")
+	log.Ctx(ctx).Info().Str("op", "getAllTenantRoutesHandler").Msg("success")
 	trace.SpanFromContext(ctx).SetAttributes(attribute.Int("routeCount", len(allRouteConfigs)))
 	resp := ItemsResponse(allRouteConfigs)
 	resp.Respond(ctx, w, doYaml(r))
@@ -645,12 +648,12 @@ func (a *APIManager) getAllTenantFragmentsHandler(w http.ResponseWriter, r *http
 	}
 	allFragments, err := a.routingTableMgr.GetAllTenantFragments(ctx, *tid)
 	if err != nil {
-		log.Ctx(ctx).Error().Str("op", "getAllTenantFragmentsHandler").Str("tid", tid.ToString()).Str("gears.app.id", tid.AppId).Str("partner.id", tid.OrgId).Msg(err.Error())
+		log.Ctx(ctx).Error().Str("op", "getAllTenantFragmentsHandler").Msg(err.Error())
 		resp := ErrorResponse(convertToApiError(ctx, err))
 		resp.Respond(ctx, w, doYaml(r))
 		return
 	}
-	log.Ctx(ctx).Info().Str("op", "getAllTenantFragmentsHandler").Str("tid", tid.ToString()).Str("gears.app.id", tid.AppId).Str("partner.id", tid.OrgId).Msg("success")
+	log.Ctx(ctx).Info().Str("op", "getAllTenantFragmentsHandler").Msg("success")
 	trace.SpanFromContext(ctx).SetAttributes(attribute.Int("routeCount", len(allFragments)))
 	resp := ItemsResponse(allFragments)
 	resp.Respond(ctx, w, doYaml(r))
@@ -674,7 +677,7 @@ func (a *APIManager) getAllSendersHandler(w http.ResponseWriter, r *http.Request
 				senders = append(senders, v)
 			}
 		}
-		log.Ctx(ctx).Info().Str("op", "getAllSendersHandler").Str("tid", tid.ToString()).Str("gears.app.id", tid.AppId).Str("partner.id", tid.OrgId).Msg("success")
+		log.Ctx(ctx).Info().Str("op", "getAllSendersHandler").Msg("success")
 	} else {
 		for _, v := range allSenders {
 			senders = append(senders, v)
@@ -704,7 +707,7 @@ func (a *APIManager) getAllReceiversHandler(w http.ResponseWriter, r *http.Reque
 				receivers = append(receivers, v)
 			}
 		}
-		log.Ctx(ctx).Info().Str("op", "getAllReceiversHandler").Str("tid", tid.ToString()).Str("gears.app.id", tid.AppId).Str("partner.id", tid.OrgId).Msg("success")
+		log.Ctx(ctx).Info().Str("op", "getAllReceiversHandler").Msg("success")
 	} else {
 		for _, v := range allReceivers {
 			receivers = append(receivers, v)
@@ -734,7 +737,7 @@ func (a *APIManager) getAllFiltersHandler(w http.ResponseWriter, r *http.Request
 				filters = append(filters, v)
 			}
 		}
-		log.Ctx(ctx).Info().Str("op", "getAllFiltersHandler").Str("tid", tid.ToString()).Str("gears.app.id", tid.AppId).Str("partner.id", tid.OrgId).Msg("success")
+		log.Ctx(ctx).Info().Str("op", "getAllFiltersHandler").Msg("success")
 	} else {
 		for _, v := range allFilters {
 			filters = append(filters, v)
@@ -775,12 +778,12 @@ func (a *APIManager) getFragmentHandler(w http.ResponseWriter, r *http.Request) 
 	trace.SpanFromContext(ctx).SetAttributes(rtsemconv.EARSFragmentId.String(fragmentId))
 	fragmentConfig, err := a.routingTableMgr.GetFragment(ctx, *tid, fragmentId)
 	if err != nil {
-		log.Ctx(ctx).Error().Str("op", "getFragmentHandler").Str("tid", tid.ToString()).Str("gears.app.id", tid.AppId).Str("partner.id", tid.OrgId).Msg(err.Error())
+		log.Ctx(ctx).Error().Str("op", "getFragmentHandler").Msg(err.Error())
 		resp := ErrorResponse(convertToApiError(ctx, err))
 		resp.Respond(ctx, w, doYaml(r))
 		return
 	}
-	log.Ctx(ctx).Info().Str("op", "getFragmentHandler").Str("fragmentId", fragmentId).Str("tid", tid.ToString()).Str("gears.app.id", tid.AppId).Str("partner.id", tid.OrgId).Msg("success")
+	log.Ctx(ctx).Info().Str("op", "getFragmentHandler").Str("fragmentId", fragmentId).Msg("success")
 	resp := ItemResponse(fragmentConfig)
 	resp.Respond(ctx, w, doYaml(r))
 }
@@ -800,7 +803,7 @@ func (a *APIManager) removeFragmentHandler(w http.ResponseWriter, r *http.Reques
 	trace.SpanFromContext(ctx).SetAttributes(rtsemconv.EARSFragmentId.String(fragmentId))
 	err := a.routingTableMgr.RemoveFragment(ctx, *tid, fragmentId)
 	if err != nil {
-		log.Ctx(ctx).Error().Str("op", "removeFragmentHandler").Str("tid", tid.ToString()).Str("gears.app.id", tid.AppId).Str("partner.id", tid.OrgId).Msg(err.Error())
+		log.Ctx(ctx).Error().Str("op", "removeFragmentHandler").Msg(err.Error())
 		a.removeRouteFailureRecorder.Add(ctx, 1.0)
 		resp := ErrorResponse(convertToApiError(ctx, err))
 		resp.Respond(ctx, w, doYaml(r))
@@ -808,7 +811,7 @@ func (a *APIManager) removeFragmentHandler(w http.ResponseWriter, r *http.Reques
 	} else {
 		a.removeRouteSuccessRecorder.Add(ctx, 1.0)
 	}
-	log.Ctx(ctx).Info().Str("op", "removeFragmentHandler").Str("fragmentId", fragmentId).Str("tid", tid.ToString()).Str("gears.app.id", tid.AppId).Str("partner.id", tid.OrgId).Msg("success")
+	log.Ctx(ctx).Info().Str("op", "removeFragmentHandler").Str("fragmentId", fragmentId).Msg("success")
 	resp := ItemResponse(fragmentId)
 	resp.Respond(ctx, w, doYaml(r))
 }
@@ -826,7 +829,7 @@ func (a *APIManager) addFragmentHandler(w http.ResponseWriter, r *http.Request) 
 	}
 	_, err := a.tenantStorer.GetConfig(ctx, *tid)
 	if err != nil {
-		log.Ctx(ctx).Error().Str("op", "addFragmentHandler").Str("tid", tid.ToString()).Str("gears.app.id", tid.AppId).Str("partner.id", tid.OrgId).Str("error", err.Error()).Msg("error getting tenant config")
+		log.Ctx(ctx).Error().Str("op", "addFragmentHandler").Str("error", err.Error()).Msg("error getting tenant config")
 		resp := ErrorResponse(convertToApiError(ctx, err))
 		resp.Respond(ctx, w, doYaml(r))
 		return
@@ -834,7 +837,7 @@ func (a *APIManager) addFragmentHandler(w http.ResponseWriter, r *http.Request) 
 	fragmentId := vars["fragmentId"]
 	body, err := ioutil.ReadAll(r.Body)
 	if err != nil {
-		log.Ctx(ctx).Error().Str("op", "addFragmentHandler").Str("tid", tid.ToString()).Str("gears.app.id", tid.AppId).Str("partner.id", tid.OrgId).Msg(err.Error())
+		log.Ctx(ctx).Error().Str("op", "addFragmentHandler").Msg(err.Error())
 		a.addRouteFailureRecorder.Add(ctx, 1.0)
 		resp := ErrorResponse(&InternalServerError{err})
 		resp.Respond(ctx, w, doYaml(r))
@@ -843,14 +846,14 @@ func (a *APIManager) addFragmentHandler(w http.ResponseWriter, r *http.Request) 
 	var fragmentConfig route.PluginConfig
 	err = yaml.Unmarshal(body, &fragmentConfig)
 	if err != nil {
-		log.Ctx(ctx).Error().Str("op", "addFragmentHandler").Str("tid", tid.ToString()).Str("gears.app.id", tid.AppId).Str("partner.id", tid.OrgId).Msg(err.Error())
+		log.Ctx(ctx).Error().Str("op", "addFragmentHandler").Msg(err.Error())
 		resp := ErrorResponse(&BadRequestError{"Cannot unmarshal request body", err})
 		resp.Respond(ctx, w, doYaml(r))
 		return
 	}
 	if fragmentId != "" && fragmentConfig.FragmentName != "" && fragmentId != fragmentConfig.FragmentName {
 		err := &BadRequestError{"fragment name mismatch " + fragmentId + " vs " + fragmentConfig.Name, nil}
-		log.Ctx(ctx).Error().Str("op", "addFragmentHandler").Str("tid", tid.ToString()).Str("gears.app.id", tid.AppId).Str("partner.id", tid.OrgId).Msg(err.Error())
+		log.Ctx(ctx).Error().Str("op", "addFragmentHandler").Msg(err.Error())
 		resp := ErrorResponse(err)
 		resp.Respond(ctx, w, doYaml(r))
 		return
@@ -860,7 +863,7 @@ func (a *APIManager) addFragmentHandler(w http.ResponseWriter, r *http.Request) 
 	}
 	if fragmentConfig.FragmentName == "" {
 		err := &BadRequestError{"missing fragment name", nil}
-		log.Ctx(ctx).Error().Str("op", "addFragmentHandler").Str("tid", tid.ToString()).Str("gears.app.id", tid.AppId).Str("partner.id", tid.OrgId).Msg(err.Error())
+		log.Ctx(ctx).Error().Str("op", "addFragmentHandler").Msg(err.Error())
 		resp := ErrorResponse(err)
 		resp.Respond(ctx, w, doYaml(r))
 		return
@@ -868,12 +871,12 @@ func (a *APIManager) addFragmentHandler(w http.ResponseWriter, r *http.Request) 
 	trace.SpanFromContext(ctx).SetAttributes(rtsemconv.EARSFragmentId.String(fragmentId))
 	err = a.routingTableMgr.AddFragment(ctx, *tid, fragmentConfig)
 	if err != nil {
-		log.Ctx(ctx).Error().Str("op", "addFragmentHandler").Str("tid", tid.ToString()).Str("gears.app.id", tid.AppId).Str("partner.id", tid.OrgId).Msg(err.Error())
+		log.Ctx(ctx).Error().Str("op", "addFragmentHandler").Msg(err.Error())
 		resp := ErrorResponse(convertToApiError(ctx, err))
 		resp.Respond(ctx, w, doYaml(r))
 		return
 	}
-	log.Ctx(ctx).Info().Str("op", "addFragmentHandler").Str("fragmentId", fragmentId).Str("tid", tid.ToString()).Str("gears.app.id", tid.AppId).Str("partner.id", tid.OrgId).Msg("success")
+	log.Ctx(ctx).Info().Str("op", "addFragmentHandler").Str("fragmentId", fragmentId).Msg("success")
 	resp := ItemResponse(fragmentConfig)
 	resp.Respond(ctx, w, doYaml(r))
 }
@@ -890,12 +893,12 @@ func (a *APIManager) getTenantConfigHandler(w http.ResponseWriter, r *http.Reque
 	}
 	config, err := a.tenantStorer.GetConfig(ctx, *tid)
 	if err != nil {
-		log.Ctx(ctx).Error().Str("op", "getTenantConfigHandler").Str("tid", tid.ToString()).Str("gears.app.id", tid.AppId).Str("partner.id", tid.OrgId).Str("error", err.Error()).Msg("error getting tenant config")
+		log.Ctx(ctx).Error().Str("op", "getTenantConfigHandler").Str("error", err.Error()).Msg("error getting tenant config")
 		resp := ErrorResponse(convertToApiError(ctx, err))
 		resp.Respond(ctx, w, doYaml(r))
 		return
 	}
-	log.Ctx(ctx).Info().Str("op", "getTenantConfigHandler").Str("tid", tid.ToString()).Str("gears.app.id", tid.AppId).Str("partner.id", tid.OrgId).Msg("success")
+	log.Ctx(ctx).Info().Str("op", "getTenantConfigHandler").Msg("success")
 	resp := ItemResponse(config)
 	resp.Respond(ctx, w, doYaml(r))
 }
@@ -926,7 +929,7 @@ func (a *APIManager) addTenantConfigHandler(w http.ResponseWriter, r *http.Reque
 	}
 	body, err := ioutil.ReadAll(r.Body)
 	if err != nil {
-		log.Ctx(ctx).Error().Str("op", "addTenantConfigHandler").Str("tid", tid.ToString()).Str("gears.app.id", tid.AppId).Str("partner.id", tid.OrgId).Str("error", err.Error()).Msg("error reading request body")
+		log.Ctx(ctx).Error().Str("op", "addTenantConfigHandler").Str("error", err.Error()).Msg("error reading request body")
 		resp := ErrorResponse(&InternalServerError{err})
 		resp.Respond(ctx, w, doYaml(r))
 		return
@@ -934,7 +937,7 @@ func (a *APIManager) addTenantConfigHandler(w http.ResponseWriter, r *http.Reque
 	var tenantConfig tenant.Config
 	err = yaml.Unmarshal(body, &tenantConfig)
 	if err != nil {
-		log.Ctx(ctx).Error().Str("op", "addTenantConfigHandler").Str("tid", tid.ToString()).Str("gears.app.id", tid.AppId).Str("partner.id", tid.OrgId).Str("error", err.Error()).Msg("error unmarshal request body")
+		log.Ctx(ctx).Error().Str("op", "addTenantConfigHandler").Str("error", err.Error()).Msg("error unmarshal request body")
 		resp := ErrorResponse(&BadRequestError{"Cannot unmarshal request body", err})
 		resp.Respond(ctx, w, doYaml(r))
 		return
@@ -942,13 +945,13 @@ func (a *APIManager) addTenantConfigHandler(w http.ResponseWriter, r *http.Reque
 	tenantConfig.Tenant = *tid
 	err = a.tenantStorer.SetConfig(ctx, tenantConfig)
 	if err != nil {
-		log.Ctx(ctx).Error().Str("op", "addTenantConfigHandler").Str("tid", tid.ToString()).Str("gears.app.id", tid.AppId).Str("partner.id", tid.OrgId).Str("error", err.Error()).Msg("error setting tenant config")
+		log.Ctx(ctx).Error().Str("op", "addTenantConfigHandler").Str("error", err.Error()).Msg("error setting tenant config")
 		resp := ErrorResponse(convertToApiError(ctx, err))
 		resp.Respond(ctx, w, doYaml(r))
 		return
 	}
 	a.quotaManager.PublishQuota(ctx, *tid)
-	log.Ctx(ctx).Info().Str("op", "addTenantConfigHandler").Str("tid", tid.ToString()).Str("gears.app.id", tid.AppId).Str("partner.id", tid.OrgId).Msg("success")
+	log.Ctx(ctx).Info().Str("op", "addTenantConfigHandler").Msg("success")
 	resp := ItemResponse(tenantConfig)
 	resp.Respond(ctx, w, doYaml(r))
 }
@@ -983,7 +986,7 @@ func (a *APIManager) deleteTenantConfigHandler(w http.ResponseWriter, r *http.Re
 		resp.Respond(ctx, w, doYaml(r))
 		return
 	}
-	log.Ctx(ctx).Info().Str("op", "deleteTenantConfigHandler").Str("tid", tid.ToString()).Msg("success")
+	log.Ctx(ctx).Info().Str("op", "deleteTenantConfigHandler").Msg("success")
 	resp := ItemResponse(tid)
 	resp.Respond(ctx, w, doYaml(r))
 }

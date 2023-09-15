@@ -32,7 +32,7 @@ func Execute() {
 	//Initialize logging for command setup. Log level/env will be set
 	//later when we read in the configurations
 	zerolog.TimeFieldFormat = zerolog.TimeFormatUnix
-	log.Logger = log.With().Str("app.id", "ears").Logger()
+	log.Logger = log.With().Str("service.name", "ears").Logger()
 	if err := rootCmd.Execute(); err != nil {
 		log.Fatal().Str("op", "Execute").Msg(err.Error())
 	}
