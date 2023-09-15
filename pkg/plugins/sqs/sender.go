@@ -174,7 +174,7 @@ func (s *Sender) startTimedSender() {
 		for {
 			select {
 			case <-s.done:
-				s.logger.Info().Str("op", "SQS.timedSender").Str("name", s.Name()).Str("tid", s.Tenant().ToString()).Str("app.id", s.Tenant().AppId).Str("partner.id", s.Tenant().OrgId).Msg("stopping sqs sender")
+				s.logger.Info().Str("op", "SQS.timedSender").Str("name", s.Name()).Str("tid", s.Tenant().ToString()).Str("gears.app.id", s.Tenant().AppId).Str("partner.id", s.Tenant().OrgId).Msg("stopping sqs sender")
 				return
 			case <-time.After(time.Duration(*s.config.SendTimeout) * time.Second):
 			}
@@ -214,7 +214,7 @@ func (s *Sender) send(events []event.Event) {
 	entries := make([]*sqs.SendMessageBatchRequestEntry, 0)
 	for idx, evt := range events {
 		if idx == 0 {
-			log.Ctx(evt.Context()).Debug().Str("op", "SQS.sendWorker").Str("name", s.Name()).Str("tid", s.Tenant().ToString()).Str("app.id", s.Tenant().AppId).Str("partner.id", s.Tenant().OrgId).Int("eventIdx", idx).Int("batchSize", len(events)).Msg("send message batch")
+			log.Ctx(evt.Context()).Debug().Str("op", "SQS.sendWorker").Str("name", s.Name()).Str("tid", s.Tenant().ToString()).Str("gears.app.id", s.Tenant().AppId).Str("partner.id", s.Tenant().OrgId).Int("eventIdx", idx).Int("batchSize", len(events)).Msg("send message batch")
 		}
 		buf, err := json.Marshal(evt.Payload())
 		if err != nil {

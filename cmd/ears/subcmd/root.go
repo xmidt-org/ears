@@ -33,7 +33,6 @@ func Execute() {
 	//later when we read in the configurations
 	zerolog.TimeFieldFormat = zerolog.TimeFormatUnix
 	log.Logger = log.With().Str("app.id", "ears").Logger()
-
 	if err := rootCmd.Execute(); err != nil {
 		log.Fatal().Str("op", "Execute").Msg(err.Error())
 	}
@@ -41,7 +40,6 @@ func Execute() {
 
 func init() {
 	cobra.OnInitialize(initConfig)
-
 	cli.ViperAddArguments(
 		rootCmd,
 		[]cli.Argument{

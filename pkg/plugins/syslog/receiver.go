@@ -268,7 +268,7 @@ func (r *Receiver) Receive(next receiver.NextFn) error {
 					if err != nil {
 						cancel()
 						r.LogError()
-						r.logger.Error().Str("op", "syslog.Receive").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Str("app.id", r.Tenant().AppId).Str("partner.id", r.Tenant().OrgId).Msg("cannot create event: " + err.Error())
+						r.logger.Error().Str("op", "syslog.Receive").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Str("gears.app.id", r.Tenant().AppId).Str("partner.id", r.Tenant().OrgId).Msg("cannot create event: " + err.Error())
 						//return
 					}
 					r.Trigger(e)
