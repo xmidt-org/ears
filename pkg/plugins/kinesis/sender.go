@@ -163,7 +163,7 @@ func (s *Sender) startTimedSender() {
 		for {
 			select {
 			case <-s.done:
-				s.logger.Info().Str("op", "Kinesis.timedSender").Str("name", s.Name()).Str("tid", s.Tenant().ToString()).Str("app.id", s.Tenant().AppId).Str("partner.id", s.Tenant().OrgId).Msg("stopping kinesis sender")
+				s.logger.Info().Str("op", "Kinesis.timedSender").Str("name", s.Name()).Str("tid", s.Tenant().ToString()).Str("gears.app.id", s.Tenant().AppId).Str("partner.id", s.Tenant().OrgId).Msg("stopping kinesis sender")
 				return
 			case <-time.After(time.Duration(*s.config.SendTimeout) * time.Second):
 			}
@@ -203,7 +203,7 @@ func (s *Sender) send(events []event.Event) {
 	batchReqs := []*kinesis.PutRecordsRequestEntry{}
 	for idx, evt := range events {
 		if idx == 0 {
-			log.Ctx(evt.Context()).Debug().Str("op", "Kinesis.sendWorker").Str("name", s.Name()).Str("tid", s.Tenant().ToString()).Str("app.id", s.Tenant().AppId).Str("partner.id", s.Tenant().OrgId).Int("eventIdx", idx).Int("batchSize", len(events)).Msg("send message batch")
+			log.Ctx(evt.Context()).Debug().Str("op", "Kinesis.sendWorker").Str("name", s.Name()).Str("tid", s.Tenant().ToString()).Str("gears.app.id", s.Tenant().AppId).Str("partner.id", s.Tenant().OrgId).Int("eventIdx", idx).Int("batchSize", len(events)).Msg("send message batch")
 		}
 		buf, err := json.Marshal(evt.Payload())
 		if err != nil {
@@ -237,7 +237,7 @@ func (s *Sender) send(events []event.Event) {
 	putResults, err := s.kinesisService.PutRecordsWithContext(events[0].Context(), &batchPut)
 	s.eventSendOutTime.Record(events[0].Context(), time.Since(start).Milliseconds())
 	if err != nil {
-		log.Ctx(events[0].Context()).Error().Str("op", "Kinesis.sendWorker").Str("name", s.Name()).Str("tid", s.Tenant().ToString()).Str("app.id", s.Tenant().AppId).Str("partner.id", s.Tenant().OrgId).Int("batchSize", len(events)).Msg("batch send error: " + err.Error())
+		log.Ctx(events[0].Context()).Error().Str("op", "Kinesis.sendWorker").Str("name", s.Name()).Str("tid", s.Tenant().ToString()).Str("gears.app.id", s.Tenant().AppId).Str("partner.id", s.Tenant().OrgId).Int("batchSize", len(events)).Msg("batch send error: " + err.Error())
 		for idx := range events {
 			s.LogError()
 			s.eventFailureCounter.Add(events[idx].Context(), 1)

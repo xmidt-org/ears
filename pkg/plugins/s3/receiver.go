@@ -187,7 +187,7 @@ func (r *Receiver) Receive(next receiver.NextFn) error {
 		_, err = downloader.Download(wabuf, params)
 		if err != nil {
 			r.LogError()
-			r.logger.Error().Str("op", "SQS.receiveWorker").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Str("app.id", r.Tenant().AppId).Str("partner.id", r.Tenant().OrgId).Msg("cannot download message from s3: " + err.Error())
+			r.logger.Error().Str("op", "SQS.receiveWorker").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Str("gears.app.id", r.Tenant().AppId).Str("partner.id", r.Tenant().OrgId).Msg("cannot download message from s3: " + err.Error())
 			continue
 		}
 		buf := wabuf.Bytes()
@@ -195,7 +195,7 @@ func (r *Receiver) Receive(next receiver.NextFn) error {
 		err = json.Unmarshal(buf, &payload)
 		if err != nil {
 			r.LogError()
-			r.logger.Error().Str("op", "SQS.receiveWorker").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Str("app.id", r.Tenant().AppId).Str("partner.id", r.Tenant().OrgId).Msg("cannot parse message: " + err.Error())
+			r.logger.Error().Str("op", "SQS.receiveWorker").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Str("gears.app.id", r.Tenant().AppId).Str("partner.id", r.Tenant().OrgId).Msg("cannot parse message: " + err.Error())
 			continue
 		}
 		ctx, cancel := context.WithTimeout(context.Background(), time.Duration(*r.config.AcknowledgeTimeout)*time.Second)
@@ -207,7 +207,7 @@ func (r *Receiver) Receive(next receiver.NextFn) error {
 				cancel()
 			},
 			func(e event.Event, err error) {
-				log.Ctx(e.Context()).Error().Str("op", "SQS.receiveWorker").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Str("app.id", r.Tenant().AppId).Str("partner.id", r.Tenant().OrgId).Msg("failed to process message: " + err.Error())
+				log.Ctx(e.Context()).Error().Str("op", "SQS.receiveWorker").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Str("gears.app.id", r.Tenant().AppId).Str("partner.id", r.Tenant().OrgId).Msg("failed to process message: " + err.Error())
 				r.eventFailureCounter.Add(ctx, 1)
 				r.LogError()
 				cancel()
@@ -216,17 +216,17 @@ func (r *Receiver) Receive(next receiver.NextFn) error {
 			event.WithOtelTracing(r.Name()))
 		if err != nil {
 			r.LogError()
-			r.logger.Error().Str("op", "SQS.receiveWorker").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Str("app.id", r.Tenant().AppId).Str("partner.id", r.Tenant().OrgId).Msg("cannot create event: " + err.Error())
+			r.logger.Error().Str("op", "SQS.receiveWorker").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Str("gears.app.id", r.Tenant().AppId).Str("partner.id", r.Tenant().OrgId).Msg("cannot create event: " + err.Error())
 		}
 		r.Trigger(e)
 	}
 	//
-	r.logger.Info().Str("op", "SQS.Receive").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Str("app.id", r.Tenant().AppId).Str("partner.id", r.Tenant().OrgId).Msg("waiting for receive done")
+	r.logger.Info().Str("op", "SQS.Receive").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Str("gears.app.id", r.Tenant().AppId).Str("partner.id", r.Tenant().OrgId).Msg("waiting for receive done")
 	<-r.done
 	r.Lock()
 	elapsedMs := time.Since(r.startTime).Milliseconds()
 	r.Unlock()
-	r.logger.Info().Str("op", "SQS.Receive").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Str("app.id", r.Tenant().AppId).Str("partner.id", r.Tenant().OrgId).Int("elapsedMs", int(elapsedMs)).Msg("receive done")
+	r.logger.Info().Str("op", "SQS.Receive").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Str("gears.app.id", r.Tenant().AppId).Str("partner.id", r.Tenant().OrgId).Int("elapsedMs", int(elapsedMs)).Msg("receive done")
 	return nil
 }
 

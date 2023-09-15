@@ -146,12 +146,12 @@ func (r *Receiver) Receive(next receiver.NextFn) error {
 			}
 			ctx, cancel := context.WithTimeout(context.Background(), time.Duration(5)*time.Second)
 			r.eventBytesCounter.Add(ctx, int64(len(msg.Payload)))
-			r.logger.Debug().Str("op", "redis.Receive").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Str("app.id", r.Tenant().AppId).Str("partner.id", r.Tenant().OrgId).Msg("received message on redis channel")
+			r.logger.Debug().Str("op", "redis.Receive").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Str("gears.app.id", r.Tenant().AppId).Str("partner.id", r.Tenant().OrgId).Msg("received message on redis channel")
 			// note: if we just pass msg.Payload into event, redis will blow up with an out of memory error within a
 			// few seconds - possibly a bug in the client library
 			e, err := event.New(ctx, pl, event.WithAck(
 				func(e event.Event) {
-					log.Ctx(e.Context()).Debug().Str("op", "redis.Receive").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Str("app.id", r.Tenant().AppId).Str("partner.id", r.Tenant().OrgId).Msg("processed message from redis channel")
+					log.Ctx(e.Context()).Debug().Str("op", "redis.Receive").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Str("gears.app.id", r.Tenant().AppId).Str("partner.id", r.Tenant().OrgId).Msg("processed message from redis channel")
 					r.eventSuccessCounter.Add(ctx, 1)
 					r.LogSuccess()
 					cancel()

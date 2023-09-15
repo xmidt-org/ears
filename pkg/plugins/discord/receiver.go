@@ -133,7 +133,7 @@ func (r *Receiver) stopShardReceiver(shardIdx int) {
 }
 
 func (r *Receiver) shardMonitor(distributor sharder.ShardDistributor) {
-	r.logger.Info().Str("op", "Discord.shardMonitor").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Str("app.id", r.Tenant().AppId).Str("partner.id", r.Tenant().OrgId).Msg("starting shard monitor")
+	r.logger.Info().Str("op", "Discord.shardMonitor").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Str("gears.app.id", r.Tenant().AppId).Str("partner.id", r.Tenant().OrgId).Msg("starting shard monitor")
 	go func() {
 		defer func() {
 			p := recover()
@@ -147,7 +147,7 @@ func (r *Receiver) shardMonitor(distributor sharder.ShardDistributor) {
 			// the stop function will wait for 5 sec in case the shard monitor is busy describing the stream and not waiting on the channel
 			select {
 			case <-r.shardMonitorStopChannel:
-				r.logger.Info().Str("op", "Discord.shardMonitor").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Str("app.id", r.Tenant().AppId).Str("partner.id", r.Tenant().OrgId).Msg("stopping shard monitor")
+				r.logger.Info().Str("op", "Discord.shardMonitor").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Str("gears.app.id", r.Tenant().AppId).Str("partner.id", r.Tenant().OrgId).Msg("stopping shard monitor")
 				return
 			//use long to avoid potential discord rate limit
 			case <-time.After(monitorTimeoutSecLong * time.Second):
@@ -159,7 +159,7 @@ func (r *Receiver) shardMonitor(distributor sharder.ShardDistributor) {
 			gatewayResp, err := sess.GatewayBot()
 			if err != nil {
 				r.LogError()
-				r.logger.Error().Str("op", "Discord.shardMonitor").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Str("app.id", r.Tenant().AppId).Str("partner.id", r.Tenant().OrgId).Msg("cannot get number of shards: " + err.Error())
+				r.logger.Error().Str("op", "Discord.shardMonitor").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Str("gears.app.id", r.Tenant().AppId).Str("partner.id", r.Tenant().OrgId).Msg("cannot get number of shards: " + err.Error())
 				continue
 			}
 			if gatewayResp.Shards == 0 {
@@ -170,7 +170,7 @@ func (r *Receiver) shardMonitor(distributor sharder.ShardDistributor) {
 				update = true
 			}
 			if update {
-				r.logger.Info().Str("op", "Discord.shardMonitor").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Str("app.id", r.Tenant().AppId).Str("partner.id", r.Tenant().OrgId).Int("numShards", gatewayResp.Shards).Msg("update number of shards")
+				r.logger.Info().Str("op", "Discord.shardMonitor").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Str("gears.app.id", r.Tenant().AppId).Str("partner.id", r.Tenant().OrgId).Int("numShards", gatewayResp.Shards).Msg("update number of shards")
 				r.shardsCount = &gatewayResp.Shards
 				distributor.UpdateNumberShards(gatewayResp.Shards)
 			}
@@ -191,10 +191,10 @@ func (r *Receiver) shardUpdateListener(distributor sharder.ShardDistributor) {
 		for {
 			select {
 			case config := <-distributor.Updates():
-				r.logger.Info().Str("op", "Discord.shardUpdateListener").Str("identity", config.Identity).Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Str("app.id", r.Tenant().AppId).Str("partner.id", r.Tenant().OrgId).Msg("shard update received")
+				r.logger.Info().Str("op", "Discord.shardUpdateListener").Str("identity", config.Identity).Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Str("gears.app.id", r.Tenant().AppId).Str("partner.id", r.Tenant().OrgId).Msg("shard update received")
 				r.updateShards(config)
 			case <-r.shardUpdateListenerStopChannel:
-				r.logger.Info().Str("op", "Discord.shardUpdateListener").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Str("app.id", r.Tenant().AppId).Str("partner.id", r.Tenant().OrgId).Msg("stopping shard update listener")
+				r.logger.Info().Str("op", "Discord.shardUpdateListener").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Str("gears.app.id", r.Tenant().AppId).Str("partner.id", r.Tenant().OrgId).Msg("stopping shard update listener")
 				return
 			}
 		}
@@ -215,7 +215,7 @@ func (r *Receiver) updateShards(newShards sharder.ShardConfig) {
 			if err != nil {
 				continue
 			}
-			r.logger.Info().Str("op", "Discord.UpdateShards").Str("identity", newShards.Identity).Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Str("app.id", r.Tenant().AppId).Str("partner.id", r.Tenant().OrgId).Int("shardIdx", shardIdx).Msg("stopping shard consumer")
+			r.logger.Info().Str("op", "Discord.UpdateShards").Str("identity", newShards.Identity).Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Str("gears.app.id", r.Tenant().AppId).Str("partner.id", r.Tenant().OrgId).Int("shardIdx", shardIdx).Msg("stopping shard consumer")
 			r.stopShardReceiver(shardIdx)
 		}
 	}
@@ -230,11 +230,11 @@ func (r *Receiver) updateShards(newShards sharder.ShardConfig) {
 		if startUp {
 			shardIdx, err := strconv.Atoi(newShardStr)
 			if err != nil {
-				r.logger.Error().Str("op", "Discord.UpdateShards").Str("identity", newShards.Identity).Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Str("app.id", r.Tenant().AppId).Str("partner.id", r.Tenant().OrgId).Int("shardIdx", shardIdx).Msg(err.Error())
+				r.logger.Error().Str("op", "Discord.UpdateShards").Str("identity", newShards.Identity).Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Str("gears.app.id", r.Tenant().AppId).Str("partner.id", r.Tenant().OrgId).Int("shardIdx", shardIdx).Msg(err.Error())
 				continue
 			}
 
-			r.logger.Info().Str("op", "Discord.UpdateShards").Str("identity", newShards.Identity).Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Str("app.id", r.Tenant().AppId).Str("partner.id", r.Tenant().OrgId).Int("shardIdx", shardIdx).Msg("launching shard consumer")
+			r.logger.Info().Str("op", "Discord.UpdateShards").Str("identity", newShards.Identity).Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Str("gears.app.id", r.Tenant().AppId).Str("partner.id", r.Tenant().OrgId).Int("shardIdx", shardIdx).Msg("launching shard consumer")
 			r.startShardReceiver(shardIdx)
 
 		}
@@ -331,7 +331,7 @@ func (r *Receiver) messageCreate(s *discordgo.Session, m *discordgo.MessageCreat
 		err := json.Unmarshal(msg, &payload)
 		if err != nil {
 			r.LogError()
-			r.logger.Error().Str("op", "Discord.startReceiver").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Str("app.id", r.Tenant().AppId).Str("partner.id", r.Tenant().OrgId).Msg("cannot parse message: " + err.Error())
+			r.logger.Error().Str("op", "Discord.startReceiver").Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Str("gears.app.id", r.Tenant().AppId).Str("partner.id", r.Tenant().OrgId).Msg("cannot parse message: " + err.Error())
 			return
 		}
 		ctx, cancel := context.WithTimeout(context.Background(), time.Duration(5)*time.Second)
