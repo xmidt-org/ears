@@ -172,7 +172,7 @@ func (m *manager) RegisterReceiver(
 				Err:     err,
 			}
 		}
-		log.Ctx(ctx).Info().Str("op", "RegisterReceiver").Str("key", key).Str("name", name).Msg("Creating NewReceiver")
+		log.Ctx(ctx).Info().Str("op", "RegisterReceiver").Str("tid", tid.ToString()).Str("gears.app.id", tid.AppId).Str("partner.id", tid.OrgId).Str("key", key).Str("name", name).Msg("Creating NewReceiver")
 
 		m.receivers[key] = r
 		m.receiversCount[key] = 0
@@ -185,6 +185,7 @@ func (m *manager) RegisterReceiver(
 					if p != nil {
 						panicErr := panics.ToError(p)
 						log.Ctx(e.Context()).Error().Str("op", "receiverNext").Str("error", panicErr.Error()).
+							Str("tid", tid.ToString()).Str("gears.app.id", tid.AppId).Str("partner.id", tid.OrgId).
 							Str("stackTrace", panicErr.StackTrace()).Msg("A panic has occurred")
 					}
 				}()
@@ -195,7 +196,7 @@ func (m *manager) RegisterReceiver(
 					err = m.quotaManager.Wait(e.Context(), tid)
 					span.End()
 					if err != nil {
-						log.Ctx(e.Context()).Debug().Str("op", "receiverNext").Str("tenantId", tid.ToString()).Msg("Tenant Ratelimited")
+						log.Ctx(e.Context()).Debug().Str("op", "receiverNext").Str("tid", tid.ToString()).Str("gears.app.id", tid.AppId).Str("partner.id", tid.OrgId).Msg("tenant rate limited")
 						e.Nack(err)
 						return
 					}
@@ -203,7 +204,7 @@ func (m *manager) RegisterReceiver(
 				m.next(key, e)
 			})
 			if err != nil {
-				m.logger.Error().Str("op", "RegisterReceiver.Receive").Err(err).Str("key", key).Str("name", name).Msg("Error calling Receive function")
+				m.logger.Error().Str("op", "RegisterReceiver.Receive").Str("tid", tid.ToString()).Str("gears.app.id", tid.AppId).Str("partner.id", tid.OrgId).Err(err).Str("key", key).Str("name", name).Msg("error calling receive function")
 				// most errors are captured during registration
 			}
 		}()
@@ -229,7 +230,7 @@ func (m *manager) RegisterReceiver(
 	}
 	m.receiversWrapped[w.id] = w
 	m.receiversCount[key]++
-	log.Ctx(ctx).Info().Str("op", "RegisterReceiver").Str("key", key).Str("wid", w.id).Str("name", name).Msg("Receiver registered")
+	log.Ctx(ctx).Info().Str("op", "RegisterReceiver").Str("tid", tid.ToString()).Str("gears.app.id", tid.AppId).Str("partner.id", tid.OrgId).Str("key", key).Str("wid", w.id).Str("name", name).Msg("receiver registered")
 	return w, nil
 }
 
@@ -358,7 +359,7 @@ func (m *manager) UnregisterReceiver(ctx context.Context, pr pkgreceiver.Receive
 	err := r.StopReceiving(ctx) // This in turn calls manager.stopreceiving()
 
 	if err != nil {
-		log.Ctx(ctx).Error().Str("op", "UnregisterReceiver").Str("r", r.name).Err(err).Msg("Error calling StopReceiving")
+		log.Ctx(ctx).Error().Str("op", "UnregisterReceiver").Str("r", r.name).Err(err).Msg("error calling StopReceiving")
 	}
 
 	key := m.mapkey(r.tid, r.name, r.hash)
@@ -369,7 +370,7 @@ func (m *manager) UnregisterReceiver(ctx context.Context, pr pkgreceiver.Receive
 		go func() {
 			err := r.receiver.StopReceiving(ctx)
 			if err != nil {
-				m.logger.Error().Str("op", "UnregisterReceiver").Str("r", r.name).Str("key", key).Err(err).Msg("Error stopping receiver")
+				m.logger.Error().Str("op", "UnregisterReceiver").Str("r", r.name).Str("key", key).Err(err).Msg("error stopping receiver")
 			}
 		}()
 		log.Ctx(ctx).Info().Str("op", "UnregisterReceiver").Str("r", r.name).Str("key", key).Str("wid", r.id).Msg("receiver stopped")
