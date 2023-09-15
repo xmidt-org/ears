@@ -253,7 +253,7 @@ func getTenant(ctx context.Context, vars map[string]string) (*tenant.Id, ApiErro
 	orgId := vars["orgId"]
 	appId := vars["appId"]
 	logs2.StrToLogCtx(ctx, "partner.id", orgId)
-	logs2.StrToLogCtx(ctx, "app.id", appId)
+	logs2.StrToLogCtx(ctx, "gears.app.id", appId)
 	logs2.StrToLogCtx(ctx, "service.name", "ears")
 	if orgId == "" || appId == "" {
 		var err ApiError
