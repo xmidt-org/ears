@@ -23,13 +23,13 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/rs/zerolog/log"
 	"github.com/xmidt-org/ears/internal/pkg/config"
-	"github.com/xmidt-org/ears/internal/pkg/jwt"
 	"github.com/xmidt-org/ears/internal/pkg/plugin"
 	"github.com/xmidt-org/ears/internal/pkg/quota"
 	"github.com/xmidt-org/ears/internal/pkg/rtsemconv"
 	"github.com/xmidt-org/ears/internal/pkg/tablemgr"
 	"github.com/xmidt-org/ears/pkg/app"
 	"github.com/xmidt-org/ears/pkg/cli"
+	jwt2 "github.com/xmidt-org/ears/pkg/jwt"
 	logs2 "github.com/xmidt-org/ears/pkg/logs"
 	"github.com/xmidt-org/ears/pkg/tenant"
 	"go.opentelemetry.io/otel/attribute"
@@ -63,7 +63,7 @@ type APIManager struct {
 	routingTableMgr            tablemgr.RoutingTableManager
 	tenantStorer               tenant.TenantStorer
 	quotaManager               *quota.QuotaManager
-	jwtManager                 jwt.JWTConsumer
+	jwtManager                 jwt2.JWTConsumer
 	tenantCache                *TenantCache
 	addRouteSuccessRecorder    metric.BoundFloat64Counter
 	addRouteFailureRecorder    metric.BoundFloat64Counter
@@ -130,7 +130,7 @@ func (c *TenantCache) GetTenant(tenantId string) *tenant.Config {
 	return &item.Config
 }
 
-func NewAPIManager(routingMgr tablemgr.RoutingTableManager, tenantStorer tenant.TenantStorer, quotaManager *quota.QuotaManager, jwtManager jwt.JWTConsumer, config config.Config) (*APIManager, error) {
+func NewAPIManager(routingMgr tablemgr.RoutingTableManager, tenantStorer tenant.TenantStorer, quotaManager *quota.QuotaManager, jwtManager jwt2.JWTConsumer, config config.Config) (*APIManager, error) {
 	api := &APIManager{
 		muxRouter:       mux.NewRouter(),
 		routingTableMgr: routingMgr,
@@ -971,8 +971,8 @@ func convertToApiError(ctx context.Context, err error) ApiError {
 	var routeValidationError *tablemgr.RouteValidationError
 	var routeRegistrationError *tablemgr.RouteRegistrationError
 	var routeNotFound *route.RouteNotFoundError
-	var jwtAuthError *jwt.JWTAuthError
-	var jwtUnauthorizedError *jwt.UnauthorizedError
+	var jwtAuthError *jwt2.JWTAuthError
+	var jwtUnauthorizedError *jwt2.UnauthorizedError
 	if errors.As(err, &tenantNotFound) {
 		return &NotFoundError{"tenant " + tenantNotFound.Tenant.ToString() + " not found"}
 	} else if errors.As(err, &badTenantConfig) {
