@@ -412,13 +412,6 @@ func (a *APIManager) sendEventHandler(w http.ResponseWriter, r *http.Request) {
 		resp.Respond(ctx, w, doYaml(r))
 		return
 	}
-	_, err = a.routingTableMgr.GetRoute(ctx, *tid, routeId)
-	if err != nil {
-		log.Ctx(ctx).Error().Str("op", "sendEventHandler").Msg(err.Error())
-		resp := ErrorResponse(convertToApiError(ctx, err))
-		resp.Respond(ctx, w, doYaml(r))
-		return
-	}
 	traceId, err := a.routingTableMgr.RouteEvent(ctx, *tid, routeId, payload)
 	if err != nil {
 		log.Ctx(ctx).Error().Str("op", "sendEventHandler").Msg(err.Error())
