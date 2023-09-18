@@ -61,7 +61,9 @@ func (mp *MetricPlugin) LogSuccess() {
 		hash := mp.Hash()
 		mp.lastMetricWriteSec = time.Now().Unix()
 		mp.Unlock()
-		mp.tableSyncer.WriteMetrics(hash, mp.getLocalMetric())
+		if mp.tableSyncer != nil {
+			mp.tableSyncer.WriteMetrics(hash, mp.getLocalMetric())
+		}
 	} else {
 		mp.Unlock()
 	}
@@ -80,7 +82,9 @@ func (mp *MetricPlugin) LogError() {
 		hash := mp.Hash()
 		mp.lastMetricWriteSec = time.Now().Unix()
 		mp.Unlock()
-		mp.tableSyncer.WriteMetrics(hash, mp.getLocalMetric())
+		if mp.tableSyncer != nil {
+			mp.tableSyncer.WriteMetrics(hash, mp.getLocalMetric())
+		}
 	} else {
 		mp.Unlock()
 	}
@@ -103,36 +107,58 @@ func (mp *MetricPlugin) getLocalMetric() *syncer.EarsMetric {
 }
 
 func (mp *MetricPlugin) DeleteMetrics() {
-	hash := mp.Hash()
-	mp.tableSyncer.DeleteMetrics(hash)
+	if mp.tableSyncer != nil {
+		hash := mp.Hash()
+		mp.tableSyncer.DeleteMetrics(hash)
+	}
 }
 
 func (mp *MetricPlugin) EventSuccessCount() int {
-	hash := mp.Hash()
-	mp.tableSyncer.WriteMetrics(hash, mp.getLocalMetric())
-	return mp.tableSyncer.ReadMetrics(hash).SuccessCount
+	if mp.tableSyncer == nil {
+		return mp.getLocalMetric().SuccessCount
+	} else {
+		hash := mp.Hash()
+		mp.tableSyncer.WriteMetrics(hash, mp.getLocalMetric())
+		return mp.tableSyncer.ReadMetrics(hash).SuccessCount
+	}
 }
 
 func (mp *MetricPlugin) EventSuccessVelocity() int {
-	hash := mp.Hash()
-	mp.tableSyncer.WriteMetrics(hash, mp.getLocalMetric())
-	return mp.tableSyncer.ReadMetrics(hash).SuccessVelocity
+	if mp.tableSyncer == nil {
+		return mp.getLocalMetric().SuccessVelocity
+	} else {
+		hash := mp.Hash()
+		mp.tableSyncer.WriteMetrics(hash, mp.getLocalMetric())
+		return mp.tableSyncer.ReadMetrics(hash).SuccessVelocity
+	}
 }
 
 func (mp *MetricPlugin) EventErrorCount() int {
-	hash := mp.Hash()
-	mp.tableSyncer.WriteMetrics(hash, mp.getLocalMetric())
-	return mp.tableSyncer.ReadMetrics(hash).ErrorCount
+	if mp.tableSyncer == nil {
+		return mp.getLocalMetric().ErrorCount
+	} else {
+		hash := mp.Hash()
+		mp.tableSyncer.WriteMetrics(hash, mp.getLocalMetric())
+		return mp.tableSyncer.ReadMetrics(hash).ErrorCount
+	}
 }
 
 func (mp *MetricPlugin) EventErrorVelocity() int {
-	hash := mp.Hash()
-	mp.tableSyncer.WriteMetrics(hash, mp.getLocalMetric())
-	return mp.tableSyncer.ReadMetrics(hash).ErrorVelocity
+	if mp.tableSyncer == nil {
+		return mp.getLocalMetric().ErrorVelocity
+	} else {
+		hash := mp.Hash()
+		mp.tableSyncer.WriteMetrics(hash, mp.getLocalMetric())
+		return mp.tableSyncer.ReadMetrics(hash).ErrorVelocity
+	}
 }
 
 func (mp *MetricPlugin) EventTs() int64 {
-	hash := mp.Hash()
-	mp.tableSyncer.WriteMetrics(hash, mp.getLocalMetric())
-	return mp.tableSyncer.ReadMetrics(hash).LastEventTs
+	if mp.tableSyncer == nil {
+		return mp.getLocalMetric().LastEventTs
+	} else {
+		hash := mp.Hash()
+		mp.tableSyncer.WriteMetrics(hash, mp.getLocalMetric())
+		return mp.tableSyncer.ReadMetrics(hash).LastEventTs
+	}
 }

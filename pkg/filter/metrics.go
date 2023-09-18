@@ -64,7 +64,9 @@ func (f *MetricFilter) LogSuccess() {
 		hash := f.Hash()
 		f.lastMetricWriteSec = time.Now().Unix()
 		f.Unlock()
-		f.tableSyncer.WriteMetrics(hash, f.getLocalMetric())
+		if f.tableSyncer != nil {
+			f.tableSyncer.WriteMetrics(hash, f.getLocalMetric())
+		}
 	} else {
 		f.Unlock()
 	}
@@ -83,7 +85,9 @@ func (f *MetricFilter) LogError() {
 		hash := f.Hash()
 		f.lastMetricWriteSec = time.Now().Unix()
 		f.Unlock()
-		f.tableSyncer.WriteMetrics(hash, f.getLocalMetric())
+		if f.tableSyncer != nil {
+			f.tableSyncer.WriteMetrics(hash, f.getLocalMetric())
+		}
 	} else {
 		f.Unlock()
 	}
@@ -102,7 +106,9 @@ func (f *MetricFilter) LogFilter() {
 		hash := f.Hash()
 		f.lastMetricWriteSec = time.Now().Unix()
 		f.Unlock()
-		f.tableSyncer.WriteMetrics(hash, f.getLocalMetric())
+		if f.tableSyncer != nil {
+			f.tableSyncer.WriteMetrics(hash, f.getLocalMetric())
+		}
 	} else {
 		f.Unlock()
 	}
@@ -125,43 +131,71 @@ func (f *MetricFilter) getLocalMetric() *syncer.EarsMetric {
 }
 
 func (f *MetricFilter) EventSuccessCount() int {
-	hash := f.Hash()
-	f.tableSyncer.WriteMetrics(hash, f.getLocalMetric())
-	return f.tableSyncer.ReadMetrics(hash).SuccessCount
+	if f.tableSyncer == nil {
+		return f.getLocalMetric().SuccessCount
+	} else {
+		hash := f.Hash()
+		f.tableSyncer.WriteMetrics(hash, f.getLocalMetric())
+		return f.tableSyncer.ReadMetrics(hash).SuccessCount
+	}
 }
 
 func (f *MetricFilter) EventSuccessVelocity() int {
-	hash := f.Hash()
-	f.tableSyncer.WriteMetrics(hash, f.getLocalMetric())
-	return f.tableSyncer.ReadMetrics(hash).SuccessVelocity
+	if f.tableSyncer == nil {
+		return f.getLocalMetric().SuccessVelocity
+	} else {
+		hash := f.Hash()
+		f.tableSyncer.WriteMetrics(hash, f.getLocalMetric())
+		return f.tableSyncer.ReadMetrics(hash).SuccessVelocity
+	}
 }
 
 func (f *MetricFilter) EventFilterCount() int {
-	hash := f.Hash()
-	f.tableSyncer.WriteMetrics(hash, f.getLocalMetric())
-	return f.tableSyncer.ReadMetrics(hash).FilterCount
+	if f.tableSyncer == nil {
+		return f.getLocalMetric().FilterCount
+	} else {
+		hash := f.Hash()
+		f.tableSyncer.WriteMetrics(hash, f.getLocalMetric())
+		return f.tableSyncer.ReadMetrics(hash).FilterCount
+	}
 }
 
 func (f *MetricFilter) EventFilterVelocity() int {
-	hash := f.Hash()
-	f.tableSyncer.WriteMetrics(hash, f.getLocalMetric())
-	return f.tableSyncer.ReadMetrics(hash).FilterVelocity
+	if f.tableSyncer == nil {
+		return f.getLocalMetric().FilterVelocity
+	} else {
+		hash := f.Hash()
+		f.tableSyncer.WriteMetrics(hash, f.getLocalMetric())
+		return f.tableSyncer.ReadMetrics(hash).FilterVelocity
+	}
 }
 
 func (f *MetricFilter) EventErrorCount() int {
-	hash := f.Hash()
-	f.tableSyncer.WriteMetrics(hash, f.getLocalMetric())
-	return f.tableSyncer.ReadMetrics(hash).ErrorCount
+	if f.tableSyncer == nil {
+		return f.getLocalMetric().ErrorCount
+	} else {
+		hash := f.Hash()
+		f.tableSyncer.WriteMetrics(hash, f.getLocalMetric())
+		return f.tableSyncer.ReadMetrics(hash).ErrorCount
+	}
 }
 
 func (f *MetricFilter) EventErrorVelocity() int {
-	hash := f.Hash()
-	f.tableSyncer.WriteMetrics(hash, f.getLocalMetric())
-	return f.tableSyncer.ReadMetrics(hash).ErrorVelocity
+	if f.tableSyncer == nil {
+		return f.getLocalMetric().ErrorVelocity
+	} else {
+		hash := f.Hash()
+		f.tableSyncer.WriteMetrics(hash, f.getLocalMetric())
+		return f.tableSyncer.ReadMetrics(hash).ErrorVelocity
+	}
 }
 
 func (f *MetricFilter) EventTs() int64 {
-	hash := f.Hash()
-	f.tableSyncer.WriteMetrics(hash, f.getLocalMetric())
-	return f.tableSyncer.ReadMetrics(hash).LastEventTs
+	if f.tableSyncer == nil {
+		return f.getLocalMetric().LastEventTs
+	} else {
+		hash := f.Hash()
+		f.tableSyncer.WriteMetrics(hash, f.getLocalMetric())
+		return f.tableSyncer.ReadMetrics(hash).LastEventTs
+	}
 }
