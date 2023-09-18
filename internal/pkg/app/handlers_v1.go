@@ -339,7 +339,8 @@ func (a *APIManager) webhookHandler(w http.ResponseWriter, r *http.Request) {
 func (a *APIManager) sendEventHandler(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	vars := mux.Vars(r)
-	if r.ContentLength > int64(a.config.GetInt("ears.api.maxEventSize")) {
+	maxEventSize := int64(a.config.GetInt("ears.api.maxEventSize"))
+	if maxEventSize > 0 && r.ContentLength > maxEventSize {
 		log.Ctx(ctx).Error().Str("op", "sendEventHandler").Int("eventSize", int(r.ContentLength)).Str("error", "event too large").Msg("event too large")
 		resp := ErrorResponse(new(EventTooLargeError))
 		resp.Respond(ctx, w, doYaml(r))
@@ -378,8 +379,10 @@ func (a *APIManager) sendEventHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	defer r.Body.Close()
-	r.Body = http.MaxBytesReader(w, r.Body, int64(a.config.GetInt("ears.api.maxEventSize")))
-	defer r.Body.Close()
+	if maxEventSize > 0 {
+		r.Body = http.MaxBytesReader(w, r.Body, maxEventSize)
+		defer r.Body.Close()
+	}
 	body, err := ioutil.ReadAll(r.Body)
 	if err != nil {
 		log.Ctx(ctx).Error().Str("op", "sendEventHandler").Msg(err.Error())
