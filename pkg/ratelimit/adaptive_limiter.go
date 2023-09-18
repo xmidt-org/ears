@@ -195,8 +195,7 @@ func (r *AdaptiveRateLimiter) tuneRqs(ctx context.Context) error {
 		return nil
 	}
 
-	log.Ctx(ctx).Info().Str("op", "tuneRqs").Int("NewRqs", target).Int("OldRqs", r.currentRqs).
-		Msg("Updating new ratelimit")
+	log.Ctx(ctx).Info().Str("op", "tuneRqs").Int("newRqs", target).Int("oldRqs", r.currentRqs).Msg("updating new rate limit")
 
 	r.limiter.SetLimit(rate.Limit(newRqs))
 	r.limiter.SetBurst(newRqs)

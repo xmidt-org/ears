@@ -35,6 +35,21 @@ type ApiError interface {
 	StatusCode() int
 }
 
+type EventTooLargeError struct {
+	message string
+}
+
+func (e *EventTooLargeError) Error() string {
+	if e.message == "" {
+		return "Event too large"
+	}
+	return e.message
+}
+
+func (e *EventTooLargeError) StatusCode() int {
+	return http.StatusRequestEntityTooLarge
+}
+
 type NotFoundError struct {
 	message string
 }
