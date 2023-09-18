@@ -17,7 +17,7 @@ package jwtmanagerfx
 import (
 	"github.com/rs/zerolog"
 	"github.com/xmidt-org/ears/internal/pkg/config"
-	jwt2 "github.com/xmidt-org/ears/pkg/jwt"
+	"github.com/xmidt-org/ears/pkg/jwt"
 	"github.com/xmidt-org/ears/pkg/tenant"
 	"go.uber.org/fx"
 	"regexp"
@@ -39,7 +39,7 @@ type JWTIn struct {
 
 type JWTOut struct {
 	fx.Out
-	JWTManager jwt2.JWTConsumer
+	JWTManager jwt.JWTConsumer
 }
 
 func ProvideJWTManager(in JWTIn) (JWTOut, error) {
@@ -56,7 +56,7 @@ func ProvideJWTManager(in JWTIn) (JWTOut, error) {
 	if in.Config.GetString("ears.jwt.capabilityPrefixes") != "" {
 		capabilityPrefixes = strings.Split(in.Config.GetString("ears.jwt.capabilityPrefixes"), ",")
 	}
-	out.JWTManager, _ = jwt2.NewJWTConsumer(publicKeyEndpoint, DefaultJWTVerifier, requireBearerToken, domain, component, adminClientIds, capabilityPrefixes, in.TenantStorer)
+	out.JWTManager, _ = jwt.NewJWTConsumer(publicKeyEndpoint, DefaultJWTVerifier, requireBearerToken, domain, component, adminClientIds, capabilityPrefixes, in.TenantStorer)
 	return out, nil
 }
 
