@@ -72,6 +72,7 @@ type APIManager struct {
 	globalWebhookOrg           string
 	globalWebhookApp           string
 	globalWebhookRouteId       string
+	config                     config.Config
 	sync.RWMutex
 }
 
@@ -138,6 +139,7 @@ func NewAPIManager(routingMgr tablemgr.RoutingTableManager, tenantStorer tenant.
 		quotaManager:    quotaManager,
 		jwtManager:      jwtManager,
 		tenantCache:     NewTenantCache(TENANT_CACHE_TTL_SECS),
+		config:          config,
 	}
 
 	if config != nil {
@@ -337,6 +339,13 @@ func (a *APIManager) webhookHandler(w http.ResponseWriter, r *http.Request) {
 func (a *APIManager) sendEventHandler(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	vars := mux.Vars(r)
+	maxEventSize := int64(a.config.GetInt("ears.api.maxEventSize"))
+	if maxEventSize > 0 && r.ContentLength > maxEventSize {
+		log.Ctx(ctx).Error().Str("op", "sendEventHandler").Int("maxEventSize", int(maxEventSize)).Int("eventSize", int(r.ContentLength)).Str("error", "event too large").Msg("event too large")
+		resp := ErrorResponse(new(EventTooLargeError))
+		resp.Respond(ctx, w, doYaml(r))
+		return
+	}
 	tid, apiErr := getTenant(ctx, vars)
 	if apiErr != nil {
 		log.Ctx(ctx).Error().Str("op", "sendEventHandler").Str("error", apiErr.Error()).Msg("orgId or appId empty")
@@ -369,10 +378,21 @@ func (a *APIManager) sendEventHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
+	defer r.Body.Close()
+	if maxEventSize > 0 {
+		r.Body = http.MaxBytesReader(w, r.Body, maxEventSize)
+		defer r.Body.Close()
+	}
 	body, err := ioutil.ReadAll(r.Body)
 	if err != nil {
 		log.Ctx(ctx).Error().Str("op", "sendEventHandler").Msg(err.Error())
 		resp := ErrorResponse(&InternalServerError{err})
+		resp.Respond(ctx, w, doYaml(r))
+		return
+	}
+	if len(body) == 0 {
+		log.Ctx(ctx).Error().Str("op", "sendEventHandler").Str("error", "empty event").Msg("empty event")
+		resp := ErrorResponse(new(EmptyEventError))
 		resp.Respond(ctx, w, doYaml(r))
 		return
 	}

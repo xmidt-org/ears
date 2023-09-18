@@ -39,7 +39,6 @@ func NewMiddleware(logger *zerolog.Logger, jwtManager jwt.JWTConsumer) []func(ne
 	middlewareLogger = logger
 	jwtMgr = jwtManager
 	otelMiddleware := otelmux.Middleware("ears", otelmux.WithPropagators(b3.New()))
-
 	return []func(next http.Handler) http.Handler{
 		authenticateMiddleware,
 		otelMiddleware,
@@ -51,7 +50,6 @@ func initRequestMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
 		subCtx := logs.SubLoggerCtx(ctx, middlewareLogger)
-
 		defer func() {
 			p := recover()
 			if p != nil {
@@ -62,13 +60,10 @@ func initRequestMiddleware(next http.Handler) http.Handler {
 					Str("stackTrace", panicErr.StackTrace()).Msg("A panic has occurred")
 			}
 		}()
-
 		//extract any trace information
 		traceId := trace.SpanFromContext(subCtx).SpanContext().TraceID().String()
 		logs.StrToLogCtx(subCtx, rtsemconv.EarsLogTraceIdKey, traceId)
-
 		log.Ctx(subCtx).Debug().Msg("initializeRequestMiddleware")
-
 		next.ServeHTTP(w, r.WithContext(subCtx))
 	})
 }
