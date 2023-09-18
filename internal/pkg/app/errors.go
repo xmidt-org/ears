@@ -35,6 +35,21 @@ type ApiError interface {
 	StatusCode() int
 }
 
+type EmptyEventError struct {
+	message string
+}
+
+func (e *EmptyEventError) Error() string {
+	if e.message == "" {
+		return "Empty event"
+	}
+	return e.message
+}
+
+func (e *EmptyEventError) StatusCode() int {
+	return http.StatusBadRequest
+}
+
 type EventTooLargeError struct {
 	message string
 }
