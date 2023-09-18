@@ -65,12 +65,12 @@ func NewRedisDeltaSyncer(logger *zerolog.Logger, config config.Config) syncer.De
 	s.localSyncers = make(map[string][]syncer.LocalSyncer)
 	hostname, _ := os.Hostname()
 	s.instanceId = hostname + "_" + uuid.New().String()
+	s.active = config.GetBool("ears.synchronization.active")
 	s.client = redis.NewClient(&redis.Options{
 		Addr:     s.redisEndpoint,
 		Password: "",
 		DB:       0,
 	})
-	//logger.Info().Msg("Redis Syncer Started")
 	return s
 }
 
@@ -204,7 +204,7 @@ func (s *RedisDeltaSyncer) PublishSyncRequest(ctx context.Context, tid tenant.Id
 				for {
 					msg, err := pubsub.ReceiveMessage()
 					if err != nil {
-						s.logger.Error().Str("op", "PublishSyncRequest").Err(err).Msg("Error collecting ack")
+						s.logger.Error().Str("op", "PublishSyncRequest").Err(err).Msg("error collecting ack")
 						break
 					}
 					var syncCmd syncer.SyncCommand
@@ -250,7 +250,7 @@ func (s *RedisDeltaSyncer) PublishSyncRequest(ctx context.Context, tid tenant.Id
 			msg, _ := json.Marshal(syncCmd)
 			err := s.client.Publish(EARS_REDIS_SYNC_CHANNEL, string(msg)).Err()
 			if err != nil {
-				s.logger.Error().Str("op", "PublishSyncRequest").Err(err).Msg("Fail to publish sync request")
+				s.logger.Error().Str("op", "PublishSyncRequest").Err(err).Msg("failed to publish sync request")
 			}
 		}
 	}()
