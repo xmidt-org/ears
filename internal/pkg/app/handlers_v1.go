@@ -341,7 +341,7 @@ func (a *APIManager) sendEventHandler(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	maxEventSize := int64(a.config.GetInt("ears.api.maxEventSize"))
 	if maxEventSize > 0 && r.ContentLength > maxEventSize {
-		log.Ctx(ctx).Error().Str("op", "sendEventHandler").Int("eventSize", int(r.ContentLength)).Str("error", "event too large").Msg("event too large")
+		log.Ctx(ctx).Error().Str("op", "sendEventHandler").Int("maxEventSize", int(maxEventSize)).Int("eventSize", int(r.ContentLength)).Str("error", "event too large").Msg("event too large")
 		resp := ErrorResponse(new(EventTooLargeError))
 		resp.Respond(ctx, w, doYaml(r))
 		return
@@ -390,7 +390,7 @@ func (a *APIManager) sendEventHandler(w http.ResponseWriter, r *http.Request) {
 		resp.Respond(ctx, w, doYaml(r))
 		return
 	}
-	if body == nil || len(body) == 0 {
+	if len(body) == 0 {
 		log.Ctx(ctx).Error().Str("op", "sendEventHandler").Str("error", "empty event").Msg("empty event")
 		resp := ErrorResponse(new(EmptyEventError))
 		resp.Respond(ctx, w, doYaml(r))
