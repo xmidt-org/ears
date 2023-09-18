@@ -5,6 +5,7 @@ ears:
 
   api:
     port: 3000
+    maxEventSize: 64000
 
   jwt:
     requireBearerToken: no
