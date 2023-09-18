@@ -18,7 +18,7 @@ import (
 	"context"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
-	"github.com/xmidt-org/ears/internal/pkg/jwt"
+	"github.com/xmidt-org/ears/pkg/jwt"
 	testLog "github.com/xmidt-org/ears/test/log"
 	"net/http"
 	"net/http/httptest"

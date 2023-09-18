@@ -17,7 +17,7 @@ package jwtmanagerfx
 import (
 	"github.com/rs/zerolog"
 	"github.com/xmidt-org/ears/internal/pkg/config"
-	"github.com/xmidt-org/ears/internal/pkg/jwt"
+	"github.com/xmidt-org/ears/pkg/jwt"
 	"github.com/xmidt-org/ears/pkg/tenant"
 	"go.uber.org/fx"
 	"regexp"
