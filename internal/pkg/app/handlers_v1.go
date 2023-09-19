@@ -162,8 +162,11 @@ func NewAPIManager(routingMgr tablemgr.RoutingTableManager, tenantStorer tenant.
 	api.muxRouter.HandleFunc("/ears/v1/orgs/{orgId}/applications/{appId}/routes/{routeId}", api.getRouteHandler).Methods(http.MethodGet)
 	api.muxRouter.HandleFunc("/ears/v1/orgs/{orgId}/applications/{appId}/routes", api.getAllTenantRoutesHandler).Methods(http.MethodGet)
 
+	api.muxRouter.HandleFunc("/ears/v1/orgs/{orgId}/applications/{appId}/senders/{senderName}", api.getAllSendersHandler).Methods(http.MethodGet)
 	api.muxRouter.HandleFunc("/ears/v1/orgs/{orgId}/applications/{appId}/senders", api.getAllSendersHandler).Methods(http.MethodGet)
+	api.muxRouter.HandleFunc("/ears/v1/orgs/{orgId}/applications/{appId}/receivers/{receiverName}", api.getAllReceiversHandler).Methods(http.MethodGet)
 	api.muxRouter.HandleFunc("/ears/v1/orgs/{orgId}/applications/{appId}/receivers", api.getAllReceiversHandler).Methods(http.MethodGet)
+	api.muxRouter.HandleFunc("/ears/v1/orgs/{orgId}/applications/{appId}/filters/{filterName}", api.getAllFiltersHandler).Methods(http.MethodGet)
 	api.muxRouter.HandleFunc("/ears/v1/orgs/{orgId}/applications/{appId}/filters", api.getAllFiltersHandler).Methods(http.MethodGet)
 
 	api.muxRouter.HandleFunc("/ears/v1/orgs/{orgId}/applications/{appId}/fragments/{fragmentId}", api.addFragmentHandler).Methods(http.MethodPut)
@@ -675,6 +678,7 @@ func (a *APIManager) getAllTenantFragmentsHandler(w http.ResponseWriter, r *http
 func (a *APIManager) getAllSendersHandler(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	vars := mux.Vars(r)
+	senderName := vars["senderName"]
 	allSenders, err := a.routingTableMgr.GetAllSendersStatus(ctx)
 	if err != nil {
 		log.Ctx(ctx).Error().Str("op", "getAllSendersHandler").Msg(err.Error())
@@ -687,6 +691,9 @@ func (a *APIManager) getAllSendersHandler(w http.ResponseWriter, r *http.Request
 	if tid != nil {
 		for _, v := range allSenders {
 			if tid.Equal(v.Tid) {
+				if senderName != "" && v.Name != senderName {
+					continue
+				}
 				senders = append(senders, v)
 			}
 		}
@@ -705,6 +712,7 @@ func (a *APIManager) getAllSendersHandler(w http.ResponseWriter, r *http.Request
 func (a *APIManager) getAllReceiversHandler(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	vars := mux.Vars(r)
+	receiverName := vars["receiverName"]
 	allReceivers, err := a.routingTableMgr.GetAllReceiversStatus(ctx)
 	if err != nil {
 		log.Ctx(ctx).Error().Str("op", "getAllReceiversHandler").Msg(err.Error())
@@ -717,6 +725,9 @@ func (a *APIManager) getAllReceiversHandler(w http.ResponseWriter, r *http.Reque
 	if tid != nil {
 		for _, v := range allReceivers {
 			if tid.Equal(v.Tid) {
+				if receiverName != "" && v.Name != receiverName {
+					continue
+				}
 				receivers = append(receivers, v)
 			}
 		}
@@ -735,6 +746,7 @@ func (a *APIManager) getAllReceiversHandler(w http.ResponseWriter, r *http.Reque
 func (a *APIManager) getAllFiltersHandler(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	vars := mux.Vars(r)
+	filterName := vars["filterName"]
 	allFilters, err := a.routingTableMgr.GetAllFiltersStatus(ctx)
 	if err != nil {
 		log.Ctx(ctx).Error().Str("op", "getAllFiltersHandler").Msg(err.Error())
@@ -747,6 +759,9 @@ func (a *APIManager) getAllFiltersHandler(w http.ResponseWriter, r *http.Request
 	if tid != nil {
 		for _, v := range allFilters {
 			if tid.Equal(v.Tid) {
+				if filterName != "" && v.Name != filterName {
+					continue
+				}
 				filters = append(filters, v)
 			}
 		}
