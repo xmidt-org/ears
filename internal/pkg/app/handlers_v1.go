@@ -365,6 +365,7 @@ func (a *APIManager) sendEventHandler(w http.ResponseWriter, r *http.Request) {
 			log.Ctx(ctx).Error().Str("op", "sendEventHandler").Str("error", err.Error()).Msg("error getting tenant config")
 			resp := ErrorResponse(convertToApiError(ctx, err))
 			resp.Respond(ctx, w, doYaml(r))
+			a.Unlock()
 			return
 		}
 		a.tenantCache.SetTenant(tenantConfig)
