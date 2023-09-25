@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"github.com/rs/zerolog/log"
 	"github.com/xmidt-org/ears/internal/pkg/config"
 	"github.com/xmidt-org/ears/pkg/secret"
 	"github.com/xmidt-org/ears/pkg/tenant"
@@ -114,14 +115,14 @@ func NewTenantConfigVault(tid tenant.Id, parentVault secret.Vault, tenantStorer 
 	return tcv
 }
 
-func (v *TenantConfigVault) getSatBearerToken(ctx context.Context) string {
+func (v *TenantConfigVault) getSatBearerToken(ctx context.Context) (string, error) {
 	//curl -s -X POST -H "X-Client-Id: ***" -H "X-Client-Secret: ***" -H "Cache-Control: no-cache" https://sat-prod.codebig2.net/oauth/token
 	//echo "Bearer $TOKEN"
 	if time.Now().Unix() >= satToken.ExpiresAt {
 		satToken = SatToken{}
 	}
 	if satToken.AccessToken != "" {
-		return satToken.TokenType + " " + satToken.AccessToken
+		return satToken.TokenType + " " + satToken.AccessToken, nil
 	}
 	if v.httpClient == nil {
 		v.httpClient = &http.Client{
@@ -130,36 +131,36 @@ func (v *TenantConfigVault) getSatBearerToken(ctx context.Context) string {
 	}
 	req, err := http.NewRequest("POST", SAT_URL, nil)
 	if err != nil {
-		return ""
+		return "", err
 	}
 	tenantConfig, err := v.tenantStorer.GetConfig(ctx, v.tid)
 	if err != nil {
-		return ""
+		return "", err
 	}
 	if len(tenantConfig.ClientIds) == 0 {
-		return ""
+		return "", errors.New("tenant has no client IDs")
 	}
 	if tenantConfig.ClientSecret == "" {
-		return ""
+		return "", errors.New("tenant has no client secret")
 	}
 	req.Header.Add("X-Client-Id", tenantConfig.ClientIds[0])
 	req.Header.Add("X-Client-Secret", tenantConfig.ClientSecret)
 	req.Header.Add("Cache-Control", "no-cache")
 	resp, err := v.httpClient.Do(req)
 	if err != nil {
-		return ""
+		return "", err
 	}
 	buf, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		return ""
+		return "", err
 	}
 	defer resp.Body.Close()
 	err = json.Unmarshal(buf, &satToken)
 	if err != nil {
-		return ""
+		return "", err
 	}
 	satToken.ExpiresAt = time.Now().Unix() + int64(satToken.ExpiresIn)
-	return satToken.TokenType + " " + satToken.AccessToken
+	return satToken.TokenType + " " + satToken.AccessToken, nil
 }
 
 func (v *TenantConfigVault) GetConfig(ctx context.Context, key string) string {
@@ -167,9 +168,9 @@ func (v *TenantConfigVault) GetConfig(ctx context.Context, key string) string {
 }
 
 func (v *TenantConfigVault) getCredential(ctx context.Context, key string, credentialType string, field string) (*Credential, error) {
-	token := v.getSatBearerToken(ctx)
-	if token == "" {
-		return nil, errors.New("no bearer token")
+	token, err := v.getSatBearerToken(ctx)
+	if err != nil {
+		return nil, err
 	}
 	if v.httpClient == nil {
 		v.httpClient = &http.Client{
@@ -294,6 +295,7 @@ func (v *TenantConfigVault) Secret(ctx context.Context, key string) string {
 		keys := strings.Split(key, ".")
 		credential, err := v.getCredential(ctx, keys[0], "", "")
 		if err != nil {
+			log.Ctx(ctx).Error().Str("op", "Secret").Str("tid", v.tid.ToString()).Str("gears.app.id", v.tid.AppId).Str("partner.id", v.tid.OrgId).Msg("credential error: " + err.Error())
 			return key
 		}
 		if len(keys) >= 2 {
