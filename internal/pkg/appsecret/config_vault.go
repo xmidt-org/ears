@@ -4,7 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"github.com/rs/zerolog/log"
+	"github.com/rs/zerolog"
 	"github.com/xmidt-org/ears/internal/pkg/config"
 	"github.com/xmidt-org/ears/pkg/secret"
 	"github.com/xmidt-org/ears/pkg/tenant"
@@ -104,13 +104,15 @@ type TenantConfigVault struct {
 	tid          tenant.Id
 	tenantStorer tenant.TenantStorer
 	httpClient   *http.Client
+	logger       *zerolog.Logger
 }
 
-func NewTenantConfigVault(tid tenant.Id, parentVault secret.Vault, tenantStorer tenant.TenantStorer) secret.Vault {
+func NewTenantConfigVault(tid tenant.Id, parentVault secret.Vault, tenantStorer tenant.TenantStorer, logger *zerolog.Logger) secret.Vault {
 	tcv := &TenantConfigVault{
 		parentVault:  parentVault,
 		tid:          tid,
 		tenantStorer: tenantStorer,
+		logger:       logger,
 	}
 	return tcv
 }
@@ -295,7 +297,7 @@ func (v *TenantConfigVault) Secret(ctx context.Context, key string) string {
 		keys := strings.Split(key, ".")
 		credential, err := v.getCredential(ctx, keys[0], "", "")
 		if err != nil {
-			log.Ctx(ctx).Error().Str("op", "Secret").Str("tid", v.tid.ToString()).Str("gears.app.id", v.tid.AppId).Str("partner.id", v.tid.OrgId).Msg("credential error: " + err.Error())
+			v.logger.Error().Str("op", "Secret").Str("tid", v.tid.ToString()).Str("gears.app.id", v.tid.AppId).Str("partner.id", v.tid.OrgId).Msg("credential error: " + err.Error())
 			return key
 		}
 		if len(keys) >= 2 {
