@@ -150,7 +150,7 @@ func (m *manager) RegisterReceiver(
 
 		var secrets secret.Vault
 		if m.secrets != nil {
-			secrets = appsecret.NewTenantConfigVault(tid, m.secrets, m.tenantStorer)
+			secrets = appsecret.NewTenantConfigVault(tid, m.secrets, m.tenantStorer, m.logger)
 		}
 
 		receiverChan := make(chan pkgreceiver.Receiver, 1)
@@ -429,7 +429,7 @@ func (m *manager) RegisterFilter(ctx context.Context, plugin string, name string
 
 		var secrets secret.Vault
 		if m.secrets != nil {
-			secrets = appsecret.NewTenantConfigVault(tid, m.secrets, m.tenantStorer)
+			secrets = appsecret.NewTenantConfigVault(tid, m.secrets, m.tenantStorer, m.logger)
 		}
 
 		filterChan := make(chan pkgfilter.Filterer, 1)
@@ -610,7 +610,7 @@ func (m *manager) RegisterSender(
 		var secrets secret.Vault
 
 		if m.secrets != nil {
-			secrets = appsecret.NewTenantConfigVault(tid, m.secrets, m.tenantStorer)
+			secrets = appsecret.NewTenantConfigVault(tid, m.secrets, m.tenantStorer, m.logger)
 		}
 
 		senderChan := make(chan pkgsender.Sender, 1)
