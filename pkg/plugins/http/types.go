@@ -98,8 +98,9 @@ type Receiver struct {
 }
 
 type SenderConfig struct {
-	Url    string `json:"url"`
-	Method string `json:"method"`
+	Url     string            `json:"url"`
+	Method  string            `json:"method"`
+	Headers map[string]string `json:"headers,omitempty"`
 }
 
 type Sender struct {
