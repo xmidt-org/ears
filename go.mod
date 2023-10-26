@@ -5,7 +5,7 @@ go 1.16
 require (
 	cloud.google.com/go/profiler v0.3.1
 	github.com/Shopify/sarama v1.38.1
-	github.com/aws/aws-sdk-go v1.46.3
+	github.com/aws/aws-sdk-go v1.46.4
 	github.com/boriwo/deepcopy v0.0.0-20220804211148-d5122121a902
 	github.com/bwmarrin/discordgo v0.27.1
 	github.com/dop251/goja v0.0.0-20210912140721-ac5354e9a820
