@@ -107,6 +107,7 @@ func (f *Filter) Tenant() tenant.Id {
 
 func (f *Filter) Hash() string {
 	cfg := ""
+	
 	if f.Config() != nil {
 		buf, _ := json.Marshal(f.Config())
 		if buf != nil {
