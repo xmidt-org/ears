@@ -74,12 +74,12 @@ func (f *Filter) Filter(evt event.Event) []event.Event {
 		buf = []byte(obj.(string))
 	}
 	if err != nil {
-		log.Ctx(evt.Context()).Error().Str("op", "filter").Str("filterType", "log").Str("name", f.Name()).Msg(err.Error())
+		log.Ctx(evt.Context()).Error().Str("op", "filter").Str("filterType", "log").Str("gears.app.id", f.Tenant().AppId).Str("partner.id", f.Tenant().OrgId).Str("name", f.Name()).Msg(err.Error())
 	} else {
 		if *f.config.AsString {
-			log.Ctx(evt.Context()).Info().Str("op", "filter").Str("filterType", "log").Str("tag", f.config.Tag).Str("name", f.Name()).Str(f.config.LogKey, string(buf)).Msg("log")
+			log.Ctx(evt.Context()).Info().Str("op", "filter").Str("filterType", "log").Str("gears.app.id", f.Tenant().AppId).Str("partner.id", f.Tenant().OrgId).Str("tag", f.config.Tag).Str("name", f.Name()).Str(f.config.LogKey, string(buf)).Msg("log")
 		} else {
-			log.Ctx(evt.Context()).Info().Str("op", "filter").Str("filterType", "log").Str("tag", f.config.Tag).Str("name", f.Name()).RawJSON(f.config.LogKey, buf).Msg("log")
+			log.Ctx(evt.Context()).Info().Str("op", "filter").Str("filterType", "log").Str("gears.app.id", f.Tenant().AppId).Str("partner.id", f.Tenant().OrgId).Str("tag", f.config.Tag).Str("name", f.Name()).RawJSON(f.config.LogKey, buf).Msg("log")
 		}
 	}
 	f.LogSuccess()
