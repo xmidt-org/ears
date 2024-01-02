@@ -50,11 +50,10 @@ type InvalidRouteError struct {
 }
 
 type PluginConfig struct {
-	Plugin         string      `json:"plugin,omitempty"`         // plugin or filter type, e.g. kafka, kds, sqs, webhook, filter
-	Name           string      `json:"name,omitempty"`           // plugin label to allow multiple instances of otherwise identical plugin configurations
-	Config         interface{} `json:"config,omitempty"`         // plugin specific configuration parameters
-	FragmentName   string      `json:"fragmentName,omitempty"`   // plugin reference id to load config as a fragment (optional)
-	RegionRequired bool        `json:"regionRequired,omitempty"` // if true, plugin requires the route to be region-local (currently only needed for Kinesis receiver)
+	Plugin       string      `json:"plugin,omitempty"`       // plugin or filter type, e.g. kafka, kds, sqs, webhook, filter
+	Name         string      `json:"name,omitempty"`         // plugin label to allow multiple instances of otherwise identical plugin configurations
+	Config       interface{} `json:"config,omitempty"`       // plugin specific configuration parameters
+	FragmentName string      `json:"fragmentName,omitempty"` // plugin reference id to load config as a fragment (optional)
 }
 
 type Config struct {
