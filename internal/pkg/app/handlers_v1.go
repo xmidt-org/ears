@@ -523,8 +523,8 @@ func (a *APIManager) addRouteHandler(w http.ResponseWriter, r *http.Request) {
 		resp.Respond(ctx, w, doYaml(r))
 		return
 	}
-	if route.Receiver.RegionRequired && route.Region == "" {
-		err := &BadRequestError{"region must be set for route", nil}
+	if route.Receiver.Plugin == "kinesis" && route.Region == "" {
+		err := &BadRequestError{"region must be set for route with kinesis receiver", nil}
 		log.Ctx(ctx).Error().Str("op", "addRouteHandler").Msg(err.Error())
 		a.addRouteFailureRecorder.Add(ctx, 1.0)
 		resp := ErrorResponse(err)
