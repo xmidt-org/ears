@@ -523,6 +523,14 @@ func (a *APIManager) addRouteHandler(w http.ResponseWriter, r *http.Request) {
 		resp.Respond(ctx, w, doYaml(r))
 		return
 	}
+	if route.Receiver.RegionRequired && route.Region == "" {
+		err := &BadRequestError{"region must be set for route", nil}
+		log.Ctx(ctx).Error().Str("op", "addRouteHandler").Msg(err.Error())
+		a.addRouteFailureRecorder.Add(ctx, 1.0)
+		resp := ErrorResponse(err)
+		resp.Respond(ctx, w, doYaml(r))
+		return
+	}
 	if routeId != "" && route.Id != "" && routeId != route.Id {
 		err := &BadRequestError{"route ID mismatch " + routeId + " vs " + route.Id, nil}
 		log.Ctx(ctx).Error().Str("op", "addRouteHandler").Msg(err.Error())

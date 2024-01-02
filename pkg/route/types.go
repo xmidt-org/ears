@@ -50,10 +50,11 @@ type InvalidRouteError struct {
 }
 
 type PluginConfig struct {
-	Plugin       string      `json:"plugin,omitempty"`       // plugin or filter type, e.g. kafka, kds, sqs, webhook, filter
-	Name         string      `json:"name,omitempty"`         // plugin label to allow multiple instances of otherwise identical plugin configurations
-	Config       interface{} `json:"config,omitempty"`       // plugin specific configuration parameters
-	FragmentName string      `json:"fragmentName,omitempty"` // plugin reference id to load config as a fragment (optional)
+	Plugin         string      `json:"plugin,omitempty"`         // plugin or filter type, e.g. kafka, kds, sqs, webhook, filter
+	Name           string      `json:"name,omitempty"`           // plugin label to allow multiple instances of otherwise identical plugin configurations
+	Config         interface{} `json:"config,omitempty"`         // plugin specific configuration parameters
+	FragmentName   string      `json:"fragmentName,omitempty"`   // plugin reference id to load config as a fragment (optional)
+	RegionRequired bool        `json:"regionRequired,omitempty"` // if true, plugin requires the route to be region-local (currently only needed for Kinesis receiver)
 }
 
 type Config struct {
@@ -76,7 +77,7 @@ type Config struct {
 	Modified     int64          `json:"modified,omitempty"`     // last time when route was modified, in unix timestamp seconds
 }
 
-//Validate returns an error if the plugin config is invalid and nil otherwise
+// Validate returns an error if the plugin config is invalid and nil otherwise
 func (pc *PluginConfig) Validate(ctx context.Context) error {
 	if pc.Plugin == "" {
 		return errors.New("missing plugin type configuration")
@@ -90,7 +91,7 @@ func (pc *PluginConfig) Validate(ctx context.Context) error {
 	return nil
 }
 
-//Validate returns an error if the route config is invalid and nil otherwise
+// Validate returns an error if the route config is invalid and nil otherwise
 func (rc *Config) Validate(ctx context.Context) error {
 	var err error
 	err = rc.Sender.Validate(ctx)
@@ -133,7 +134,7 @@ func (rc *Config) Validate(ctx context.Context) error {
 	return nil
 }
 
-//Hash returns the md5 hash of the plugin config
+// Hash returns the md5 hash of the plugin config
 func (pc *PluginConfig) Hash(ctx context.Context) string {
 	cfg := ""
 	if pc.Config != nil {
@@ -147,7 +148,7 @@ func (pc *PluginConfig) Hash(ctx context.Context) string {
 	return hash
 }
 
-//Hash returns the md5 hash of a route config
+// Hash returns the md5 hash of a route config
 func (pc *Config) Hash(ctx context.Context) string {
 	// notably the route id is not part of the hash as the id might be the hash itself
 	str := pc.TenantId.OrgId + pc.TenantId.AppId + pc.Name + pc.DeliveryMode + pc.UserId + pc.Region
@@ -165,8 +166,8 @@ func (pc *Config) Hash(ctx context.Context) string {
 	return hash
 }
 
-//All route operations are synchronous. The storer should respect the cancellation
-//from the context and cancel its operation gracefully when desired.
+// All route operations are synchronous. The storer should respect the cancellation
+// from the context and cancel its operation gracefully when desired.
 type RouteStorer interface {
 	//Get all routes of all tenants
 	GetAllRoutes(context.Context) ([]Config, error)

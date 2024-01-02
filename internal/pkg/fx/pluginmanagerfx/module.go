@@ -258,5 +258,4 @@ func ProvidePluginManager(in PluginIn) (PluginOut, error) {
 	out.PluginManager = m
 
 	return out, nil
-
 }
