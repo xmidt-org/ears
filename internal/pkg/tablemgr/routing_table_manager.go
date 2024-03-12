@@ -227,9 +227,8 @@ func (r *DefaultRoutingTableManager) RouteEvent(ctx context.Context, tid tenant.
 	}
 	var wg sync.WaitGroup
 	wg.Add(1)
-	//sctx, cancel := context.WithTimeout(ctx, 5*time.Second)
-	//sctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	// no need to cancel context here because RouteEvent is only used synchronously via API call
+	//sctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	e, err := event.New(ctx, payload, event.WithAck(
 		func(evt event.Event) {
 			r.logger.Info().Str("op", "routeEventWebhook").Str("tid", tid.ToString()).Msg("success")
@@ -246,10 +245,10 @@ func (r *DefaultRoutingTableManager) RouteEvent(ctx context.Context, tid tenant.
 		event.WithTracePayloadOnNack(false),
 	)
 	if err != nil {
-		return "", errors.New("bad test event for route " + routeId)
+		return "", errors.New("invalid event for route " + routeId)
 	}
-	traceId, _, _ := e.GetPathValue("trace.id")
-	traceIdStr, _ := traceId.(string)
+	actualTraceId, _, _ := e.GetPathValue("trace.id")
+	traceIdStr, _ := actualTraceId.(string)
 	lrw.Receiver.Trigger(e)
 	wg.Wait()
 	return traceIdStr, nil

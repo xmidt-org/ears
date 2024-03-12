@@ -38,7 +38,10 @@ var eventUrlValidator = regexp.MustCompile(`^\/ears\/v1\/orgs\/[a-zA-Z0-9][a-zA-
 func NewMiddleware(logger *zerolog.Logger, jwtManager jwt.JWTConsumer) []func(next http.Handler) http.Handler {
 	middlewareLogger = logger
 	jwtMgr = jwtManager
+	// for this extraction to work, X-B3-TraceId header must be present and exactly 32 byte hex and X-B3-SpanId
+	// must be present and exactly 16 byte hex
 	otelMiddleware := otelmux.Middleware("ears", otelmux.WithPropagators(b3.New()))
+	//otelMiddleware := otelmux.Middleware("ears", otelmux.WithPropagators(otel.GetTextMapPropagator()))
 	return []func(next http.Handler) http.Handler{
 		authenticateMiddleware,
 		otelMiddleware,
