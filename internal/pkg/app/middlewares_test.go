@@ -87,7 +87,7 @@ func TestAuthMiddleware(t *testing.T) {
 
 	w := httptest.NewRecorder()
 	r := httptest.NewRequest(http.MethodGet, "/", nil)
-	r.Header.Set("X-B3-TraceId", "123456")
+	r.Header.Set(HeaderTraceId, "123456")
 
 	m.ServeHTTP(w, r.WithContext(subCtx))
 }

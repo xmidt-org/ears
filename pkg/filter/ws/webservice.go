@@ -23,6 +23,7 @@ import (
 	"github.com/boriwo/deepcopy"
 	"github.com/rs/zerolog/log"
 	"github.com/xmidt-org/ears/internal/pkg/syncer"
+	"github.com/xmidt-org/ears/pkg/app"
 	"github.com/xmidt-org/ears/pkg/event"
 	"github.com/xmidt-org/ears/pkg/filter"
 	"github.com/xmidt-org/ears/pkg/hasher"
@@ -255,7 +256,7 @@ func (f *Filter) hitEndpoint(ctx context.Context, evt event.Event) (string, int,
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("User-Agent", "ears")
 	// add trace header to outbound call
-	traceHeader := "X-B3-TraceId"
+	traceHeader := app.HeaderTraceId
 	traceId := trace.SpanFromContext(ctx).SpanContext().TraceID().String()
 	req.Header.Set(traceHeader, traceId)
 	// add supplied headers
