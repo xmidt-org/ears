@@ -58,8 +58,9 @@ func (id Id) ToString() string {
 type Config struct {
 	Tenant       Id       `json:"tenant"`                 // tenant id
 	Quota        Quota    `json:"quota"`                  // tenant quota
-	ClientIds    []string `json:"clientIds,omitempty"`    // jwt subjects or client IDs
-	ClientSecret string   `json:"clientSecret"`           // client secret for first client id in list, needed to make calls to credentials API
+	ClientIds    []string `json:"clientIds,omitempty"`    // list client IDs that can make EARS API calls for this tenant
+	ClientId     string   `json:"clientId,omitempty"`     // client id used to make calls to credentials API (if blank or omitted, first client ID from ClientIds will be used instead)
+	ClientSecret string   `json:"clientSecret"`           // client secret for ClientId or first client id in ClientIds list to make calls to credentials API
 	OpenEventApi bool     `json:"openEventApi,omitempty"` // if true, allow unauthenticated calls to the event API for routes under that tenant
 	Modified     int64    `json:"modified,omitempty"`     // last time when the tenant config is modified
 }

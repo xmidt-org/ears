@@ -14,7 +14,7 @@ import (
 	"time"
 )
 
-//ConfigVault provides secrets from ears app configuration
+// ConfigVault provides secrets from ears app configuration
 type ConfigVault struct {
 	config config.Config
 }
@@ -139,13 +139,19 @@ func (v *TenantConfigVault) getSatBearerToken(ctx context.Context) (string, erro
 	if err != nil {
 		return "", err
 	}
-	if len(tenantConfig.ClientIds) == 0 {
+	clientId := ""
+	if tenantConfig.ClientId != "" {
+		clientId = tenantConfig.ClientId
+	} else if len(tenantConfig.ClientIds) > 0 {
+		clientId = tenantConfig.ClientIds[0]
+	}
+	if clientId == "" {
 		return "", errors.New("tenant has no client IDs")
 	}
 	if tenantConfig.ClientSecret == "" {
 		return "", errors.New("tenant has no client secret")
 	}
-	req.Header.Add("X-Client-Id", tenantConfig.ClientIds[0])
+	req.Header.Add("X-Client-Id", clientId)
 	req.Header.Add("X-Client-Secret", tenantConfig.ClientSecret)
 	req.Header.Add("Cache-Control", "no-cache")
 	resp, err := v.httpClient.Do(req)
