@@ -299,11 +299,34 @@ func (a *APIManager) webhookHandler(w http.ResponseWriter, r *http.Request) {
 		resp.Respond(ctx, w, doYaml(r))
 		return
 	}
-	r = mux.SetURLVars(r, map[string]string{
+	m := map[string]string{
 		"orgId":   a.globalWebhookOrg,
 		"appId":   a.globalWebhookApp,
 		"routeId": a.globalWebhookRouteId,
-	})
+	}
+	// harvest gears routing information from URL query params if present
+	routeToApp := r.URL.Query().Get("app")
+	if routeToApp != "" {
+		m["routeToApp"] = routeToApp
+	}
+	routeToLocation := r.URL.Query().Get("location")
+	if routeToLocation != "" {
+		m["routeToLocation"] = routeToLocation
+	}
+	routeToPartner := r.URL.Query().Get("partner")
+	if routeToPartner != "" {
+		m["routeToPartner"] = routeToPartner
+	}
+	// need to figure out how we can adopt trace id
+	/*traceId := r.URL.Query().Get("traceId")
+	if traceId != "" {
+		m["traceId"] = traceId
+	}*/
+	token := r.URL.Query().Get("token")
+	if token != "" {
+		m["token"] = token
+	}
+	r = mux.SetURLVars(r, m)
 	a.sendEventHandler(w, r)
 	// Solution B: Forward request via network stack. Does create an extra hop but it allows for a more
 	// flexible implementation where we load the from and to URls to be proxied from ears.config.
@@ -375,8 +398,19 @@ func (a *APIManager) sendEventHandler(w http.ResponseWriter, r *http.Request) {
 		a.tenantCache.SetTenant(tenantConfig)
 	}
 	a.Unlock()
-	// authenticate here if necessary (middleware does not authenticate this API)
-	if !tenantConfig.OpenEventApi {
+	token := vars["token"]
+	if token != "" {
+		// authenticate query param token if present in webhook
+		log.Ctx(ctx).Info().Str("op", "sendEventHandler").Str("action", "authenticating_token").Msg("authenticating token")
+		_, _, authErr := jwtMgr.VerifyToken(ctx, token, r.URL.Path, r.Method, tid)
+		if authErr != nil {
+			log.Ctx(ctx).Error().Str("op", "sendEventHandler").Str("error", authErr.Error()).Msg("token authorization error")
+			resp := ErrorResponse(convertToApiError(ctx, authErr))
+			resp.Respond(ctx, w, doYaml(r))
+			return
+		}
+	} else if !tenantConfig.OpenEventApi {
+		// authenticate here if necessary (middleware does not authenticate this API)
 		bearerToken := getBearerToken(r)
 		_, _, authErr := jwtMgr.VerifyToken(ctx, bearerToken, r.URL.Path, r.Method, tid)
 		if authErr != nil {
@@ -412,6 +446,14 @@ func (a *APIManager) sendEventHandler(w http.ResponseWriter, r *http.Request) {
 		resp := ErrorResponse(&BadRequestError{"cannot unmarshal request body", err})
 		resp.Respond(ctx, w, doYaml(r))
 		return
+	}
+	// envelope payload if query params are present in webhook
+	routeToApp := vars["routeToApp"]
+	routeToLocation := vars["routeToLocation"]
+	routeToPartner := vars["routeToPartner"]
+	if routeToApp != "" && routeToLocation != "" {
+		log.Ctx(ctx).Info().Str("op", "sendEventHandler").Str("action", "enveloping_payload").Msg("enveloping payload")
+		payload = NewGearsEnvelope(routeToPartner, routeToApp, routeToLocation, "", payload)
 	}
 	routeId := vars["routeId"]
 	if routeId == "" {
