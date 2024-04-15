@@ -4,14 +4,15 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"github.com/rs/zerolog"
-	"github.com/xmidt-org/ears/internal/pkg/config"
-	"github.com/xmidt-org/ears/pkg/secret"
-	"github.com/xmidt-org/ears/pkg/tenant"
 	"io/ioutil"
 	"net/http"
 	"strings"
 	"time"
+
+	"github.com/rs/zerolog"
+	"github.com/xmidt-org/ears/internal/pkg/config"
+	"github.com/xmidt-org/ears/pkg/secret"
+	"github.com/xmidt-org/ears/pkg/tenant"
 )
 
 // ConfigVault provides secrets from ears app configuration
@@ -74,7 +75,7 @@ type (
 	}
 )
 
-const SAT_URL = "https://sat-prod.codebig2.net/oauth/token"
+const SAT_URL = "https://sat-prod.codebig2.net/v2/oauth/token"
 const CREDENTIAL_URL = "https://{{env}}gears.comcast.com/v2/applications/{{app}}/credentials/{{key}}"
 
 var satToken SatToken
@@ -118,8 +119,6 @@ func NewTenantConfigVault(tid tenant.Id, parentVault secret.Vault, tenantStorer 
 }
 
 func (v *TenantConfigVault) getSatBearerToken(ctx context.Context) (string, error) {
-	//curl -s -X POST -H "X-Client-Id: ***" -H "X-Client-Secret: ***" -H "Cache-Control: no-cache" https://sat-prod.codebig2.net/oauth/token
-	//echo "Bearer $TOKEN"
 	if time.Now().Unix() >= satToken.ExpiresAt {
 		satToken = SatToken{}
 	}
