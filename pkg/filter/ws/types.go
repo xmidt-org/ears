@@ -15,12 +15,13 @@
 package ws
 
 import (
+	"net/http"
+	"sync"
+
 	"github.com/xmidt-org/ears/pkg/filter"
 	"github.com/xmidt-org/ears/pkg/secret"
 	"github.com/xmidt-org/ears/pkg/tenant"
 	"github.com/xorcare/pointer"
-	"net/http"
-	"sync"
 )
 
 // Config can be passed into NewFilter() in order to configure
@@ -45,6 +46,7 @@ type Auth struct {
 	ClientSecret string   `json:"clientSecret,omitempty"` // oauth2
 	TokenURL     string   `json:"tokenUrl,omitempty"`     // oauth2
 	Scopes       []string `json:"scopes,omitempty"`       // oauth2
+	GrantType    string   `json:"grantType,omitempty"`    // oauth2
 }
 
 var DefaultConfig = Config{
