@@ -4,17 +4,18 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"github.com/rs/zerolog"
-	"github.com/xmidt-org/ears/internal/pkg/config"
-	"github.com/xmidt-org/ears/pkg/secret"
-	"github.com/xmidt-org/ears/pkg/tenant"
 	"io/ioutil"
 	"net/http"
 	"strings"
 	"time"
+
+	"github.com/rs/zerolog"
+	"github.com/xmidt-org/ears/internal/pkg/config"
+	"github.com/xmidt-org/ears/pkg/secret"
+	"github.com/xmidt-org/ears/pkg/tenant"
 )
 
-//ConfigVault provides secrets from ears app configuration
+// ConfigVault provides secrets from ears app configuration
 type ConfigVault struct {
 	config config.Config
 }
@@ -74,7 +75,7 @@ type (
 	}
 )
 
-const SAT_URL = "https://sat-prod.codebig2.net/oauth/token"
+const SAT_URL = "https://sat-prod.codebig2.net/v2/oauth/token"
 const CREDENTIAL_URL = "https://{{env}}gears.comcast.com/v2/applications/{{app}}/credentials/{{key}}"
 
 var satToken SatToken
@@ -118,8 +119,6 @@ func NewTenantConfigVault(tid tenant.Id, parentVault secret.Vault, tenantStorer 
 }
 
 func (v *TenantConfigVault) getSatBearerToken(ctx context.Context) (string, error) {
-	//curl -s -X POST -H "X-Client-Id: ***" -H "X-Client-Secret: ***" -H "Cache-Control: no-cache" https://sat-prod.codebig2.net/oauth/token
-	//echo "Bearer $TOKEN"
 	if time.Now().Unix() >= satToken.ExpiresAt {
 		satToken = SatToken{}
 	}
@@ -139,13 +138,19 @@ func (v *TenantConfigVault) getSatBearerToken(ctx context.Context) (string, erro
 	if err != nil {
 		return "", err
 	}
-	if len(tenantConfig.ClientIds) == 0 {
+	clientId := ""
+	if tenantConfig.ClientId != "" {
+		clientId = tenantConfig.ClientId
+	} else if len(tenantConfig.ClientIds) > 0 {
+		clientId = tenantConfig.ClientIds[0]
+	}
+	if clientId == "" {
 		return "", errors.New("tenant has no client IDs")
 	}
 	if tenantConfig.ClientSecret == "" {
 		return "", errors.New("tenant has no client secret")
 	}
-	req.Header.Add("X-Client-Id", tenantConfig.ClientIds[0])
+	req.Header.Add("X-Client-Id", clientId)
 	req.Header.Add("X-Client-Secret", tenantConfig.ClientSecret)
 	req.Header.Add("Cache-Control", "no-cache")
 	resp, err := v.httpClient.Do(req)

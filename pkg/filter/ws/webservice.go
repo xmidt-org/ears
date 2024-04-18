@@ -20,9 +20,17 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
+	"net"
+	"net/http"
+	nurl "net/url"
+	"strings"
+	"time"
+
 	"github.com/boriwo/deepcopy"
 	"github.com/rs/zerolog/log"
 	"github.com/xmidt-org/ears/internal/pkg/syncer"
+	"github.com/xmidt-org/ears/pkg/app"
 	"github.com/xmidt-org/ears/pkg/event"
 	"github.com/xmidt-org/ears/pkg/filter"
 	"github.com/xmidt-org/ears/pkg/hasher"
@@ -30,11 +38,6 @@ import (
 	"github.com/xmidt-org/ears/pkg/tenant"
 	"go.opentelemetry.io/otel/trace"
 	"golang.org/x/oauth2/clientcredentials"
-	"io/ioutil"
-	"net"
-	"net/http"
-	"strings"
-	"time"
 )
 
 const (
@@ -43,7 +46,7 @@ const (
 	HTTP_AUTH_TYPE_OAUTH  = "oauth"
 	HTTP_AUTH_TYPE_OAUTH2 = "oauth2"
 
-	SAT_URL = "https://sat-prod.codebig2.net/oauth/token"
+	SAT_URL = "https://sat-prod.codebig2.net/v2/oauth/token"
 )
 
 type (
@@ -193,8 +196,6 @@ func (f *Filter) evalStr(evt event.Event, tt string) string {
 }
 
 func (f *Filter) getSatBearerToken(ctx context.Context, clientId string, clientSecret string) string {
-	//curl -s -X POST -H "X-Client-Id: ***" -H "X-Client-Secret: ***" -H "Cache-Control: no-cache" https://sat-prod.codebig2.net/oauth/token
-	//echo "Bearer $TOKEN"
 	f.Lock()
 	if time.Now().Unix() >= f.satTokens[clientId].ExpiresAt {
 		delete(f.satTokens, clientId)
@@ -220,7 +221,7 @@ func (f *Filter) getSatBearerToken(ctx context.Context, clientId string, clientS
 	if err != nil {
 		return ""
 	}
-	buf, err := ioutil.ReadAll(resp.Body)
+	buf, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return ""
 	}
@@ -255,7 +256,7 @@ func (f *Filter) hitEndpoint(ctx context.Context, evt event.Event) (string, int,
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("User-Agent", "ears")
 	// add trace header to outbound call
-	traceHeader := "X-B3-TraceId"
+	traceHeader := app.HeaderTraceId
 	traceId := trace.SpanFromContext(ctx).SpanContext().TraceID().String()
 	req.Header.Set(traceHeader, traceId)
 	// add supplied headers
@@ -306,6 +307,9 @@ func (f *Filter) hitEndpoint(ctx context.Context, evt event.Event) (string, int,
 				TokenURL:     f.secrets.Secret(ctx, f.config.Auth.TokenURL),
 				Scopes:       f.config.Auth.Scopes,
 			}
+			if f.config.Auth.GrantType != "" {
+				conf.EndpointParams = nurl.Values{"grant_type": []string{f.config.Auth.GrantType}}
+			}
 			client = conf.Client(context.Background())
 			f.Lock()
 			f.clients[HTTP_AUTH_TYPE_OAUTH2+"-"+url] = client
@@ -331,14 +335,16 @@ func (f *Filter) hitEndpoint(ctx context.Context, evt event.Event) (string, int,
 	// send request
 	resp, err := client.Do(req)
 	if err != nil {
+		log.Ctx(evt.Context()).Error().Str("op", "filter").Str("filterType", "ws").Str("name", f.Name()).Msg("Request error: " + err.Error())
 		return "", 0, err
 	}
 	// read response
 	var body []byte
 	if resp != nil && resp.Body != nil {
 		var readErr error
-		body, readErr = ioutil.ReadAll(resp.Body)
+		body, readErr = io.ReadAll(resp.Body)
 		if readErr != nil {
+			log.Ctx(evt.Context()).Error().Str("op", "filter").Str("filterType", "ws").Str("name", f.Name()).Msg("Read error: " + readErr.Error())
 			return "", resp.StatusCode, readErr
 		}
 		resp.Body.Close()
