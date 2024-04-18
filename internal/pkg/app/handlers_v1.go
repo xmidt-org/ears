@@ -452,8 +452,24 @@ func (a *APIManager) sendEventHandler(w http.ResponseWriter, r *http.Request) {
 	routeToLocation := vars["routeToLocation"]
 	routeToPartner := vars["routeToPartner"]
 	if routeToApp != "" && routeToLocation != "" {
-		log.Ctx(ctx).Info().Str("op", "sendEventHandler").Str("action", "enveloping_payload").Msg("enveloping payload")
-		payload = NewGearsEnvelope(routeToPartner, routeToApp, routeToLocation, "", payload)
+		//log.Ctx(ctx).Info().Str("op", "sendEventHandler").Str("action", "enveloping_payload").Str("routeToApp", routeToApp).Str("routeToLoc", routeToLocation).Msg("enveloping payload")
+		genvelope := NewGearsEnvelope(routeToPartner, routeToApp, routeToLocation, "", payload)
+		body, err = json.Marshal(genvelope)
+		if err != nil {
+			log.Ctx(ctx).Error().Str("op", "sendEventHandler").Msg(err.Error())
+			a.addRouteFailureRecorder.Add(ctx, 1.0)
+			resp := ErrorResponse(&BadRequestError{"enveloping error", err})
+			resp.Respond(ctx, w, doYaml(r))
+			return
+		}
+		err = json.Unmarshal(body, &payload)
+		if err != nil {
+			log.Ctx(ctx).Error().Str("op", "sendEventHandler").Msg(err.Error())
+			a.addRouteFailureRecorder.Add(ctx, 1.0)
+			resp := ErrorResponse(&BadRequestError{"enveloping error", err})
+			resp.Respond(ctx, w, doYaml(r))
+			return
+		}
 	}
 	routeId := vars["routeId"]
 	if routeId == "" {
