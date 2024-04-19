@@ -75,9 +75,6 @@ type (
 	}
 )
 
-const SAT_URL = "https://sat-prod.codebig2.net/v2/oauth/token"
-const CREDENTIAL_URL = "https://{{env}}gears.comcast.com/v2/applications/{{app}}/credentials/{{key}}"
-
 var satToken SatToken
 
 func NewConfigVault(config config.Config) secret.Vault {
@@ -130,7 +127,11 @@ func (v *TenantConfigVault) getSatBearerToken(ctx context.Context) (string, erro
 			Timeout: 10 * time.Second,
 		}
 	}
-	req, err := http.NewRequest("POST", SAT_URL, nil)
+	SATUrl := v.Secret(ctx, "SATUrl")
+	if SATUrl == "" {
+		return "", errors.New("missing SAT URL")
+	}
+	req, err := http.NewRequest("POST", SATUrl, nil)
 	if err != nil {
 		return "", err
 	}
@@ -188,8 +189,10 @@ func (v *TenantConfigVault) getCredential(ctx context.Context, key string, crede
 	if env == "prod." {
 		env = ""
 	}
-	url := CREDENTIAL_URL
-	url = strings.Replace(url, "{{env}}", env, -1)
+	url := v.Secret(ctx, "CredentialUrl")
+	if url == "" {
+		return nil, errors.New("missing credential URL")
+	}
 	url = strings.Replace(url, "{{app}}", v.tid.AppId, -1)
 	url = strings.Replace(url, "{{key}}", key, -1)
 	req, err := http.NewRequest("GET", url, nil)
