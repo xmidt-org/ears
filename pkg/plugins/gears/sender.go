@@ -372,7 +372,6 @@ func (p *Producer) SendMessage(ctx context.Context, topic string, partition int,
 		Timestamp: time.Now(),
 	}
 	otel.GetTextMapPropagator().Inject(ctx, otelsarama.NewProducerMessageCarrier(message))
-
 	part, offset, err := producer.SendMessage(message)
 	if nil != err {
 		return err
@@ -380,7 +379,7 @@ func (p *Producer) SendMessage(ctx context.Context, topic string, partition int,
 	// override log values if any
 	elapsed := time.Since(start).Milliseconds()
 	p.sender.getMetrics(p.sender.getLabelValues(e, p.sender.config.DynamicMetricLabels)).eventSendOutTime.Record(ctx, elapsed)
-	log.Ctx(ctx).Debug().Str("op", "gears.Send").Int("elapsed", int(elapsed)).Int("partition", int(part)).Int("offset", int(offset)).Msg("sent message on gears topic")
+	log.Ctx(ctx).Debug().Str("op", "gears.Send").Str("topic", topic).Int("elapsed", int(elapsed)).Int("partition", int(part)).Int("offset", int(offset)).Msg("sent message on gears topic")
 	return nil
 }
 
@@ -465,13 +464,18 @@ func (s *Sender) Send(e event.Event) {
 		return
 	}
 	tx := make(map[string]string, 0)
-	obj, _, _ = e.Evaluate("{trace.id}")
-	if obj != nil {
-		switch txid := obj.(type) {
-		case string:
-			tx["traceId"] = txid
+	if e.UserTraceId() != "" {
+		tx["traceId"] = e.UserTraceId()
+	} else {
+		obj, _, _ = e.Evaluate("{trace.id}")
+		if obj != nil {
+			switch txid := obj.(type) {
+			case string:
+				tx["traceId"] = txid
+			}
 		}
 	}
+
 	message := make(map[string]interface{}, 0)
 	message["op"] = "process"
 	if s.config.Uses != "" {

@@ -89,8 +89,11 @@ const (
 	HostnameLabel          = "hostname"
 
 	EarsLogTraceIdKey  = "tx.traceId"
+	EarsOtelTraceIdKey = "otel.traceId"
 	EarsLogTenantIdKey = "tenantId"
 	EarsLogHostnameKey = "hostname"
+
+	EarsUserTraceId = "ears-user-trace-id"
 )
 
 var (

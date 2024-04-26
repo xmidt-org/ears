@@ -94,6 +94,9 @@ type Event interface {
 
 	//Deep copy event payload and metadata
 	DeepCopy() error
+
+	//TraceId from upstream
+	UserTraceId() string
 }
 
 type NoAckHandlersError struct {
