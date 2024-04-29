@@ -82,7 +82,7 @@ func (f *Filter) Filter(evt event.Event) []event.Event {
 		currEvent := evt
 		if isArray {
 			var err error
-			currEvent, err = event.New(evt.Context(), aElem, event.WithMetadata(evt.Metadata()))
+			currEvent, err = event.New(evt.Context(), aElem, event.WithMetadata(evt.Metadata()), event.WithUserTraceId(evt.UserTraceId()))
 			if err != nil {
 				log.Ctx(evt.Context()).Error().Str("op", "filter").Str("filterType", "mapping").Str("name", f.Name()).Msg(err.Error())
 				if span := trace.SpanFromContext(evt.Context()); span != nil {
