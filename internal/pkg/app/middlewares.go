@@ -77,7 +77,11 @@ func initRequestMiddleware(next http.Handler) http.Handler {
 		//https://www.w3.org/TR/trace-context/#trace-id, the otel will ignore the trace id from the header
 		//and generate a new one. We log both for debugging purposes.
 		traceIdFromHeader := r.Header.Get(HeaderTraceId)
-		logs.StrToLogCtx(subCtx, rtsemconv.EarsLogTraceIdKey, traceIdFromHeader)
+		if traceIdFromHeader != "" {
+			logs.StrToLogCtx(subCtx, rtsemconv.EarsLogTraceIdKey, traceIdFromHeader)
+		} else {
+			logs.StrToLogCtx(subCtx, rtsemconv.EarsLogTraceIdKey, traceId)
+		}
 		logs.StrToLogCtx(subCtx, rtsemconv.EarsOtelTraceIdKey, traceId)
 		subCtx = context.WithValue(subCtx, rtsemconv.EarsUserTraceId, traceIdFromHeader)
 		log.Ctx(subCtx).Debug().Msg("initializeRequestMiddleware")
