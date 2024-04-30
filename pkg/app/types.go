@@ -16,5 +16,6 @@ package app
 
 const (
 	HeaderTraceId  = "X-B3-TraceId"
+	HeaderSpanId   = "X-B3-SpanId"
 	HeaderTenantId = "Application-Id"
 )

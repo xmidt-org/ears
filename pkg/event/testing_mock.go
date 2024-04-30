@@ -16,64 +16,67 @@ var _ Event = &EventMock{}
 
 // EventMock is a mock implementation of Event.
 //
-// 	func TestSomethingThatUsesEvent(t *testing.T) {
+//	func TestSomethingThatUsesEvent(t *testing.T) {
 //
-// 		// make and configure a mocked Event
-// 		mockedEvent := &EventMock{
-// 			AckFunc: func()  {
-// 				panic("mock out the Ack method")
-// 			},
-// 			CloneFunc: func(ctx context.Context) (Event, error) {
-// 				panic("mock out the Clone method")
-// 			},
-// 			ContextFunc: func() context.Context {
-// 				panic("mock out the Context method")
-// 			},
-// 			CreatedFunc: func() time.Time {
-// 				panic("mock out the Created method")
-// 			},
-// 			DeepCopyFunc: func() error {
-// 				panic("mock out the DeepCopy method")
-// 			},
-// 			EvaluateFunc: func(expression interface{}) (interface{}, interface{}, string) {
-// 				panic("mock out the Evaluate method")
-// 			},
-// 			GetPathValueFunc: func(path string) (interface{}, interface{}, string) {
-// 				panic("mock out the GetPathValue method")
-// 			},
-// 			IdFunc: func() string {
-// 				panic("mock out the Id method")
-// 			},
-// 			MetadataFunc: func() map[string]interface{} {
-// 				panic("mock out the Metadata method")
-// 			},
-// 			NackFunc: func(err error)  {
-// 				panic("mock out the Nack method")
-// 			},
-// 			PayloadFunc: func() interface{} {
-// 				panic("mock out the Payload method")
-// 			},
-// 			SetContextFunc: func(ctx context.Context) error {
-// 				panic("mock out the SetContext method")
-// 			},
-// 			SetMetadataFunc: func(metadata map[string]interface{}) error {
-// 				panic("mock out the SetMetadata method")
-// 			},
-// 			SetPathValueFunc: func(path string, val interface{}, createPath bool) (interface{}, string, error) {
-// 				panic("mock out the SetPathValue method")
-// 			},
-// 			SetPayloadFunc: func(payload interface{}) error {
-// 				panic("mock out the SetPayload method")
-// 			},
-// 			TenantFunc: func() tenant.Id {
-// 				panic("mock out the Tenant method")
-// 			},
-// 		}
+//		// make and configure a mocked Event
+//		mockedEvent := &EventMock{
+//			AckFunc: func()  {
+//				panic("mock out the Ack method")
+//			},
+//			CloneFunc: func(ctx context.Context) (Event, error) {
+//				panic("mock out the Clone method")
+//			},
+//			ContextFunc: func() context.Context {
+//				panic("mock out the Context method")
+//			},
+//			CreatedFunc: func() time.Time {
+//				panic("mock out the Created method")
+//			},
+//			DeepCopyFunc: func() error {
+//				panic("mock out the DeepCopy method")
+//			},
+//			EvaluateFunc: func(expression interface{}) (interface{}, interface{}, string) {
+//				panic("mock out the Evaluate method")
+//			},
+//			GetPathValueFunc: func(path string) (interface{}, interface{}, string) {
+//				panic("mock out the GetPathValue method")
+//			},
+//			IdFunc: func() string {
+//				panic("mock out the Id method")
+//			},
+//			MetadataFunc: func() map[string]interface{} {
+//				panic("mock out the Metadata method")
+//			},
+//			NackFunc: func(err error)  {
+//				panic("mock out the Nack method")
+//			},
+//			PayloadFunc: func() interface{} {
+//				panic("mock out the Payload method")
+//			},
+//			SetContextFunc: func(ctx context.Context) error {
+//				panic("mock out the SetContext method")
+//			},
+//			SetMetadataFunc: func(metadata map[string]interface{}) error {
+//				panic("mock out the SetMetadata method")
+//			},
+//			SetPathValueFunc: func(path string, val interface{}, createPath bool) (interface{}, string, error) {
+//				panic("mock out the SetPathValue method")
+//			},
+//			SetPayloadFunc: func(payload interface{}) error {
+//				panic("mock out the SetPayload method")
+//			},
+//			TenantFunc: func() tenant.Id {
+//				panic("mock out the Tenant method")
+//			},
+//			UserTraceIdFunc: func() string {
+//				panic("mock out the UserTraceId method")
+//			},
+//		}
 //
-// 		// use mockedEvent in code that requires Event
-// 		// and then make assertions.
+//		// use mockedEvent in code that requires Event
+//		// and then make assertions.
 //
-// 	}
+//	}
 type EventMock struct {
 	// AckFunc mocks the Ack method.
 	AckFunc func()
@@ -122,6 +125,9 @@ type EventMock struct {
 
 	// TenantFunc mocks the Tenant method.
 	TenantFunc func() tenant.Id
+
+	// UserTraceIdFunc mocks the UserTraceId method.
+	UserTraceIdFunc func() string
 
 	// calls tracks calls to the methods.
 	calls struct {
@@ -193,6 +199,9 @@ type EventMock struct {
 		// Tenant holds details about calls to the Tenant method.
 		Tenant []struct {
 		}
+		// UserTraceId holds details about calls to the UserTraceId method.
+		UserTraceId []struct {
+		}
 	}
 	lockAck          sync.RWMutex
 	lockClone        sync.RWMutex
@@ -210,6 +219,7 @@ type EventMock struct {
 	lockSetPathValue sync.RWMutex
 	lockSetPayload   sync.RWMutex
 	lockTenant       sync.RWMutex
+	lockUserTraceId  sync.RWMutex
 }
 
 // Ack calls AckFunc.
@@ -227,7 +237,8 @@ func (mock *EventMock) Ack() {
 
 // AckCalls gets all the calls that were made to Ack.
 // Check the length with:
-//     len(mockedEvent.AckCalls())
+//
+//	len(mockedEvent.AckCalls())
 func (mock *EventMock) AckCalls() []struct {
 } {
 	var calls []struct {
@@ -256,7 +267,8 @@ func (mock *EventMock) Clone(ctx context.Context) (Event, error) {
 
 // CloneCalls gets all the calls that were made to Clone.
 // Check the length with:
-//     len(mockedEvent.CloneCalls())
+//
+//	len(mockedEvent.CloneCalls())
 func (mock *EventMock) CloneCalls() []struct {
 	Ctx context.Context
 } {
@@ -284,7 +296,8 @@ func (mock *EventMock) Context() context.Context {
 
 // ContextCalls gets all the calls that were made to Context.
 // Check the length with:
-//     len(mockedEvent.ContextCalls())
+//
+//	len(mockedEvent.ContextCalls())
 func (mock *EventMock) ContextCalls() []struct {
 } {
 	var calls []struct {
@@ -310,7 +323,8 @@ func (mock *EventMock) Created() time.Time {
 
 // CreatedCalls gets all the calls that were made to Created.
 // Check the length with:
-//     len(mockedEvent.CreatedCalls())
+//
+//	len(mockedEvent.CreatedCalls())
 func (mock *EventMock) CreatedCalls() []struct {
 } {
 	var calls []struct {
@@ -336,7 +350,8 @@ func (mock *EventMock) DeepCopy() error {
 
 // DeepCopyCalls gets all the calls that were made to DeepCopy.
 // Check the length with:
-//     len(mockedEvent.DeepCopyCalls())
+//
+//	len(mockedEvent.DeepCopyCalls())
 func (mock *EventMock) DeepCopyCalls() []struct {
 } {
 	var calls []struct {
@@ -365,7 +380,8 @@ func (mock *EventMock) Evaluate(expression interface{}) (interface{}, interface{
 
 // EvaluateCalls gets all the calls that were made to Evaluate.
 // Check the length with:
-//     len(mockedEvent.EvaluateCalls())
+//
+//	len(mockedEvent.EvaluateCalls())
 func (mock *EventMock) EvaluateCalls() []struct {
 	Expression interface{}
 } {
@@ -396,7 +412,8 @@ func (mock *EventMock) GetPathValue(path string) (interface{}, interface{}, stri
 
 // GetPathValueCalls gets all the calls that were made to GetPathValue.
 // Check the length with:
-//     len(mockedEvent.GetPathValueCalls())
+//
+//	len(mockedEvent.GetPathValueCalls())
 func (mock *EventMock) GetPathValueCalls() []struct {
 	Path string
 } {
@@ -424,7 +441,8 @@ func (mock *EventMock) Id() string {
 
 // IdCalls gets all the calls that were made to Id.
 // Check the length with:
-//     len(mockedEvent.IdCalls())
+//
+//	len(mockedEvent.IdCalls())
 func (mock *EventMock) IdCalls() []struct {
 } {
 	var calls []struct {
@@ -450,7 +468,8 @@ func (mock *EventMock) Metadata() map[string]interface{} {
 
 // MetadataCalls gets all the calls that were made to Metadata.
 // Check the length with:
-//     len(mockedEvent.MetadataCalls())
+//
+//	len(mockedEvent.MetadataCalls())
 func (mock *EventMock) MetadataCalls() []struct {
 } {
 	var calls []struct {
@@ -479,7 +498,8 @@ func (mock *EventMock) Nack(err error) {
 
 // NackCalls gets all the calls that were made to Nack.
 // Check the length with:
-//     len(mockedEvent.NackCalls())
+//
+//	len(mockedEvent.NackCalls())
 func (mock *EventMock) NackCalls() []struct {
 	Err error
 } {
@@ -507,7 +527,8 @@ func (mock *EventMock) Payload() interface{} {
 
 // PayloadCalls gets all the calls that were made to Payload.
 // Check the length with:
-//     len(mockedEvent.PayloadCalls())
+//
+//	len(mockedEvent.PayloadCalls())
 func (mock *EventMock) PayloadCalls() []struct {
 } {
 	var calls []struct {
@@ -536,7 +557,8 @@ func (mock *EventMock) SetContext(ctx context.Context) error {
 
 // SetContextCalls gets all the calls that were made to SetContext.
 // Check the length with:
-//     len(mockedEvent.SetContextCalls())
+//
+//	len(mockedEvent.SetContextCalls())
 func (mock *EventMock) SetContextCalls() []struct {
 	Ctx context.Context
 } {
@@ -567,7 +589,8 @@ func (mock *EventMock) SetMetadata(metadata map[string]interface{}) error {
 
 // SetMetadataCalls gets all the calls that were made to SetMetadata.
 // Check the length with:
-//     len(mockedEvent.SetMetadataCalls())
+//
+//	len(mockedEvent.SetMetadataCalls())
 func (mock *EventMock) SetMetadataCalls() []struct {
 	Metadata map[string]interface{}
 } {
@@ -602,7 +625,8 @@ func (mock *EventMock) SetPathValue(path string, val interface{}, createPath boo
 
 // SetPathValueCalls gets all the calls that were made to SetPathValue.
 // Check the length with:
-//     len(mockedEvent.SetPathValueCalls())
+//
+//	len(mockedEvent.SetPathValueCalls())
 func (mock *EventMock) SetPathValueCalls() []struct {
 	Path       string
 	Val        interface{}
@@ -637,7 +661,8 @@ func (mock *EventMock) SetPayload(payload interface{}) error {
 
 // SetPayloadCalls gets all the calls that were made to SetPayload.
 // Check the length with:
-//     len(mockedEvent.SetPayloadCalls())
+//
+//	len(mockedEvent.SetPayloadCalls())
 func (mock *EventMock) SetPayloadCalls() []struct {
 	Payload interface{}
 } {
@@ -665,7 +690,8 @@ func (mock *EventMock) Tenant() tenant.Id {
 
 // TenantCalls gets all the calls that were made to Tenant.
 // Check the length with:
-//     len(mockedEvent.TenantCalls())
+//
+//	len(mockedEvent.TenantCalls())
 func (mock *EventMock) TenantCalls() []struct {
 } {
 	var calls []struct {
@@ -673,5 +699,32 @@ func (mock *EventMock) TenantCalls() []struct {
 	mock.lockTenant.RLock()
 	calls = mock.calls.Tenant
 	mock.lockTenant.RUnlock()
+	return calls
+}
+
+// UserTraceId calls UserTraceIdFunc.
+func (mock *EventMock) UserTraceId() string {
+	if mock.UserTraceIdFunc == nil {
+		panic("EventMock.UserTraceIdFunc: method is nil but Event.UserTraceId was just called")
+	}
+	callInfo := struct {
+	}{}
+	mock.lockUserTraceId.Lock()
+	mock.calls.UserTraceId = append(mock.calls.UserTraceId, callInfo)
+	mock.lockUserTraceId.Unlock()
+	return mock.UserTraceIdFunc()
+}
+
+// UserTraceIdCalls gets all the calls that were made to UserTraceId.
+// Check the length with:
+//
+//	len(mockedEvent.UserTraceIdCalls())
+func (mock *EventMock) UserTraceIdCalls() []struct {
+} {
+	var calls []struct {
+	}
+	mock.lockUserTraceId.RLock()
+	calls = mock.calls.UserTraceId
+	mock.lockUserTraceId.RUnlock()
 	return calls
 }

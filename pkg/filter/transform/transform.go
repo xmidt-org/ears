@@ -84,7 +84,7 @@ func (f *Filter) Filter(evt event.Event) []event.Event {
 			isArray = true
 		}
 		for idx, elem := range a {
-			subEvt, err := event.New(evt.Context(), elem, event.WithMetadata(evt.Metadata()), event.WithTenant(evt.Tenant()))
+			subEvt, err := event.New(evt.Context(), elem, event.WithMetadata(evt.Metadata()), event.WithTenant(evt.Tenant()), event.WithUserTraceId(evt.UserTraceId()))
 			if err != nil {
 				log.Ctx(evt.Context()).Error().Str("op", "filter").Str("filterType", "transform").Str("name", f.Name()).Msg(err.Error())
 				if span := trace.SpanFromContext(evt.Context()); span != nil {

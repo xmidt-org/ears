@@ -15,6 +15,7 @@
 package app
 
 import (
+	"context"
 	"github.com/gorilla/mux"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
@@ -25,6 +26,7 @@ import (
 	"github.com/xmidt-org/ears/pkg/tenant"
 	"go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux"
 	"go.opentelemetry.io/contrib/propagators/b3"
+	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/trace"
 	"net/http"
 	"regexp"
@@ -40,7 +42,9 @@ func NewMiddleware(logger *zerolog.Logger, jwtManager jwt.JWTConsumer) []func(ne
 	jwtMgr = jwtManager
 	// for this extraction to work, X-B3-TraceId header must be present and exactly 32 byte hex and X-B3-SpanId
 	// must be present and exactly 16 byte hex
-	otelMiddleware := otelmux.Middleware("ears", otelmux.WithPropagators(b3.New()))
+	propagator := propagation.NewCompositeTextMapPropagator(b3.New(b3.WithInjectEncoding(b3.B3MultipleHeader)), propagation.TraceContext{})
+	otelMiddleware := otelmux.Middleware("ears", otelmux.WithPropagators(propagator))
+
 	//otelMiddleware := otelmux.Middleware("ears", otelmux.WithPropagators(otel.GetTextMapPropagator()))
 	return []func(next http.Handler) http.Handler{
 		authenticateMiddleware,
@@ -65,7 +69,21 @@ func initRequestMiddleware(next http.Handler) http.Handler {
 		}()
 		//extract any trace information
 		traceId := trace.SpanFromContext(subCtx).SpanContext().TraceID().String()
-		logs.StrToLogCtx(subCtx, rtsemconv.EarsLogTraceIdKey, traceId)
+
+		//tx.traceId may not be the same as otel.traceId:
+		// - tx.traceId is the trace id from the http header
+		// - otel.traceId is the trace id from the otel
+		//In theory, they should be the same. However, if trace id from http header is non-conformant to
+		//https://www.w3.org/TR/trace-context/#trace-id, the otel will ignore the trace id from the header
+		//and generate a new one. We log both for debugging purposes.
+		traceIdFromHeader := r.Header.Get(HeaderTraceId)
+		if traceIdFromHeader != "" {
+			logs.StrToLogCtx(subCtx, rtsemconv.EarsLogTraceIdKey, traceIdFromHeader)
+		} else {
+			logs.StrToLogCtx(subCtx, rtsemconv.EarsLogTraceIdKey, traceId)
+		}
+		logs.StrToLogCtx(subCtx, rtsemconv.EarsOtelTraceIdKey, traceId)
+		subCtx = context.WithValue(subCtx, rtsemconv.EarsUserTraceId, traceIdFromHeader)
 		log.Ctx(subCtx).Debug().Msg("initializeRequestMiddleware")
 		next.ServeHTTP(w, r.WithContext(subCtx))
 	})

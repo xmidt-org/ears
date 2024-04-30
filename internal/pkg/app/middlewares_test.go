@@ -45,6 +45,7 @@ func TestInitRequestMiddleware(t *testing.T) {
 		ctx := r.Context()
 		log.Ctx(ctx).Debug().Msg("test")
 		listener.AssertLastLogLine(t, "tx.traceId", "00000000000000000000000000000000")
+		listener.AssertLastLogLine(t, "otel.traceId", "00000000000000000000000000000000")
 	}}
 
 	//3rd middleware should be the InitRequestMiddleware

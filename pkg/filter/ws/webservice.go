@@ -116,7 +116,7 @@ func (f *Filter) Filter(evt event.Event) []event.Event {
 		return []event.Event{}
 	}
 	if f.config.FromPath != "" {
-		resEvt, _ := event.New(evt.Context(), resObj)
+		resEvt, _ := event.New(evt.Context(), resObj, event.WithUserTraceId(evt.UserTraceId()))
 		resObj, _, _ = resEvt.GetPathValue(f.config.FromPath)
 	}
 	err = evt.DeepCopy()

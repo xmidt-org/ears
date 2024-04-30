@@ -227,22 +227,26 @@ func (r *DefaultRoutingTableManager) RouteEvent(ctx context.Context, tid tenant.
 	}
 	var wg sync.WaitGroup
 	wg.Add(1)
+
+	userTraceId := ctx.Value(rtsemconv.EarsUserTraceId).(string)
+
 	// no need to cancel context here because RouteEvent is only used synchronously via API call
 	//sctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	e, err := event.New(ctx, payload, event.WithAck(
 		func(evt event.Event) {
-			r.logger.Info().Str("op", "routeEventWebhook").Str("tid", tid.ToString()).Msg("success")
+			log.Ctx(ctx).Info().Str("op", "routeEventWebhook").Str("tid", tid.ToString()).Msg("success")
 			lrw.Receiver.LogSuccess()
 			wg.Done()
 			//cancel()
 		}, func(evt event.Event, err error) {
-			r.logger.Error().Str("op", "routeEventWebhook").Str("tid", tid.ToString()).Msg("failed to process message: " + err.Error())
+			log.Ctx(ctx).Error().Str("op", "routeEventWebhook").Str("tid", tid.ToString()).Msg("failed to process message: " + err.Error())
 			wg.Done()
 			//cancel()
 		}),
 		event.WithOtelTracing("routeEventWebhook"),
 		event.WithTenant(tid),
 		event.WithTracePayloadOnNack(false),
+		event.WithUserTraceId(userTraceId),
 	)
 	if err != nil {
 		return "", errors.New("invalid event for route " + routeId)

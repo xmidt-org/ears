@@ -52,7 +52,7 @@ type event struct {
 	span               trace.Span //Only valid in the root event
 	tracePayloadOnNack bool
 	tracePayload       interface{}
-	traceId            string
+	userTraceId        string
 	created            time.Time
 	deepcopied         bool
 }
@@ -96,22 +96,26 @@ func New(ctx context.Context, payload interface{}, options ...EventOption) (Even
 		ctx, span = tracer.Start(ctx, e.spanName)
 		span.SetAttributes(rtsemconv.EARSEventTrace)
 		span.SetAttributes(rtsemconv.EARSOrgId.String(e.tid.OrgId), rtsemconv.EARSAppId.String(e.tid.AppId))
-		if e.traceId == "" {
-			e.traceId = span.SpanContext().TraceID().String()
+		if e.userTraceId == "" {
+			e.userTraceId = span.SpanContext().TraceID().String()
 		}
-		span.SetAttributes(rtsemconv.EARSTraceId.String(e.traceId))
+		span.SetAttributes(rtsemconv.EARSTraceId.String(e.userTraceId))
 		e.span = span
 	}
 	// last resort, make up trace id here
-	if e.traceId == "" {
-		e.traceId = uuid.New().String()
+	if e.userTraceId == "" {
+		e.userTraceId = strings.Replace(uuid.New().String(), "-", "", -1)
 	}
 	// setting up logger for the event
 	parentLogger, ok := logger.Load().(*zerolog.Logger)
 	if ok {
 		ctx = logs.SubLoggerCtx(ctx, parentLogger)
-		logs.StrToLogCtx(ctx, rtsemconv.EarsLogTraceIdKey, e.traceId)
+		logs.StrToLogCtx(ctx, rtsemconv.EarsLogTraceIdKey, e.userTraceId)
 		logs.StrToLogCtx(ctx, rtsemconv.EarsLogTenantIdKey, e.tid.ToString())
+		if e.span != nil {
+			otelTraceId := e.span.SpanContext().TraceID().String()
+			logs.StrToLogCtx(ctx, rtsemconv.EarsOtelTraceIdKey, otelTraceId)
+		}
 	}
 	e.SetContext(ctx)
 	return e, nil
@@ -175,9 +179,9 @@ func WithId(eid string) EventOption {
 	}
 }
 
-func WithTraceId(traceId string) EventOption {
+func WithUserTraceId(traceId string) EventOption {
 	return func(e *event) error {
-		e.traceId = traceId
+		e.userTraceId = traceId
 		return nil
 	}
 }
@@ -406,6 +410,9 @@ func (e *event) splitPath(path string) []string {
 
 func (e *event) GetPathValue(path string) (interface{}, interface{}, string) {
 	if path == TRACE+".id" {
+		if e.userTraceId != "" {
+			return e.userTraceId, nil, ""
+		}
 		traceId := trace.SpanFromContext(e.ctx).SpanContext().TraceID().String()
 		return traceId, nil, ""
 	}
@@ -575,6 +582,10 @@ func (e *event) Nack(err error) {
 	}
 }
 
+func (e *event) UserTraceId() string {
+	return e.userTraceId
+}
+
 func (e *event) Clone(ctx context.Context) (Event, error) {
 	// clone shallow
 	var subTree ack.SubTree
@@ -586,14 +597,14 @@ func (e *event) Clone(ctx context.Context) (Event, error) {
 		}
 	}
 	return &event{
-		payload:  e.Payload(),
-		metadata: e.Metadata(),
-		ctx:      ctx,
-		ack:      subTree,
-		eid:      e.eid,
-		tid:      e.tid,
-		created:  e.created,
-		traceId:  e.traceId,
+		payload:     e.Payload(),
+		metadata:    e.Metadata(),
+		ctx:         ctx,
+		ack:         subTree,
+		eid:         e.eid,
+		tid:         e.tid,
+		created:     e.created,
+		userTraceId: e.userTraceId,
 	}, nil
 }
 
