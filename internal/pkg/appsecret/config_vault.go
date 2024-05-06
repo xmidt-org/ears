@@ -127,7 +127,7 @@ func (v *TenantConfigVault) getSatBearerToken(ctx context.Context) (string, erro
 			Timeout: 10 * time.Second,
 		}
 	}
-	SATUrl := v.Secret(ctx, "SATUrl")
+	SATUrl := v.Secret(ctx, "secret://SATUrl")
 	if SATUrl == "" {
 		return "", errors.New("missing SAT URL")
 	}

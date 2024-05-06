@@ -209,7 +209,7 @@ func (f *Filter) getSatBearerToken(ctx context.Context, clientId string, clientS
 	httpClient := &http.Client{
 		Timeout: 10 * time.Second,
 	}
-	req, err := http.NewRequest("POST", f.secrets.Secret(ctx, "SATUrl"), nil)
+	req, err := http.NewRequest("POST", f.secrets.Secret(ctx, "secret://SATUrl"), nil)
 	if err != nil {
 		return "", err
 	}
