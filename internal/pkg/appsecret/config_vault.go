@@ -189,7 +189,7 @@ func (v *TenantConfigVault) getCredential(ctx context.Context, key string, crede
 	if env == "prod." {
 		env = ""
 	}
-	url := v.Secret(ctx, "CredentialUrl")
+	url := v.Secret(ctx, "secret://CredentialUrl")
 	if url == "" {
 		return nil, errors.New("missing credential URL")
 	}
