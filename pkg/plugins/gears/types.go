@@ -62,6 +62,7 @@ var DefaultSenderConfig = SenderConfig{
 	App:                 "",
 	Partner:             "",
 	Uses:                "",
+	Enveloped:           false,
 }
 
 // SenderConfig can be passed into NewSender() in order to configure
@@ -81,10 +82,11 @@ type SenderConfig struct {
 	DynamicMetricLabels []DynamicMetricLabel `json:"dynamicMetricLabel,omitempty"`
 	CompressionMethod   string               `json:"compressionMethod,omitempty"`
 	CompressionLevel    *int                 `json:"compressionLevel,omitempty"`
-	Location            interface{}          `json:"location,omitempty"` // gears config: string or array of strings, may contain path
-	App                 string               `json:"app,omitempty"`      // gears config
-	Partner             string               `json:"partner,omitempty"`  // gears config
-	Uses                string               `json:"uses,omitempty"`     // gears config
+	Location            interface{}          `json:"location,omitempty"`  // gears config: string or array of strings, may contain path
+	App                 string               `json:"app,omitempty"`       // gears config
+	Partner             string               `json:"partner,omitempty"`   // gears config
+	Uses                string               `json:"uses,omitempty"`      // gears config
+	Enveloped           bool                 `json:"enveloped,omitempty"` // gears config
 }
 
 type DynamicMetricLabel struct {

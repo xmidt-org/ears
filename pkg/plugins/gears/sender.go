@@ -398,97 +398,24 @@ func (s *Sender) Send(e event.Event) {
 		s.getMetrics(s.getLabelValues(e, s.config.DynamicMetricLabels)).eventFailureCounter.Add(e.Context(), 1.0)
 		return
 	}
-	to := make(map[string]string, 0)
-	obj, _, _ := e.Evaluate(s.config.Partner)
-	if obj != nil {
-		switch partner := obj.(type) {
-		case string:
-			to["partner"] = partner
-		}
-	}
-	if to["partner"] == "" {
-		log.Ctx(e.Context()).Error().Str("op", "gears.Send").Str("name", s.Name()).Str("tid", s.Tenant().ToString()).Msg("missing gears routing information partner")
-		if span := trace.SpanFromContext(e.Context()); span != nil {
-			span.AddEvent("missing partner")
-		}
-		e.Ack()
-		return
-	}
-	obj, _, _ = e.Evaluate(s.config.App)
-	if obj != nil {
-		switch app := obj.(type) {
-		case string:
-			to["app"] = app
-		}
-	}
-	if to["app"] == "" {
-		log.Ctx(e.Context()).Error().Str("op", "gears.Send").Str("name", s.Name()).Str("tid", s.Tenant().ToString()).Msg("missing gears routing information app")
-		if span := trace.SpanFromContext(e.Context()); span != nil {
-			span.AddEvent("missing app")
-		}
-		e.Ack()
-		return
-	}
-	locations := make([]string, 0)
-	obj, _, _ = e.Evaluate(s.config.Location)
-	if obj != nil {
-		switch loc := obj.(type) {
-		case string:
-			locations = append(locations, loc)
-		case []string:
-			for _, ls := range loc {
-				obj, _, _ := e.Evaluate(ls)
-				switch sls := obj.(type) {
-				case string:
-					locations = append(locations, sls)
-				}
-			}
-		case []interface{}:
-			for _, l := range loc {
-				if ls, ok := l.(string); ok {
-					obj, _, _ := e.Evaluate(ls)
-					switch sls := obj.(type) {
-					case string:
-						locations = append(locations, sls)
-					}
-				}
-			}
-		}
-	}
-	if len(locations) == 0 {
-		log.Ctx(e.Context()).Error().Str("op", "gears.Send").Str("name", s.Name()).Str("tid", s.Tenant().ToString()).Msg("missing gears routing information location")
-		if span := trace.SpanFromContext(e.Context()); span != nil {
-			span.AddEvent("missing location")
-		}
-		e.Ack()
-		return
-	}
-	tx := make(map[string]string, 0)
-	if e.UserTraceId() != "" {
-		tx["traceId"] = e.UserTraceId()
-	} else {
-		obj, _, _ = e.Evaluate("{trace.id}")
+	if s.config.Enveloped {
+		location := ""
+		obj, _, _ := e.Evaluate("{.to.location}")
 		if obj != nil {
-			switch txid := obj.(type) {
+			switch l := obj.(type) {
 			case string:
-				tx["traceId"] = txid
+				location = l
 			}
 		}
-	}
-
-	message := make(map[string]interface{}, 0)
-	message["op"] = "process"
-	if s.config.Uses != "" {
-		message["uses"] = s.config.Uses
-	}
-	message["payload"] = e.Payload()
-	envelope := make(map[string]interface{}, 0)
-	envelope["message"] = message
-	envelope["to"] = to
-	envelope["tx"] = tx
-	for _, l := range locations {
-		to["location"] = l
-		buf, err := json.Marshal(envelope)
+		if location == "" {
+			log.Ctx(e.Context()).Error().Str("op", "gears.Send").Str("name", s.Name()).Str("tid", s.Tenant().ToString()).Msg("invalid gears envelope missing location")
+			if span := trace.SpanFromContext(e.Context()); span != nil {
+				span.AddEvent("invalid gears envelope")
+			}
+			e.Ack()
+			return
+		}
+		buf, err := json.Marshal(e.Payload())
 		if err != nil {
 			log.Ctx(e.Context()).Error().Str("op", "gears.Send").Str("name", s.Name()).Str("tid", s.Tenant().ToString()).Msg("failed to marshal message: " + err.Error())
 			s.getMetrics(s.getLabelValues(e, s.config.DynamicMetricLabels)).eventFailureCounter.Add(e.Context(), 1.0)
@@ -498,7 +425,7 @@ func (s *Sender) Send(e event.Event) {
 		}
 		s.getMetrics(s.getLabelValues(e, s.config.DynamicMetricLabels)).eventProcessingTime.Record(e.Context(), time.Since(e.Created()).Milliseconds())
 		s.getMetrics(s.getLabelValues(e, s.config.DynamicMetricLabels)).eventBytesCounter.Add(e.Context(), int64(len(buf)))
-		hashbuf := []byte(to["location"])
+		hashbuf := []byte(location)
 		h := fnv.New32a()
 		h.Write(hashbuf)
 		partition := int(h.Sum32())
@@ -516,6 +443,125 @@ func (s *Sender) Send(e event.Event) {
 		s.count++
 		log.Ctx(e.Context()).Debug().Str("op", "gears.Send").Str("name", s.Name()).Str("tid", s.Tenant().ToString()).Int("count", s.count).Msg("sent message on gears topic")
 		s.Unlock()
+	} else {
+		to := make(map[string]string, 0)
+		obj, _, _ := e.Evaluate(s.config.Partner)
+		if obj != nil {
+			switch partner := obj.(type) {
+			case string:
+				to["partner"] = partner
+			}
+		}
+		if to["partner"] == "" {
+			log.Ctx(e.Context()).Error().Str("op", "gears.Send").Str("name", s.Name()).Str("tid", s.Tenant().ToString()).Msg("missing gears routing information partner")
+			if span := trace.SpanFromContext(e.Context()); span != nil {
+				span.AddEvent("missing partner")
+			}
+			e.Ack()
+			return
+		}
+		obj, _, _ = e.Evaluate(s.config.App)
+		if obj != nil {
+			switch app := obj.(type) {
+			case string:
+				to["app"] = app
+			}
+		}
+		if to["app"] == "" {
+			log.Ctx(e.Context()).Error().Str("op", "gears.Send").Str("name", s.Name()).Str("tid", s.Tenant().ToString()).Msg("missing gears routing information app")
+			if span := trace.SpanFromContext(e.Context()); span != nil {
+				span.AddEvent("missing app")
+			}
+			e.Ack()
+			return
+		}
+		locations := make([]string, 0)
+		obj, _, _ = e.Evaluate(s.config.Location)
+		if obj != nil {
+			switch loc := obj.(type) {
+			case string:
+				locations = append(locations, loc)
+			case []string:
+				for _, ls := range loc {
+					obj, _, _ := e.Evaluate(ls)
+					switch sls := obj.(type) {
+					case string:
+						locations = append(locations, sls)
+					}
+				}
+			case []interface{}:
+				for _, l := range loc {
+					if ls, ok := l.(string); ok {
+						obj, _, _ := e.Evaluate(ls)
+						switch sls := obj.(type) {
+						case string:
+							locations = append(locations, sls)
+						}
+					}
+				}
+			}
+		}
+		if len(locations) == 0 {
+			log.Ctx(e.Context()).Error().Str("op", "gears.Send").Str("name", s.Name()).Str("tid", s.Tenant().ToString()).Msg("missing gears routing information location")
+			if span := trace.SpanFromContext(e.Context()); span != nil {
+				span.AddEvent("missing location")
+			}
+			e.Ack()
+			return
+		}
+		tx := make(map[string]string, 0)
+		if e.UserTraceId() != "" {
+			tx["traceId"] = e.UserTraceId()
+		} else {
+			obj, _, _ = e.Evaluate("{trace.id}")
+			if obj != nil {
+				switch txid := obj.(type) {
+				case string:
+					tx["traceId"] = txid
+				}
+			}
+		}
+		message := make(map[string]interface{}, 0)
+		message["op"] = "process"
+		if s.config.Uses != "" {
+			message["uses"] = s.config.Uses
+		}
+		message["payload"] = e.Payload()
+		envelope := make(map[string]interface{}, 0)
+		envelope["message"] = message
+		envelope["to"] = to
+		envelope["tx"] = tx
+		for _, l := range locations {
+			to["location"] = l
+			buf, err := json.Marshal(envelope)
+			if err != nil {
+				log.Ctx(e.Context()).Error().Str("op", "gears.Send").Str("name", s.Name()).Str("tid", s.Tenant().ToString()).Msg("failed to marshal message: " + err.Error())
+				s.getMetrics(s.getLabelValues(e, s.config.DynamicMetricLabels)).eventFailureCounter.Add(e.Context(), 1.0)
+				s.LogError()
+				e.Nack(err)
+				return
+			}
+			s.getMetrics(s.getLabelValues(e, s.config.DynamicMetricLabels)).eventProcessingTime.Record(e.Context(), time.Since(e.Created()).Milliseconds())
+			s.getMetrics(s.getLabelValues(e, s.config.DynamicMetricLabels)).eventBytesCounter.Add(e.Context(), int64(len(buf)))
+			hashbuf := []byte(to["location"])
+			h := fnv.New32a()
+			h.Write(hashbuf)
+			partition := int(h.Sum32())
+			err = s.producer.SendMessage(e.Context(), s.config.Topic, partition, nil, buf, e)
+			if err != nil {
+				log.Ctx(e.Context()).Error().Str("op", "gears.Send").Str("name", s.Name()).Str("tid", s.Tenant().ToString()).Msg("failed to send message: " + err.Error())
+				s.getMetrics(s.getLabelValues(e, s.config.DynamicMetricLabels)).eventFailureCounter.Add(e.Context(), 1)
+				s.LogError()
+				e.Nack(err)
+				return
+			}
+			s.getMetrics(s.getLabelValues(e, s.config.DynamicMetricLabels)).eventSuccessCounter.Add(e.Context(), 1)
+			s.LogSuccess()
+			s.Lock()
+			s.count++
+			log.Ctx(e.Context()).Debug().Str("op", "gears.Send").Str("name", s.Name()).Str("tid", s.Tenant().ToString()).Int("count", s.count).Msg("sent message on gears topic")
+			s.Unlock()
+		}
 	}
 	e.Ack()
 }
