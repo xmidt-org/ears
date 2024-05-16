@@ -156,6 +156,7 @@ func NewAPIManager(routingMgr tablemgr.RoutingTableManager, tenantStorer tenant.
 
 	api.muxRouter.HandleFunc("/ears/v1/orgs/{orgId}/applications/{appId}/routes/{routeId}", api.addRouteHandler).Methods(http.MethodPut)
 	api.muxRouter.HandleFunc("/ears/v1/orgs/{orgId}/applications/{appId}/routes/{routeId}/event", api.sendEventHandler).Methods(http.MethodPost)
+	api.muxRouter.HandleFunc("/ears/v1/orgs/{orgId}/applications/{appId}/routes/{routeId}/reload", api.reloadRouteHandler).Methods(http.MethodPut)
 	api.muxRouter.HandleFunc("/ears/v1/orgs/{orgId}/applications/{appId}/routes/{routeId}/toggleEnable", api.enableDisableRouteHandler).Methods(http.MethodPut)
 	api.muxRouter.HandleFunc("/ears/v1/orgs/{orgId}/applications/{appId}/routes", api.addRouteHandler).Methods(http.MethodPost)
 	api.muxRouter.HandleFunc("/ears/v1/orgs/{orgId}/applications/{appId}/routes/{routeId}", api.removeRouteHandler).Methods(http.MethodDelete)
@@ -188,6 +189,7 @@ func NewAPIManager(routingMgr tablemgr.RoutingTableManager, tenantStorer tenant.
 	api.muxRouter.HandleFunc("/ears/v1/orgs/{orgId}/applications/{appId}", api.deleteTenantConfigHandler).Methods(http.MethodDelete)
 
 	api.muxRouter.HandleFunc("/ears/v1/routes", api.getAllRoutesHandler).Methods(http.MethodGet)
+	api.muxRouter.HandleFunc("/ears/v1/routes", api.reloadAllRoutesHandler).Methods(http.MethodPut)
 
 	api.muxRouter.HandleFunc("/ears/v1/tenants", api.getAllTenantConfigsHandler).Methods(http.MethodGet)
 	api.muxRouter.HandleFunc("/ears/v1/senders", api.getAllSendersHandler).Methods(http.MethodGet)
@@ -549,6 +551,40 @@ func (a *APIManager) enableDisableRouteHandler(w http.ResponseWriter, r *http.Re
 	resp.Respond(ctx, w, doYaml(r))
 }
 
+func (a *APIManager) reloadRouteHandler(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	vars := mux.Vars(r)
+	tid, apiErr := getTenant(ctx, vars)
+	if apiErr != nil {
+		log.Ctx(ctx).Error().Str("op", "reloadRouteHandler").Str("error", apiErr.Error()).Msg("orgId or appId empty")
+		a.addRouteFailureRecorder.Add(ctx, 1.0)
+		resp := ErrorResponse(apiErr)
+		resp.Respond(ctx, w, doYaml(r))
+		return
+	}
+	_, err := a.tenantStorer.GetConfig(ctx, *tid)
+	if err != nil {
+		log.Ctx(ctx).Error().Str("op", "reloadRouteHandler").Str("error", err.Error()).Msg("error getting tenant config")
+		resp := ErrorResponse(convertToApiError(ctx, err))
+		resp.Respond(ctx, w, doYaml(r))
+		return
+	}
+	routeId := vars["routeId"]
+	route, err := a.routingTableMgr.ReloadRoute(ctx, *tid, routeId)
+	if err != nil {
+		log.Ctx(ctx).Error().Str("op", "reloadRouteHandler").Msg(err.Error())
+		a.addRouteFailureRecorder.Add(ctx, 1.0)
+		resp := ErrorResponse(convertToApiError(ctx, err))
+		resp.Respond(ctx, w, doYaml(r))
+		return
+	} else {
+		a.addRouteSuccessRecorder.Add(ctx, 1.0)
+	}
+	log.Ctx(ctx).Info().Str("op", "reloadRouteHandler").Str("routeId", routeId).Msg("success")
+	resp := ItemResponse(route)
+	resp.Respond(ctx, w, doYaml(r))
+}
+
 func (a *APIManager) addRouteHandler(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	vars := mux.Vars(r)
@@ -694,6 +730,20 @@ func (a *APIManager) getAllTenantRoutesHandler(w http.ResponseWriter, r *http.Re
 	log.Ctx(ctx).Info().Str("op", "getAllTenantRoutesHandler").Msg("success")
 	trace.SpanFromContext(ctx).SetAttributes(attribute.Int("routeCount", len(allRouteConfigs)))
 	resp := ItemsResponse(allRouteConfigs)
+	resp.Respond(ctx, w, doYaml(r))
+}
+
+func (a *APIManager) reloadAllRoutesHandler(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	rids, err := a.routingTableMgr.ReloadAllRoutes(ctx)
+	if err != nil {
+		log.Ctx(ctx).Error().Str("op", "reloadAllRoutesHandler").Str("error", err.Error()).Msg("failed to reload all or some routes")
+		resp := ErrorResponse(convertToApiError(ctx, err))
+		resp.Respond(ctx, w, doYaml(r))
+		return
+	}
+	log.Ctx(ctx).Info().Str("op", "reloadAllRoutesHandler").Msg("success")
+	resp := ItemsResponse(rids)
 	resp.Respond(ctx, w, doYaml(r))
 }
 

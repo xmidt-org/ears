@@ -50,12 +50,16 @@ type (
 		GetAllTenantFragments(ctx context.Context, tenantId tenant.Id) ([]route.PluginConfig, error)
 		// GetFragment gets a single fragment
 		GetFragment(ctx context.Context, tenantId tenant.Id, fragmentId string) (route.PluginConfig, error)
-		// DeleteFragment delete a fragment by its name
+		// RemoveFragment delete a fragment by its name
 		RemoveFragment(ctx context.Context, tenantId tenant.Id, fragmentId string) error
 		// AddFragment adds a new fragment
 		AddFragment(ctx context.Context, tid tenant.Id, fragmentConfig route.PluginConfig) error
-		// Send test event to route
+		// RouteEvent send test event to route
 		RouteEvent(ctx context.Context, tid tenant.Id, routeId string, payload interface{}) (string, error)
+		// ReloadRoute reload route when secrets change
+		ReloadRoute(ctx context.Context, tid tenant.Id, routeId string) (*route.Config, error)
+		// ReloadAllRoutes reload routes when secrets change
+		ReloadAllRoutes(ctx context.Context) ([]string, error)
 	}
 
 	RoutingTableGlobalSyncer interface {
@@ -71,5 +75,7 @@ type (
 		IsSynchronized() (bool, error)
 		// GetAllRegisteredRoutes gets all routes that are currently registered and running on ears instance
 		GetAllRegisteredRoutes() ([]route.Config, error)
+		// GetRegisteredRoute get a registered route by ID
+		GetRegisteredRoute(tid tenant.Id, routeId string) (route.Config, error)
 	}
 )
