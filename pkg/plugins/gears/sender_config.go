@@ -90,6 +90,9 @@ const senderSchema = `
                 "uses": {
                     "type": "string"
                 },
+                "enveloped": {
+                    "type": "boolean"
+                },
                 "partner": {
                     "type": "string"
                 },
