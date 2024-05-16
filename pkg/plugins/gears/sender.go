@@ -441,7 +441,7 @@ func (s *Sender) Send(e event.Event) {
 		s.LogSuccess()
 		s.Lock()
 		s.count++
-		log.Ctx(e.Context()).Debug().Str("op", "gears.Send").Str("name", s.Name()).Str("tid", s.Tenant().ToString()).Int("count", s.count).Msg("sent message on gears topic")
+		log.Ctx(e.Context()).Info().Str("op", "gears.Send").Str("name", s.Name()).Str("location", location).Str("tid", s.Tenant().ToString()).Int("count", s.count).Msg("sent enveloped message on gears topic")
 		s.Unlock()
 	} else {
 		to := make(map[string]string, 0)
