@@ -68,25 +68,38 @@ var DefaultSenderConfig = SenderConfig{
 // SenderConfig can be passed into NewSender() in order to configure
 // the behavior of the sender.
 type SenderConfig struct {
-	Brokers             string               `json:"brokers,omitempty"`
-	Topic               string               `json:"topic,omitempty"`
-	Username            string               `json:"username,omitempty"`
-	Password            string               `json:"password,omitempty"`
-	CACert              string               `json:"caCert,omitempty"`
-	AccessCert          string               `json:"accessCert,omitempty"`
-	AccessKey           string               `json:"accessKey,omitempty"`
-	Version             string               `json:"version,omitempty"`
-	ChannelBufferSize   *int                 `json:"channelBufferSize,omitempty"`
-	TLSEnable           bool                 `json:"tlsEnable,omitempty"`
-	SenderPoolSize      *int                 `json:"senderPoolSize,omitempty"`
-	DynamicMetricLabels []DynamicMetricLabel `json:"dynamicMetricLabel,omitempty"`
-	CompressionMethod   string               `json:"compressionMethod,omitempty"`
-	CompressionLevel    *int                 `json:"compressionLevel,omitempty"`
-	Location            interface{}          `json:"location,omitempty"`  // gears config: string or array of strings, may contain path
-	App                 string               `json:"app,omitempty"`       // gears config
-	Partner             string               `json:"partner,omitempty"`   // gears config
-	Uses                string               `json:"uses,omitempty"`      // gears config
-	Enveloped           bool                 `json:"enveloped,omitempty"` // gears config
+	Clusters            map[string]BrokerSettings `json:"clusters,omitempty"`
+	ActiveClusters      string                    `json:"activeClusters,omitempty"`
+	Topic               string                    `json:"topic,omitempty"`
+	Version             string                    `json:"version,omitempty"`
+	ChannelBufferSize   *int                      `json:"channelBufferSize,omitempty"`
+	SenderPoolSize      *int                      `json:"senderPoolSize,omitempty"`
+	CompressionMethod   string                    `json:"compressionMethod,omitempty"`
+	CompressionLevel    *int                      `json:"compressionLevel,omitempty"`
+	DynamicMetricLabels []DynamicMetricLabel      `json:"dynamicMetricLabel,omitempty"`
+	Location            interface{}               `json:"location,omitempty"`  // gears config: string or array of strings, may contain path
+	App                 string                    `json:"app,omitempty"`       // gears config
+	Partner             string                    `json:"partner,omitempty"`   // gears config
+	Uses                string                    `json:"uses,omitempty"`      // gears config
+	Enveloped           bool                      `json:"enveloped,omitempty"` // gears config
+
+	Brokers    string `json:"brokers,omitempty"`    //deprecating. Please specify in cluster
+	Username   string `json:"username,omitempty"`   //deprecating. Please specify in cluster
+	Password   string `json:"password,omitempty"`   //deprecating. Please specify in cluster
+	CACert     string `json:"caCert,omitempty"`     //deprecating. Please specify in cluster
+	AccessCert string `json:"accessCert,omitempty"` //deprecating. Please specify in cluster
+	AccessKey  string `json:"accessKey,omitempty"`  //deprecating. Please specify in cluster
+	TLSEnable  bool   `json:"tlsEnable,omitempty"`  //deprecating. Please specify in cluster
+}
+
+type BrokerSettings struct {
+	Brokers    string `json:"brokers,omitempty"`
+	Username   string `json:"username,omitempty"`
+	Password   string `json:"password,omitempty"`
+	CACert     string `json:"caCert,omitempty"`
+	AccessCert string `json:"accessCert,omitempty"`
+	AccessKey  string `json:"accessKey,omitempty"`
+	TLSEnable  bool   `json:"tlsEnable,omitempty"`
 }
 
 type DynamicMetricLabel struct {
@@ -109,16 +122,16 @@ type SenderMetrics struct {
 
 type Sender struct {
 	pkgplugin.MetricPlugin
-	name     string
-	plugin   string
-	tid      tenant.Id
-	config   SenderConfig
-	count    int
-	logger   *zerolog.Logger
-	producer *Producer
-	stopped  bool
-	secrets  secret.Vault
-	metrics  map[string]*SenderMetrics
+	name      string
+	plugin    string
+	tid       tenant.Id
+	config    SenderConfig
+	count     int
+	logger    *zerolog.Logger
+	producers []*Producer
+	stopped   bool
+	secrets   secret.Vault
+	metrics   map[string]*SenderMetrics
 }
 
 type ManualHashPartitioner struct {
@@ -131,4 +144,5 @@ type Producer struct {
 	client sarama.Client
 	sender *Sender
 	logger *zerolog.Logger
+	key    string
 }
