@@ -285,8 +285,8 @@ func (r *DefaultRoutingTableManager) ReloadAllRoutes(ctx context.Context) ([]str
 		rids = append(rids, rt.Id)
 		_, err = r.ReloadRoute(ctx, rt.TenantId, rt.Id)
 		if err != nil {
+			errs[rt.Id] = err
 		}
-		errs[rt.Id] = err
 	}
 	if len(errs) > 0 {
 		errRep := ""

@@ -319,7 +319,6 @@ func (s *RedisDeltaSyncer) StartListeningForSyncRequests() {
 					s.GetInstanceCount(ctx) // just for logging
 					if syncCmd.Cmd == syncer.EARS_ADD_ITEM_CMD {
 						s.logger.Info().Str("op", "ListenForSyncRequests").Str("instanceId", s.instanceId).Str("routeId", syncCmd.ItemId).Str("sid", syncCmd.Sid).Msg("received message to add route")
-
 						s.Lock()
 						syncers, ok := s.localSyncers[syncCmd.ItemType]
 						if ok {
