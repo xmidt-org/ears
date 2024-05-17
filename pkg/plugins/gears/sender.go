@@ -616,7 +616,6 @@ func (s *Sender) Send(e event.Event) {
 // bucket is the hash in.
 func getProducerIdx(hash uint32, count int) int {
 	bucket := math.MaxUint32 / uint32(count)
-	fmt.Printf("bucket: %d\n", bucket)
 	return int(hash / bucket)
 }
 
