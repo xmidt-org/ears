@@ -78,6 +78,9 @@ const senderSchema = `
                 "clusters": {
 					"type": "object"
 				},
+                "activeClusters": {
+                    "type": "string"
+                },
                 "brokers": {
                     "type": "string"
                 },
