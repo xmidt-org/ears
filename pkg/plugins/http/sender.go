@@ -138,6 +138,9 @@ func (s *Sender) Send(event event.Event) {
 		event.Nack(err)
 		return
 	}
+	for k, v := range s.config.Headers {
+		req.Header.Set(k, v)
+	}
 	ctx := event.Context()
 	s.b3Propagator.Inject(ctx, propagation.HeaderCarrier(req.Header))
 	start := time.Now()
