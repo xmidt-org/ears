@@ -23,6 +23,7 @@ import (
 	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
 	"github.com/xmidt-org/ears/internal/pkg/aws/s3"
+	"gopkg.in/yaml.v3"
 	"path/filepath"
 	"strings"
 )
@@ -97,7 +98,8 @@ func ViperConfigFile() string {
 // ViperConfig will help configure a project. This includes setting
 // the environment variable prefix, plus the default config file name.
 // For example:
-//   cli.ViperConfig("ears")
+//
+//	cli.ViperConfig("ears")
 func ViperConfig(envPrefix, configName string) error {
 
 	viper.SetEnvPrefix(envPrefix)
@@ -151,12 +153,28 @@ func ViperConfig(envPrefix, configName string) error {
 			return &ConfigError{err, config}
 		}
 
-		data, err := svc.GetObject(config)
-		if err != nil {
-			return &ConfigError{err, config}
+		confs := strings.Split(config, ",")
+
+		// merge following yamls to the first one
+		var data []byte
+		for _, conf := range confs {
+			str, err := svc.GetObject(conf)
+			if nil != err {
+				if nil == data {
+					return &ConfigError{err, conf}
+				}
+				// stop merge on the first error
+				break
+			}
+
+			if nil == data {
+				data = []byte(str)
+			} else if data, err = mergeYaml([]byte(str), data); nil != err {
+				return &ConfigError{err, conf}
+			}
 		}
 
-		err = viper.ReadConfig(strings.NewReader(data))
+		err = viper.ReadConfig(strings.NewReader(string(data)))
 		if err != nil {
 			return &ConfigError{err, config}
 		}
@@ -181,4 +199,36 @@ func ViperConfig(envPrefix, configName string) error {
 	}
 
 	return nil
+}
+
+// mergeYaml merges top level key value pairs from src to dst
+func mergeYaml(srcData, dstData []byte) ([]byte, error) {
+	var src, dst yaml.Node
+
+	if err := yaml.Unmarshal(srcData, &src); nil != err {
+		return nil, err
+	}
+	src = *src.Content[0]
+
+	nodes := make(map[string]*yaml.Node)
+	for i, n := range src.Content {
+		// The odd number is the key while the even number is the value
+		if i%2 == 0 {
+			nodes[n.Value] = src.Content[i+1]
+		}
+	}
+
+	if err := yaml.Unmarshal(dstData, &dst); nil != err {
+		return nil, err
+	}
+	dst = *dst.Content[0]
+	for i, n := range dst.Content {
+		if i%2 == 0 {
+			if tmp, ok := nodes[n.Value]; ok {
+				dst.Content[i+1] = tmp
+			}
+		}
+	}
+
+	return yaml.Marshal(dst)
 }
