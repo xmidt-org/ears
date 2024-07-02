@@ -164,7 +164,10 @@ func (s *Sender) initPlugin() error {
 	s.Lock()
 	defer s.Unlock()
 
+	ctx := context.Background()
+
 	activeClusters := s.secrets.Secret(context.Background(), s.config.ActiveClusters)
+	log.Ctx(ctx).Info().Str("op", "gears.initPlugin").Str("action", "init").Str("activeCluster", activeClusters).Msg("Debug")
 	if len(activeClusters) > 0 {
 		clusterKeys := strings.Split(activeClusters, ",")
 		for _, key := range clusterKeys {
@@ -172,7 +175,9 @@ func (s *Sender) initPlugin() error {
 			if !ok {
 				return fmt.Errorf("activeClusters key %s not found in clusters", key)
 			}
+			log.Ctx(ctx).Info().Str("op", "gears.initPlugin").Str("action", "newProducer").Str("brokers", settings.Brokers).Msg("Debug")
 			producer, err := s.NewProducer(key, settings, *s.config.SenderPoolSize)
+			log.Ctx(ctx).Info().Str("op", "gears.initPlugin").Str("action", "newProducer").Str("brokers", settings.Brokers).Msg("Debug Done")
 			if err != nil {
 				return err
 			}
