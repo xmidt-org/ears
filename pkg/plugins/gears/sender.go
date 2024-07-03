@@ -177,11 +177,11 @@ func (s *Sender) initPlugin() error {
 			if !ok {
 				return fmt.Errorf("activeClusters key %s not found in clusters", key)
 			}
-			logger.Info().Str("op", "gears.initPlugin").Str("action", "newProducer").Str("brokers", settings.Brokers).Msg("Debug")
+			logger.Info().Str("op", "gears.initPlugin").Str("action", "newProducer").Str("brokers", settings.Brokers).Str("key", key).Msg("Debug")
 			producer, err := s.NewProducer(key, settings, *s.config.SenderPoolSize)
-			logger.Info().Str("op", "gears.initPlugin").Str("action", "newProducer").Str("brokers", settings.Brokers).Msg("Debug Done")
+			logger.Info().Str("op", "gears.initPlugin").Str("action", "newProducer").Str("brokers", settings.Brokers).Str("key", key).Msg("Debug Done")
 			if err != nil {
-				logger.Info().Str("op", "gears.initPlugin").Str("action", "newProducer").Str("brokers", settings.Brokers).Msg("Error=" + err.Error())
+				logger.Info().Str("op", "gears.initPlugin").Str("action", "newProducer").Str("brokers", settings.Brokers).Str("key", key).Msg("Error=" + err.Error())
 				return err
 			}
 			s.producers = append(s.producers, producer)
