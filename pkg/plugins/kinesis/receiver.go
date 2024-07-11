@@ -572,41 +572,39 @@ func (r *Receiver) startShardReceiver(svc *kinesis.Kinesis, stream *kinesis.Desc
 					if len(msg.Data) == 0 {
 						continue
 					} else {
-						go func() {
-							var payload interface{}
-							err = json.Unmarshal(msg.Data, &payload)
-							if err != nil {
+						var payload interface{}
+						err = json.Unmarshal(msg.Data, &payload)
+						if err != nil {
+							r.LogError()
+							r.logger.Error().Str("op", "kinesis.startShardReceiver").Str("stream", *r.stream.StreamDescription.StreamName).Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Str("gears.app.id", r.Tenant().AppId).Str("partner.id", r.Tenant().OrgId).Str("rid", routineId).Int("shardIdx", shardIdx).Msg("cannot parse message " + (*msg.SequenceNumber) + ": " + err.Error())
+							return
+						}
+						ctx, cancel := context.WithTimeout(context.Background(), time.Duration(*r.config.AcknowledgeTimeout)*time.Second)
+						r.eventLagMillis.Record(ctx, *getRecordsOutput.MillisBehindLatest)
+						trueLagMillis := time.Since(*msg.ApproximateArrivalTimestamp).Milliseconds()
+						r.eventTrueLagMillis.Record(ctx, trueLagMillis)
+						r.eventBytesCounter.Add(ctx, int64(len(msg.Data)))
+						e, err := event.New(ctx, payload, event.WithMetadataKeyValue("kinesisMessage", *msg), event.WithAck(
+							func(e event.Event) {
+								r.eventSuccessCounter.Add(ctx, 1)
+								r.LogSuccess()
+								checkpoint.SetCheckpoint(checkpointId, *msg.SequenceNumber)
+								cancel()
+							},
+							func(e event.Event, err error) {
+								r.eventFailureCounter.Add(ctx, 1)
 								r.LogError()
-								r.logger.Error().Str("op", "kinesis.startShardReceiver").Str("stream", *r.stream.StreamDescription.StreamName).Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Str("gears.app.id", r.Tenant().AppId).Str("partner.id", r.Tenant().OrgId).Str("rid", routineId).Int("shardIdx", shardIdx).Msg("cannot parse message " + (*msg.SequenceNumber) + ": " + err.Error())
-								return
-							}
-							ctx, cancel := context.WithTimeout(context.Background(), time.Duration(*r.config.AcknowledgeTimeout)*time.Second)
-							r.eventLagMillis.Record(ctx, *getRecordsOutput.MillisBehindLatest)
-							trueLagMillis := time.Since(*msg.ApproximateArrivalTimestamp).Milliseconds()
-							r.eventTrueLagMillis.Record(ctx, trueLagMillis)
-							r.eventBytesCounter.Add(ctx, int64(len(msg.Data)))
-							e, err := event.New(ctx, payload, event.WithMetadataKeyValue("kinesisMessage", *msg), event.WithAck(
-								func(e event.Event) {
-									r.eventSuccessCounter.Add(ctx, 1)
-									r.LogSuccess()
-									checkpoint.SetCheckpoint(checkpointId, *msg.SequenceNumber)
-									cancel()
-								},
-								func(e event.Event, err error) {
-									r.eventFailureCounter.Add(ctx, 1)
-									r.LogError()
-									checkpoint.SetCheckpoint(checkpointId, *msg.SequenceNumber)
-									cancel()
-								}),
-								event.WithTenant(r.Tenant()),
-								event.WithOtelTracing(r.Name()),
-								event.WithTracePayloadOnNack(*r.config.TracePayloadOnNack))
-							if err != nil {
-								r.logger.Error().Str("op", "kinesis.startShardReceiver").Str("stream", *r.stream.StreamDescription.StreamName).Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Str("gears.app.id", r.Tenant().AppId).Str("partner.id", r.Tenant().OrgId).Str("rid", routineId).Int("shardIdx", shardIdx).Msg("cannot create event: " + err.Error())
-								return
-							}
-							r.Trigger(e)
-						}()
+								checkpoint.SetCheckpoint(checkpointId, *msg.SequenceNumber)
+								cancel()
+							}),
+							event.WithTenant(r.Tenant()),
+							event.WithOtelTracing(r.Name()),
+							event.WithTracePayloadOnNack(*r.config.TracePayloadOnNack))
+						if err != nil {
+							r.logger.Error().Str("op", "kinesis.startShardReceiver").Str("stream", *r.stream.StreamDescription.StreamName).Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Str("gears.app.id", r.Tenant().AppId).Str("partner.id", r.Tenant().OrgId).Str("rid", routineId).Int("shardIdx", shardIdx).Msg("cannot create event: " + err.Error())
+							return
+						}
+						r.Trigger(e)
 					}
 				}
 				// this the next sequence number to read from in the shard, if nil the shard has been closed pending expiration
