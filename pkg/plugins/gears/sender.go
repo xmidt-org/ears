@@ -22,7 +22,6 @@ import (
 	"fmt"
 	"github.com/Shopify/sarama"
 	"github.com/goccy/go-yaml"
-	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"github.com/xmidt-org/ears/internal/pkg/rtsemconv"
 	"github.com/xmidt-org/ears/internal/pkg/syncer"
@@ -165,11 +164,7 @@ func (s *Sender) initPlugin() error {
 	s.Lock()
 	defer s.Unlock()
 
-	logger := zerolog.New(os.Stdout).Level(zerolog.InfoLevel).With().Timestamp().Logger()
-	zerolog.LevelFieldName = "log.level"
-
 	activeClusters := s.secrets.Secret(context.Background(), s.config.ActiveClusters)
-	logger.Info().Str("op", "gears.initPlugin").Str("action", "init").Str("activeCluster", activeClusters).Msg("Debug")
 	if len(activeClusters) > 0 {
 		clusterKeys := strings.Split(activeClusters, ",")
 		for _, key := range clusterKeys {
@@ -177,11 +172,8 @@ func (s *Sender) initPlugin() error {
 			if !ok {
 				return fmt.Errorf("activeClusters key %s not found in clusters", key)
 			}
-			logger.Info().Str("op", "gears.initPlugin").Str("action", "newProducer").Str("brokers", settings.Brokers).Str("key", key).Msg("Debug")
 			producer, err := s.NewProducer(key, settings, *s.config.SenderPoolSize)
-			logger.Info().Str("op", "gears.initPlugin").Str("action", "newProducer").Str("brokers", settings.Brokers).Str("key", key).Msg("Debug Done")
 			if err != nil {
-				logger.Info().Str("op", "gears.initPlugin").Str("action", "newProducer").Str("brokers", settings.Brokers).Str("key", key).Msg("Error=" + err.Error())
 				return err
 			}
 			s.producers = append(s.producers, producer)
