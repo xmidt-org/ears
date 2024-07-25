@@ -56,6 +56,12 @@ type Event interface {
 	//Get the event creation time
 	Created() time.Time
 
+	//Get response string for synchronous routes
+	Response() string
+
+	//Set response string for synchronous routes
+	SetResponse(response string)
+
 	//Set the event payload
 	//Will return an error if the event is done
 	SetPayload(payload interface{}) error

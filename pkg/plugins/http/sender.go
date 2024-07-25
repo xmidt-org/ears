@@ -34,7 +34,6 @@ import (
 	"go.opentelemetry.io/otel/metric/unit"
 	"go.opentelemetry.io/otel/propagation"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"os"
 	"time"
@@ -149,7 +148,14 @@ func (s *Sender) Send(event event.Event) {
 		event.Nack(err)
 		return
 	}
-	io.Copy(ioutil.Discard, resp.Body)
+	buf, err := io.ReadAll(resp.Body)
+	if err != nil {
+		s.eventFailureCounter.Add(event.Context(), 1)
+		s.LogError()
+		event.Nack(err)
+		return
+	}
+	event.SetResponse(string(buf))
 	defer resp.Body.Close()
 	if resp.StatusCode < http.StatusOK || resp.StatusCode >= http.StatusBadRequest {
 		s.eventFailureCounter.Add(event.Context(), 1)

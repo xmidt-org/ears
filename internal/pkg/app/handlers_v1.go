@@ -480,7 +480,7 @@ func (a *APIManager) sendEventHandler(w http.ResponseWriter, r *http.Request) {
 		resp.Respond(ctx, w, doYaml(r))
 		return
 	}
-	traceId, err := a.routingTableMgr.RouteEvent(ctx, *tid, routeId, payload)
+	evt, traceId, err := a.routingTableMgr.RouteEvent(ctx, *tid, routeId, payload)
 	if err != nil {
 		log.Ctx(ctx).Error().Str("op", "sendEventHandler").Msg(err.Error())
 		resp := ErrorResponse(convertToApiError(ctx, err))
@@ -490,6 +490,7 @@ func (a *APIManager) sendEventHandler(w http.ResponseWriter, r *http.Request) {
 	item := make(map[string]string)
 	item["routeId"] = routeId
 	item["tx.traceId"] = traceId
+	item["response"] = (*evt).Response()
 	resp := ItemResponse(item)
 	resp.Respond(ctx, w, doYaml(r))
 }

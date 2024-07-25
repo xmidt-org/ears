@@ -55,6 +55,7 @@ type event struct {
 	userTraceId        string
 	created            time.Time
 	deepcopied         bool
+	response           *string
 }
 
 type EventOption func(*event) error
@@ -75,13 +76,15 @@ func GetEventLogger() *zerolog.Logger {
 
 // Create a new event given a context, a payload, and other event options
 func New(ctx context.Context, payload interface{}, options ...EventOption) (Event, error) {
+	emptyResponse := "{}"
 	e := &event{
-		payload: payload,
-		ctx:     ctx,
-		ack:     nil,
-		tid:     tenant.Id{OrgId: "", AppId: ""},
-		created: time.Now(),
-		eid:     uuid.New().String(),
+		payload:  payload,
+		ctx:      ctx,
+		ack:      nil,
+		tid:      tenant.Id{OrgId: "", AppId: ""},
+		created:  time.Now(),
+		eid:      uuid.New().String(),
+		response: &emptyResponse,
 	}
 	for _, option := range options {
 		err := option(e)
@@ -228,6 +231,14 @@ func (e *event) Id() string {
 
 func (e *event) Payload() interface{} {
 	return e.payload
+}
+
+func (e *event) Response() string {
+	return *e.response
+}
+
+func (e *event) SetResponse(response string) {
+	*e.response = response
 }
 
 func (e *event) SetPayload(payload interface{}) error {
@@ -605,6 +616,7 @@ func (e *event) Clone(ctx context.Context) (Event, error) {
 		tid:         e.tid,
 		created:     e.created,
 		userTraceId: e.userTraceId,
+		response:    e.response,
 	}, nil
 }
 
