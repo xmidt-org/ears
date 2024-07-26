@@ -40,23 +40,6 @@ import (
 	"golang.org/x/oauth2/clientcredentials"
 )
 
-const (
-	HTTP_AUTH_TYPE_BASIC  = "basic"
-	HTTP_AUTH_TYPE_SAT    = "sat"
-	HTTP_AUTH_TYPE_OAUTH  = "oauth"
-	HTTP_AUTH_TYPE_OAUTH2 = "oauth2"
-)
-
-type (
-	SatToken struct {
-		AccessToken string `json:"access_token"`
-		ExpiresIn   int    `json:"expires_in"`
-		Scope       string `json:"scope"`
-		TokenType   string `json:"token_type"`
-		ExpiresAt   int64  `json:"timestamp"`
-	}
-)
-
 func NewFilter(tid tenant.Id, plugin string, name string, config interface{}, secrets secret.Vault, tableSyncer syncer.DeltaSyncer) (*Filter, error) {
 	cfg, err := NewConfig(config)
 	if err != nil {
@@ -274,7 +257,7 @@ func (f *Filter) hitEndpoint(ctx context.Context, evt event.Event) (string, int,
 		client, ok = f.clients[HTTP_AUTH_TYPE_BASIC]
 		f.RUnlock()
 		if !ok {
-			client = InitHttpTransportWithDialer()
+			client = f.initHttpTransportWithDialer()
 			f.Lock()
 			f.clients[HTTP_AUTH_TYPE_BASIC] = client
 			f.Unlock()
@@ -285,7 +268,7 @@ func (f *Filter) hitEndpoint(ctx context.Context, evt event.Event) (string, int,
 		client, ok = f.clients[HTTP_AUTH_TYPE_BASIC]
 		f.RUnlock()
 		if !ok {
-			client = InitHttpTransportWithDialer()
+			client = f.initHttpTransportWithDialer()
 			f.Lock()
 			f.clients[HTTP_AUTH_TYPE_BASIC] = client
 			f.Unlock()
@@ -323,7 +306,7 @@ func (f *Filter) hitEndpoint(ctx context.Context, evt event.Event) (string, int,
 		client, ok = f.clients[HTTP_AUTH_TYPE_BASIC]
 		f.RUnlock()
 		if !ok {
-			client = InitHttpTransportWithDialer()
+			client = f.initHttpTransportWithDialer()
 			f.Lock()
 			f.clients[HTTP_AUTH_TYPE_BASIC] = client
 			f.Unlock()
@@ -357,7 +340,7 @@ func (f *Filter) hitEndpoint(ctx context.Context, evt event.Event) (string, int,
 	return string(body), resp.StatusCode, nil
 }
 
-func InitHttpTransportWithDialer() *http.Client {
+func (f *Filter) initHttpTransportWithDialer() *http.Client {
 	var dialer net.Dialer
 	tr := &http.Transport{
 		MaxIdleConnsPerHost:   100,

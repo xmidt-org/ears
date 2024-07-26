@@ -24,6 +24,13 @@ import (
 	"github.com/xorcare/pointer"
 )
 
+const (
+	HTTP_AUTH_TYPE_BASIC  = "basic"
+	HTTP_AUTH_TYPE_SAT    = "sat"
+	HTTP_AUTH_TYPE_OAUTH  = "oauth"
+	HTTP_AUTH_TYPE_OAUTH2 = "oauth2"
+)
+
 // Config can be passed into NewFilter() in order to configure
 // the behavior of the sender.
 type Config struct {
@@ -72,3 +79,13 @@ type Filter struct {
 	satTokens map[string]*SatToken
 	filter.MetricFilter
 }
+
+type (
+	SatToken struct {
+		AccessToken string `json:"access_token"`
+		ExpiresIn   int    `json:"expires_in"`
+		Scope       string `json:"scope"`
+		TokenType   string `json:"token_type"`
+		ExpiresAt   int64  `json:"timestamp"`
+	}
+)
