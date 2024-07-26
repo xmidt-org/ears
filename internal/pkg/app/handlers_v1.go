@@ -15,7 +15,7 @@
 //DONE: enhance event object to pass response back to sender plugin and return response
 //DONE: http sender needs more parameters: payload etc.
 //DONE: modify global webhook route to allow for optional route id parameter
-//TODO: http sender needs to support standard authentication methods (SAT, oauth etc.)
+//DONE: http sender needs to support standard authentication methods (SAT, oauth etc.)
 
 package app
 
