@@ -18,6 +18,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"github.com/boriwo/deepcopy"
 	"github.com/goccy/go-yaml"
 	"github.com/xmidt-org/ears/internal/pkg/rtsemconv"
 	"github.com/xmidt-org/ears/internal/pkg/syncer"
@@ -36,6 +37,7 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"strings"
 	"time"
 )
 
@@ -119,18 +121,54 @@ func NewSender(tid tenant.Id, plugin string, name string, config interface{}, se
 	return s, nil
 }
 
+func (s *Sender) evalStr(evt event.Event, tt string) string {
+	for {
+		si := strings.Index(tt, "{")
+		ei := strings.Index(tt, "}")
+		if si < 0 || ei < 0 {
+			break
+		}
+		path := tt[si+1 : ei]
+		v, _, _ := evt.GetPathValue(path)
+		v = deepcopy.DeepCopy(v)
+		if !(si == 0 && ei == len(tt)-1) {
+			switch vt := v.(type) {
+			case string:
+				tt = tt[0:si] + vt + tt[ei+1:]
+			default:
+				sv, _ := json.Marshal(vt)
+				tt = tt[0:si] + string(sv) + tt[ei+1:]
+			}
+		} else {
+			switch vt := v.(type) {
+			case string:
+				return vt
+			default:
+				sv, _ := json.Marshal(vt)
+				return string(sv)
+			}
+		}
+	}
+	return tt
+}
+
 func (s *Sender) Send(event event.Event) {
-	payload := event.Payload()
+	body := ""
+	if s.config.Body != "" {
+		body = s.evalStr(event, s.config.Body)
+	}
+	/*payload := event.Payload()
 	body, err := json.Marshal(payload)
 	if err != nil {
 		s.eventFailureCounter.Add(event.Context(), 1)
 		s.LogError()
 		event.Nack(err)
 		return
-	}
+	}*/
 	s.eventBytesCounter.Add(event.Context(), int64(len(body)))
 	s.eventProcessingTime.Record(event.Context(), time.Since(event.Created()).Milliseconds())
-	req, err := http.NewRequest(s.config.Method, s.config.Url, bytes.NewReader(body))
+	//req, err := http.NewRequest(s.config.Method, s.config.Url, bytes.NewReader(body))
+	req, err := http.NewRequest(s.config.Method, s.config.Url, bytes.NewReader([]byte(body)))
 	if err != nil {
 		s.eventFailureCounter.Add(event.Context(), 1)
 		s.LogError()

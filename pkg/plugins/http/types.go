@@ -100,6 +100,7 @@ type Receiver struct {
 type SenderConfig struct {
 	Url    string `json:"url"`
 	Method string `json:"method"`
+	Body   string `json:"body"`
 }
 
 type Sender struct {

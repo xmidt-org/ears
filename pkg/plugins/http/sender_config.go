@@ -47,6 +47,9 @@ const senderSchema = `
                 },
 				"method": {
                     "type": "string"
+				},
+				"body": {
+					"type": "string"
 				}
             },
             "required": [

@@ -13,10 +13,9 @@
 // limitations under the License.
 
 //DONE: enhance event object to pass response back to sender plugin and return response
-//TODO: http sender needs more parameters: payload etc.
+//DONE: http sender needs more parameters: payload etc.
+//TODO: modify global webhook route to allow for optional route id parameter
 //TODO: http sender needs to support standard authentication methods (SAT, oauth etc.)
-//TODO: http receiver needs to evaluate response as well
-//TODO: design needed: gears webhook route can currently only route gears envelopes to masheens (do we use a separate route using a separate webhook?)
 
 package app
 
