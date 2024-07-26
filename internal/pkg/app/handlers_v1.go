@@ -14,7 +14,7 @@
 
 //DONE: enhance event object to pass response back to sender plugin and return response
 //DONE: http sender needs more parameters: payload etc.
-//TODO: modify global webhook route to allow for optional route id parameter
+//DONE: modify global webhook route to allow for optional route id parameter
 //TODO: http sender needs to support standard authentication methods (SAT, oauth etc.)
 
 package app
@@ -324,6 +324,10 @@ func (a *APIManager) webhookHandler(w http.ResponseWriter, r *http.Request) {
 	if routeToPartner != "" {
 		m["routeToPartner"] = routeToPartner
 	}
+	routeToRoute := r.URL.Query().Get("routeId")
+	if routeToRoute != "" {
+		m["routeToRoute"] = routeToRoute
+	}
 	// need to figure out how we can adopt trace id
 	/*traceId := r.URL.Query().Get("traceId")
 	if traceId != "" {
@@ -478,7 +482,11 @@ func (a *APIManager) sendEventHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
-	routeId := vars["routeId"]
+	// check if route id given as query param, otherwise use configured global route id
+	routeId := vars["routeToRoute"]
+	if routeId == "" {
+		routeId = vars["routeId"]
+	}
 	if routeId == "" {
 		log.Ctx(ctx).Error().Str("op", "sendEventHandler").Msg("missing route ID")
 		resp := ErrorResponse(convertToApiError(ctx, err))
