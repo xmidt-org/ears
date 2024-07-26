@@ -500,10 +500,18 @@ func (a *APIManager) sendEventHandler(w http.ResponseWriter, r *http.Request) {
 		resp.Respond(ctx, w, doYaml(r))
 		return
 	}
-	item := make(map[string]string)
+	item := make(map[string]interface{})
 	item["routeId"] = routeId
 	item["tx.traceId"] = traceId
-	item["response"] = (*evt).Response()
+	resstr := (*evt).Response()
+	item["response"] = resstr
+	if resstr != "" {
+		var obj interface{}
+		err = json.Unmarshal([]byte(resstr), &obj)
+		if err == nil {
+			item["response"] = obj
+		}
+	}
 	resp := ItemResponse(item)
 	resp.Respond(ctx, w, doYaml(r))
 }
