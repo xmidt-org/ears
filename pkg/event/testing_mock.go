@@ -56,6 +56,9 @@ var _ Event = &EventMock{}
 //			ResponseFunc: func() string {
 //				panic("mock out the Response method")
 //			},
+//			ResponseStatusFunc: func() int {
+//				panic("mock out the ResponseStatus method")
+//			},
 //			SetContextFunc: func(ctx context.Context) error {
 //				panic("mock out the SetContext method")
 //			},
@@ -70,6 +73,9 @@ var _ Event = &EventMock{}
 //			},
 //			SetResponseFunc: func(response string)  {
 //				panic("mock out the SetResponse method")
+//			},
+//			SetResponseStatusFunc: func(status int)  {
+//				panic("mock out the SetResponseStatus method")
 //			},
 //			TenantFunc: func() tenant.Id {
 //				panic("mock out the Tenant method")
@@ -120,6 +126,9 @@ type EventMock struct {
 	// ResponseFunc mocks the Response method.
 	ResponseFunc func() string
 
+	// ResponseStatusFunc mocks the ResponseStatus method.
+	ResponseStatusFunc func() int
+
 	// SetContextFunc mocks the SetContext method.
 	SetContextFunc func(ctx context.Context) error
 
@@ -134,6 +143,9 @@ type EventMock struct {
 
 	// SetResponseFunc mocks the SetResponse method.
 	SetResponseFunc func(response string)
+
+	// SetResponseStatusFunc mocks the SetResponseStatus method.
+	SetResponseStatusFunc func(status int)
 
 	// TenantFunc mocks the Tenant method.
 	TenantFunc func() tenant.Id
@@ -187,6 +199,9 @@ type EventMock struct {
 		// Response holds details about calls to the Response method.
 		Response []struct {
 		}
+		// ResponseStatus holds details about calls to the ResponseStatus method.
+		ResponseStatus []struct {
+		}
 		// SetContext holds details about calls to the SetContext method.
 		SetContext []struct {
 			// Ctx is the ctx argument value.
@@ -216,6 +231,11 @@ type EventMock struct {
 			// Response is the response argument value.
 			Response string
 		}
+		// SetResponseStatus holds details about calls to the SetResponseStatus method.
+		SetResponseStatus []struct {
+			// Status is the status argument value.
+			Status int
+		}
 		// Tenant holds details about calls to the Tenant method.
 		Tenant []struct {
 		}
@@ -223,25 +243,27 @@ type EventMock struct {
 		UserTraceId []struct {
 		}
 	}
-	lockAck          sync.RWMutex
-	lockClone        sync.RWMutex
-	lockContext      sync.RWMutex
-	lockCreated      sync.RWMutex
-	lockDeepCopy     sync.RWMutex
-	lockEvaluate     sync.RWMutex
-	lockGetPathValue sync.RWMutex
-	lockId           sync.RWMutex
-	lockMetadata     sync.RWMutex
-	lockNack         sync.RWMutex
-	lockPayload      sync.RWMutex
-	lockResponse     sync.RWMutex
-	lockSetContext   sync.RWMutex
-	lockSetMetadata  sync.RWMutex
-	lockSetPathValue sync.RWMutex
-	lockSetPayload   sync.RWMutex
-	lockSetResponse  sync.RWMutex
-	lockTenant       sync.RWMutex
-	lockUserTraceId  sync.RWMutex
+	lockAck               sync.RWMutex
+	lockClone             sync.RWMutex
+	lockContext           sync.RWMutex
+	lockCreated           sync.RWMutex
+	lockDeepCopy          sync.RWMutex
+	lockEvaluate          sync.RWMutex
+	lockGetPathValue      sync.RWMutex
+	lockId                sync.RWMutex
+	lockMetadata          sync.RWMutex
+	lockNack              sync.RWMutex
+	lockPayload           sync.RWMutex
+	lockResponse          sync.RWMutex
+	lockResponseStatus    sync.RWMutex
+	lockSetContext        sync.RWMutex
+	lockSetMetadata       sync.RWMutex
+	lockSetPathValue      sync.RWMutex
+	lockSetPayload        sync.RWMutex
+	lockSetResponse       sync.RWMutex
+	lockSetResponseStatus sync.RWMutex
+	lockTenant            sync.RWMutex
+	lockUserTraceId       sync.RWMutex
 }
 
 // Ack calls AckFunc.
@@ -588,6 +610,33 @@ func (mock *EventMock) ResponseCalls() []struct {
 	return calls
 }
 
+// ResponseStatus calls ResponseStatusFunc.
+func (mock *EventMock) ResponseStatus() int {
+	if mock.ResponseStatusFunc == nil {
+		panic("EventMock.ResponseStatusFunc: method is nil but Event.ResponseStatus was just called")
+	}
+	callInfo := struct {
+	}{}
+	mock.lockResponseStatus.Lock()
+	mock.calls.ResponseStatus = append(mock.calls.ResponseStatus, callInfo)
+	mock.lockResponseStatus.Unlock()
+	return mock.ResponseStatusFunc()
+}
+
+// ResponseStatusCalls gets all the calls that were made to ResponseStatus.
+// Check the length with:
+//
+//	len(mockedEvent.ResponseStatusCalls())
+func (mock *EventMock) ResponseStatusCalls() []struct {
+} {
+	var calls []struct {
+	}
+	mock.lockResponseStatus.RLock()
+	calls = mock.calls.ResponseStatus
+	mock.lockResponseStatus.RUnlock()
+	return calls
+}
+
 // SetContext calls SetContextFunc.
 func (mock *EventMock) SetContext(ctx context.Context) error {
 	if mock.SetContextFunc == nil {
@@ -753,6 +802,38 @@ func (mock *EventMock) SetResponseCalls() []struct {
 	mock.lockSetResponse.RLock()
 	calls = mock.calls.SetResponse
 	mock.lockSetResponse.RUnlock()
+	return calls
+}
+
+// SetResponseStatus calls SetResponseStatusFunc.
+func (mock *EventMock) SetResponseStatus(status int) {
+	if mock.SetResponseStatusFunc == nil {
+		panic("EventMock.SetResponseStatusFunc: method is nil but Event.SetResponseStatus was just called")
+	}
+	callInfo := struct {
+		Status int
+	}{
+		Status: status,
+	}
+	mock.lockSetResponseStatus.Lock()
+	mock.calls.SetResponseStatus = append(mock.calls.SetResponseStatus, callInfo)
+	mock.lockSetResponseStatus.Unlock()
+	mock.SetResponseStatusFunc(status)
+}
+
+// SetResponseStatusCalls gets all the calls that were made to SetResponseStatus.
+// Check the length with:
+//
+//	len(mockedEvent.SetResponseStatusCalls())
+func (mock *EventMock) SetResponseStatusCalls() []struct {
+	Status int
+} {
+	var calls []struct {
+		Status int
+	}
+	mock.lockSetResponseStatus.RLock()
+	calls = mock.calls.SetResponseStatus
+	mock.lockSetResponseStatus.RUnlock()
 	return calls
 }
 

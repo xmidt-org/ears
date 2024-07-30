@@ -306,7 +306,11 @@ func (s *Sender) hitEndpoint(ctx context.Context, evt event.Event) (string, int,
 	s.eventBytesCounter.Add(evt.Context(), int64(len(payload)))
 	if err != nil {
 		log.Ctx(evt.Context()).Error().Str("op", "filter").Str("filterType", "ws").Str("name", s.Name()).Msg("Request error: " + err.Error())
-		return "", 0, err
+		if resp != nil {
+			return "", resp.StatusCode, err
+		} else {
+			return "", 0, err
+		}
 	}
 	// read response
 	var body []byte
@@ -346,7 +350,7 @@ func (s *Sender) initHttpTransportWithDialer() *http.Client {
 
 func (s *Sender) Send(event event.Event) {
 	// execute http request
-	res, _, err := s.hitEndpoint(event.Context(), event)
+	res, statusCode, err := s.hitEndpoint(event.Context(), event)
 	if err != nil {
 		log.Ctx(event.Context()).Error().Str("op", "filter").Str("filterType", "ws").Str("name", s.Name()).Msg(err.Error())
 		// legitimate filter nack because it involves an external service
@@ -356,40 +360,7 @@ func (s *Sender) Send(event event.Event) {
 		return
 	}
 	event.SetResponse(res)
-	//req, err := http.NewRequest(s.config.Method, s.config.Url, bytes.NewReader(body))
-	/*req, err := http.NewRequest(s.config.Method, s.config.Url, bytes.NewReader([]byte(body)))
-	if err != nil {
-		s.eventFailureCounter.Add(event.Context(), 1)
-		s.LogError()
-		event.Nack(err)
-		return
-	}
-	ctx := event.Context()
-	s.b3Propagator.Inject(ctx, propagation.HeaderCarrier(req.Header))
-	start := time.Now()
-	resp, err := s.client.Do(req)
-	s.eventSendOutTime.Record(event.Context(), time.Since(start).Milliseconds())
-	if err != nil {
-		s.eventFailureCounter.Add(event.Context(), 1)
-		s.LogError()
-		event.Nack(err)
-		return
-	}
-	buf, err := io.ReadAll(resp.Body)
-	if err != nil {
-		s.eventFailureCounter.Add(event.Context(), 1)
-		s.LogError()
-		event.Nack(err)
-		return
-	}
-	event.SetResponse(string(buf))
-	defer resp.Body.Close()
-	if resp.StatusCode < http.StatusOK || resp.StatusCode >= http.StatusBadRequest {
-		s.eventFailureCounter.Add(event.Context(), 1)
-		s.LogError()
-		event.Nack(&BadHttpStatusError{resp.StatusCode})
-		return
-	}*/
+	event.SetResponseStatus(statusCode)
 	s.eventSuccessCounter.Add(event.Context(), 1)
 	s.LogSuccess()
 	event.Ack()

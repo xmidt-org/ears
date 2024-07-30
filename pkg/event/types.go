@@ -62,6 +62,12 @@ type Event interface {
 	//Set response string for synchronous routes
 	SetResponse(response string)
 
+	//Get response status for synchronous routes
+	ResponseStatus() int
+
+	//Set response status for synchronous routes
+	SetResponseStatus(status int)
+
 	//Set the event payload
 	//Will return an error if the event is done
 	SetPayload(payload interface{}) error

@@ -512,7 +512,11 @@ func (a *APIManager) sendEventHandler(w http.ResponseWriter, r *http.Request) {
 			item["response"] = obj
 		}
 	}
-	resp := ItemResponse(item)
+	statusCode := 200
+	if (*evt).ResponseStatus() > 0 {
+		statusCode = (*evt).ResponseStatus()
+	}
+	resp := ItemStatusResponse(item, statusCode)
 	resp.Respond(ctx, w, doYaml(r))
 }
 
