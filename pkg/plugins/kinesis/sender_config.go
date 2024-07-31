@@ -45,6 +45,12 @@ func (sc *SenderConfig) Validate() error {
 	if !result.Valid() {
 		return fmt.Errorf(fmt.Sprintf("%+v", result.Errors()))
 	}
+	if sc.StreamArn == "" && sc.StreamName == "" {
+		return fmt.Errorf("must provide either stream name or stream arn")
+	}
+	if sc.StreamArn != "" && sc.StreamName != "" {
+		return fmt.Errorf("must provide either stream name or stream arn but not both")
+	}
 	return nil
 }
 
@@ -58,6 +64,9 @@ const senderSchema = `
             "additionalProperties": false,
             "properties": {
                 "streamName": {
+                    "type": "string"
+                },
+                "streamArn": {
                     "type": "string"
                 },
                 "partitionKey": {
@@ -90,7 +99,6 @@ const senderSchema = `
 				}
             },
             "required": [
-                "streamName"
             ],
             "title": "SenderConfig"
         }

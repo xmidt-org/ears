@@ -71,6 +71,12 @@ func (rc *ReceiverConfig) Validate() error {
 	if *rc.EnhancedFanOut && rc.ConsumerName == "" {
 		return fmt.Errorf("must provide consumer name with enhanced fan-out option")
 	}
+	if rc.StreamArn == "" && rc.StreamName == "" {
+		return fmt.Errorf("must provide either stream name or stream arn")
+	}
+	if rc.StreamArn != "" && rc.StreamName != "" {
+		return fmt.Errorf("must provide either stream name or stream arn but not both")
+	}
 	return nil
 }
 
@@ -84,6 +90,9 @@ const receiverSchema = `
             "additionalProperties": false,
             "properties": {
                 "streamName": {
+                    "type": "string"
+                },
+                "streamArn": {
                     "type": "string"
                 },
                 "consumerName": {
@@ -141,7 +150,6 @@ const receiverSchema = `
 				}
             },
             "required": [
-                "streamName"
             ],
             "title": "ReceiverConfig"
         }
