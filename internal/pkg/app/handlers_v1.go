@@ -319,6 +319,10 @@ func (a *APIManager) webhookHandler(w http.ResponseWriter, r *http.Request) {
 	if routeToPartner != "" {
 		m["routeToPartner"] = routeToPartner
 	}
+	routeToRoute := r.URL.Query().Get("routeId")
+	if routeToRoute != "" {
+		m["routeToRoute"] = routeToRoute
+	}
 	// need to figure out how we can adopt trace id
 	/*traceId := r.URL.Query().Get("traceId")
 	if traceId != "" {
@@ -473,24 +477,41 @@ func (a *APIManager) sendEventHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
-	routeId := vars["routeId"]
+	// check if route id given as query param, otherwise use configured global route id
+	routeId := vars["routeToRoute"]
+	if routeId == "" {
+		routeId = vars["routeId"]
+	}
 	if routeId == "" {
 		log.Ctx(ctx).Error().Str("op", "sendEventHandler").Msg("missing route ID")
 		resp := ErrorResponse(convertToApiError(ctx, err))
 		resp.Respond(ctx, w, doYaml(r))
 		return
 	}
-	traceId, err := a.routingTableMgr.RouteEvent(ctx, *tid, routeId, payload)
+	evt, traceId, err := a.routingTableMgr.RouteEvent(ctx, *tid, routeId, payload)
 	if err != nil {
 		log.Ctx(ctx).Error().Str("op", "sendEventHandler").Msg(err.Error())
 		resp := ErrorResponse(convertToApiError(ctx, err))
 		resp.Respond(ctx, w, doYaml(r))
 		return
 	}
-	item := make(map[string]string)
+	item := make(map[string]interface{})
 	item["routeId"] = routeId
 	item["tx.traceId"] = traceId
-	resp := ItemResponse(item)
+	resstr := (*evt).Response()
+	item["response"] = resstr
+	if resstr != "" {
+		var obj interface{}
+		err = json.Unmarshal([]byte(resstr), &obj)
+		if err == nil {
+			item["response"] = obj
+		}
+	}
+	statusCode := 200
+	if (*evt).ResponseStatus() > 0 {
+		statusCode = (*evt).ResponseStatus()
+	}
+	resp := ItemStatusResponse(item, statusCode)
 	resp.Respond(ctx, w, doYaml(r))
 }
 

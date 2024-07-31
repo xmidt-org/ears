@@ -33,11 +33,71 @@ func (sc *SenderConfig) Validate() error {
 	return nil
 }
 
+func (c SenderConfig) WithDefaults() SenderConfig {
+	cfg := c
+	if c.Method == "" {
+		cfg.Method = DefaultSenderConfig.Method
+	}
+	if c.Url == "" {
+		cfg.Url = DefaultSenderConfig.Url
+	}
+	if c.UrlPath == "" {
+		cfg.UrlPath = DefaultSenderConfig.UrlPath
+	}
+	if c.Body == "" {
+		cfg.Body = DefaultSenderConfig.Body
+	}
+	if c.Headers == nil {
+		cfg.Headers = DefaultSenderConfig.Headers
+	}
+	if c.Auth == nil {
+		cfg.Auth = DefaultSenderConfig.Auth
+	}
+	return cfg
+}
+
 const senderSchema = `
 {
     "$schema": "http://json-schema.org/draft-06/schema#",
     "$ref": "#/definitions/SenderConfig",
     "definitions": {
+		"AuthConfig": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+                "type": {
+                    "type": "string",
+					"enum": ["", "basic", "sat", "oauth", "oauth2"]
+                },
+                "username": {
+                    "type": "string"
+                },
+                "password": {
+                    "type": "string"
+                },
+                "clientId": {
+                    "type": "string"
+                },
+                "clientSecret": {
+                    "type": "string"
+                },
+                "grantType": {
+                    "type": "string"
+                },
+                "tokenUrl": {
+                    "type": "string"
+                },
+                "scopes": {
+ 					"type": "array",
+      				"items": {
+        				"type": "string"
+      				}             
+				}
+            },
+            "required": [
+            ],
+            "title": "AuthConfig"
+		},
         "SenderConfig": {
             "type": "object",
             "additionalProperties": false,
@@ -45,8 +105,21 @@ const senderSchema = `
                 "url": {
                     "type": "string"
                 },
-				"method": {
+				"urlPath": {
                     "type": "string"
+				},
+				"method": {
+                    "type": "string",
+					"enum": ["GET", "PUT", "POST", "DELETE"]
+				},
+				"body": {
+					"type": "string"
+				},
+				"headers": {
+                    "type": "object"
+				},
+				"auth": {
+                    "$ref": "#/definitions/AuthConfig"
 				}
             },
             "required": [

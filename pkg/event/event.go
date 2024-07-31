@@ -55,6 +55,8 @@ type event struct {
 	userTraceId        string
 	created            time.Time
 	deepcopied         bool
+	response           *string
+	responseStatus     *int
 }
 
 type EventOption func(*event) error
@@ -75,13 +77,17 @@ func GetEventLogger() *zerolog.Logger {
 
 // Create a new event given a context, a payload, and other event options
 func New(ctx context.Context, payload interface{}, options ...EventOption) (Event, error) {
+	emptyResponse := "{}"
+	emptyResponseStatus := 0
 	e := &event{
-		payload: payload,
-		ctx:     ctx,
-		ack:     nil,
-		tid:     tenant.Id{OrgId: "", AppId: ""},
-		created: time.Now(),
-		eid:     uuid.New().String(),
+		payload:        payload,
+		ctx:            ctx,
+		ack:            nil,
+		tid:            tenant.Id{OrgId: "", AppId: ""},
+		created:        time.Now(),
+		eid:            uuid.New().String(),
+		response:       &emptyResponse,
+		responseStatus: &emptyResponseStatus,
 	}
 	for _, option := range options {
 		err := option(e)
@@ -228,6 +234,22 @@ func (e *event) Id() string {
 
 func (e *event) Payload() interface{} {
 	return e.payload
+}
+
+func (e *event) Response() string {
+	return *e.response
+}
+
+func (e *event) SetResponse(response string) {
+	*e.response = response
+}
+
+func (e *event) ResponseStatus() int {
+	return *e.responseStatus
+}
+
+func (e *event) SetResponseStatus(status int) {
+	*e.responseStatus = status
 }
 
 func (e *event) SetPayload(payload interface{}) error {
@@ -597,14 +619,16 @@ func (e *event) Clone(ctx context.Context) (Event, error) {
 		}
 	}
 	return &event{
-		payload:     e.Payload(),
-		metadata:    e.Metadata(),
-		ctx:         ctx,
-		ack:         subTree,
-		eid:         e.eid,
-		tid:         e.tid,
-		created:     e.created,
-		userTraceId: e.userTraceId,
+		payload:        e.Payload(),
+		metadata:       e.Metadata(),
+		ctx:            ctx,
+		ack:            subTree,
+		eid:            e.eid,
+		tid:            e.tid,
+		created:        e.created,
+		userTraceId:    e.userTraceId,
+		response:       e.response,
+		responseStatus: e.responseStatus,
 	}, nil
 }
 

@@ -90,6 +90,15 @@ func ItemResponse(item interface{}) Response {
 	}
 }
 
+func ItemStatusResponse(item interface{}, status int) Response {
+	return Response{
+		Status: &Status{
+			Code: status,
+		},
+		Item: item,
+	}
+}
+
 func ItemsResponse(item interface{}) Response {
 	return Response{
 		Status: &Status{

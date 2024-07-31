@@ -17,6 +17,7 @@ package kinesis
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
@@ -98,7 +99,17 @@ func NewReceiver(tid tenant.Id, plugin string, name string, config interface{}, 
 		awsAccessSecret:                secrets.Secret(ctx, cfg.AWSSecretAccessKey),
 		awsRegion:                      secrets.Secret(ctx, cfg.AWSRegion),
 		streamName:                     secrets.Secret(ctx, cfg.StreamName),
+		streamArn:                      secrets.Secret(ctx, cfg.StreamArn),
 		consumerName:                   secrets.Secret(ctx, cfg.ConsumerName),
+	}
+	if r.streamArn != "" && r.streamName == "" {
+		if strings.LastIndex(r.streamArn, "/") > 0 {
+			r.streamName = r.streamArn[strings.LastIndex(r.streamArn, "/")+1:]
+		} else {
+			return nil, &pkgplugin.InvalidConfigError{
+				Err: errors.New("invalid stream arn"),
+			}
+		}
 	}
 	r.MetricPlugin = pkgplugin.NewMetricPlugin(tableSyncer, r.Hash)
 	r.Lock()
@@ -190,9 +201,17 @@ func (r *Receiver) shardMonitor(svc *kinesis.Kinesis, distributor sharder.ShardD
 				//r.logger.Info().Str("op", "Kinesis.shardMonitor").Str("stream", *r.stream.StreamDescription.StreamName).Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Str("gears.app.id", r.Tenant().AppId).Str("partner.id", r.Tenant().OrgId).Msg("shard monitor disabled")
 				continue
 			}
-			stream, err := svc.DescribeStream(&kinesis.DescribeStreamInput{
-				StreamName: &r.streamName,
-			})
+			var stream *kinesis.DescribeStreamOutput
+			var err error
+			if r.streamArn != "" {
+				stream, err = svc.DescribeStream(&kinesis.DescribeStreamInput{
+					StreamARN: &r.streamArn,
+				})
+			} else {
+				stream, err = svc.DescribeStream(&kinesis.DescribeStreamInput{
+					StreamName: &r.streamName,
+				})
+			}
 			if err != nil {
 				r.logger.Error().Str("op", "Kinesis.shardMonitor").Str("stream", *r.stream.StreamDescription.StreamName).Str("name", r.Name()).Str("tid", r.Tenant().ToString()).Str("gears.app.id", r.Tenant().AppId).Str("partner.id", r.Tenant().OrgId).Msg("cannot get number of shards: " + err.Error())
 				continue
@@ -215,30 +234,38 @@ func (r *Receiver) shardMonitor(svc *kinesis.Kinesis, distributor sharder.ShardD
 	}()
 }
 
-func (r *Receiver) registerStreamConsumer(svc *kinesis.Kinesis, streamName, consumerName string) (*kinesis.DescribeStreamConsumerOutput, error) {
-	stream, err := svc.DescribeStream(&kinesis.DescribeStreamInput{
-		StreamName: &streamName,
-	})
+func (r *Receiver) registerStreamConsumer(svc *kinesis.Kinesis) (*kinesis.DescribeStreamConsumerOutput, error) {
+	var stream *kinesis.DescribeStreamOutput
+	var err error
+	if r.streamArn != "" {
+		stream, err = svc.DescribeStream(&kinesis.DescribeStreamInput{
+			StreamARN: &r.streamArn,
+		})
+	} else {
+		stream, err = svc.DescribeStream(&kinesis.DescribeStreamInput{
+			StreamName: &r.streamName,
+		})
+	}
 	if err != nil {
-		return nil, fmt.Errorf("failed to describe stream, %s, %v", streamName, err)
+		return nil, fmt.Errorf("failed to describe stream %s%s:, %v", r.streamArn, r.streamName, err)
 	}
 	descParams := &kinesis.DescribeStreamConsumerInput{
 		StreamARN:    stream.StreamDescription.StreamARN,
-		ConsumerName: &consumerName,
+		ConsumerName: &r.consumerName,
 	}
 	_, err = svc.DescribeStreamConsumer(descParams)
 	if aerr, ok := err.(awserr.Error); ok && aerr.Code() == kinesis.ErrCodeResourceNotFoundException {
 		_, err := svc.RegisterStreamConsumer(
 			&kinesis.RegisterStreamConsumerInput{
-				ConsumerName: aws.String(consumerName),
+				ConsumerName: aws.String(r.consumerName),
 				StreamARN:    stream.StreamDescription.StreamARN,
 			},
 		)
 		if err != nil {
-			return nil, fmt.Errorf("failed to create stream consumer %s, %v", consumerName, err)
+			return nil, fmt.Errorf("failed to create stream consumer %s: %v", r.consumerName, err)
 		}
 	} else if err != nil {
-		return nil, fmt.Errorf("failed to describe stream consumer %s, %v", consumerName, err)
+		return nil, fmt.Errorf("failed to describe stream consumer %s: %v", r.consumerName, err)
 	}
 	for i := 0; i < 10; i++ {
 		streamConsumer, err := svc.DescribeStreamConsumer(descParams)
@@ -248,7 +275,7 @@ func (r *Receiver) registerStreamConsumer(svc *kinesis.Kinesis, streamName, cons
 		}
 		return streamConsumer, nil
 	}
-	return nil, fmt.Errorf("failed to wait for consumer to exist, %v, %v", *descParams.StreamARN, *descParams.ConsumerName)
+	return nil, fmt.Errorf("failed to wait for consumer %s to exist for stream %s", *descParams.ConsumerName, *descParams.StreamARN)
 }
 
 func (r *Receiver) startShardReceiverEFO(svc *kinesis.Kinesis, stream *kinesis.DescribeStreamOutput, consumer *kinesis.DescribeStreamConsumerOutput, shardIdx int) {
@@ -503,7 +530,11 @@ func (r *Receiver) startShardReceiver(svc *kinesis.Kinesis, stream *kinesis.Desc
 				ShardIteratorType: aws.String(r.config.ShardIteratorType),
 				// Timestamp:         aws.Time(startingTimestamp),
 				// StartingSequenceNumber: aws.String(""),
-				StreamName: aws.String(r.streamName),
+			}
+			if r.streamArn != "" {
+				shardIteratorInput.StreamARN = aws.String(r.streamArn)
+			} else {
+				shardIteratorInput.StreamName = aws.String(r.streamName)
 			}
 			if *r.config.UseCheckpoint {
 				sequenceId, lastUpdate, err := checkpoint.GetCheckpoint(checkpointId)
@@ -748,13 +779,17 @@ func (r *Receiver) Receive(next receiver.NextFn) error {
 	}
 	r.svc = kinesis.New(sess)
 	//r.svc = kinesis.New(sess, aws.NewConfig().WithLogLevel(aws.LogDebug))
-	r.stream, err = r.svc.DescribeStream(&kinesis.DescribeStreamInput{StreamName: aws.String(r.streamName)})
+	if r.streamArn != "" {
+		r.stream, err = r.svc.DescribeStream(&kinesis.DescribeStreamInput{StreamARN: aws.String(r.streamArn)})
+	} else {
+		r.stream, err = r.svc.DescribeStream(&kinesis.DescribeStreamInput{StreamName: aws.String(r.streamName)})
+	}
 	if err != nil {
 		r.LogError()
 		return &KinesisError{op: "DescribeStream", err: err}
 	}
 	if *r.config.EnhancedFanOut {
-		r.consumer, err = r.registerStreamConsumer(r.svc, r.streamName, r.consumerName)
+		r.consumer, err = r.registerStreamConsumer(r.svc)
 		if err != nil {
 			r.LogError()
 			return &KinesisError{op: "registerStreamConsumer", err: err}

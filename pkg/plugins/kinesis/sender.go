@@ -17,6 +17,7 @@ package kinesis
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/credentials/stscreds"
@@ -38,6 +39,7 @@ import (
 	"go.opentelemetry.io/otel/metric/global"
 	"go.opentelemetry.io/otel/metric/unit"
 	"os"
+	"strings"
 	"time"
 )
 
@@ -77,6 +79,16 @@ func NewSender(tid tenant.Id, plugin string, name string, config interface{}, se
 		awsAccessSecret: secrets.Secret(ctx, cfg.AWSSecretAccessKey),
 		awsRegion:       secrets.Secret(ctx, cfg.AWSRegion),
 		streamName:      secrets.Secret(ctx, cfg.StreamName),
+		streamArn:       secrets.Secret(ctx, cfg.StreamArn),
+	}
+	if s.streamArn != "" && s.streamName == "" {
+		if strings.LastIndex(s.streamArn, "/") > 0 {
+			s.streamName = s.streamArn[strings.LastIndex(s.streamArn, "/")+1:]
+		} else {
+			return nil, &pkgplugin.InvalidConfigError{
+				Err: errors.New("invalid stream arn"),
+			}
+		}
 	}
 	s.MetricPlugin = pkgplugin.NewMetricPlugin(tableSyncer, s.Hash)
 	s.initPlugin()
@@ -148,7 +160,11 @@ func (s *Sender) initPlugin() error {
 		return &KinesisError{op: "GetCredentials", err: err}
 	}
 	s.kinesisService = kinesis.New(sess)
-	_, err = s.kinesisService.DescribeStream(&kinesis.DescribeStreamInput{StreamName: aws.String(s.streamName)})
+	if s.streamArn != "" {
+		_, err = s.kinesisService.DescribeStream(&kinesis.DescribeStreamInput{StreamARN: aws.String(s.streamArn)})
+	} else {
+		_, err = s.kinesisService.DescribeStream(&kinesis.DescribeStreamInput{StreamName: aws.String(s.streamName)})
+	}
 	if err != nil {
 		s.LogError()
 		return err
@@ -230,8 +246,12 @@ func (s *Sender) send(events []event.Event) {
 		s.eventProcessingTime.Record(evt.Context(), time.Since(evt.Created()).Milliseconds())
 	}
 	batchPut := kinesis.PutRecordsInput{
-		Records:    batchReqs,
-		StreamName: aws.String(s.streamName),
+		Records: batchReqs,
+	}
+	if s.streamArn != "" {
+		batchPut.StreamARN = aws.String(s.streamArn)
+	} else {
+		batchPut.StreamName = aws.String(s.streamName)
 	}
 	start := time.Now()
 	putResults, err := s.kinesisService.PutRecordsWithContext(events[0].Context(), &batchPut)

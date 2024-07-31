@@ -18,6 +18,7 @@ import (
 	"context"
 	"github.com/xmidt-org/ears/internal/pkg/plugin"
 	"github.com/xmidt-org/ears/internal/pkg/syncer"
+	"github.com/xmidt-org/ears/pkg/event"
 	"github.com/xmidt-org/ears/pkg/route"
 	"github.com/xmidt-org/ears/pkg/tenant"
 )
@@ -55,7 +56,7 @@ type (
 		// AddFragment adds a new fragment
 		AddFragment(ctx context.Context, tid tenant.Id, fragmentConfig route.PluginConfig) error
 		// RouteEvent send test event to route
-		RouteEvent(ctx context.Context, tid tenant.Id, routeId string, payload interface{}) (string, error)
+		RouteEvent(ctx context.Context, tid tenant.Id, routeId string, payload interface{}) (*event.Event, string, error)
 		// ReloadRoute reload route when secrets change
 		ReloadRoute(ctx context.Context, tid tenant.Id, routeId string) (*route.Config, error)
 		// ReloadAllRoutes reload routes when secrets change
