@@ -575,9 +575,13 @@ func (r *Receiver) startShardReceiver(svc *kinesis.Kinesis, stream *kinesis.Desc
 					return
 				default:
 				}
-				getRecordsOutput, err := svc.GetRecords(&kinesis.GetRecordsInput{
+				getRecordsInputParams := &kinesis.GetRecordsInput{
 					ShardIterator: shardIterator,
-				})
+				}
+				if r.streamArn != "" {
+					getRecordsInputParams.StreamARN = aws.String(r.streamArn)
+				}
+				getRecordsOutput, err := svc.GetRecords(getRecordsInputParams)
 				if err != nil {
 					r.LogError()
 					if strings.Contains(err.Error(), "ExpiredIteratorException") {
