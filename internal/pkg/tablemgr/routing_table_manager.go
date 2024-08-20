@@ -217,7 +217,9 @@ func (r *DefaultRoutingTableManager) RemoveRoute(ctx context.Context, tid tenant
 }
 
 func (r *DefaultRoutingTableManager) RouteEvent(ctx context.Context, tid tenant.Id, routeId string, payload interface{}) (*event.Event, string, error) {
+	r.Lock()
 	lrw, ok := r.liveRouteMap[tid.KeyWithRoute(routeId)]
+	r.Unlock()
 	if !ok {
 		return nil, "", errors.New("no route " + routeId)
 	}
