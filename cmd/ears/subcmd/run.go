@@ -36,6 +36,7 @@ import (
 	"github.com/xmidt-org/ears/pkg/panics"
 	"go.uber.org/fx"
 	"os"
+	"time"
 )
 
 var runCmd = &cobra.Command{
@@ -62,6 +63,7 @@ var runCmd = &cobra.Command{
 		zerolog.LevelFieldName = "log.level"
 
 		earsApp := fx.New(
+			fx.StartTimeout(60*time.Second),
 			pluginmanagerfx.Module,
 			routestorerfx.Module,
 			fragmentstorerfx.Module,
