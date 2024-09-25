@@ -504,6 +504,7 @@ func (s *Sender) Send(e event.Event) {
 		log.Ctx(e.Context()).Info().Str("op", "gears.Send").
 			Str("name", s.Name()).Uint32("hash", h.Sum32()).Str("producer", s.producers[pIdx].key).
 			Str("location", location).Str("tid", s.Tenant().ToString()).Int("count", s.count).
+			Str("Payload", string(buf)).Str("Topic", s.config.Topic).
 			Msg("sent enveloped message on gears topic")
 		s.Unlock()
 	} else {
@@ -623,7 +624,11 @@ func (s *Sender) Send(e event.Event) {
 			s.LogSuccess()
 			s.Lock()
 			s.count++
-			log.Ctx(e.Context()).Info().Str("op", "gears.Send").Str("name", s.Name()).Uint32("hash", h.Sum32()).Str("producer", s.producers[pIdx].key).Str("location", l).Str("tid", s.Tenant().ToString()).Int("count", s.count).Msg("sent message on gears topic")
+			log.Ctx(e.Context()).Info().Str("op", "gears.Send").
+				Str("name", s.Name()).Uint32("hash", h.Sum32()).Str("producer", s.producers[pIdx].key).
+				Str("location", l).Str("tid", s.Tenant().ToString()).Int("count", s.count).
+				Str("Payload", string(buf)).Str("Topic", s.config.Topic).
+				Msg("sent message on gears topic")
 			s.Unlock()
 		}
 	}
