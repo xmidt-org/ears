@@ -130,7 +130,6 @@ func init() {
 				Default: "us-west-2", LookupKey: "ears.region",
 				Description: "region",
 			},
-
 			cli.Argument{
 				Name: "routeStorageType", Shorthand: "", Type: cli.ArgTypeString,
 				Default: "inmemory", LookupKey: "ears.storage.route.type",
@@ -146,7 +145,6 @@ func init() {
 				Default: "dev.ears.routes", LookupKey: "ears.storage.route.table",
 				Description: "route dynamodb table name",
 			},
-
 			cli.Argument{
 				Name: "tenantStorageType", Shorthand: "", Type: cli.ArgTypeString,
 				Default: "inmemory", LookupKey: "ears.storage.tenant.type",
