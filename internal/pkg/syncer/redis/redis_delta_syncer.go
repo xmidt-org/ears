@@ -95,6 +95,7 @@ func (s *RedisDeltaSyncer) DeleteMetrics(id string) {
 func (s *RedisDeltaSyncer) WriteMetrics(id string, metric *syncer.EarsMetric) {
 	redisMapName := s.GetRedisMetricMapName(id)
 	metric.Ts = time.Now().Unix()
+	metric.Region = s.region
 	buf, err := json.Marshal(metric)
 	if err != nil {
 		s.logger.Error().Str("op", "WriteMetrics").Str("error", err.Error()).Msg("failed to write metrics")
