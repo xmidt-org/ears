@@ -77,14 +77,14 @@ func NewRedisDeltaSyncer(logger *zerolog.Logger, config config.Config) syncer.De
 }
 
 // id - filter hash
-func (s *RedisDeltaSyncer) GetRedisMapName(id string) string {
+func (s *RedisDeltaSyncer) GetRedisMetricMapName(id string) string {
 	redisMapName := EARS_METRICS + "_" + s.env + "_" + id
 	return redisMapName
 }
 
 // id - filter hash
 func (s *RedisDeltaSyncer) DeleteMetrics(id string) {
-	redisMapName := s.GetRedisMapName(id)
+	redisMapName := s.GetRedisMetricMapName(id)
 	err := s.client.Del(redisMapName).Err()
 	if err != nil {
 		s.logger.Error().Str("op", "DeleteMetrics").Str("mapKey", s.instanceId).Str("mapName", redisMapName).Str("error", err.Error()).Msg("failed to delete metrics")
@@ -93,7 +93,7 @@ func (s *RedisDeltaSyncer) DeleteMetrics(id string) {
 
 // id - filter hash
 func (s *RedisDeltaSyncer) WriteMetrics(id string, metric *syncer.EarsMetric) {
-	redisMapName := s.GetRedisMapName(id)
+	redisMapName := s.GetRedisMetricMapName(id)
 	metric.Ts = time.Now().Unix()
 	buf, err := json.Marshal(metric)
 	if err != nil {
@@ -109,7 +109,7 @@ func (s *RedisDeltaSyncer) WriteMetrics(id string, metric *syncer.EarsMetric) {
 
 // id - filter hash
 func (s *RedisDeltaSyncer) ReadMetrics(id string) *syncer.EarsMetric {
-	redisMapName := s.GetRedisMapName(id)
+	redisMapName := s.GetRedisMetricMapName(id)
 	result := s.client.HGetAll(redisMapName)
 	metricsMap, err := result.Result()
 	if err != nil {
