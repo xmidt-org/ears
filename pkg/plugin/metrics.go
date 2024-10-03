@@ -102,6 +102,7 @@ func (mp *MetricPlugin) getLocalMetric() *syncer.EarsMetric {
 		0,
 		mp.currentSec,
 		0,
+		"",
 	}
 	return metrics
 }

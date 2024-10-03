@@ -53,6 +53,7 @@ type (
 		config        config.Config
 		instanceId    string
 		env           string
+		region        string
 	}
 )
 
@@ -62,6 +63,7 @@ func NewRedisDeltaSyncer(logger *zerolog.Logger, config config.Config) syncer.De
 	s.config = config
 	s.redisEndpoint = config.GetString("ears.synchronization.endpoint")
 	s.env = config.GetString("ears.env")
+	s.region = config.GetString("ears.region")
 	s.localSyncers = make(map[string][]syncer.LocalSyncer)
 	hostname, _ := os.Hostname()
 	s.instanceId = hostname + "_" + uuid.New().String()
@@ -74,30 +76,41 @@ func NewRedisDeltaSyncer(logger *zerolog.Logger, config config.Config) syncer.De
 	return s
 }
 
-func (s *RedisDeltaSyncer) DeleteMetrics(id string) {
+// id - filter hash
+func (s *RedisDeltaSyncer) GetRedisMetricMapName(id string) string {
 	redisMapName := EARS_METRICS + "_" + s.env + "_" + id
+	return redisMapName
+}
+
+// id - filter hash
+func (s *RedisDeltaSyncer) DeleteMetrics(id string) {
+	redisMapName := s.GetRedisMetricMapName(id)
 	err := s.client.Del(redisMapName).Err()
 	if err != nil {
 		s.logger.Error().Str("op", "DeleteMetrics").Str("mapKey", s.instanceId).Str("mapName", redisMapName).Str("error", err.Error()).Msg("failed to delete metrics")
 	}
 }
 
+// id - filter hash
 func (s *RedisDeltaSyncer) WriteMetrics(id string, metric *syncer.EarsMetric) {
-	redisMapName := EARS_METRICS + "_" + s.env + "_" + id
+	redisMapName := s.GetRedisMetricMapName(id)
 	metric.Ts = time.Now().Unix()
+	metric.Region = s.region
 	buf, err := json.Marshal(metric)
 	if err != nil {
 		s.logger.Error().Str("op", "WriteMetrics").Str("error", err.Error()).Msg("failed to write metrics")
 		return
 	}
+	// this hashmap will mix records from different regions
 	err = s.client.HSet(redisMapName, s.instanceId, string(buf)).Err()
 	if err != nil {
 		s.logger.Error().Str("op", "WriteMetrics").Str("mapKey", s.instanceId).Str("mapName", redisMapName).Str("error", err.Error()).Msg("failed to write metrics")
 	}
 }
 
+// id - filter hash
 func (s *RedisDeltaSyncer) ReadMetrics(id string) *syncer.EarsMetric {
-	redisMapName := EARS_METRICS + "_" + s.env + "_" + id
+	redisMapName := s.GetRedisMetricMapName(id)
 	result := s.client.HGetAll(redisMapName)
 	metricsMap, err := result.Result()
 	if err != nil {
@@ -106,6 +119,7 @@ func (s *RedisDeltaSyncer) ReadMetrics(id string) *syncer.EarsMetric {
 	delKeys := make([]string, 0)
 	var aggMetric syncer.EarsMetric
 	aggMetric.Ts = time.Now().Unix()
+	// id - instance id
 	for id, v := range metricsMap {
 		var metric syncer.EarsMetric
 		err = json.Unmarshal([]byte(v), &metric)
@@ -113,7 +127,8 @@ func (s *RedisDeltaSyncer) ReadMetrics(id string) *syncer.EarsMetric {
 			s.logger.Error().Str("op", "ReadMetrics").Str("mapName", redisMapName).Str("error", err.Error()).Msg("failed to parse metrics")
 			continue
 		}
-		if aggMetric.Ts-metric.Ts > 5*60 {
+		// delete instance metrics if they haven't updated with the last hour
+		if aggMetric.Ts-metric.Ts > 5*60*60 {
 			delKeys = append(delKeys, id)
 		} else {
 			aggMetric.SuccessCount += metric.SuccessCount
@@ -127,6 +142,7 @@ func (s *RedisDeltaSyncer) ReadMetrics(id string) *syncer.EarsMetric {
 			}
 		}
 	}
+	// id - instance id
 	for _, id := range delKeys {
 		err = s.client.HDel(redisMapName, id).Err()
 		if err != nil {
@@ -186,7 +202,7 @@ func (s *RedisDeltaSyncer) PublishSyncRequest(ctx context.Context, tid tenant.Id
 	go func() {
 		var wg sync.WaitGroup
 		wg.Add(1)
-		//listen for ACKs first ...
+		// listen for ACKs first ...
 		go func() {
 			received := make(map[string]bool)
 			lrc := redis.NewClient(&redis.Options{
@@ -245,8 +261,8 @@ func (s *RedisDeltaSyncer) PublishSyncRequest(ctx context.Context, tid tenant.Id
 				InstanceId: s.instanceId,
 				Sid:        sid,
 				Tenant:     tid,
+				Region:     s.region,
 			}
-
 			msg, _ := json.Marshal(syncCmd)
 			err := s.client.Publish(EARS_REDIS_SYNC_CHANNEL, string(msg)).Err()
 			if err != nil {
@@ -290,7 +306,6 @@ func (s *RedisDeltaSyncer) StartListeningForSyncRequests() {
 		defer lrc.Close()
 		pubsub := lrc.Subscribe(EARS_REDIS_SYNC_CHANNEL)
 		defer pubsub.Close()
-
 		subscribeComplete.Done()
 		for {
 			msg, err := pubsub.ReceiveMessage()
@@ -314,7 +329,7 @@ func (s *RedisDeltaSyncer) StartListeningForSyncRequests() {
 						return
 					}
 				}
-				// sync only whats needed
+				// sync only what's needed
 				if syncCmd.InstanceId != s.instanceId {
 					s.GetInstanceCount(ctx) // just for logging
 					if syncCmd.Cmd == syncer.EARS_ADD_ITEM_CMD {
@@ -373,6 +388,7 @@ func (s *RedisDeltaSyncer) publishAckMessage(ctx context.Context, cmd string, it
 		InstanceId: s.instanceId,
 		Sid:        sid,
 		Tenant:     tid,
+		Region:     s.region,
 	}
 	msg, _ := json.Marshal(syncCmd)
 	err := s.client.Publish(EARS_REDIS_ACK_CHANNEL, string(msg)).Err()

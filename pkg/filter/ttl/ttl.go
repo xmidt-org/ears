@@ -77,6 +77,7 @@ func (f *Filter) Filter(evt event.Event) []event.Event {
 		return nil
 	}
 	if *f.config.Disabled {
+		f.LogSuccess()
 		return []event.Event{evt}
 	}
 	log.Ctx(evt.Context()).Debug().Str("op", "filter").Str("filterType", "ttl").Str("name", f.Name()).Msg("ttl")
