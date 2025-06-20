@@ -208,7 +208,6 @@ func (r *DefaultRoutingTableManager) RemoveRoute(ctx context.Context, tid tenant
 		// even if the route cannot be deleted from storage we should still proceed to try to sync the delta
 		log.Ctx(ctx).Info().Str("op", "RemoveRoute").Str("routeId", routeId).Msg("could not delete route from storage layer: " + storageErr.Error())
 	}
-
 	r.rtSyncer.PublishSyncRequest(ctx, tid, syncer.ITEM_TYPE_ROUTE, routeId, false)
 	registrationErr := r.unregisterAndStopRoute(ctx, tid, routeId)
 	if registrationErr != nil {
@@ -217,42 +216,89 @@ func (r *DefaultRoutingTableManager) RemoveRoute(ctx context.Context, tid tenant
 	return storageErr
 }
 
-func (r *DefaultRoutingTableManager) RouteEvent(ctx context.Context, tid tenant.Id, routeId string, payload interface{}) (string, error) {
+func (r *DefaultRoutingTableManager) RouteEvent(ctx context.Context, tid tenant.Id, routeId string, payload interface{}) (*event.Event, string, error) {
+	r.Lock()
 	lrw, ok := r.liveRouteMap[tid.KeyWithRoute(routeId)]
+	r.Unlock()
 	if !ok {
-		return "", errors.New("no route " + routeId)
+		return nil, "", errors.New("no route " + routeId)
 	}
 	if lrw.Receiver == nil {
-		return "", errors.New("no receiver for route " + routeId)
+		return nil, "", errors.New("no receiver for route " + routeId)
 	}
 	var wg sync.WaitGroup
 	wg.Add(1)
-	//sctx, cancel := context.WithTimeout(ctx, 5*time.Second)
-	//sctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	userTraceId := ctx.Value(rtsemconv.EarsUserTraceId).(string)
 	// no need to cancel context here because RouteEvent is only used synchronously via API call
+	//sctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	e, err := event.New(ctx, payload, event.WithAck(
 		func(evt event.Event) {
-			r.logger.Info().Str("op", "routeEventWebhook").Str("tid", tid.ToString()).Msg("success")
+			log.Ctx(ctx).Info().Str("op", "routeEventWebhook").Str("tid", tid.ToString()).Msg("success")
 			lrw.Receiver.LogSuccess()
 			wg.Done()
 			//cancel()
 		}, func(evt event.Event, err error) {
-			r.logger.Error().Str("op", "routeEventWebhook").Str("tid", tid.ToString()).Msg("failed to process message: " + err.Error())
+			log.Ctx(ctx).Error().Str("op", "routeEventWebhook").Str("tid", tid.ToString()).Msg("failed to process message: " + err.Error())
 			wg.Done()
 			//cancel()
 		}),
 		event.WithOtelTracing("routeEventWebhook"),
 		event.WithTenant(tid),
 		event.WithTracePayloadOnNack(false),
+		event.WithUserTraceId(userTraceId),
 	)
 	if err != nil {
-		return "", errors.New("bad test event for route " + routeId)
+		return nil, "", errors.New("invalid event for route " + routeId)
 	}
-	traceId, _, _ := e.GetPathValue("trace.id")
-	traceIdStr, _ := traceId.(string)
+	actualTraceId, _, _ := e.GetPathValue("trace.id")
+	traceIdStr, _ := actualTraceId.(string)
 	lrw.Receiver.Trigger(e)
 	wg.Wait()
-	return traceIdStr, nil
+	return &e, traceIdStr, nil
+}
+
+func (r *DefaultRoutingTableManager) ReloadRoute(ctx context.Context, tid tenant.Id, routeId string) (*route.Config, error) {
+	routeConfig, err := r.GetRoute(ctx, tid, routeId)
+	if err != nil {
+		return nil, &RouteRegistrationError{err}
+	}
+	err = r.unregisterAndStopRoute(ctx, routeConfig.TenantId, routeConfig.Id)
+	if err != nil {
+		return nil, &RouteRegistrationError{err}
+	}
+	r.rtSyncer.PublishSyncRequest(ctx, routeConfig.TenantId, syncer.ITEM_TYPE_ROUTE, routeConfig.Id, false)
+	time.Sleep(100 * time.Millisecond)
+	err = r.registerAndRunRoute(ctx, routeConfig)
+	if err != nil {
+		return nil, &RouteRegistrationError{err}
+	}
+	r.rtSyncer.PublishSyncRequest(ctx, routeConfig.TenantId, syncer.ITEM_TYPE_ROUTE, routeConfig.Id, true)
+	return routeConfig, nil
+}
+
+func (r *DefaultRoutingTableManager) ReloadAllRoutes(ctx context.Context) ([]string, error) {
+	routes, err := r.GetAllRegisteredRoutes()
+	if err != nil {
+		return nil, &RouteRegistrationError{err}
+	}
+	errs := make(map[string]error, 0)
+	rids := make([]string, 0)
+	for _, rt := range routes {
+		rids = append(rids, rt.Id)
+		_, err = r.ReloadRoute(ctx, rt.TenantId, rt.Id)
+		if err != nil {
+			errs[rt.Id] = err
+		}
+	}
+	if len(errs) > 0 {
+		errRep := ""
+		for rid, err := range errs {
+			errRep += "failed to reload route " + rid + ": " + err.Error() + "\n"
+		}
+		return rids, &RouteRegistrationError{errors.New(errRep)}
+	} else {
+		return rids, nil
+	}
 }
 
 func (r *DefaultRoutingTableManager) AddRoute(ctx context.Context, routeConfig *route.Config) error {
@@ -347,7 +393,7 @@ func (r *DefaultRoutingTableManager) AddRoute(ctx context.Context, routeConfig *
 
 func (r *DefaultRoutingTableManager) setRunningStatus(routes []route.Config) {
 	for idx, _ := range routes {
-		rid := routes[idx].TenantId.KeyWithRoute(routes[idx].Id)
+		/*rid := routes[idx].TenantId.KeyWithRoute(routes[idx].Id)
 		r.Lock()
 		_, ok := r.liveRouteMap[rid]
 		r.Unlock()
@@ -355,6 +401,11 @@ func (r *DefaultRoutingTableManager) setRunningStatus(routes []route.Config) {
 			routes[idx].Status = route.ROUTE_STATUS_RUNNING
 		} else {
 			routes[idx].Status = route.ROUTE_STATUS_STOPPED
+		}*/
+		if routes[idx].Inactive == true {
+			routes[idx].Status = route.ROUTE_STATUS_STOPPED
+		} else {
+			routes[idx].Status = route.ROUTE_STATUS_RUNNING
 		}
 	}
 }
@@ -364,13 +415,18 @@ func (r *DefaultRoutingTableManager) GetRoute(ctx context.Context, tid tenant.Id
 	if err != nil {
 		return nil, err
 	}
-	r.Lock()
+	/*r.Lock()
 	_, ok := r.liveRouteMap[tid.KeyWithRoute(routeId)]
 	r.Unlock()
 	if ok {
 		rte.Status = route.ROUTE_STATUS_RUNNING
 	} else {
 		rte.Status = route.ROUTE_STATUS_STOPPED
+	}*/
+	if rte.Inactive == true {
+		rte.Status = route.ROUTE_STATUS_STOPPED
+	} else {
+		rte.Status = route.ROUTE_STATUS_RUNNING
 	}
 	return &rte, nil
 }
@@ -596,4 +652,14 @@ func (r *DefaultRoutingTableManager) GetAllRegisteredRoutes() ([]route.Config, e
 		routes = append(routes, route.Config)
 	}
 	return routes, nil
+}
+
+func (r *DefaultRoutingTableManager) GetRegisteredRoute(tid tenant.Id, routeId string) (route.Config, error) {
+	r.Lock()
+	defer r.Unlock()
+	rt, ok := r.liveRouteMap[tid.KeyWithRoute(routeId)]
+	if ok {
+		return rt.Config, nil
+	}
+	return route.Config{}, errors.New("no live route with ID " + routeId)
 }

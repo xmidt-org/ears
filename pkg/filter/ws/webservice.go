@@ -20,9 +20,17 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
+	"net"
+	"net/http"
+	nurl "net/url"
+	"strings"
+	"time"
+
 	"github.com/boriwo/deepcopy"
 	"github.com/rs/zerolog/log"
 	"github.com/xmidt-org/ears/internal/pkg/syncer"
+	"github.com/xmidt-org/ears/pkg/app"
 	"github.com/xmidt-org/ears/pkg/event"
 	"github.com/xmidt-org/ears/pkg/filter"
 	"github.com/xmidt-org/ears/pkg/hasher"
@@ -30,30 +38,6 @@ import (
 	"github.com/xmidt-org/ears/pkg/tenant"
 	"go.opentelemetry.io/otel/trace"
 	"golang.org/x/oauth2/clientcredentials"
-	"io/ioutil"
-	"net"
-	"net/http"
-	"strings"
-	"time"
-)
-
-const (
-	HTTP_AUTH_TYPE_BASIC  = "basic"
-	HTTP_AUTH_TYPE_SAT    = "sat"
-	HTTP_AUTH_TYPE_OAUTH  = "oauth"
-	HTTP_AUTH_TYPE_OAUTH2 = "oauth2"
-
-	SAT_URL = "https://sat-prod.codebig2.net/oauth/token"
-)
-
-type (
-	SatToken struct {
-		AccessToken string `json:"access_token"`
-		ExpiresIn   int    `json:"expires_in"`
-		Scope       string `json:"scope"`
-		TokenType   string `json:"token_type"`
-		ExpiresAt   int64  `json:"timestamp"`
-	}
 )
 
 func NewFilter(tid tenant.Id, plugin string, name string, config interface{}, secrets secret.Vault, tableSyncer syncer.DeltaSyncer) (*Filter, error) {
@@ -97,6 +81,7 @@ func (f *Filter) Filter(evt event.Event) []event.Event {
 	// execute http request
 	res, _, err := f.hitEndpoint(evt.Context(), evt)
 	if err != nil {
+		log.Ctx(evt.Context()).Error().Str("op", "filter").Str("filterType", "ws").Str("name", f.Name()).Msg(err.Error())
 		// legitimate filter nack because it involves an external service
 		evt.Nack(err)
 		f.LogError()
@@ -114,7 +99,7 @@ func (f *Filter) Filter(evt event.Event) []event.Event {
 		return []event.Event{}
 	}
 	if f.config.FromPath != "" {
-		resEvt, _ := event.New(evt.Context(), resObj)
+		resEvt, _ := event.New(evt.Context(), resObj, event.WithUserTraceId(evt.UserTraceId()))
 		resObj, _, _ = resEvt.GetPathValue(f.config.FromPath)
 	}
 	err = evt.DeepCopy()
@@ -192,9 +177,7 @@ func (f *Filter) evalStr(evt event.Event, tt string) string {
 	return tt
 }
 
-func (f *Filter) getSatBearerToken(ctx context.Context, clientId string, clientSecret string) string {
-	//curl -s -X POST -H "X-Client-Id: ***" -H "X-Client-Secret: ***" -H "Cache-Control: no-cache" https://sat-prod.codebig2.net/oauth/token
-	//echo "Bearer $TOKEN"
+func (f *Filter) getSatBearerToken(ctx context.Context, clientId string, clientSecret string) (string, error) {
 	f.Lock()
 	if time.Now().Unix() >= f.satTokens[clientId].ExpiresAt {
 		delete(f.satTokens, clientId)
@@ -204,37 +187,37 @@ func (f *Filter) getSatBearerToken(ctx context.Context, clientId string, clientS
 		f.Lock()
 		token := f.satTokens[clientId].TokenType + " " + f.satTokens[clientId].AccessToken
 		f.Unlock()
-		return token
+		return token, nil
 	}
 	httpClient := &http.Client{
 		Timeout: 10 * time.Second,
 	}
-	req, err := http.NewRequest("POST", SAT_URL, nil)
+	req, err := http.NewRequest("POST", f.secrets.Secret(ctx, "secret://SATUrl"), nil)
 	if err != nil {
-		return ""
+		return "", err
 	}
 	req.Header.Add("X-Client-Id", clientId)
 	req.Header.Add("X-Client-Secret", clientSecret)
 	req.Header.Add("Cache-Control", "no-cache")
 	resp, err := httpClient.Do(req)
 	if err != nil {
-		return ""
+		return "", err
 	}
-	buf, err := ioutil.ReadAll(resp.Body)
+	buf, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return ""
+		return "", err
 	}
 	defer resp.Body.Close()
 	var satToken SatToken
 	err = json.Unmarshal(buf, &satToken)
 	if err != nil {
-		return ""
+		return "", err
 	}
 	satToken.ExpiresAt = time.Now().Unix() + int64(satToken.ExpiresIn)
 	f.Lock()
 	f.satTokens[clientId] = &satToken
 	f.Unlock()
-	return satToken.TokenType + " " + satToken.AccessToken
+	return satToken.TokenType + " " + satToken.AccessToken, nil
 }
 
 func (f *Filter) hitEndpoint(ctx context.Context, evt event.Event) (string, int, error) {
@@ -255,7 +238,7 @@ func (f *Filter) hitEndpoint(ctx context.Context, evt event.Event) (string, int,
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("User-Agent", "ears")
 	// add trace header to outbound call
-	traceHeader := "X-B3-TraceId"
+	traceHeader := app.HeaderTraceId
 	traceId := trace.SpanFromContext(ctx).SpanContext().TraceID().String()
 	req.Header.Set(traceHeader, traceId)
 	// add supplied headers
@@ -274,7 +257,7 @@ func (f *Filter) hitEndpoint(ctx context.Context, evt event.Event) (string, int,
 		client, ok = f.clients[HTTP_AUTH_TYPE_BASIC]
 		f.RUnlock()
 		if !ok {
-			client = InitHttpTransportWithDialer()
+			client = f.initHttpTransportWithDialer()
 			f.Lock()
 			f.clients[HTTP_AUTH_TYPE_BASIC] = client
 			f.Unlock()
@@ -285,12 +268,15 @@ func (f *Filter) hitEndpoint(ctx context.Context, evt event.Event) (string, int,
 		client, ok = f.clients[HTTP_AUTH_TYPE_BASIC]
 		f.RUnlock()
 		if !ok {
-			client = InitHttpTransportWithDialer()
+			client = f.initHttpTransportWithDialer()
 			f.Lock()
 			f.clients[HTTP_AUTH_TYPE_BASIC] = client
 			f.Unlock()
 		}
-		token := f.getSatBearerToken(ctx, f.secrets.Secret(ctx, f.config.Auth.ClientID), f.secrets.Secret(ctx, f.config.Auth.ClientSecret))
+		token, err := f.getSatBearerToken(ctx, f.secrets.Secret(ctx, f.config.Auth.ClientID), f.secrets.Secret(ctx, f.config.Auth.ClientSecret))
+		if err != nil {
+			return "", 0, err
+		}
 		req.Header.Add("Authorization", token)
 	} else if f.config.Auth.Type == HTTP_AUTH_TYPE_OAUTH {
 		return "", 0, errors.New("oauth auth not supported")
@@ -306,6 +292,9 @@ func (f *Filter) hitEndpoint(ctx context.Context, evt event.Event) (string, int,
 				TokenURL:     f.secrets.Secret(ctx, f.config.Auth.TokenURL),
 				Scopes:       f.config.Auth.Scopes,
 			}
+			if f.config.Auth.GrantType != "" {
+				conf.EndpointParams = nurl.Values{"grant_type": []string{f.config.Auth.GrantType}}
+			}
 			client = conf.Client(context.Background())
 			f.Lock()
 			f.clients[HTTP_AUTH_TYPE_OAUTH2+"-"+url] = client
@@ -317,7 +306,7 @@ func (f *Filter) hitEndpoint(ctx context.Context, evt event.Event) (string, int,
 		client, ok = f.clients[HTTP_AUTH_TYPE_BASIC]
 		f.RUnlock()
 		if !ok {
-			client = InitHttpTransportWithDialer()
+			client = f.initHttpTransportWithDialer()
 			f.Lock()
 			f.clients[HTTP_AUTH_TYPE_BASIC] = client
 			f.Unlock()
@@ -331,14 +320,16 @@ func (f *Filter) hitEndpoint(ctx context.Context, evt event.Event) (string, int,
 	// send request
 	resp, err := client.Do(req)
 	if err != nil {
+		log.Ctx(evt.Context()).Error().Str("op", "filter").Str("filterType", "ws").Str("name", f.Name()).Msg("Request error: " + err.Error())
 		return "", 0, err
 	}
 	// read response
 	var body []byte
 	if resp != nil && resp.Body != nil {
 		var readErr error
-		body, readErr = ioutil.ReadAll(resp.Body)
+		body, readErr = io.ReadAll(resp.Body)
 		if readErr != nil {
+			log.Ctx(evt.Context()).Error().Str("op", "filter").Str("filterType", "ws").Str("name", f.Name()).Msg("Read error: " + readErr.Error())
 			return "", resp.StatusCode, readErr
 		}
 		resp.Body.Close()
@@ -349,7 +340,7 @@ func (f *Filter) hitEndpoint(ctx context.Context, evt event.Event) (string, int,
 	return string(body), resp.StatusCode, nil
 }
 
-func InitHttpTransportWithDialer() *http.Client {
+func (f *Filter) initHttpTransportWithDialer() *http.Client {
 	var dialer net.Dialer
 	tr := &http.Transport{
 		MaxIdleConnsPerHost:   100,

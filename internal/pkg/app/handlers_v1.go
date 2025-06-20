@@ -36,7 +36,7 @@ import (
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/global"
 	"go.opentelemetry.io/otel/trace"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"regexp"
 	"strings"
@@ -156,6 +156,7 @@ func NewAPIManager(routingMgr tablemgr.RoutingTableManager, tenantStorer tenant.
 
 	api.muxRouter.HandleFunc("/ears/v1/orgs/{orgId}/applications/{appId}/routes/{routeId}", api.addRouteHandler).Methods(http.MethodPut)
 	api.muxRouter.HandleFunc("/ears/v1/orgs/{orgId}/applications/{appId}/routes/{routeId}/event", api.sendEventHandler).Methods(http.MethodPost)
+	api.muxRouter.HandleFunc("/ears/v1/orgs/{orgId}/applications/{appId}/routes/{routeId}/reload", api.reloadRouteHandler).Methods(http.MethodPut)
 	api.muxRouter.HandleFunc("/ears/v1/orgs/{orgId}/applications/{appId}/routes/{routeId}/toggleEnable", api.enableDisableRouteHandler).Methods(http.MethodPut)
 	api.muxRouter.HandleFunc("/ears/v1/orgs/{orgId}/applications/{appId}/routes", api.addRouteHandler).Methods(http.MethodPost)
 	api.muxRouter.HandleFunc("/ears/v1/orgs/{orgId}/applications/{appId}/routes/{routeId}", api.removeRouteHandler).Methods(http.MethodDelete)
@@ -175,15 +176,20 @@ func NewAPIManager(routingMgr tablemgr.RoutingTableManager, tenantStorer tenant.
 	api.muxRouter.HandleFunc("/ears/v1/orgs/{orgId}/applications/{appId}/fragments/{fragmentId}", api.getFragmentHandler).Methods(http.MethodGet)
 	api.muxRouter.HandleFunc("/ears/v1/orgs/{orgId}/applications/{appId}/fragments", api.getAllTenantFragmentsHandler).Methods(http.MethodGet)
 
+	// old tenant APIs for backward compatibility
+
 	api.muxRouter.HandleFunc("/ears/v1/orgs/{orgId}/applications/{appId}/config", api.getTenantConfigHandler).Methods(http.MethodGet)
-	api.muxRouter.HandleFunc("/ears/v1/orgs/{orgId}/applications/{appId}/config", api.addTenantConfigHandler).Methods(http.MethodPut)
+	api.muxRouter.HandleFunc("/ears/v1/orgs/{orgId}/applications/{appId}/config", api.updateTenantConfigHandler).Methods(http.MethodPut)
+	api.muxRouter.HandleFunc("/ears/v1/orgs/{orgId}/applications/{appId}/config", api.addTenantConfigHandler).Methods(http.MethodPost)
 	api.muxRouter.HandleFunc("/ears/v1/orgs/{orgId}/applications/{appId}/config", api.deleteTenantConfigHandler).Methods(http.MethodDelete)
 
 	api.muxRouter.HandleFunc("/ears/v1/orgs/{orgId}/applications/{appId}", api.getTenantConfigHandler).Methods(http.MethodGet)
-	api.muxRouter.HandleFunc("/ears/v1/orgs/{orgId}/applications/{appId}", api.addTenantConfigHandler).Methods(http.MethodPut)
+	api.muxRouter.HandleFunc("/ears/v1/orgs/{orgId}/applications/{appId}", api.updateTenantConfigHandler).Methods(http.MethodPut)
+	api.muxRouter.HandleFunc("/ears/v1/orgs/{orgId}/applications/{appId}", api.addTenantConfigHandler).Methods(http.MethodPost)
 	api.muxRouter.HandleFunc("/ears/v1/orgs/{orgId}/applications/{appId}", api.deleteTenantConfigHandler).Methods(http.MethodDelete)
 
 	api.muxRouter.HandleFunc("/ears/v1/routes", api.getAllRoutesHandler).Methods(http.MethodGet)
+	api.muxRouter.HandleFunc("/ears/v1/routes", api.reloadAllRoutesHandler).Methods(http.MethodPut)
 
 	api.muxRouter.HandleFunc("/ears/v1/tenants", api.getAllTenantConfigsHandler).Methods(http.MethodGet)
 	api.muxRouter.HandleFunc("/ears/v1/senders", api.getAllSendersHandler).Methods(http.MethodGet)
@@ -295,11 +301,38 @@ func (a *APIManager) webhookHandler(w http.ResponseWriter, r *http.Request) {
 		resp.Respond(ctx, w, doYaml(r))
 		return
 	}
-	r = mux.SetURLVars(r, map[string]string{
+	m := map[string]string{
 		"orgId":   a.globalWebhookOrg,
 		"appId":   a.globalWebhookApp,
 		"routeId": a.globalWebhookRouteId,
-	})
+	}
+	// harvest gears routing information from URL query params if present
+	routeToApp := r.URL.Query().Get("app")
+	if routeToApp != "" {
+		m["routeToApp"] = routeToApp
+	}
+	routeToLocation := r.URL.Query().Get("location")
+	if routeToLocation != "" {
+		m["routeToLocation"] = routeToLocation
+	}
+	routeToPartner := r.URL.Query().Get("partner")
+	if routeToPartner != "" {
+		m["routeToPartner"] = routeToPartner
+	}
+	routeToRoute := r.URL.Query().Get("routeId")
+	if routeToRoute != "" {
+		m["routeToRoute"] = routeToRoute
+	}
+	// need to figure out how we can adopt trace id
+	/*traceId := r.URL.Query().Get("traceId")
+	if traceId != "" {
+		m["traceId"] = traceId
+	}*/
+	token := r.URL.Query().Get("token")
+	if token != "" {
+		m["token"] = token
+	}
+	r = mux.SetURLVars(r, m)
 	a.sendEventHandler(w, r)
 	// Solution B: Forward request via network stack. Does create an extra hop but it allows for a more
 	// flexible implementation where we load the from and to URls to be proxied from ears.config.
@@ -327,7 +360,7 @@ func (a *APIManager) webhookHandler(w http.ResponseWriter, r *http.Request) {
 		resp.Respond(ctx, w, doYaml(r))
 		return
 	}
-	body, err := ioutil.ReadAll(r.Body)
+	body, err := io.ReadAll(r.Body)
 	if err != nil {
 		log.Ctx(ctx).Error().Str("op", "webhookHandler").Msg(err.Error())
 		resp := ErrorResponse(&InternalServerError{err})
@@ -371,8 +404,19 @@ func (a *APIManager) sendEventHandler(w http.ResponseWriter, r *http.Request) {
 		a.tenantCache.SetTenant(tenantConfig)
 	}
 	a.Unlock()
-	// authenticate here if necessary (middleware does not authenticate this API)
-	if !tenantConfig.OpenEventApi {
+	token := vars["token"]
+	if token != "" {
+		// authenticate query param token if present in webhook
+		log.Ctx(ctx).Info().Str("op", "sendEventHandler").Str("action", "authenticating_token").Msg("authenticating token")
+		_, _, authErr := jwtMgr.VerifyToken(ctx, token, r.URL.Path, r.Method, tid)
+		if authErr != nil {
+			log.Ctx(ctx).Error().Str("op", "sendEventHandler").Str("error", authErr.Error()).Msg("token authorization error")
+			resp := ErrorResponse(convertToApiError(ctx, authErr))
+			resp.Respond(ctx, w, doYaml(r))
+			return
+		}
+	} else if !tenantConfig.OpenEventApi {
+		// authenticate here if necessary (middleware does not authenticate this API)
 		bearerToken := getBearerToken(r)
 		_, _, authErr := jwtMgr.VerifyToken(ctx, bearerToken, r.URL.Path, r.Method, tid)
 		if authErr != nil {
@@ -387,7 +431,7 @@ func (a *APIManager) sendEventHandler(w http.ResponseWriter, r *http.Request) {
 		r.Body = http.MaxBytesReader(w, r.Body, maxEventSize)
 		defer r.Body.Close()
 	}
-	body, err := ioutil.ReadAll(r.Body)
+	body, err := io.ReadAll(r.Body)
 	if err != nil {
 		log.Ctx(ctx).Error().Str("op", "sendEventHandler").Msg(err.Error())
 		resp := ErrorResponse(&InternalServerError{err})
@@ -409,24 +453,65 @@ func (a *APIManager) sendEventHandler(w http.ResponseWriter, r *http.Request) {
 		resp.Respond(ctx, w, doYaml(r))
 		return
 	}
-	routeId := vars["routeId"]
+	// envelope payload if query params are present in webhook
+	routeToApp := vars["routeToApp"]
+	routeToLocation := vars["routeToLocation"]
+	routeToPartner := vars["routeToPartner"]
+	if routeToApp != "" && routeToLocation != "" {
+		//log.Ctx(ctx).Info().Str("op", "sendEventHandler").Str("action", "enveloping_payload").Str("routeToApp", routeToApp).Str("routeToLoc", routeToLocation).Msg("enveloping payload")
+		genvelope := NewGearsEnvelope(routeToPartner, routeToApp, routeToLocation, "", payload)
+		body, err = json.Marshal(genvelope)
+		if err != nil {
+			log.Ctx(ctx).Error().Str("op", "sendEventHandler").Msg(err.Error())
+			a.addRouteFailureRecorder.Add(ctx, 1.0)
+			resp := ErrorResponse(&BadRequestError{"enveloping error", err})
+			resp.Respond(ctx, w, doYaml(r))
+			return
+		}
+		err = json.Unmarshal(body, &payload)
+		if err != nil {
+			log.Ctx(ctx).Error().Str("op", "sendEventHandler").Msg(err.Error())
+			a.addRouteFailureRecorder.Add(ctx, 1.0)
+			resp := ErrorResponse(&BadRequestError{"enveloping error", err})
+			resp.Respond(ctx, w, doYaml(r))
+			return
+		}
+	}
+	// check if route id given as query param, otherwise use configured global route id
+	routeId := vars["routeToRoute"]
+	if routeId == "" {
+		routeId = vars["routeId"]
+	}
 	if routeId == "" {
 		log.Ctx(ctx).Error().Str("op", "sendEventHandler").Msg("missing route ID")
 		resp := ErrorResponse(convertToApiError(ctx, err))
 		resp.Respond(ctx, w, doYaml(r))
 		return
 	}
-	traceId, err := a.routingTableMgr.RouteEvent(ctx, *tid, routeId, payload)
+	evt, traceId, err := a.routingTableMgr.RouteEvent(ctx, *tid, routeId, payload)
 	if err != nil {
 		log.Ctx(ctx).Error().Str("op", "sendEventHandler").Msg(err.Error())
 		resp := ErrorResponse(convertToApiError(ctx, err))
 		resp.Respond(ctx, w, doYaml(r))
 		return
 	}
-	item := make(map[string]string)
+	item := make(map[string]interface{})
 	item["routeId"] = routeId
 	item["tx.traceId"] = traceId
-	resp := ItemResponse(item)
+	resstr := (*evt).Response()
+	item["response"] = resstr
+	if resstr != "" {
+		var obj interface{}
+		err = json.Unmarshal([]byte(resstr), &obj)
+		if err == nil {
+			item["response"] = obj
+		}
+	}
+	statusCode := 200
+	if (*evt).ResponseStatus() > 0 {
+		statusCode = (*evt).ResponseStatus()
+	}
+	resp := ItemStatusResponse(item, statusCode)
 	resp.Respond(ctx, w, doYaml(r))
 }
 
@@ -487,6 +572,40 @@ func (a *APIManager) enableDisableRouteHandler(w http.ResponseWriter, r *http.Re
 	resp.Respond(ctx, w, doYaml(r))
 }
 
+func (a *APIManager) reloadRouteHandler(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	vars := mux.Vars(r)
+	tid, apiErr := getTenant(ctx, vars)
+	if apiErr != nil {
+		log.Ctx(ctx).Error().Str("op", "reloadRouteHandler").Str("error", apiErr.Error()).Msg("orgId or appId empty")
+		a.addRouteFailureRecorder.Add(ctx, 1.0)
+		resp := ErrorResponse(apiErr)
+		resp.Respond(ctx, w, doYaml(r))
+		return
+	}
+	_, err := a.tenantStorer.GetConfig(ctx, *tid)
+	if err != nil {
+		log.Ctx(ctx).Error().Str("op", "reloadRouteHandler").Str("error", err.Error()).Msg("error getting tenant config")
+		resp := ErrorResponse(convertToApiError(ctx, err))
+		resp.Respond(ctx, w, doYaml(r))
+		return
+	}
+	routeId := vars["routeId"]
+	route, err := a.routingTableMgr.ReloadRoute(ctx, *tid, routeId)
+	if err != nil {
+		log.Ctx(ctx).Error().Str("op", "reloadRouteHandler").Msg(err.Error())
+		a.addRouteFailureRecorder.Add(ctx, 1.0)
+		resp := ErrorResponse(convertToApiError(ctx, err))
+		resp.Respond(ctx, w, doYaml(r))
+		return
+	} else {
+		a.addRouteSuccessRecorder.Add(ctx, 1.0)
+	}
+	log.Ctx(ctx).Info().Str("op", "reloadRouteHandler").Str("routeId", routeId).Msg("success")
+	resp := ItemResponse(route)
+	resp.Respond(ctx, w, doYaml(r))
+}
+
 func (a *APIManager) addRouteHandler(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	vars := mux.Vars(r)
@@ -506,7 +625,7 @@ func (a *APIManager) addRouteHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	routeId := vars["routeId"]
-	body, err := ioutil.ReadAll(r.Body)
+	body, err := io.ReadAll(r.Body)
 	if err != nil {
 		log.Ctx(ctx).Error().Str("op", "addRouteHandler").Msg(err.Error())
 		a.addRouteFailureRecorder.Add(ctx, 1.0)
@@ -520,6 +639,14 @@ func (a *APIManager) addRouteHandler(w http.ResponseWriter, r *http.Request) {
 		log.Ctx(ctx).Error().Str("op", "addRouteHandler").Msg(err.Error())
 		a.addRouteFailureRecorder.Add(ctx, 1.0)
 		resp := ErrorResponse(&BadRequestError{"Cannot unmarshal request body", err})
+		resp.Respond(ctx, w, doYaml(r))
+		return
+	}
+	if route.Receiver.Plugin == "kinesis" && route.Region == "" {
+		err := &BadRequestError{"region must be set for route with kinesis receiver", nil}
+		log.Ctx(ctx).Error().Str("op", "addRouteHandler").Msg(err.Error())
+		a.addRouteFailureRecorder.Add(ctx, 1.0)
+		resp := ErrorResponse(err)
 		resp.Respond(ctx, w, doYaml(r))
 		return
 	}
@@ -624,6 +751,20 @@ func (a *APIManager) getAllTenantRoutesHandler(w http.ResponseWriter, r *http.Re
 	log.Ctx(ctx).Info().Str("op", "getAllTenantRoutesHandler").Msg("success")
 	trace.SpanFromContext(ctx).SetAttributes(attribute.Int("routeCount", len(allRouteConfigs)))
 	resp := ItemsResponse(allRouteConfigs)
+	resp.Respond(ctx, w, doYaml(r))
+}
+
+func (a *APIManager) reloadAllRoutesHandler(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	rids, err := a.routingTableMgr.ReloadAllRoutes(ctx)
+	if err != nil {
+		log.Ctx(ctx).Error().Str("op", "reloadAllRoutesHandler").Str("error", err.Error()).Msg("failed to reload all or some routes")
+		resp := ErrorResponse(convertToApiError(ctx, err))
+		resp.Respond(ctx, w, doYaml(r))
+		return
+	}
+	log.Ctx(ctx).Info().Str("op", "reloadAllRoutesHandler").Msg("success")
+	resp := ItemsResponse(rids)
 	resp.Respond(ctx, w, doYaml(r))
 }
 
@@ -864,7 +1005,7 @@ func (a *APIManager) addFragmentHandler(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 	fragmentId := vars["fragmentId"]
-	body, err := ioutil.ReadAll(r.Body)
+	body, err := io.ReadAll(r.Body)
 	if err != nil {
 		log.Ctx(ctx).Error().Str("op", "addFragmentHandler").Msg(err.Error())
 		a.addRouteFailureRecorder.Add(ctx, 1.0)
@@ -956,7 +1097,15 @@ func (a *APIManager) addTenantConfigHandler(w http.ResponseWriter, r *http.Reque
 		resp.Respond(ctx, w, doYaml(r))
 		return
 	}
-	body, err := ioutil.ReadAll(r.Body)
+	config, err := a.tenantStorer.GetConfig(ctx, *tid)
+	if err == nil && config != nil {
+		err = errors.New("cannot update existing tenant " + tid.AppId)
+		log.Ctx(ctx).Error().Str("op", "addTenantConfigHandler").Str("error", err.Error()).Msg("tenant " + tid.AppId + "already exists")
+		resp := ErrorResponse(convertToApiError(ctx, err))
+		resp.Respond(ctx, w, doYaml(r))
+		return
+	}
+	body, err := io.ReadAll(r.Body)
 	if err != nil {
 		log.Ctx(ctx).Error().Str("op", "addTenantConfigHandler").Str("error", err.Error()).Msg("error reading request body")
 		resp := ErrorResponse(&InternalServerError{err})
@@ -981,6 +1130,45 @@ func (a *APIManager) addTenantConfigHandler(w http.ResponseWriter, r *http.Reque
 	}
 	a.quotaManager.PublishQuota(ctx, *tid)
 	log.Ctx(ctx).Info().Str("op", "addTenantConfigHandler").Msg("success")
+	resp := ItemResponse(tenantConfig)
+	resp.Respond(ctx, w, doYaml(r))
+}
+
+func (a *APIManager) updateTenantConfigHandler(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	vars := mux.Vars(r)
+	tid, apiErr := getTenant(ctx, vars)
+	if apiErr != nil {
+		log.Ctx(ctx).Error().Str("op", "updateTenantConfigHandler").Str("error", apiErr.Error()).Msg("orgId or appId empty")
+		resp := ErrorResponse(apiErr)
+		resp.Respond(ctx, w, doYaml(r))
+		return
+	}
+	body, err := io.ReadAll(r.Body)
+	if err != nil {
+		log.Ctx(ctx).Error().Str("op", "updateTenantConfigHandler").Str("error", err.Error()).Msg("error reading request body")
+		resp := ErrorResponse(&InternalServerError{err})
+		resp.Respond(ctx, w, doYaml(r))
+		return
+	}
+	var tenantConfig tenant.Config
+	err = yaml.Unmarshal(body, &tenantConfig)
+	if err != nil {
+		log.Ctx(ctx).Error().Str("op", "updateTenantConfigHandler").Str("error", err.Error()).Msg("error unmarshal request body")
+		resp := ErrorResponse(&BadRequestError{"Cannot unmarshal request body", err})
+		resp.Respond(ctx, w, doYaml(r))
+		return
+	}
+	tenantConfig.Tenant = *tid
+	err = a.tenantStorer.SetConfig(ctx, tenantConfig)
+	if err != nil {
+		log.Ctx(ctx).Error().Str("op", "updateTenantConfigHandler").Str("error", err.Error()).Msg("error setting tenant config")
+		resp := ErrorResponse(convertToApiError(ctx, err))
+		resp.Respond(ctx, w, doYaml(r))
+		return
+	}
+	a.quotaManager.PublishQuota(ctx, *tid)
+	log.Ctx(ctx).Info().Str("op", "updateTenantConfigHandler").Msg("success")
 	resp := ItemResponse(tenantConfig)
 	resp.Respond(ctx, w, doYaml(r))
 }

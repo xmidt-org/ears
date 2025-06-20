@@ -26,7 +26,6 @@
         "name": "simpleRouteSender",
         "plugin": "debug"
       },
-      "status": "running",
       "tenant": {
         "appId": "myapp",
         "orgId": "myorg"

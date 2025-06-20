@@ -56,6 +56,18 @@ type Event interface {
 	//Get the event creation time
 	Created() time.Time
 
+	//Get response string for synchronous routes
+	Response() string
+
+	//Set response string for synchronous routes
+	SetResponse(response string)
+
+	//Get response status for synchronous routes
+	ResponseStatus() int
+
+	//Set response status for synchronous routes
+	SetResponseStatus(status int)
+
 	//Set the event payload
 	//Will return an error if the event is done
 	SetPayload(payload interface{}) error
@@ -94,6 +106,9 @@ type Event interface {
 
 	//Deep copy event payload and metadata
 	DeepCopy() error
+
+	//TraceId from upstream
+	UserTraceId() string
 }
 
 type NoAckHandlersError struct {

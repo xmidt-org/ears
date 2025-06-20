@@ -126,6 +126,7 @@ func (f *MetricFilter) getLocalMetric() *syncer.EarsMetric {
 		f.filterVelocityCounter,
 		f.currentSec,
 		0,
+		"",
 	}
 	return metrics
 }

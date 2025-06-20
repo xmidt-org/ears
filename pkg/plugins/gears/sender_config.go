@@ -75,6 +75,12 @@ const senderSchema = `
             "type": "object",
             "additionalProperties": false,
             "properties": {
+                "clusters": {
+					"type": "object"
+				},
+                "activeClusters": {
+                    "type": "string"
+                },
                 "brokers": {
                     "type": "string"
                 },
@@ -89,6 +95,9 @@ const senderSchema = `
                 },
                 "uses": {
                     "type": "string"
+                },
+                "enveloped": {
+                    "type": "boolean"
                 },
                 "partner": {
                     "type": "string"
@@ -133,7 +142,7 @@ const senderSchema = `
                 }
             },
             "required": [
-                "brokers", "topic"
+                "topic"
             ],
             "title": "SenderConfig"
         }

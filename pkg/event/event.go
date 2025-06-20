@@ -52,8 +52,11 @@ type event struct {
 	span               trace.Span //Only valid in the root event
 	tracePayloadOnNack bool
 	tracePayload       interface{}
+	userTraceId        string
 	created            time.Time
 	deepcopied         bool
+	response           *string
+	responseStatus     *int
 }
 
 type EventOption func(*event) error
@@ -72,15 +75,19 @@ func GetEventLogger() *zerolog.Logger {
 	return nil
 }
 
-//Create a new event given a context, a payload, and other event options
+// Create a new event given a context, a payload, and other event options
 func New(ctx context.Context, payload interface{}, options ...EventOption) (Event, error) {
+	emptyResponse := "{}"
+	emptyResponseStatus := 0
 	e := &event{
-		payload: payload,
-		ctx:     ctx,
-		ack:     nil,
-		tid:     tenant.Id{OrgId: "", AppId: ""},
-		created: time.Now(),
-		eid:     uuid.New().String(),
+		payload:        payload,
+		ctx:            ctx,
+		ack:            nil,
+		tid:            tenant.Id{OrgId: "", AppId: ""},
+		created:        time.Now(),
+		eid:            uuid.New().String(),
+		response:       &emptyResponse,
+		responseStatus: &emptyResponseStatus,
 	}
 	for _, option := range options {
 		err := option(e)
@@ -88,8 +95,6 @@ func New(ctx context.Context, payload interface{}, options ...EventOption) (Even
 			return nil, err
 		}
 	}
-	traceId := uuid.New().String()
-
 	// enable otel tracing
 	if e.spanName != "" {
 		tracer := otel.Tracer(rtsemconv.EARSTracerName)
@@ -97,32 +102,41 @@ func New(ctx context.Context, payload interface{}, options ...EventOption) (Even
 		ctx, span = tracer.Start(ctx, e.spanName)
 		span.SetAttributes(rtsemconv.EARSEventTrace)
 		span.SetAttributes(rtsemconv.EARSOrgId.String(e.tid.OrgId), rtsemconv.EARSAppId.String(e.tid.AppId))
-		traceId = span.SpanContext().TraceID().String()
-		span.SetAttributes(rtsemconv.EARSTraceId.String(traceId))
+		if e.userTraceId == "" {
+			e.userTraceId = span.SpanContext().TraceID().String()
+		}
+		span.SetAttributes(rtsemconv.EARSTraceId.String(e.userTraceId))
 		e.span = span
 	}
-
+	// last resort, make up trace id here
+	if e.userTraceId == "" {
+		e.userTraceId = strings.Replace(uuid.New().String(), "-", "", -1)
+	}
 	// setting up logger for the event
 	parentLogger, ok := logger.Load().(*zerolog.Logger)
 	if ok {
 		ctx = logs.SubLoggerCtx(ctx, parentLogger)
-		logs.StrToLogCtx(ctx, rtsemconv.EarsLogTraceIdKey, traceId)
+		logs.StrToLogCtx(ctx, rtsemconv.EarsLogTraceIdKey, e.userTraceId)
 		logs.StrToLogCtx(ctx, rtsemconv.EarsLogTenantIdKey, e.tid.ToString())
+		if e.span != nil {
+			otelTraceId := e.span.SpanContext().TraceID().String()
+			logs.StrToLogCtx(ctx, rtsemconv.EarsOtelTraceIdKey, otelTraceId)
+		}
 	}
 	e.SetContext(ctx)
 	return e, nil
 }
 
-//event acknowledge option with two completion functions,
-//handledFn and errFn. An event with acknowledgement option will be notified through
-//the handledFn when an event is handled, or through the errFn when there is an
-//error handling it.
-//An event is considered handled when it and all its child events (derived from the
-//Clone function) have called the Ack function.
-//An event is considered to have an error if it or any of its child events (derived from
-//the Clone function) has called the Nack function.
-//An event can also error out if it does not receive all the acknowledgements before
-//the context timeout/cancellation.
+// event acknowledge option with two completion functions,
+// handledFn and errFn. An event with acknowledgement option will be notified through
+// the handledFn when an event is handled, or through the errFn when there is an
+// error handling it.
+// An event is considered handled when it and all its child events (derived from the
+// Clone function) have called the Ack function.
+// An event is considered to have an error if it or any of its child events (derived from
+// the Clone function) has called the Nack function.
+// An event can also error out if it does not receive all the acknowledgements before
+// the context timeout/cancellation.
 func WithAck(handledFn func(Event), errFn func(Event, error)) EventOption {
 	return func(e *event) error {
 		if handledFn == nil || errFn == nil {
@@ -159,7 +173,6 @@ func WithTracePayloadOnNack(tracePayloadOnNack bool) EventOption {
 		e.tracePayloadOnNack = tracePayloadOnNack
 		if tracePayloadOnNack {
 			e.tracePayload = deepcopy.DeepCopy(e.payload)
-
 		}
 		return nil
 	}
@@ -168,6 +181,13 @@ func WithTracePayloadOnNack(tracePayloadOnNack bool) EventOption {
 func WithId(eid string) EventOption {
 	return func(e *event) error {
 		e.eid = eid
+		return nil
+	}
+}
+
+func WithUserTraceId(traceId string) EventOption {
+	return func(e *event) error {
+		e.userTraceId = traceId
 		return nil
 	}
 }
@@ -196,7 +216,7 @@ func WithTenant(tid tenant.Id) EventOption {
 	}
 }
 
-//WithOtelTracing enables opentelemtry tracing for the event
+// WithOtelTracing enables opentelemtry tracing for the event
 func WithOtelTracing(spanName string) EventOption {
 	return func(e *event) error {
 		e.spanName = spanName
@@ -214,6 +234,22 @@ func (e *event) Id() string {
 
 func (e *event) Payload() interface{} {
 	return e.payload
+}
+
+func (e *event) Response() string {
+	return *e.response
+}
+
+func (e *event) SetResponse(response string) {
+	*e.response = response
+}
+
+func (e *event) ResponseStatus() int {
+	return *e.responseStatus
+}
+
+func (e *event) SetResponseStatus(status int) {
+	*e.responseStatus = status
 }
 
 func (e *event) SetPayload(payload interface{}) error {
@@ -396,6 +432,9 @@ func (e *event) splitPath(path string) []string {
 
 func (e *event) GetPathValue(path string) (interface{}, interface{}, string) {
 	if path == TRACE+".id" {
+		if e.userTraceId != "" {
+			return e.userTraceId, nil, ""
+		}
 		traceId := trace.SpanFromContext(e.ctx).SpanContext().TraceID().String()
 		return traceId, nil, ""
 	}
@@ -565,6 +604,10 @@ func (e *event) Nack(err error) {
 	}
 }
 
+func (e *event) UserTraceId() string {
+	return e.userTraceId
+}
+
 func (e *event) Clone(ctx context.Context) (Event, error) {
 	// clone shallow
 	var subTree ack.SubTree
@@ -576,13 +619,16 @@ func (e *event) Clone(ctx context.Context) (Event, error) {
 		}
 	}
 	return &event{
-		payload:  e.Payload(),
-		metadata: e.Metadata(),
-		ctx:      ctx,
-		ack:      subTree,
-		eid:      e.eid,
-		tid:      e.tid,
-		created:  e.created,
+		payload:        e.Payload(),
+		metadata:       e.Metadata(),
+		ctx:            ctx,
+		ack:            subTree,
+		eid:            e.eid,
+		tid:            e.tid,
+		created:        e.created,
+		userTraceId:    e.userTraceId,
+		response:       e.response,
+		responseStatus: e.responseStatus,
 	}, nil
 }
 

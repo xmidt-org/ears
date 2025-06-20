@@ -35,7 +35,6 @@ type (
 		sync.Mutex
 		syncers map[string]*InmemoryDeltaSyncer
 	}
-
 	InmemoryDeltaSyncer struct {
 		sync.Mutex
 		active       bool
@@ -43,6 +42,8 @@ type (
 		localSyncers map[string][]LocalSyncer
 		logger       *zerolog.Logger
 		earsMetrics  map[string]*EarsMetric
+		env          string
+		region       string
 	}
 )
 
@@ -59,6 +60,8 @@ func NewInMemoryDeltaSyncer(logger *zerolog.Logger, config config.Config) DeltaS
 		logger.Info().Msg("InMemory Delta Syncer Not Activated")
 	}
 	s.earsMetrics = make(map[string]*EarsMetric, 0)
+	s.env = config.GetString("ears.env")
+	s.region = config.GetString("ears.region")
 	return s
 }
 
@@ -137,8 +140,8 @@ func (s *InmemoryDeltaSyncer) PublishSyncRequest(ctx context.Context, tid tenant
 					s.instanceId,
 					sid,
 					tid,
+					s.region,
 				}
-
 				localSyncer.notify(ctx, msg)
 			}()
 		}
@@ -149,7 +152,6 @@ func (s *InmemoryDeltaSyncer) PublishSyncRequest(ctx context.Context, tid tenant
 func (s *InmemoryDeltaSyncer) notify(ctx context.Context, msg SyncCommand) {
 	if msg.Cmd == EARS_ADD_ITEM_CMD {
 		s.logger.Info().Str("op", "ListenForSyncRequests").Str("instanceId", msg.InstanceId).Str("routeId", msg.ItemId).Str("sid", msg.Sid).Msg("received message to add route")
-
 		s.Lock()
 		syncers, ok := s.localSyncers[msg.ItemType]
 		if ok {
@@ -163,7 +165,6 @@ func (s *InmemoryDeltaSyncer) notify(ctx context.Context, msg SyncCommand) {
 		s.Unlock()
 	} else if msg.Cmd == EARS_REMOVE_ITEM_CMD {
 		s.logger.Info().Str("op", "ListenForSyncRequests").Str("instanceId", msg.InstanceId).Str("routeId", msg.ItemId).Str("sid", msg.Sid).Msg("received message to remove route")
-
 		s.Lock()
 		syncers, ok := s.localSyncers[msg.ItemType]
 		if ok {
