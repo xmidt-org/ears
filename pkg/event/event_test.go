@@ -62,6 +62,32 @@ func TestEventBasic(t *testing.T) {
 	}
 }
 
+func TestEventWithUserTraceId(t *testing.T) {
+	ctx := context.Background()
+	payload := map[string]interface{}{
+		"field1": "abcd",
+		"field2": 1234,
+	}
+
+	e, err := event.New(ctx, payload, event.WithUserTraceId("blah"))
+	if err != nil {
+		t.Errorf("Fail to create new event %s\n", err.Error())
+	}
+
+	if e.UserTraceId() != "blah" {
+		t.Errorf("Fail to get user trace id")
+	}
+
+	e2, err := e.Clone(ctx)
+	if err != nil {
+		t.Errorf("Fail to clone an event %s\n", err.Error())
+	}
+
+	if e2.UserTraceId() != "blah" {
+		t.Errorf("Fail to get user trace id from clone")
+	}
+}
+
 func TestEventGetPath(t *testing.T) {
 	ctx := context.Background()
 	payload := map[string]interface{}{

@@ -55,6 +55,7 @@ func NewPluginVersion(name string, version string, commitID string) (*pkgplugin.
 
 var DefaultReceiverConfig = ReceiverConfig{
 	StreamName:              "",
+	StreamArn:               "",
 	AcknowledgeTimeout:      pointer.Int(5),
 	ShardIteratorType:       kinesis.ShardIteratorTypeLatest, // AT_SEQUENCE_NUMBER, AFTER_SEQUENCE_NUMBER, LATEST, AT_TIMESTAMP, TRIM_HORIZON
 	TracePayloadOnNack:      pointer.Bool(false),
@@ -74,6 +75,7 @@ var DefaultReceiverConfig = ReceiverConfig{
 
 type ReceiverConfig struct {
 	StreamName              string `json:"streamName,omitempty"`
+	StreamArn               string `json:"streamArn,omitempty"`
 	AcknowledgeTimeout      *int   `json:"acknowledgeTimeout,omitempty"`
 	ShardIteratorType       string `json:"shardIteratorType,omitempty"`
 	TracePayloadOnNack      *bool  `json:"tracePayloadOnNack,omitempty"`
@@ -120,11 +122,13 @@ type Receiver struct {
 	awsAccessSecret                string
 	awsRegion                      string
 	streamName                     string
+	streamArn                      string
 	consumerName                   string
 }
 
 var DefaultSenderConfig = SenderConfig{
 	StreamName:          "",
+	StreamArn:           "",
 	MaxNumberOfMessages: pointer.Int(1),
 	SendTimeout:         pointer.Int(1),
 	PartitionKey:        "",
@@ -137,6 +141,7 @@ var DefaultSenderConfig = SenderConfig{
 
 type SenderConfig struct {
 	StreamName          string `json:"streamName,omitempty"`
+	StreamArn           string `json:"streamArn,omitempty"`
 	MaxNumberOfMessages *int   `json:"maxNumberOfMessages,omitempty"`
 	SendTimeout         *int   `json:"sendTimeout,omitempty"`
 	PartitionKey        string `json:"partitionKey,omitempty"`
@@ -168,6 +173,7 @@ type Sender struct {
 	awsAccessSecret     string
 	awsRegion           string
 	streamName          string
+	streamArn           string
 }
 
 type KinesisError struct {

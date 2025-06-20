@@ -128,6 +128,9 @@ const filterSchema = `
                 "clientSecret": {
                     "type": "string"
                 },
+                "grantType": {
+                    "type": "string"
+                },
                 "tokenUrl": {
                     "type": "string"
                 },

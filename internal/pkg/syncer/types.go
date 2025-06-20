@@ -37,6 +37,7 @@ type SyncCommand struct {
 	InstanceId string
 	Sid        string
 	Tenant     tenant.Id
+	Region     string
 }
 
 type EarsMetric struct {
@@ -48,6 +49,7 @@ type EarsMetric struct {
 	FilterVelocity  int
 	LastEventTs     int64
 	Ts              int64
+	Region          string
 }
 
 type (

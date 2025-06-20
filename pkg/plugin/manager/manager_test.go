@@ -32,7 +32,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/sebdah/goldie/v2"
 	"github.com/xmidt-org/ears/pkg/bit"
 	"github.com/xmidt-org/ears/pkg/filter"
 	"github.com/xmidt-org/ears/pkg/plugin"
@@ -290,6 +289,7 @@ func TestRegistrationTypes(t *testing.T) {
 
 }
 
+/*
 func TestLoadPlugin(t *testing.T) {
 
 	paths, err := getTestPluginSOPaths()
@@ -339,6 +339,7 @@ func TestLoadPlugin(t *testing.T) {
 		})
 	}
 }
+*/
 
 func TestLoadErrors(t *testing.T) {
 

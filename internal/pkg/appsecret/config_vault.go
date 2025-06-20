@@ -4,17 +4,18 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"github.com/rs/zerolog"
-	"github.com/xmidt-org/ears/internal/pkg/config"
-	"github.com/xmidt-org/ears/pkg/secret"
-	"github.com/xmidt-org/ears/pkg/tenant"
 	"io/ioutil"
 	"net/http"
 	"strings"
 	"time"
+
+	"github.com/rs/zerolog"
+	"github.com/xmidt-org/ears/internal/pkg/config"
+	"github.com/xmidt-org/ears/pkg/secret"
+	"github.com/xmidt-org/ears/pkg/tenant"
 )
 
-//ConfigVault provides secrets from ears app configuration
+// ConfigVault provides secrets from ears app configuration
 type ConfigVault struct {
 	config config.Config
 }
@@ -74,9 +75,6 @@ type (
 	}
 )
 
-const SAT_URL = "https://sat-prod.codebig2.net/oauth/token"
-const CREDENTIAL_URL = "https://{{env}}gears.comcast.com/v2/applications/{{app}}/credentials/{{key}}"
-
 var satToken SatToken
 
 func NewConfigVault(config config.Config) secret.Vault {
@@ -118,8 +116,6 @@ func NewTenantConfigVault(tid tenant.Id, parentVault secret.Vault, tenantStorer 
 }
 
 func (v *TenantConfigVault) getSatBearerToken(ctx context.Context) (string, error) {
-	//curl -s -X POST -H "X-Client-Id: ***" -H "X-Client-Secret: ***" -H "Cache-Control: no-cache" https://sat-prod.codebig2.net/oauth/token
-	//echo "Bearer $TOKEN"
 	if time.Now().Unix() >= satToken.ExpiresAt {
 		satToken = SatToken{}
 	}
@@ -131,7 +127,11 @@ func (v *TenantConfigVault) getSatBearerToken(ctx context.Context) (string, erro
 			Timeout: 10 * time.Second,
 		}
 	}
-	req, err := http.NewRequest("POST", SAT_URL, nil)
+	SATUrl := v.Secret(ctx, "secret://SATUrl")
+	if SATUrl == "" {
+		return "", errors.New("missing SAT URL")
+	}
+	req, err := http.NewRequest("POST", SATUrl, nil)
 	if err != nil {
 		return "", err
 	}
@@ -139,13 +139,19 @@ func (v *TenantConfigVault) getSatBearerToken(ctx context.Context) (string, erro
 	if err != nil {
 		return "", err
 	}
-	if len(tenantConfig.ClientIds) == 0 {
+	clientId := ""
+	if tenantConfig.ClientId != "" {
+		clientId = tenantConfig.ClientId
+	} else if len(tenantConfig.ClientIds) > 0 {
+		clientId = tenantConfig.ClientIds[0]
+	}
+	if clientId == "" {
 		return "", errors.New("tenant has no client IDs")
 	}
 	if tenantConfig.ClientSecret == "" {
 		return "", errors.New("tenant has no client secret")
 	}
-	req.Header.Add("X-Client-Id", tenantConfig.ClientIds[0])
+	req.Header.Add("X-Client-Id", clientId)
 	req.Header.Add("X-Client-Secret", tenantConfig.ClientSecret)
 	req.Header.Add("Cache-Control", "no-cache")
 	resp, err := v.httpClient.Do(req)
@@ -183,8 +189,10 @@ func (v *TenantConfigVault) getCredential(ctx context.Context, key string, crede
 	if env == "prod." {
 		env = ""
 	}
-	url := CREDENTIAL_URL
-	url = strings.Replace(url, "{{env}}", env, -1)
+	url := v.Secret(ctx, "secret://CredentialUrl")
+	if url == "" {
+		return nil, errors.New("missing credential URL")
+	}
 	url = strings.Replace(url, "{{app}}", v.tid.AppId, -1)
 	url = strings.Replace(url, "{{key}}", key, -1)
 	req, err := http.NewRequest("GET", url, nil)

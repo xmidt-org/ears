@@ -39,7 +39,9 @@ import (
 	"go.opentelemetry.io/otel/metric/unit"
 	"go.opentelemetry.io/otel/trace"
 	"hash/fnv"
+	"math"
 	"os"
+	"sort"
 	"strings"
 	"time"
 )
@@ -159,13 +161,50 @@ func (s *Sender) getMetrics(labels []DynamicMetricValue) *SenderMetrics {
 }
 
 func (s *Sender) initPlugin() error {
-	var err error
 	s.Lock()
-	s.producer, err = s.NewProducer(*s.config.SenderPoolSize)
-	s.Unlock()
-	if err != nil {
-		return err
+	defer s.Unlock()
+
+	activeClusters := s.secrets.Secret(context.Background(), s.config.ActiveClusters)
+	if len(activeClusters) > 0 {
+		clusterKeys := strings.Split(activeClusters, ",")
+		for _, key := range clusterKeys {
+			settings, ok := s.config.Clusters[key]
+			if !ok {
+				return fmt.Errorf("activeClusters key %s not found in clusters", key)
+			}
+			producer, err := s.NewProducer(key, settings, *s.config.SenderPoolSize)
+			if err != nil {
+				return err
+			}
+			s.producers = append(s.producers, producer)
+		}
+	} else if len(s.config.Clusters) > 0 {
+		for key, settings := range s.config.Clusters {
+			producer, err := s.NewProducer(key, settings, *s.config.SenderPoolSize)
+			if err != nil {
+				return err
+			}
+			s.producers = append(s.producers, producer)
+		}
+	} else {
+		producer, err := s.NewProducer("default", BrokerSettings{
+			Brokers:    s.config.Brokers,
+			Username:   s.config.Username,
+			Password:   s.config.Password,
+			CACert:     s.config.CACert,
+			AccessCert: s.config.AccessCert,
+			AccessKey:  s.config.AccessKey,
+			TLSEnable:  s.config.TLSEnable,
+		}, *s.config.SenderPoolSize)
+		if err != nil {
+			return err
+		}
+		s.producers = append(s.producers, producer)
 	}
+	sort.Slice(s.producers, func(i, j int) bool {
+		return s.producers[i].key < s.producers[j].key
+	})
+
 	return nil
 }
 
@@ -187,16 +226,18 @@ func (s *Sender) StopSending(ctx context.Context) {
 			m.eventProcessingTime.Unbind()
 			m.eventSendOutTime.Unbind()
 		}
-		s.producer.Close(ctx)
+		for _, p := range s.producers {
+			p.Close(ctx)
+		}
 		s.DeleteMetrics()
 	}
 }
 
-func (s *Sender) NewProducer(count int) (*Producer, error) {
+func (s *Sender) NewProducer(key string, settings BrokerSettings, count int) (*Producer, error) {
 	if s.config.Brokers == "" {
 		return nil, fmt.Errorf("Brokers cannot be empty")
 	}
-	ps, c, err := s.NewSyncProducers(count)
+	ps, c, err := s.NewSyncProducers(settings, count)
 	if nil != err {
 		return nil, err
 	}
@@ -210,6 +251,7 @@ func (s *Sender) NewProducer(count int) (*Producer, error) {
 		client: c,
 		logger: s.logger,
 		sender: s,
+		key:    key,
 	}, nil
 }
 
@@ -219,7 +261,7 @@ func NewManualHashPartitioner(topic string) sarama.Partitioner {
 	}
 }
 
-func (s *Sender) setConfig(config *sarama.Config) error {
+func (s *Sender) setConfig(config *sarama.Config, settings BrokerSettings) error {
 	if "" != s.config.Version {
 		v, err := sarama.ParseKafkaVersion(s.config.Version)
 		if nil != err {
@@ -230,28 +272,28 @@ func (s *Sender) setConfig(config *sarama.Config) error {
 	if 0 < *s.config.ChannelBufferSize {
 		config.ChannelBufferSize = *s.config.ChannelBufferSize
 	}
-	config.Net.TLS.Enable = s.config.TLSEnable
+	config.Net.TLS.Enable = settings.TLSEnable
 	ctx := context.Background()
-	if "" != s.config.Username {
+	if "" != settings.Username {
 		config.Net.TLS.Enable = true
 		config.Net.SASL.Enable = true
-		config.Net.SASL.User = s.config.Username
-		config.Net.SASL.Password = s.secrets.Secret(ctx, s.config.Password)
+		config.Net.SASL.User = settings.Username
+		config.Net.SASL.Password = s.secrets.Secret(ctx, settings.Password)
 		if config.Net.SASL.Password == "" {
-			config.Net.SASL.Password = s.config.Password
+			config.Net.SASL.Password = settings.Password
 		}
-	} else if "" != s.config.AccessCert {
-		accessCert := s.secrets.Secret(ctx, s.config.AccessCert)
+	} else if "" != settings.AccessCert {
+		accessCert := s.secrets.Secret(ctx, settings.AccessCert)
 		if accessCert == "" {
 			accessCert = s.config.AccessCert
 		}
-		accessKey := s.secrets.Secret(ctx, s.config.AccessKey)
+		accessKey := s.secrets.Secret(ctx, settings.AccessKey)
 		if accessKey == "" {
-			accessKey = s.config.AccessKey
+			accessKey = settings.AccessKey
 		}
-		caCert := s.secrets.Secret(ctx, s.config.CACert)
+		caCert := s.secrets.Secret(ctx, settings.CACert)
 		if caCert == "" {
-			caCert = s.config.CACert
+			caCert = settings.CACert
 		}
 		keypair, err := tls.X509KeyPair([]byte(accessCert), []byte(accessKey))
 		if err != nil {
@@ -271,11 +313,11 @@ func (s *Sender) setConfig(config *sarama.Config) error {
 	return nil
 }
 
-func (s *Sender) NewSyncProducers(count int) ([]sarama.SyncProducer, sarama.Client, error) {
+func (s *Sender) NewSyncProducers(settings BrokerSettings, count int) ([]sarama.SyncProducer, sarama.Client, error) {
 	ctx := context.Background()
-	brokersStr := s.secrets.Secret(ctx, s.config.Brokers)
+	brokersStr := s.secrets.Secret(ctx, settings.Brokers)
 	if brokersStr == "" {
-		brokersStr = s.config.Brokers
+		brokersStr = settings.Brokers
 	}
 	brokers := strings.Split(brokersStr, ",")
 	config := sarama.NewConfig()
@@ -295,7 +337,7 @@ func (s *Sender) NewSyncProducers(count int) ([]sarama.SyncProducer, sarama.Clie
 		config.Producer.CompressionLevel = *s.config.CompressionLevel
 	}
 	config.Producer.Return.Successes = true
-	if err := s.setConfig(config); nil != err {
+	if err := s.setConfig(config, settings); nil != err {
 		return nil, nil, err
 	}
 	producers := make([]sarama.SyncProducer, count)
@@ -372,7 +414,6 @@ func (p *Producer) SendMessage(ctx context.Context, topic string, partition int,
 		Timestamp: time.Now(),
 	}
 	otel.GetTextMapPropagator().Inject(ctx, otelsarama.NewProducerMessageCarrier(message))
-
 	part, offset, err := producer.SendMessage(message)
 	if nil != err {
 		return err
@@ -380,7 +421,7 @@ func (p *Producer) SendMessage(ctx context.Context, topic string, partition int,
 	// override log values if any
 	elapsed := time.Since(start).Milliseconds()
 	p.sender.getMetrics(p.sender.getLabelValues(e, p.sender.config.DynamicMetricLabels)).eventSendOutTime.Record(ctx, elapsed)
-	log.Ctx(ctx).Debug().Str("op", "gears.Send").Int("elapsed", int(elapsed)).Int("partition", int(part)).Int("offset", int(offset)).Msg("sent message on gears topic")
+	log.Ctx(ctx).Debug().Str("op", "gears.Send").Str("topic", topic).Int("elapsed", int(elapsed)).Int("partition", int(part)).Int("offset", int(offset)).Msg("sent message on gears topic")
 	return nil
 }
 
@@ -399,92 +440,41 @@ func (s *Sender) Send(e event.Event) {
 		s.getMetrics(s.getLabelValues(e, s.config.DynamicMetricLabels)).eventFailureCounter.Add(e.Context(), 1.0)
 		return
 	}
-	to := make(map[string]string, 0)
-	obj, _, _ := e.Evaluate(s.config.Partner)
-	if obj != nil {
-		switch partner := obj.(type) {
-		case string:
-			to["partner"] = partner
-		}
-	}
-	if to["partner"] == "" {
-		log.Ctx(e.Context()).Error().Str("op", "gears.Send").Str("name", s.Name()).Str("tid", s.Tenant().ToString()).Msg("missing gears routing information partner")
-		if span := trace.SpanFromContext(e.Context()); span != nil {
-			span.AddEvent("missing partner")
-		}
-		e.Ack()
-		return
-	}
-	obj, _, _ = e.Evaluate(s.config.App)
-	if obj != nil {
-		switch app := obj.(type) {
-		case string:
-			to["app"] = app
-		}
-	}
-	if to["app"] == "" {
-		log.Ctx(e.Context()).Error().Str("op", "gears.Send").Str("name", s.Name()).Str("tid", s.Tenant().ToString()).Msg("missing gears routing information app")
-		if span := trace.SpanFromContext(e.Context()); span != nil {
-			span.AddEvent("missing app")
-		}
-		e.Ack()
-		return
-	}
-	locations := make([]string, 0)
-	obj, _, _ = e.Evaluate(s.config.Location)
-	if obj != nil {
-		switch loc := obj.(type) {
-		case string:
-			locations = append(locations, loc)
-		case []string:
-			for _, ls := range loc {
-				obj, _, _ := e.Evaluate(ls)
-				switch sls := obj.(type) {
-				case string:
-					locations = append(locations, sls)
-				}
+	if s.config.Enveloped {
+		location := ""
+		obj, _, _ := e.Evaluate("{.to.location}")
+		if obj != nil {
+			switch l := obj.(type) {
+			case string:
+				location = l
 			}
-		case []interface{}:
-			for _, l := range loc {
-				if ls, ok := l.(string); ok {
-					obj, _, _ := e.Evaluate(ls)
-					switch sls := obj.(type) {
-					case string:
-						locations = append(locations, sls)
-					}
+		}
+		if location == "" {
+			log.Ctx(e.Context()).Error().Str("op", "gears.Send").Str("name", s.Name()).Str("tid", s.Tenant().ToString()).Msg("invalid gears envelope missing location")
+			if span := trace.SpanFromContext(e.Context()); span != nil {
+				span.AddEvent("invalid gears envelope")
+			}
+			e.Ack()
+			return
+		}
+		//if tx.traceId not set and if e.UserTraceId() is set, set tx.traceId to e.UserTraceId()
+		payload, ok := e.Payload().(map[string]interface{})
+		if ok {
+			tx, ok := payload["tx"].(map[string]interface{})
+			if ok {
+				_, ok := tx["traceId"]
+				if !ok && e.UserTraceId() != "" {
+					tx["traceId"] = e.UserTraceId()
+					payload["tx"] = tx
+				}
+			} else {
+				if e.UserTraceId() != "" {
+					payload["tx"] = map[string]interface{}{"traceId": e.UserTraceId()}
 				}
 			}
 		}
-	}
-	if len(locations) == 0 {
-		log.Ctx(e.Context()).Error().Str("op", "gears.Send").Str("name", s.Name()).Str("tid", s.Tenant().ToString()).Msg("missing gears routing information location")
-		if span := trace.SpanFromContext(e.Context()); span != nil {
-			span.AddEvent("missing location")
-		}
-		e.Ack()
-		return
-	}
-	tx := make(map[string]string, 0)
-	obj, _, _ = e.Evaluate("{trace.id}")
-	if obj != nil {
-		switch txid := obj.(type) {
-		case string:
-			tx["traceId"] = txid
-		}
-	}
-	message := make(map[string]interface{}, 0)
-	message["op"] = "process"
-	if s.config.Uses != "" {
-		message["uses"] = s.config.Uses
-	}
-	message["payload"] = e.Payload()
-	envelope := make(map[string]interface{}, 0)
-	envelope["message"] = message
-	envelope["to"] = to
-	envelope["tx"] = tx
-	for _, l := range locations {
-		to["location"] = l
-		buf, err := json.Marshal(envelope)
+
+		buf, err := json.Marshal(payload)
 		if err != nil {
 			log.Ctx(e.Context()).Error().Str("op", "gears.Send").Str("name", s.Name()).Str("tid", s.Tenant().ToString()).Msg("failed to marshal message: " + err.Error())
 			s.getMetrics(s.getLabelValues(e, s.config.DynamicMetricLabels)).eventFailureCounter.Add(e.Context(), 1.0)
@@ -494,11 +484,12 @@ func (s *Sender) Send(e event.Event) {
 		}
 		s.getMetrics(s.getLabelValues(e, s.config.DynamicMetricLabels)).eventProcessingTime.Record(e.Context(), time.Since(e.Created()).Milliseconds())
 		s.getMetrics(s.getLabelValues(e, s.config.DynamicMetricLabels)).eventBytesCounter.Add(e.Context(), int64(len(buf)))
-		hashbuf := []byte(to["location"])
+		hashbuf := []byte(location)
 		h := fnv.New32a()
 		h.Write(hashbuf)
+		pIdx := getProducerIdx(h.Sum32(), len(s.producers))
 		partition := int(h.Sum32())
-		err = s.producer.SendMessage(e.Context(), s.config.Topic, partition, nil, buf, e)
+		err = s.producers[pIdx].SendMessage(e.Context(), s.config.Topic, partition, nil, buf, e)
 		if err != nil {
 			log.Ctx(e.Context()).Error().Str("op", "gears.Send").Str("name", s.Name()).Str("tid", s.Tenant().ToString()).Msg("failed to send message: " + err.Error())
 			s.getMetrics(s.getLabelValues(e, s.config.DynamicMetricLabels)).eventFailureCounter.Add(e.Context(), 1)
@@ -510,10 +501,147 @@ func (s *Sender) Send(e event.Event) {
 		s.LogSuccess()
 		s.Lock()
 		s.count++
-		log.Ctx(e.Context()).Debug().Str("op", "gears.Send").Str("name", s.Name()).Str("tid", s.Tenant().ToString()).Int("count", s.count).Msg("sent message on gears topic")
+		log.Ctx(e.Context()).Info().Str("op", "gears.Send").
+			Str("name", s.Name()).Uint32("hash", h.Sum32()).Str("producer", s.producers[pIdx].key).
+			Str("location", location).Str("tid", s.Tenant().ToString()).Int("count", s.count).
+			Str("Payload", string(buf)).Str("Topic", s.config.Topic).
+			Msg("sent enveloped message on gears topic")
 		s.Unlock()
+	} else {
+		to := make(map[string]string, 0)
+		obj, _, _ := e.Evaluate(s.config.Partner)
+		if obj != nil {
+			switch partner := obj.(type) {
+			case string:
+				to["partner"] = partner
+			}
+		}
+		if to["partner"] == "" {
+			log.Ctx(e.Context()).Error().Str("op", "gears.Send").Str("name", s.Name()).Str("tid", s.Tenant().ToString()).Msg("missing gears routing information partner")
+			if span := trace.SpanFromContext(e.Context()); span != nil {
+				span.AddEvent("missing partner")
+			}
+			e.Ack()
+			return
+		}
+		obj, _, _ = e.Evaluate(s.config.App)
+		if obj != nil {
+			switch app := obj.(type) {
+			case string:
+				to["app"] = app
+			}
+		}
+		if to["app"] == "" {
+			log.Ctx(e.Context()).Error().Str("op", "gears.Send").Str("name", s.Name()).Str("tid", s.Tenant().ToString()).Msg("missing gears routing information app")
+			if span := trace.SpanFromContext(e.Context()); span != nil {
+				span.AddEvent("missing app")
+			}
+			e.Ack()
+			return
+		}
+		locations := make([]string, 0)
+		obj, _, _ = e.Evaluate(s.config.Location)
+		if obj != nil {
+			switch loc := obj.(type) {
+			case string:
+				locations = append(locations, loc)
+			case []string:
+				for _, ls := range loc {
+					obj, _, _ := e.Evaluate(ls)
+					switch sls := obj.(type) {
+					case string:
+						locations = append(locations, sls)
+					}
+				}
+			case []interface{}:
+				for _, l := range loc {
+					if ls, ok := l.(string); ok {
+						obj, _, _ := e.Evaluate(ls)
+						switch sls := obj.(type) {
+						case string:
+							locations = append(locations, sls)
+						}
+					}
+				}
+			}
+		}
+		if len(locations) == 0 {
+			log.Ctx(e.Context()).Error().Str("op", "gears.Send").Str("name", s.Name()).Str("tid", s.Tenant().ToString()).Msg("missing gears routing information location")
+			if span := trace.SpanFromContext(e.Context()); span != nil {
+				span.AddEvent("missing location")
+			}
+			e.Ack()
+			return
+		}
+		tx := make(map[string]string, 0)
+		if e.UserTraceId() != "" {
+			tx["traceId"] = e.UserTraceId()
+		} else {
+			obj, _, _ = e.Evaluate("{trace.id}")
+			if obj != nil {
+				switch txid := obj.(type) {
+				case string:
+					tx["traceId"] = txid
+				}
+			}
+		}
+		message := make(map[string]interface{}, 0)
+		message["op"] = "process"
+		if s.config.Uses != "" {
+			message["uses"] = s.config.Uses
+		}
+		message["payload"] = e.Payload()
+		envelope := make(map[string]interface{}, 0)
+		envelope["message"] = message
+		envelope["to"] = to
+		envelope["tx"] = tx
+		for _, l := range locations {
+			to["location"] = l
+			buf, err := json.Marshal(envelope)
+			if err != nil {
+				log.Ctx(e.Context()).Error().Str("op", "gears.Send").Str("name", s.Name()).Str("tid", s.Tenant().ToString()).Msg("failed to marshal message: " + err.Error())
+				s.getMetrics(s.getLabelValues(e, s.config.DynamicMetricLabels)).eventFailureCounter.Add(e.Context(), 1.0)
+				s.LogError()
+				e.Nack(err)
+				return
+			}
+			s.getMetrics(s.getLabelValues(e, s.config.DynamicMetricLabels)).eventProcessingTime.Record(e.Context(), time.Since(e.Created()).Milliseconds())
+			s.getMetrics(s.getLabelValues(e, s.config.DynamicMetricLabels)).eventBytesCounter.Add(e.Context(), int64(len(buf)))
+			hashbuf := []byte(to["location"])
+			h := fnv.New32a()
+			h.Write(hashbuf)
+			pIdx := getProducerIdx(h.Sum32(), len(s.producers))
+			partition := int(h.Sum32())
+			err = s.producers[pIdx].SendMessage(e.Context(), s.config.Topic, partition, nil, buf, e)
+			if err != nil {
+				log.Ctx(e.Context()).Error().Str("op", "gears.Send").Str("name", s.Name()).Str("tid", s.Tenant().ToString()).Msg("failed to send message: " + err.Error())
+				s.getMetrics(s.getLabelValues(e, s.config.DynamicMetricLabels)).eventFailureCounter.Add(e.Context(), 1)
+				s.LogError()
+				e.Nack(err)
+				return
+			}
+			s.getMetrics(s.getLabelValues(e, s.config.DynamicMetricLabels)).eventSuccessCounter.Add(e.Context(), 1)
+			s.LogSuccess()
+			s.Lock()
+			s.count++
+			log.Ctx(e.Context()).Info().Str("op", "gears.Send").
+				Str("name", s.Name()).Uint32("hash", h.Sum32()).Str("producer", s.producers[pIdx].key).
+				Str("location", l).Str("tid", s.Tenant().ToString()).Int("count", s.count).
+				Str("Payload", string(buf)).Str("Topic", s.config.Topic).
+				Msg("sent message on gears topic")
+			s.Unlock()
+		}
 	}
 	e.Ack()
+}
+
+// Given a hash and the number of producers, return the index of the producer to use
+// We do not use % here because we are going to % the hash again in SendMessage
+// Instead, we index by dividing uint32 by the number of producers and see which
+// bucket is the hash in.
+func getProducerIdx(hash uint32, count int) int {
+	bucket := math.MaxUint32 / uint32(count)
+	return int(hash / bucket)
 }
 
 func (s *Sender) Unwrap() sender.Sender {
