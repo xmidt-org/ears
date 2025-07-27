@@ -124,7 +124,7 @@ func (r *AdaptiveRateLimiter) initLimiter(ctx context.Context) error {
 	return nil
 }
 
-//Tune RQS check the rate limit history and ask backend ratelimiter for a new quota if necessary
+// Tune RQS check the rate limit history and ask backend ratelimiter for a new quota if necessary
 func (r *AdaptiveRateLimiter) tuneRqs(ctx context.Context) error {
 	if r.lastTune.Add(time.Second).After(time.Now()) {
 		//No need to tune yet

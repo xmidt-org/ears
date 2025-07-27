@@ -148,7 +148,7 @@ func (m *QuotaManager) SyncItem(ctx context.Context, tid tenant.Id, itemId strin
 	return limiter.SetLimit(tenantRqs)
 }
 
-//PublishQuota publishes tenant quota to ratelimiters in all nodes so they can sync to the new quota
+// PublishQuota publishes tenant quota to ratelimiters in all nodes so they can sync to the new quota
 func (m *QuotaManager) PublishQuota(ctx context.Context, tid tenant.Id) error {
 	err := m.SyncItem(ctx, tid, "ignored", true)
 	if err != nil {

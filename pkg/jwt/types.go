@@ -29,7 +29,7 @@ type (
 	Verifier func(path, method, scope string) bool
 )
 
-//401 errors
+// 401 errors
 type UnauthorizedError struct {
 	Msg string
 }

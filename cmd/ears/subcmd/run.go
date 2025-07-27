@@ -105,62 +105,62 @@ func init() {
 	cli.ViperAddArguments(
 		runCmd,
 		[]cli.Argument{
-			cli.Argument{
+			{
 				Name: "logLevel", Shorthand: "", Type: cli.ArgTypeString,
 				Default: "info", LookupKey: "ears.logLevel",
 				Description: "log level",
 			},
-			cli.Argument{
+			{
 				Name: "port", Shorthand: "", Type: cli.ArgTypeInt,
 				Default: 8080, LookupKey: "ears.api.port",
 				Description: "API port",
 			},
-			cli.Argument{
+			{
 				Name: "env", Shorthand: "", Type: cli.ArgTypeString,
 				Default: "local", LookupKey: "ears.env",
 				Description: "environment",
 			},
-			cli.Argument{
+			{
 				Name: "hostname", Shorthand: "", Type: cli.ArgTypeString,
 				Default: "", LookupKey: "ears.hostname",
 				Description: "hostname",
 			},
-			cli.Argument{
+			{
 				Name: "region", Shorthand: "", Type: cli.ArgTypeString,
 				Default: "us-west-2", LookupKey: "ears.region",
 				Description: "region",
 			},
-			cli.Argument{
+			{
 				Name: "routeStorageType", Shorthand: "", Type: cli.ArgTypeString,
 				Default: "inmemory", LookupKey: "ears.storage.route.type",
 				Description: "persistence layer storage type for routes (inmemory, dynamodb)",
 			},
-			cli.Argument{
+			{
 				Name: "routeStorageDynamoRegion", Shorthand: "", Type: cli.ArgTypeString,
 				Default: "us-west-2", LookupKey: "ears.storage.route.region",
 				Description: "route dynamodb region",
 			},
-			cli.Argument{
+			{
 				Name: "routeStorageDynamoTable", Shorthand: "", Type: cli.ArgTypeString,
 				Default: "dev.ears.routes", LookupKey: "ears.storage.route.table",
 				Description: "route dynamodb table name",
 			},
-			cli.Argument{
+			{
 				Name: "tenantStorageType", Shorthand: "", Type: cli.ArgTypeString,
 				Default: "inmemory", LookupKey: "ears.storage.tenant.type",
 				Description: "persistence layer storage type for tenants (inmemory, dynamodb)",
 			},
-			cli.Argument{
+			{
 				Name: "tenantStorageDynamoRegion", Shorthand: "", Type: cli.ArgTypeString,
 				Default: "us-west-2", LookupKey: "ears.storage.tenant.region",
 				Description: "tenant dynamodb region",
 			},
-			cli.Argument{
+			{
 				Name: "tenantStorageDynamoTable", Shorthand: "", Type: cli.ArgTypeString,
 				Default: "dev.ears.tenant", LookupKey: "ears.storage.tenant.table",
 				Description: "tenant dynamodb table name",
 			},
-			cli.Argument{
+			{
 				Name: "redisEndpoint", Shorthand: "", Type: cli.ArgTypeString,
 				Default: "localhost:6379", LookupKey: "ears.synchronization.endpoint",
 				Description: "redis endpoint for routing table synchronization",

@@ -18,19 +18,19 @@ var _ Hasher = &HasherMock{}
 
 // HasherMock is a mock implementation of Hasher.
 //
-// 	func TestSomethingThatUsesHasher(t *testing.T) {
+//	func TestSomethingThatUsesHasher(t *testing.T) {
 //
-// 		// make and configure a mocked Hasher
-// 		mockedHasher := &HasherMock{
-// 			ReceiverHashFunc: func(config interface{}) (string, error) {
-// 				panic("mock out the ReceiverHash method")
-// 			},
-// 		}
+//		// make and configure a mocked Hasher
+//		mockedHasher := &HasherMock{
+//			ReceiverHashFunc: func(config interface{}) (string, error) {
+//				panic("mock out the ReceiverHash method")
+//			},
+//		}
 //
-// 		// use mockedHasher in code that requires Hasher
-// 		// and then make assertions.
+//		// use mockedHasher in code that requires Hasher
+//		// and then make assertions.
 //
-// 	}
+//	}
 type HasherMock struct {
 	// ReceiverHashFunc mocks the ReceiverHash method.
 	ReceiverHashFunc func(config interface{}) (string, error)
@@ -64,7 +64,8 @@ func (mock *HasherMock) ReceiverHash(config interface{}) (string, error) {
 
 // ReceiverHashCalls gets all the calls that were made to ReceiverHash.
 // Check the length with:
-//     len(mockedHasher.ReceiverHashCalls())
+//
+//	len(mockedHasher.ReceiverHashCalls())
 func (mock *HasherMock) ReceiverHashCalls() []struct {
 	Config interface{}
 } {
@@ -83,22 +84,22 @@ var _ NewReceiverer = &NewReceivererMock{}
 
 // NewReceivererMock is a mock implementation of NewReceiverer.
 //
-// 	func TestSomethingThatUsesNewReceiverer(t *testing.T) {
+//	func TestSomethingThatUsesNewReceiverer(t *testing.T) {
 //
-// 		// make and configure a mocked NewReceiverer
-// 		mockedNewReceiverer := &NewReceivererMock{
-// 			NewReceiverFunc: func(tid tenant.Id, plugin string, name string, config interface{}, secrets secret.Vault) (Receiver, error) {
-// 				panic("mock out the NewReceiver method")
-// 			},
-// 			ReceiverHashFunc: func(config interface{}) (string, error) {
-// 				panic("mock out the ReceiverHash method")
-// 			},
-// 		}
+//		// make and configure a mocked NewReceiverer
+//		mockedNewReceiverer := &NewReceivererMock{
+//			NewReceiverFunc: func(tid tenant.Id, plugin string, name string, config interface{}, secrets secret.Vault) (Receiver, error) {
+//				panic("mock out the NewReceiver method")
+//			},
+//			ReceiverHashFunc: func(config interface{}) (string, error) {
+//				panic("mock out the ReceiverHash method")
+//			},
+//		}
 //
-// 		// use mockedNewReceiverer in code that requires NewReceiverer
-// 		// and then make assertions.
+//		// use mockedNewReceiverer in code that requires NewReceiverer
+//		// and then make assertions.
 //
-// 	}
+//	}
 type NewReceivererMock struct {
 	// NewReceiverFunc mocks the NewReceiver method.
 	NewReceiverFunc func(tid tenant.Id, plugin string, name string, config interface{}, secrets secret.Vault, tableSyncer syncer.DeltaSyncer) (Receiver, error)
@@ -157,7 +158,8 @@ func (mock *NewReceivererMock) NewReceiver(tid tenant.Id, plugin string, name st
 
 // NewReceiverCalls gets all the calls that were made to NewReceiver.
 // Check the length with:
-//     len(mockedNewReceiverer.NewReceiverCalls())
+//
+//	len(mockedNewReceiverer.NewReceiverCalls())
 func (mock *NewReceivererMock) NewReceiverCalls() []struct {
 	Tid     tenant.Id
 	Plugin  string
@@ -196,7 +198,8 @@ func (mock *NewReceivererMock) ReceiverHash(config interface{}) (string, error) 
 
 // ReceiverHashCalls gets all the calls that were made to ReceiverHash.
 // Check the length with:
-//     len(mockedNewReceiverer.ReceiverHashCalls())
+//
+//	len(mockedNewReceiverer.ReceiverHashCalls())
 func (mock *NewReceivererMock) ReceiverHashCalls() []struct {
 	Config interface{}
 } {
@@ -215,37 +218,37 @@ var _ Receiver = &ReceiverMock{}
 
 // ReceiverMock is a mock implementation of Receiver.
 //
-// 	func TestSomethingThatUsesReceiver(t *testing.T) {
+//	func TestSomethingThatUsesReceiver(t *testing.T) {
 //
-// 		// make and configure a mocked Receiver
-// 		mockedReceiver := &ReceiverMock{
-// 			ConfigFunc: func() interface{} {
-// 				panic("mock out the Config method")
-// 			},
-// 			NameFunc: func() string {
-// 				panic("mock out the Name method")
-// 			},
-// 			PluginFunc: func() string {
-// 				panic("mock out the Plugin method")
-// 			},
-// 			ReceiveFunc: func(next NextFn) error {
-// 				panic("mock out the Receive method")
-// 			},
-// 			StopReceivingFunc: func(ctx context.Context) error {
-// 				panic("mock out the StopReceiving method")
-// 			},
-// 			TenantFunc: func() tenant.Id {
-// 				panic("mock out the Tenant method")
-// 			},
-// 			TriggerFunc: func(e event.Event)  {
-// 				panic("mock out the Trigger method")
-// 			},
-// 		}
+//		// make and configure a mocked Receiver
+//		mockedReceiver := &ReceiverMock{
+//			ConfigFunc: func() interface{} {
+//				panic("mock out the Config method")
+//			},
+//			NameFunc: func() string {
+//				panic("mock out the Name method")
+//			},
+//			PluginFunc: func() string {
+//				panic("mock out the Plugin method")
+//			},
+//			ReceiveFunc: func(next NextFn) error {
+//				panic("mock out the Receive method")
+//			},
+//			StopReceivingFunc: func(ctx context.Context) error {
+//				panic("mock out the StopReceiving method")
+//			},
+//			TenantFunc: func() tenant.Id {
+//				panic("mock out the Tenant method")
+//			},
+//			TriggerFunc: func(e event.Event)  {
+//				panic("mock out the Trigger method")
+//			},
+//		}
 //
-// 		// use mockedReceiver in code that requires Receiver
-// 		// and then make assertions.
+//		// use mockedReceiver in code that requires Receiver
+//		// and then make assertions.
 //
-// 	}
+//	}
 type ReceiverMock struct {
 	// ConfigFunc mocks the Config method.
 	ConfigFunc func() interface{}
@@ -322,7 +325,8 @@ func (mock *ReceiverMock) Config() interface{} {
 
 // ConfigCalls gets all the calls that were made to Config.
 // Check the length with:
-//     len(mockedReceiver.ConfigCalls())
+//
+//	len(mockedReceiver.ConfigCalls())
 func (mock *ReceiverMock) ConfigCalls() []struct {
 } {
 	var calls []struct {
@@ -370,7 +374,8 @@ func (mock *ReceiverMock) EventTs() int64 {
 
 // NameCalls gets all the calls that were made to Name.
 // Check the length with:
-//     len(mockedReceiver.NameCalls())
+//
+//	len(mockedReceiver.NameCalls())
 func (mock *ReceiverMock) NameCalls() []struct {
 } {
 	var calls []struct {
@@ -396,7 +401,8 @@ func (mock *ReceiverMock) Plugin() string {
 
 // PluginCalls gets all the calls that were made to Plugin.
 // Check the length with:
-//     len(mockedReceiver.PluginCalls())
+//
+//	len(mockedReceiver.PluginCalls())
 func (mock *ReceiverMock) PluginCalls() []struct {
 } {
 	var calls []struct {
@@ -425,7 +431,8 @@ func (mock *ReceiverMock) Receive(next NextFn) error {
 
 // ReceiveCalls gets all the calls that were made to Receive.
 // Check the length with:
-//     len(mockedReceiver.ReceiveCalls())
+//
+//	len(mockedReceiver.ReceiveCalls())
 func (mock *ReceiverMock) ReceiveCalls() []struct {
 	Next NextFn
 } {
@@ -456,7 +463,8 @@ func (mock *ReceiverMock) StopReceiving(ctx context.Context) error {
 
 // StopReceivingCalls gets all the calls that were made to StopReceiving.
 // Check the length with:
-//     len(mockedReceiver.StopReceivingCalls())
+//
+//	len(mockedReceiver.StopReceivingCalls())
 func (mock *ReceiverMock) StopReceivingCalls() []struct {
 	Ctx context.Context
 } {
@@ -484,7 +492,8 @@ func (mock *ReceiverMock) Tenant() tenant.Id {
 
 // TenantCalls gets all the calls that were made to Tenant.
 // Check the length with:
-//     len(mockedReceiver.TenantCalls())
+//
+//	len(mockedReceiver.TenantCalls())
 func (mock *ReceiverMock) TenantCalls() []struct {
 } {
 	var calls []struct {
@@ -513,7 +522,8 @@ func (mock *ReceiverMock) Trigger(e event.Event) {
 
 // TriggerCalls gets all the calls that were made to Trigger.
 // Check the length with:
-//     len(mockedReceiver.TriggerCalls())
+//
+//	len(mockedReceiver.TriggerCalls())
 func (mock *ReceiverMock) TriggerCalls() []struct {
 	E event.Event
 } {

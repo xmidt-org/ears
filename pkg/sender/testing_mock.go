@@ -18,19 +18,19 @@ var _ Hasher = &HasherMock{}
 
 // HasherMock is a mock implementation of Hasher.
 //
-// 	func TestSomethingThatUsesHasher(t *testing.T) {
+//	func TestSomethingThatUsesHasher(t *testing.T) {
 //
-// 		// make and configure a mocked Hasher
-// 		mockedHasher := &HasherMock{
-// 			SenderHashFunc: func(config interface{}) (string, error) {
-// 				panic("mock out the SenderHash method")
-// 			},
-// 		}
+//		// make and configure a mocked Hasher
+//		mockedHasher := &HasherMock{
+//			SenderHashFunc: func(config interface{}) (string, error) {
+//				panic("mock out the SenderHash method")
+//			},
+//		}
 //
-// 		// use mockedHasher in code that requires Hasher
-// 		// and then make assertions.
+//		// use mockedHasher in code that requires Hasher
+//		// and then make assertions.
 //
-// 	}
+//	}
 type HasherMock struct {
 	// SenderHashFunc mocks the SenderHash method.
 	SenderHashFunc func(config interface{}) (string, error)
@@ -64,7 +64,8 @@ func (mock *HasherMock) SenderHash(config interface{}) (string, error) {
 
 // SenderHashCalls gets all the calls that were made to SenderHash.
 // Check the length with:
-//     len(mockedHasher.SenderHashCalls())
+//
+//	len(mockedHasher.SenderHashCalls())
 func (mock *HasherMock) SenderHashCalls() []struct {
 	Config interface{}
 } {
@@ -83,22 +84,22 @@ var _ NewSenderer = &NewSendererMock{}
 
 // NewSendererMock is a mock implementation of NewSenderer.
 //
-// 	func TestSomethingThatUsesNewSenderer(t *testing.T) {
+//	func TestSomethingThatUsesNewSenderer(t *testing.T) {
 //
-// 		// make and configure a mocked NewSenderer
-// 		mockedNewSenderer := &NewSendererMock{
-// 			NewSenderFunc: func(tid tenant.Id, plugin string, name string, config interface{}, secrets secret.Vault) (Sender, error) {
-// 				panic("mock out the NewSender method")
-// 			},
-// 			SenderHashFunc: func(config interface{}) (string, error) {
-// 				panic("mock out the SenderHash method")
-// 			},
-// 		}
+//		// make and configure a mocked NewSenderer
+//		mockedNewSenderer := &NewSendererMock{
+//			NewSenderFunc: func(tid tenant.Id, plugin string, name string, config interface{}, secrets secret.Vault) (Sender, error) {
+//				panic("mock out the NewSender method")
+//			},
+//			SenderHashFunc: func(config interface{}) (string, error) {
+//				panic("mock out the SenderHash method")
+//			},
+//		}
 //
-// 		// use mockedNewSenderer in code that requires NewSenderer
-// 		// and then make assertions.
+//		// use mockedNewSenderer in code that requires NewSenderer
+//		// and then make assertions.
 //
-// 	}
+//	}
 type NewSendererMock struct {
 	// NewSenderFunc mocks the NewSender method.
 	NewSenderFunc func(tid tenant.Id, plugin string, name string, config interface{}, secrets secret.Vault, tableSyncer syncer.DeltaSyncer) (Sender, error)
@@ -157,7 +158,8 @@ func (mock *NewSendererMock) NewSender(tid tenant.Id, plugin string, name string
 
 // NewSenderCalls gets all the calls that were made to NewSender.
 // Check the length with:
-//     len(mockedNewSenderer.NewSenderCalls())
+//
+//	len(mockedNewSenderer.NewSenderCalls())
 func (mock *NewSendererMock) NewSenderCalls() []struct {
 	Tid     tenant.Id
 	Plugin  string
@@ -196,7 +198,8 @@ func (mock *NewSendererMock) SenderHash(config interface{}) (string, error) {
 
 // SenderHashCalls gets all the calls that were made to SenderHash.
 // Check the length with:
-//     len(mockedNewSenderer.SenderHashCalls())
+//
+//	len(mockedNewSenderer.SenderHashCalls())
 func (mock *NewSendererMock) SenderHashCalls() []struct {
 	Config interface{}
 } {
@@ -215,37 +218,37 @@ var _ Sender = &SenderMock{}
 
 // SenderMock is a mock implementation of Sender.
 //
-// 	func TestSomethingThatUsesSender(t *testing.T) {
+//	func TestSomethingThatUsesSender(t *testing.T) {
 //
-// 		// make and configure a mocked Sender
-// 		mockedSender := &SenderMock{
-// 			ConfigFunc: func() interface{} {
-// 				panic("mock out the Config method")
-// 			},
-// 			NameFunc: func() string {
-// 				panic("mock out the Name method")
-// 			},
-// 			PluginFunc: func() string {
-// 				panic("mock out the Plugin method")
-// 			},
-// 			SendFunc: func(e event.Event)  {
-// 				panic("mock out the Send method")
-// 			},
-// 			StopSendingFunc: func(ctx context.Context)  {
-// 				panic("mock out the StopSending method")
-// 			},
-// 			TenantFunc: func() tenant.Id {
-// 				panic("mock out the Tenant method")
-// 			},
-// 			UnwrapFunc: func() Sender {
-// 				panic("mock out the Unwrap method")
-// 			},
-// 		}
+//		// make and configure a mocked Sender
+//		mockedSender := &SenderMock{
+//			ConfigFunc: func() interface{} {
+//				panic("mock out the Config method")
+//			},
+//			NameFunc: func() string {
+//				panic("mock out the Name method")
+//			},
+//			PluginFunc: func() string {
+//				panic("mock out the Plugin method")
+//			},
+//			SendFunc: func(e event.Event)  {
+//				panic("mock out the Send method")
+//			},
+//			StopSendingFunc: func(ctx context.Context)  {
+//				panic("mock out the StopSending method")
+//			},
+//			TenantFunc: func() tenant.Id {
+//				panic("mock out the Tenant method")
+//			},
+//			UnwrapFunc: func() Sender {
+//				panic("mock out the Unwrap method")
+//			},
+//		}
 //
-// 		// use mockedSender in code that requires Sender
-// 		// and then make assertions.
+//		// use mockedSender in code that requires Sender
+//		// and then make assertions.
 //
-// 	}
+//	}
 type SenderMock struct {
 	// ConfigFunc mocks the Config method.
 	ConfigFunc func() interface{}
@@ -320,7 +323,8 @@ func (mock *SenderMock) Config() interface{} {
 
 // ConfigCalls gets all the calls that were made to Config.
 // Check the length with:
-//     len(mockedSender.ConfigCalls())
+//
+//	len(mockedSender.ConfigCalls())
 func (mock *SenderMock) ConfigCalls() []struct {
 } {
 	var calls []struct {
@@ -366,7 +370,8 @@ func (mock *SenderMock) Name() string {
 
 // NameCalls gets all the calls that were made to Name.
 // Check the length with:
-//     len(mockedSender.NameCalls())
+//
+//	len(mockedSender.NameCalls())
 func (mock *SenderMock) NameCalls() []struct {
 } {
 	var calls []struct {
@@ -392,7 +397,8 @@ func (mock *SenderMock) Plugin() string {
 
 // PluginCalls gets all the calls that were made to Plugin.
 // Check the length with:
-//     len(mockedSender.PluginCalls())
+//
+//	len(mockedSender.PluginCalls())
 func (mock *SenderMock) PluginCalls() []struct {
 } {
 	var calls []struct {
@@ -421,7 +427,8 @@ func (mock *SenderMock) Send(e event.Event) {
 
 // SendCalls gets all the calls that were made to Send.
 // Check the length with:
-//     len(mockedSender.SendCalls())
+//
+//	len(mockedSender.SendCalls())
 func (mock *SenderMock) SendCalls() []struct {
 	E event.Event
 } {
@@ -452,7 +459,8 @@ func (mock *SenderMock) StopSending(ctx context.Context) {
 
 // StopSendingCalls gets all the calls that were made to StopSending.
 // Check the length with:
-//     len(mockedSender.StopSendingCalls())
+//
+//	len(mockedSender.StopSendingCalls())
 func (mock *SenderMock) StopSendingCalls() []struct {
 	Ctx context.Context
 } {
@@ -480,7 +488,8 @@ func (mock *SenderMock) Tenant() tenant.Id {
 
 // TenantCalls gets all the calls that were made to Tenant.
 // Check the length with:
-//     len(mockedSender.TenantCalls())
+//
+//	len(mockedSender.TenantCalls())
 func (mock *SenderMock) TenantCalls() []struct {
 } {
 	var calls []struct {
@@ -506,7 +515,8 @@ func (mock *SenderMock) Unwrap() Sender {
 
 // UnwrapCalls gets all the calls that were made to Unwrap.
 // Check the length with:
-//     len(mockedSender.UnwrapCalls())
+//
+//	len(mockedSender.UnwrapCalls())
 func (mock *SenderMock) UnwrapCalls() []struct {
 } {
 	var calls []struct {

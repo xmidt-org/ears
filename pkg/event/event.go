@@ -424,7 +424,7 @@ func (e *event) Evaluate(expression interface{}) (interface{}, interface{}, stri
 func (e *event) splitPath(path string) []string {
 	path = strings.Replace(path, `\.`, `\\`, -1)
 	segments := strings.Split(path, ".")
-	for i, _ := range segments {
+	for i := range segments {
 		segments[i] = strings.Replace(segments[i], `\\`, `.`, -1)
 	}
 	return segments

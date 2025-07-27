@@ -43,7 +43,7 @@ func init() {
 	cli.ViperAddArguments(
 		rootCmd,
 		[]cli.Argument{
-			cli.Argument{
+			{
 				Name: "config", Shorthand: "", Type: cli.ArgTypeString,
 				Default: "", Persistent: true,
 				Description: "config file (default is $HOME/ears.yaml)",

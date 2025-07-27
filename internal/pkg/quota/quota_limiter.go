@@ -24,7 +24,7 @@ import (
 	"time"
 )
 
-//Quota limiter implements an additional Wait function
+// Quota limiter implements an additional Wait function
 type QuotaLimiter struct {
 	tid             tenant.Id
 	adaptiveLimiter *ratelimit.AdaptiveRateLimiter

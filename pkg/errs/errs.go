@@ -25,10 +25,9 @@ import (
 String will generate an error string that conforms to our
 error coding style.  This will:
 
-  * Print the name of the error struct
-  * Enclose any key sorted values within parenthesis
-  * Append any wrapped errors to the end of the message (separated by a ":")
-
+  - Print the name of the error struct
+  - Enclose any key sorted values within parenthesis
+  - Append any wrapped errors to the end of the message (separated by a ":")
 */
 func String(prefix interface{}, values map[string]interface{}, wrapped error) string {
 	msgs := []string{}

@@ -26,8 +26,8 @@ func (e *Error) Unwrap() error {
 // Error implements the standard error interface.
 //
 // Output:
-//   plugin error (code=42): wrapped Err.Error() goes here
 //
+//	plugin error (code=42): wrapped Err.Error() goes here
 func (e *Error) Error() string {
 	return errs.String(
 		"plugin error",

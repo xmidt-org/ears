@@ -25,10 +25,10 @@ import (
 // `pkgconfig.NewConfig` does the hard work of converting
 // the input from:
 //
-//   * yaml
-//   * json
-//   * Config{}
-//   * &Config{}
+//   - yaml
+//   - json
+//   - Config{}
+//   - &Config{}
 //
 // into a *Config{} object.
 func NewConfig(c interface{}) (*Config, error) {

@@ -14,19 +14,19 @@ var _ Hasher = &HasherMock{}
 
 // HasherMock is a mock implementation of Hasher.
 //
-// 	func TestSomethingThatUsesHasher(t *testing.T) {
+//	func TestSomethingThatUsesHasher(t *testing.T) {
 //
-// 		// make and configure a mocked Hasher
-// 		mockedHasher := &HasherMock{
-// 			PluginerHashFunc: func(config interface{}) (string, error) {
-// 				panic("mock out the PluginerHash method")
-// 			},
-// 		}
+//		// make and configure a mocked Hasher
+//		mockedHasher := &HasherMock{
+//			PluginerHashFunc: func(config interface{}) (string, error) {
+//				panic("mock out the PluginerHash method")
+//			},
+//		}
 //
-// 		// use mockedHasher in code that requires Hasher
-// 		// and then make assertions.
+//		// use mockedHasher in code that requires Hasher
+//		// and then make assertions.
 //
-// 	}
+//	}
 type HasherMock struct {
 	// PluginerHashFunc mocks the PluginerHash method.
 	PluginerHashFunc func(config interface{}) (string, error)
@@ -60,7 +60,8 @@ func (mock *HasherMock) PluginerHash(config interface{}) (string, error) {
 
 // PluginerHashCalls gets all the calls that were made to PluginerHash.
 // Check the length with:
-//     len(mockedHasher.PluginerHashCalls())
+//
+//	len(mockedHasher.PluginerHashCalls())
 func (mock *HasherMock) PluginerHashCalls() []struct {
 	Config interface{}
 } {
@@ -79,22 +80,22 @@ var _ NewPluginerer = &NewPluginererMock{}
 
 // NewPluginererMock is a mock implementation of NewPluginerer.
 //
-// 	func TestSomethingThatUsesNewPluginerer(t *testing.T) {
+//	func TestSomethingThatUsesNewPluginerer(t *testing.T) {
 //
-// 		// make and configure a mocked NewPluginerer
-// 		mockedNewPluginerer := &NewPluginererMock{
-// 			NewPluginerFunc: func(config interface{}) (Pluginer, error) {
-// 				panic("mock out the NewPluginer method")
-// 			},
-// 			PluginerHashFunc: func(config interface{}) (string, error) {
-// 				panic("mock out the PluginerHash method")
-// 			},
-// 		}
+//		// make and configure a mocked NewPluginerer
+//		mockedNewPluginerer := &NewPluginererMock{
+//			NewPluginerFunc: func(config interface{}) (Pluginer, error) {
+//				panic("mock out the NewPluginer method")
+//			},
+//			PluginerHashFunc: func(config interface{}) (string, error) {
+//				panic("mock out the PluginerHash method")
+//			},
+//		}
 //
-// 		// use mockedNewPluginerer in code that requires NewPluginerer
-// 		// and then make assertions.
+//		// use mockedNewPluginerer in code that requires NewPluginerer
+//		// and then make assertions.
 //
-// 	}
+//	}
 type NewPluginererMock struct {
 	// NewPluginerFunc mocks the NewPluginer method.
 	NewPluginerFunc func(config interface{}) (Pluginer, error)
@@ -137,7 +138,8 @@ func (mock *NewPluginererMock) NewPluginer(config interface{}) (Pluginer, error)
 
 // NewPluginerCalls gets all the calls that were made to NewPluginer.
 // Check the length with:
-//     len(mockedNewPluginerer.NewPluginerCalls())
+//
+//	len(mockedNewPluginerer.NewPluginerCalls())
 func (mock *NewPluginererMock) NewPluginerCalls() []struct {
 	Config interface{}
 } {
@@ -168,7 +170,8 @@ func (mock *NewPluginererMock) PluginerHash(config interface{}) (string, error) 
 
 // PluginerHashCalls gets all the calls that were made to PluginerHash.
 // Check the length with:
-//     len(mockedNewPluginerer.PluginerHashCalls())
+//
+//	len(mockedNewPluginerer.PluginerHashCalls())
 func (mock *NewPluginererMock) PluginerHashCalls() []struct {
 	Config interface{}
 } {
@@ -187,31 +190,31 @@ var _ Pluginer = &PluginerMock{}
 
 // PluginerMock is a mock implementation of Pluginer.
 //
-// 	func TestSomethingThatUsesPluginer(t *testing.T) {
+//	func TestSomethingThatUsesPluginer(t *testing.T) {
 //
-// 		// make and configure a mocked Pluginer
-// 		mockedPluginer := &PluginerMock{
-// 			CommitIDFunc: func() string {
-// 				panic("mock out the CommitID method")
-// 			},
-// 			ConfigFunc: func() string {
-// 				panic("mock out the Config method")
-// 			},
-// 			NameFunc: func() string {
-// 				panic("mock out the Name method")
-// 			},
-// 			SupportedTypesFunc: func() bit.Mask {
-// 				panic("mock out the SupportedTypes method")
-// 			},
-// 			VersionFunc: func() string {
-// 				panic("mock out the Version method")
-// 			},
-// 		}
+//		// make and configure a mocked Pluginer
+//		mockedPluginer := &PluginerMock{
+//			CommitIDFunc: func() string {
+//				panic("mock out the CommitID method")
+//			},
+//			ConfigFunc: func() string {
+//				panic("mock out the Config method")
+//			},
+//			NameFunc: func() string {
+//				panic("mock out the Name method")
+//			},
+//			SupportedTypesFunc: func() bit.Mask {
+//				panic("mock out the SupportedTypes method")
+//			},
+//			VersionFunc: func() string {
+//				panic("mock out the Version method")
+//			},
+//		}
 //
-// 		// use mockedPluginer in code that requires Pluginer
-// 		// and then make assertions.
+//		// use mockedPluginer in code that requires Pluginer
+//		// and then make assertions.
 //
-// 	}
+//	}
 type PluginerMock struct {
 	// CommitIDFunc mocks the CommitID method.
 	CommitIDFunc func() string
@@ -268,7 +271,8 @@ func (mock *PluginerMock) CommitID() string {
 
 // CommitIDCalls gets all the calls that were made to CommitID.
 // Check the length with:
-//     len(mockedPluginer.CommitIDCalls())
+//
+//	len(mockedPluginer.CommitIDCalls())
 func (mock *PluginerMock) CommitIDCalls() []struct {
 } {
 	var calls []struct {
@@ -294,7 +298,8 @@ func (mock *PluginerMock) Config() string {
 
 // ConfigCalls gets all the calls that were made to Config.
 // Check the length with:
-//     len(mockedPluginer.ConfigCalls())
+//
+//	len(mockedPluginer.ConfigCalls())
 func (mock *PluginerMock) ConfigCalls() []struct {
 } {
 	var calls []struct {
@@ -320,7 +325,8 @@ func (mock *PluginerMock) Name() string {
 
 // NameCalls gets all the calls that were made to Name.
 // Check the length with:
-//     len(mockedPluginer.NameCalls())
+//
+//	len(mockedPluginer.NameCalls())
 func (mock *PluginerMock) NameCalls() []struct {
 } {
 	var calls []struct {
@@ -346,7 +352,8 @@ func (mock *PluginerMock) SupportedTypes() bit.Mask {
 
 // SupportedTypesCalls gets all the calls that were made to SupportedTypes.
 // Check the length with:
-//     len(mockedPluginer.SupportedTypesCalls())
+//
+//	len(mockedPluginer.SupportedTypesCalls())
 func (mock *PluginerMock) SupportedTypesCalls() []struct {
 } {
 	var calls []struct {
@@ -372,7 +379,8 @@ func (mock *PluginerMock) Version() string {
 
 // VersionCalls gets all the calls that were made to Version.
 // Check the length with:
-//     len(mockedPluginer.VersionCalls())
+//
+//	len(mockedPluginer.VersionCalls())
 func (mock *PluginerMock) VersionCalls() []struct {
 } {
 	var calls []struct {

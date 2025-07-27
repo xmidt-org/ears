@@ -24,7 +24,7 @@ import (
 var globalLimiters = make(map[string]*InMemoryBackendLimiter)
 var lock = &sync.Mutex{}
 
-//InMemoryBackendLimiter is only for testing/unit test purpose
+// InMemoryBackendLimiter is only for testing/unit test purpose
 type InMemoryBackendLimiter struct {
 	sync.Mutex
 

@@ -207,7 +207,7 @@ func (d *DynamoDbStorer) SetRoute(ctx context.Context, r route.Config) error {
 	return d.setRoute(ctx, r, svc)
 }
 
-//TODO: make this more efficient
+// TODO: make this more efficient
 func (d *DynamoDbStorer) SetRoutes(ctx context.Context, routes []route.Config) error {
 
 	ctx, span := db.CreateSpan(ctx, "storeRoutes", semconv.DBSystemDynamoDB, rtsemconv.DBTable.String(d.tableName))
