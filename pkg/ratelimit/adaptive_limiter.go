@@ -1,27 +1,17 @@
-// Copyright 2021 Comcast Cable Communications Management, LLC
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//      http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+// SPDX-FileCopyrightText: 2025 Comcast Cable Communications Management, LLC
+// SPDX-License-Identifier: Apache-2.0
 
 package ratelimit
 
 import (
 	"context"
 	"errors"
-	"github.com/rs/zerolog/log"
-	"golang.org/x/time/rate"
 	"math"
 	"sync"
 	"time"
+
+	"github.com/rs/zerolog/log"
+	"golang.org/x/time/rate"
 )
 
 type AdaptiveRateLimiter struct {
@@ -124,7 +114,7 @@ func (r *AdaptiveRateLimiter) initLimiter(ctx context.Context) error {
 	return nil
 }
 
-//Tune RQS check the rate limit history and ask backend ratelimiter for a new quota if necessary
+// Tune RQS check the rate limit history and ask backend ratelimiter for a new quota if necessary
 func (r *AdaptiveRateLimiter) tuneRqs(ctx context.Context) error {
 	if r.lastTune.Add(time.Second).After(time.Now()) {
 		//No need to tune yet

@@ -1,16 +1,5 @@
-// Copyright 2021 Comcast Cable Communications Management, LLC
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//      http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+// SPDX-FileCopyrightText: 2025 Comcast Cable Communications Management, LLC
+// SPDX-License-Identifier: Apache-2.0
 
 // Package s3 provides simplified aws s3 functionality in order to reduce the
 // amount of duplicated s3 code we have across all of our Go projects
@@ -38,14 +27,14 @@ type client struct {
 
 // New produces a new s3 client.  The basic usage is as follows:
 //
-// 	s, err := s3.New()
+//		s, err := s3.New()
 //
-// 	s, err := s3.New(s3.WithService(s3crypto.NewDecryptionClient())
+//		s, err := s3.New(s3.WithService(s3crypto.NewDecryptionClient())
 //
-// 	cfg, err := external.LoadDefaultAWSConfig(
-//   	external.WithSharedConfigProfile("exampleProfile"),
-// 	)
-// 	s, err := s3.New(s3.WithConfig(cfg))
+//		cfg, err := external.LoadDefaultAWSConfig(
+//	  	external.WithSharedConfigProfile("exampleProfile"),
+//		)
+//		s, err := s3.New(s3.WithConfig(cfg))
 func New(options ...func(*client) error) (*client, error) {
 	s := client{}
 
