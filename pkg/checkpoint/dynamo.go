@@ -28,7 +28,7 @@ import (
 const readCap = 10
 const writeCap = 10
 
-//const keyName = "key"
+// const keyName = "key"
 const sortKeyName = "id"
 const valueNameSequenceId = "sequenceId"
 const valueNameLastUpdated = "lastUpdated"

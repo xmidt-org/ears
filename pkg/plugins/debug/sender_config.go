@@ -19,11 +19,10 @@ import (
 )
 
 // WithDefaults will set
-//   * The .Destination and .Writer if Destination is DestinationUnknown
-//   * The .MaxHistory if it is nil
+//   - The .Destination and .Writer if Destination is DestinationUnknown
+//   - The .MaxHistory if it is nil
 //
 // The values will be set to the corresponding DefaultSenderConfig.* values
-//
 func (sc SenderConfig) WithDefaults() SenderConfig {
 	cfg := sc
 
@@ -40,9 +39,9 @@ func (sc SenderConfig) WithDefaults() SenderConfig {
 }
 
 // Validate will ensure that:
-//   * The .Destination is a valid DestinationType and is not DestinationUnknown
-//   * Max history is >= 0
-//   * The .Writer is only set when .Destination is DestinationCustom
+//   - The .Destination is a valid DestinationType and is not DestinationUnknown
+//   - Max history is >= 0
+//   - The .Writer is only set when .Destination is DestinationCustom
 func (sc *SenderConfig) Validate() error {
 	s := *sc
 

@@ -392,7 +392,7 @@ func (r *DefaultRoutingTableManager) AddRoute(ctx context.Context, routeConfig *
 }
 
 func (r *DefaultRoutingTableManager) setRunningStatus(routes []route.Config) {
-	for idx, _ := range routes {
+	for idx := range routes {
 		/*rid := routes[idx].TenantId.KeyWithRoute(routes[idx].Id)
 		r.Lock()
 		_, ok := r.liveRouteMap[rid]

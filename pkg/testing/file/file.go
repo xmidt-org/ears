@@ -15,7 +15,6 @@
 // Package file assists in loading test files from the file system.
 // Errors will call t.Error(err).  Passing in `OptionNotRequired`
 // will cause the function to fail if no file is found.
-//
 package file
 
 import (

@@ -34,7 +34,7 @@ type RouteTestCase struct {
 }
 
 var testCases = []RouteTestCase{
-	RouteTestCase{
+	{
 		tenant.Id{
 			OrgId: "myOrg",
 			AppId: "myApp",
@@ -48,7 +48,7 @@ var testCases = []RouteTestCase{
 		}
 		`,
 	},
-	RouteTestCase{
+	{
 		tenant.Id{
 			OrgId: "myOrg",
 			AppId: "myApp",
@@ -65,7 +65,7 @@ var testCases = []RouteTestCase{
 		}
 		`,
 	},
-	RouteTestCase{
+	{
 		tenant.Id{
 			OrgId: "myOrg2",
 			AppId: "myApp2",
@@ -86,7 +86,7 @@ var testCases = []RouteTestCase{
 		}
 		`,
 	},
-	RouteTestCase{
+	{
 		tenantId: tenant.Id{
 			OrgId: "myOrg2",
 			AppId: "myApp2",
@@ -106,7 +106,7 @@ var testCases = []RouteTestCase{
 		  }
 		}`,
 	},
-	RouteTestCase{
+	{
 		tenantId: tenant.Id{
 			OrgId: "myOrg3",
 			AppId: "myApp3",
@@ -126,7 +126,7 @@ var testCases = []RouteTestCase{
 		  }
 		}`,
 	},
-	RouteTestCase{
+	{
 		tenantId: tenant.Id{
 			OrgId: "myOrg3",
 			AppId: "myApp3",

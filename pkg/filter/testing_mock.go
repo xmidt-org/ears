@@ -17,19 +17,19 @@ var _ Hasher = &HasherMock{}
 
 // HasherMock is a mock implementation of Hasher.
 //
-// 	func TestSomethingThatUsesHasher(t *testing.T) {
+//	func TestSomethingThatUsesHasher(t *testing.T) {
 //
-// 		// make and configure a mocked Hasher
-// 		mockedHasher := &HasherMock{
-// 			FiltererHashFunc: func(config interface{}) (string, error) {
-// 				panic("mock out the FiltererHash method")
-// 			},
-// 		}
+//		// make and configure a mocked Hasher
+//		mockedHasher := &HasherMock{
+//			FiltererHashFunc: func(config interface{}) (string, error) {
+//				panic("mock out the FiltererHash method")
+//			},
+//		}
 //
-// 		// use mockedHasher in code that requires Hasher
-// 		// and then make assertions.
+//		// use mockedHasher in code that requires Hasher
+//		// and then make assertions.
 //
-// 	}
+//	}
 type HasherMock struct {
 	// FiltererHashFunc mocks the FiltererHash method.
 	FiltererHashFunc func(config interface{}) (string, error)
@@ -63,7 +63,8 @@ func (mock *HasherMock) FiltererHash(config interface{}) (string, error) {
 
 // FiltererHashCalls gets all the calls that were made to FiltererHash.
 // Check the length with:
-//     len(mockedHasher.FiltererHashCalls())
+//
+//	len(mockedHasher.FiltererHashCalls())
 func (mock *HasherMock) FiltererHashCalls() []struct {
 	Config interface{}
 } {
@@ -82,22 +83,22 @@ var _ NewFilterer = &NewFiltererMock{}
 
 // NewFiltererMock is a mock implementation of NewFilterer.
 //
-// 	func TestSomethingThatUsesNewFilterer(t *testing.T) {
+//	func TestSomethingThatUsesNewFilterer(t *testing.T) {
 //
-// 		// make and configure a mocked NewFilterer
-// 		mockedNewFilterer := &NewFiltererMock{
-// 			FiltererHashFunc: func(config interface{}) (string, error) {
-// 				panic("mock out the FiltererHash method")
-// 			},
-// 			NewFiltererFunc: func(tid tenant.Id, plugin string, name string, config interface{}, secrets secret.Vault) (Filterer, error) {
-// 				panic("mock out the NewFilterer method")
-// 			},
-// 		}
+//		// make and configure a mocked NewFilterer
+//		mockedNewFilterer := &NewFiltererMock{
+//			FiltererHashFunc: func(config interface{}) (string, error) {
+//				panic("mock out the FiltererHash method")
+//			},
+//			NewFiltererFunc: func(tid tenant.Id, plugin string, name string, config interface{}, secrets secret.Vault) (Filterer, error) {
+//				panic("mock out the NewFilterer method")
+//			},
+//		}
 //
-// 		// use mockedNewFilterer in code that requires NewFilterer
-// 		// and then make assertions.
+//		// use mockedNewFilterer in code that requires NewFilterer
+//		// and then make assertions.
 //
-// 	}
+//	}
 type NewFiltererMock struct {
 	// FiltererHashFunc mocks the FiltererHash method.
 	FiltererHashFunc func(config interface{}) (string, error)
@@ -148,7 +149,8 @@ func (mock *NewFiltererMock) FiltererHash(config interface{}) (string, error) {
 
 // FiltererHashCalls gets all the calls that were made to FiltererHash.
 // Check the length with:
-//     len(mockedNewFilterer.FiltererHashCalls())
+//
+//	len(mockedNewFilterer.FiltererHashCalls())
 func (mock *NewFiltererMock) FiltererHashCalls() []struct {
 	Config interface{}
 } {
@@ -187,7 +189,8 @@ func (mock *NewFiltererMock) NewFilterer(tid tenant.Id, plugin string, name stri
 
 // NewFiltererCalls gets all the calls that were made to NewFilterer.
 // Check the length with:
-//     len(mockedNewFilterer.NewFiltererCalls())
+//
+//	len(mockedNewFilterer.NewFiltererCalls())
 func (mock *NewFiltererMock) NewFiltererCalls() []struct {
 	Tid     tenant.Id
 	Plugin  string
@@ -214,31 +217,31 @@ var _ Filterer = &FiltererMock{}
 
 // FiltererMock is a mock implementation of Filterer.
 //
-// 	func TestSomethingThatUsesFilterer(t *testing.T) {
+//	func TestSomethingThatUsesFilterer(t *testing.T) {
 //
-// 		// make and configure a mocked Filterer
-// 		mockedFilterer := &FiltererMock{
-// 			ConfigFunc: func() interface{} {
-// 				panic("mock out the Config method")
-// 			},
-// 			FilterFunc: func(e event.Event) []event.Event {
-// 				panic("mock out the Filter method")
-// 			},
-// 			NameFunc: func() string {
-// 				panic("mock out the Name method")
-// 			},
-// 			PluginFunc: func() string {
-// 				panic("mock out the Plugin method")
-// 			},
-// 			TenantFunc: func() tenant.Id {
-// 				panic("mock out the Tenant method")
-// 			},
-// 		}
+//		// make and configure a mocked Filterer
+//		mockedFilterer := &FiltererMock{
+//			ConfigFunc: func() interface{} {
+//				panic("mock out the Config method")
+//			},
+//			FilterFunc: func(e event.Event) []event.Event {
+//				panic("mock out the Filter method")
+//			},
+//			NameFunc: func() string {
+//				panic("mock out the Name method")
+//			},
+//			PluginFunc: func() string {
+//				panic("mock out the Plugin method")
+//			},
+//			TenantFunc: func() tenant.Id {
+//				panic("mock out the Tenant method")
+//			},
+//		}
 //
-// 		// use mockedFilterer in code that requires Filterer
-// 		// and then make assertions.
+//		// use mockedFilterer in code that requires Filterer
+//		// and then make assertions.
 //
-// 	}
+//	}
 type FiltererMock struct {
 	// ConfigFunc mocks the Config method.
 	ConfigFunc func() interface{}
@@ -325,7 +328,8 @@ func (mock *FiltererMock) Config() interface{} {
 
 // ConfigCalls gets all the calls that were made to Config.
 // Check the length with:
-//     len(mockedFilterer.ConfigCalls())
+//
+//	len(mockedFilterer.ConfigCalls())
 func (mock *FiltererMock) ConfigCalls() []struct {
 } {
 	var calls []struct {
@@ -354,7 +358,8 @@ func (mock *FiltererMock) Filter(e event.Event) []event.Event {
 
 // FilterCalls gets all the calls that were made to Filter.
 // Check the length with:
-//     len(mockedFilterer.FilterCalls())
+//
+//	len(mockedFilterer.FilterCalls())
 func (mock *FiltererMock) FilterCalls() []struct {
 	E event.Event
 } {
@@ -382,7 +387,8 @@ func (mock *FiltererMock) Name() string {
 
 // NameCalls gets all the calls that were made to Name.
 // Check the length with:
-//     len(mockedFilterer.NameCalls())
+//
+//	len(mockedFilterer.NameCalls())
 func (mock *FiltererMock) NameCalls() []struct {
 } {
 	var calls []struct {
@@ -408,7 +414,8 @@ func (mock *FiltererMock) Plugin() string {
 
 // PluginCalls gets all the calls that were made to Plugin.
 // Check the length with:
-//     len(mockedFilterer.PluginCalls())
+//
+//	len(mockedFilterer.PluginCalls())
 func (mock *FiltererMock) PluginCalls() []struct {
 } {
 	var calls []struct {
@@ -434,7 +441,8 @@ func (mock *FiltererMock) Tenant() tenant.Id {
 
 // TenantCalls gets all the calls that were made to Tenant.
 // Check the length with:
-//     len(mockedFilterer.TenantCalls())
+//
+//	len(mockedFilterer.TenantCalls())
 func (mock *FiltererMock) TenantCalls() []struct {
 } {
 	var calls []struct {
@@ -451,37 +459,37 @@ var _ Chainer = &ChainerMock{}
 
 // ChainerMock is a mock implementation of Chainer.
 //
-// 	func TestSomethingThatUsesChainer(t *testing.T) {
+//	func TestSomethingThatUsesChainer(t *testing.T) {
 //
-// 		// make and configure a mocked Chainer
-// 		mockedChainer := &ChainerMock{
-// 			AddFunc: func(f Filterer) error {
-// 				panic("mock out the Add method")
-// 			},
-// 			ConfigFunc: func() interface{} {
-// 				panic("mock out the Config method")
-// 			},
-// 			FilterFunc: func(e event.Event) []event.Event {
-// 				panic("mock out the Filter method")
-// 			},
-// 			FilterersFunc: func() []Filterer {
-// 				panic("mock out the Filterers method")
-// 			},
-// 			NameFunc: func() string {
-// 				panic("mock out the Name method")
-// 			},
-// 			PluginFunc: func() string {
-// 				panic("mock out the Plugin method")
-// 			},
-// 			TenantFunc: func() tenant.Id {
-// 				panic("mock out the Tenant method")
-// 			},
-// 		}
+//		// make and configure a mocked Chainer
+//		mockedChainer := &ChainerMock{
+//			AddFunc: func(f Filterer) error {
+//				panic("mock out the Add method")
+//			},
+//			ConfigFunc: func() interface{} {
+//				panic("mock out the Config method")
+//			},
+//			FilterFunc: func(e event.Event) []event.Event {
+//				panic("mock out the Filter method")
+//			},
+//			FilterersFunc: func() []Filterer {
+//				panic("mock out the Filterers method")
+//			},
+//			NameFunc: func() string {
+//				panic("mock out the Name method")
+//			},
+//			PluginFunc: func() string {
+//				panic("mock out the Plugin method")
+//			},
+//			TenantFunc: func() tenant.Id {
+//				panic("mock out the Tenant method")
+//			},
+//		}
 //
-// 		// use mockedChainer in code that requires Chainer
-// 		// and then make assertions.
+//		// use mockedChainer in code that requires Chainer
+//		// and then make assertions.
 //
-// 	}
+//	}
 type ChainerMock struct {
 	// AddFunc mocks the Add method.
 	AddFunc func(f Filterer) error
@@ -559,7 +567,8 @@ func (mock *ChainerMock) Add(f Filterer) error {
 
 // AddCalls gets all the calls that were made to Add.
 // Check the length with:
-//     len(mockedChainer.AddCalls())
+//
+//	len(mockedChainer.AddCalls())
 func (mock *ChainerMock) AddCalls() []struct {
 	F Filterer
 } {
@@ -587,7 +596,8 @@ func (mock *ChainerMock) Config() interface{} {
 
 // ConfigCalls gets all the calls that were made to Config.
 // Check the length with:
-//     len(mockedChainer.ConfigCalls())
+//
+//	len(mockedChainer.ConfigCalls())
 func (mock *ChainerMock) ConfigCalls() []struct {
 } {
 	var calls []struct {
@@ -616,7 +626,8 @@ func (mock *ChainerMock) Filter(e event.Event) []event.Event {
 
 // FilterCalls gets all the calls that were made to Filter.
 // Check the length with:
-//     len(mockedChainer.FilterCalls())
+//
+//	len(mockedChainer.FilterCalls())
 func (mock *ChainerMock) FilterCalls() []struct {
 	E event.Event
 } {
@@ -644,7 +655,8 @@ func (mock *ChainerMock) Filterers() []Filterer {
 
 // FilterersCalls gets all the calls that were made to Filterers.
 // Check the length with:
-//     len(mockedChainer.FilterersCalls())
+//
+//	len(mockedChainer.FilterersCalls())
 func (mock *ChainerMock) FilterersCalls() []struct {
 } {
 	var calls []struct {
@@ -670,7 +682,8 @@ func (mock *ChainerMock) Name() string {
 
 // NameCalls gets all the calls that were made to Name.
 // Check the length with:
-//     len(mockedChainer.NameCalls())
+//
+//	len(mockedChainer.NameCalls())
 func (mock *ChainerMock) NameCalls() []struct {
 } {
 	var calls []struct {
@@ -696,7 +709,8 @@ func (mock *ChainerMock) Plugin() string {
 
 // PluginCalls gets all the calls that were made to Plugin.
 // Check the length with:
-//     len(mockedChainer.PluginCalls())
+//
+//	len(mockedChainer.PluginCalls())
 func (mock *ChainerMock) PluginCalls() []struct {
 } {
 	var calls []struct {
@@ -722,7 +736,8 @@ func (mock *ChainerMock) Tenant() tenant.Id {
 
 // TenantCalls gets all the calls that were made to Tenant.
 // Check the length with:
-//     len(mockedChainer.TenantCalls())
+//
+//	len(mockedChainer.TenantCalls())
 func (mock *ChainerMock) TenantCalls() []struct {
 } {
 	var calls []struct {

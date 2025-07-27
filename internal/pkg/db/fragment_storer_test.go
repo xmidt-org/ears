@@ -34,7 +34,7 @@ type FragmentTestCase struct {
 }
 
 var fragmentTestCases = []FragmentTestCase{
-	FragmentTestCase{
+	{
 		tenant.Id{
 			OrgId: "myOrg",
 			AppId: "myApp",
@@ -48,7 +48,7 @@ var fragmentTestCases = []FragmentTestCase{
 		}
 		`,
 	},
-	FragmentTestCase{
+	{
 		tenant.Id{
 			OrgId: "myOrg",
 			AppId: "myApp",
@@ -62,7 +62,7 @@ var fragmentTestCases = []FragmentTestCase{
 		}
 		`,
 	},
-	FragmentTestCase{
+	{
 		tenant.Id{
 			OrgId: "yourOrg",
 			AppId: "yourApp",
@@ -76,7 +76,7 @@ var fragmentTestCases = []FragmentTestCase{
 		}
 		`,
 	},
-	FragmentTestCase{
+	{
 		tenant.Id{
 			OrgId: "yourOrg",
 			AppId: "yourApp",
@@ -90,7 +90,7 @@ var fragmentTestCases = []FragmentTestCase{
 		}
 		`,
 	},
-	FragmentTestCase{
+	{
 		tenant.Id{
 			OrgId: "yourOrg",
 			AppId: "yourApp",

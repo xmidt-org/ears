@@ -38,14 +38,14 @@ type client struct {
 
 // New produces a new s3 client.  The basic usage is as follows:
 //
-// 	s, err := s3.New()
+//		s, err := s3.New()
 //
-// 	s, err := s3.New(s3.WithService(s3crypto.NewDecryptionClient())
+//		s, err := s3.New(s3.WithService(s3crypto.NewDecryptionClient())
 //
-// 	cfg, err := external.LoadDefaultAWSConfig(
-//   	external.WithSharedConfigProfile("exampleProfile"),
-// 	)
-// 	s, err := s3.New(s3.WithConfig(cfg))
+//		cfg, err := external.LoadDefaultAWSConfig(
+//	  	external.WithSharedConfigProfile("exampleProfile"),
+//		)
+//		s, err := s3.New(s3.WithConfig(cfg))
 func New(options ...func(*client) error) (*client, error) {
 	s := client{}
 

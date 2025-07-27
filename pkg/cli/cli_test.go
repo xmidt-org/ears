@@ -42,12 +42,12 @@ func TestConfigErrors(t *testing.T) {
 	)
 
 	testCases := [][]string{
-		[]string{"noextension", `ConfigError (path=noextension): open noextension: no such file or directory`},
-		[]string{"./mymissingfile.yaml", `ConfigError (path=./mymissingfile.yaml): open ./mymissingfile.yaml: no such file or directory`},
-		[]string{"./config.weirdext", `ConfigError (path=./config.weirdext): Unsupported Config Type "weirdext"`},
-		[]string{"file://config", `ConfigError (path=config): open config: no such file or directory`},
-		[]string{"file://config.yaml", `ConfigError (path=config.yaml): open config.yaml: no such file or directory`},
-		[]string{"f://random/protocol.json", `ConfigNotSupportedProtocolError (protocol=f)`},
+		{"noextension", `ConfigError (path=noextension): open noextension: no such file or directory`},
+		{"./mymissingfile.yaml", `ConfigError (path=./mymissingfile.yaml): open ./mymissingfile.yaml: no such file or directory`},
+		{"./config.weirdext", `ConfigError (path=./config.weirdext): Unsupported Config Type "weirdext"`},
+		{"file://config", `ConfigError (path=config): open config: no such file or directory`},
+		{"file://config.yaml", `ConfigError (path=config.yaml): open config.yaml: no such file or directory`},
+		{"f://random/protocol.json", `ConfigNotSupportedProtocolError (protocol=f)`},
 
 		// TODO:  Need to look into possibly not embedding dynamic info into the error string
 		// such as request and host ids (which the aws error does)
@@ -133,22 +133,22 @@ func TestConfigRead(t *testing.T) {
 	cli.ViperAddArguments(
 		cmd,
 		[]cli.Argument{
-			cli.Argument{
+			{
 				Name: "string", Shorthand: "", Type: cli.ArgTypeString,
 				Default: "", LookupKey: "string",
 				Description: "A string",
 			},
-			cli.Argument{
+			{
 				Name: "boolean", Shorthand: "", Type: cli.ArgTypeBool,
 				Default: false, LookupKey: "boolean",
 				Description: "A bool",
 			},
-			cli.Argument{
+			{
 				Name: "number", Shorthand: "", Type: cli.ArgTypeInt,
 				Default: 8080, LookupKey: "number",
 				Description: "An int",
 			},
-			cli.Argument{
+			{
 				Name: "array", Shorthand: "", Type: cli.ArgTypeStringSlice,
 				Default: []string{}, LookupKey: "array",
 				Description: "A string array",

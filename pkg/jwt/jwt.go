@@ -252,8 +252,8 @@ func (sc *DefaultJWTConsumer) extractToken(token string) ([]string, string, []st
 }
 
 // isValid verifies capability in two formats:
-//  * <domain>:<component>:<api>:<method>
-//  * <ignore>:<domain>:<component>:<api>:<method>
+//   - <domain>:<component>:<api>:<method>
+//   - <ignore>:<domain>:<component>:<api>:<method>
 func (sc *DefaultJWTConsumer) isValid(api, method, cap string) bool {
 	// SAT requires prefix which is not related to the capabilities, remove it
 	for _, prefix := range sc.capabilityPrefixes {

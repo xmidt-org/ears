@@ -136,7 +136,7 @@ func (ack *ackTree) NewSubTree() (SubTree, error) {
 	}, nil
 }
 
-//wait until closure functions are called
+// wait until closure functions are called
 func (ack *ackTree) Wait() {
 	ack.wg.Wait()
 }

@@ -14,7 +14,7 @@
 
 // Package classification EARS
 //
-// Documentation EARS API
+// # Documentation EARS API
 //
 // Schemes: https
 // BasePath: /ears
@@ -30,14 +30,15 @@
 // - application/yaml
 //
 // Security:
-//   Bearer:
+//
+//	Bearer:
 //
 // SecurityDefinitions:
-//   Bearer:
-//     In: header
-//     Name: Authorization
-//     Type: apiKey
+//
+//	Bearer:
+//	  In: header
+//	  Name: Authorization
+//	  Type: apiKey
 //
 // swagger:meta
-//
 package docs

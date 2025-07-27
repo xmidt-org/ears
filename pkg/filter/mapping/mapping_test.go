@@ -29,7 +29,7 @@ func TestFilterMappingBasic(t *testing.T) {
 	f, err := mapping.NewFilter(tenant.Id{AppId: "myapp", OrgId: "myorg"}, "mapping", "mymapping", mapping.Config{
 		Path:         ".foo",
 		ArrayPath:    "",
-		Map:          []mapping.FromTo{mapping.FromTo{From: "bar", To: true}},
+		Map:          []mapping.FromTo{{From: "bar", To: true}},
 		DefaultValue: nil,
 	}, nil, nil)
 	if err != nil {
@@ -65,7 +65,7 @@ func TestFilterMappingDefault(t *testing.T) {
 	f, err := mapping.NewFilter(tenant.Id{AppId: "myapp", OrgId: "myorg"}, "match", "mymatch", mapping.Config{
 		Path:         ".foo",
 		ArrayPath:    "",
-		Map:          []mapping.FromTo{mapping.FromTo{From: "baz", To: true}},
+		Map:          []mapping.FromTo{{From: "baz", To: true}},
 		DefaultValue: "default",
 	}, nil, nil)
 	if err != nil {
@@ -101,7 +101,7 @@ func TestFilterMappingArray(t *testing.T) {
 	f, err := mapping.NewFilter(tenant.Id{AppId: "myapp", OrgId: "myorg"}, "match", "mymatch", mapping.Config{
 		Path:         ".hello",
 		ArrayPath:    ".foo",
-		Map:          []mapping.FromTo{mapping.FromTo{From: "earth", To: "planet"}, mapping.FromTo{From: "mars", To: "planet"}},
+		Map:          []mapping.FromTo{{From: "earth", To: "planet"}, {From: "mars", To: "planet"}},
 		DefaultValue: nil,
 	}, nil, nil)
 	if err != nil {

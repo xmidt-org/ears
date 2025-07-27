@@ -50,7 +50,7 @@ func (l *LogListener) Close() error {
 	return nil
 }
 
-//Assert if the last logline has the key value pair
+// Assert if the last logline has the key value pair
 func (l *LogListener) AssertLastLogLine(t *testing.T, key string, value interface{}) {
 	var log map[string]interface{}
 	err := json.Unmarshal([]byte(l.lastLogLine), &log)
@@ -63,8 +63,8 @@ func (l *LogListener) AssertLastLogLine(t *testing.T, key string, value interfac
 	}
 }
 
-//listen to a JSON stream until a key/value pair is found
-//this function is not thread safe and is only intended for one listener at a time.
+// listen to a JSON stream until a key/value pair is found
+// this function is not thread safe and is only intended for one listener at a time.
 func (l *LogListener) Listen(key string, value interface{}, timeout time.Duration) error {
 	for {
 		select {
