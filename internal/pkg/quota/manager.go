@@ -1,29 +1,19 @@
-// Copyright 2021 Comcast Cable Communications Management, LLC
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//      http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+// SPDX-FileCopyrightText: 2025 Comcast Cable Communications Management, LLC
+// SPDX-License-Identifier: Apache-2.0
 
 package quota
 
 import (
 	"context"
 	"errors"
+	"sync"
+	"time"
+
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"github.com/xmidt-org/ears/internal/pkg/config"
 	"github.com/xmidt-org/ears/internal/pkg/syncer"
 	"github.com/xmidt-org/ears/pkg/tenant"
-	"sync"
-	"time"
 )
 
 type QuotaManager struct {
@@ -148,7 +138,7 @@ func (m *QuotaManager) SyncItem(ctx context.Context, tid tenant.Id, itemId strin
 	return limiter.SetLimit(tenantRqs)
 }
 
-//PublishQuota publishes tenant quota to ratelimiters in all nodes so they can sync to the new quota
+// PublishQuota publishes tenant quota to ratelimiters in all nodes so they can sync to the new quota
 func (m *QuotaManager) PublishQuota(ctx context.Context, tid tenant.Id) error {
 	err := m.SyncItem(ctx, tid, "ignored", true)
 	if err != nil {

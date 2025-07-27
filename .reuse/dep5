@@ -1,0 +1,100 @@
+Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
+Upstream-Name: ears
+Upstream-Contact: John Bass <john_bass2@cable.comcast.com>
+Source: https://github.com/xmidt-org/ears
+
+Files: NOTICE
+Copyright: SPDX-FileCopyrightText: 2025 Comcast Cable Communications Management, LLC
+License: Apache-2.0
+
+Files: .gitignore
+Copyright: SPDX-FileCopyrightText: 2025 Comcast Cable Communications Management, LLC
+License: Apache-2.0
+
+Files: .dockerignore
+Copyright: SPDX-FileCopyrightText: 2025 Comcast Cable Communications Management, LLC
+License: Apache-2.0
+
+Files: .whitesource
+Copyright: SPDX-FileCopyrightText: 2025 Comcast Cable Communications Management, LLC
+License: Apache-2.0
+
+Files: *.md
+Copyright: SPDX-FileCopyrightText: 2025 Comcast Cable Communications Management, LLC
+License: Apache-2.0
+
+Files: go.mod
+Copyright: SPDX-FileCopyrightText: 2025 Comcast Cable Communications Management, LLC
+License: Apache-2.0
+
+Files: go.sum
+Copyright: SPDX-FileCopyrightText: 2025 Comcast Cable Communications Management, LLC
+License: Apache-2.0
+
+Files: *.golden
+Copyright: SPDX-FileCopyrightText: 2025 Comcast Cable Communications Management, LLC
+License: Apache-2.0
+
+Files: *mock.go
+Copyright: SPDX-FileCopyrightText: 2025 Comcast Cable Communications Management, LLC
+License: Apache-2.0
+
+Files: *.png
+Copyright: SPDX-FileCopyrightText: 2025 Comcast Cable Communications Management, LLC
+License: Apache-2.0
+
+Files: *.xml
+Copyright: SPDX-FileCopyrightText: 2025 Comcast Cable Communications Management, LLC
+License: Apache-2.0
+
+Files: *.js
+Copyright: SPDX-FileCopyrightText: 2025 Comcast Cable Communications Management, LLC
+License: Apache-2.0
+
+Files: *.js.map
+Copyright: SPDX-FileCopyrightText: 2025 Comcast Cable Communications Management, LLC
+License: Apache-2.0
+
+Files: *.css
+Copyright: SPDX-FileCopyrightText: 2025 Comcast Cable Communications Management, LLC
+License: Apache-2.0
+
+Files: *.json
+Copyright: SPDX-FileCopyrightText: 2025 Comcast Cable Communications Management, LLC
+License: Apache-2.0
+
+Files: pkg/plugins/sqs/main/main
+Copyright: SPDX-FileCopyrightText: 2025 Comcast Cable Communications Management, LLC
+License: Apache-2.0
+
+Files: pkg/plugins/kafka/main/main
+Copyright: SPDX-FileCopyrightText: 2025 Comcast Cable Communications Management, LLC
+License: Apache-2.0
+
+Files: pkg/plugins/js/main/main
+Copyright: SPDX-FileCopyrightText: 2025 Comcast Cable Communications Management, LLC
+License: Apache-2.0
+
+Files: *enum.go
+Copyright: SPDX-FileCopyrightText: 2025 Comcast Cable Communications Management, LLC
+License: Apache-2.0
+
+Files: pkg/plugin/manager/testplugins/complete/complete
+Copyright: SPDX-FileCopyrightText: 2025 Comcast Cable Communications Management, LLC
+License: Apache-2.0
+
+Files: pkg/plugin/manager/testplugins/complete/complete
+Copyright: SPDX-FileCopyrightText: 2025 Comcast Cable Communications Management, LLC
+License: Apache-2.0
+
+Files: internal/pkg/app/ears/openapi/dist/swagger-ui.css.map
+Copyright: SPDX-FileCopyrightText: 2025 Comcast Cable Communications Management, LLC
+License: Apache-2.0
+
+Files: cmd/ratelimiter_sim/ratelimiter_sim
+Copyright: SPDX-FileCopyrightText: 2025 Comcast Cable Communications Management, LLC
+License: Apache-2.0
+
+Files: cmd/ears/subcmd/redis.conf
+Copyright: SPDX-FileCopyrightText: 2025 Comcast Cable Communications Management, LLC
+License: Apache-2.0

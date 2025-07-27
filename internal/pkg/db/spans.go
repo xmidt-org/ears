@@ -1,7 +1,11 @@
+// SPDX-FileCopyrightText: 2025 Comcast Cable Communications Management, LLC
+// SPDX-License-Identifier: Apache-2.0
+
 package db
 
 import (
 	"context"
+
 	"github.com/xmidt-org/ears/internal/pkg/rtsemconv"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
